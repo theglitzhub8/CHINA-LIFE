@@ -3,6 +3,7 @@ const HAFRIK_API = 'https://hafrik.com/api/v4', TOKEN_KEY = 'chinalife-hafrik-to
 const storage = {getItem(key) {try {return localStorage.getItem(key)} catch {return null}}, setItem(key, value) {try {localStorage.setItem(key, value)} catch {}}};
 let account = null, remote = {state:null}, auto = false, busy = false, loading = true, timer, presence = false, players = [], epoch = 0, authEpoch = 0, polling = false;
 let joining=null;
+let presenceCheck={lastSuccess:null,error:null,serverId:null};
 let message = 'Sign in with Hafrik to save across devices.', liveToken = storage.getItem(TOKEN_KEY) || '';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(path, method = 'GET', data) {
@@ -19,10 +20,29 @@ async function api(path, method = 'GET', data) {
 function notify() {window.dispatchEvent(new CustomEvent('chinalife:cloudready'))}
 function publish() {if($('onlineCount'))$('onlineCount').textContent=presence ? (players.filter(p=>p.city===game.state.city).length+1)+' online in this city' : 'Single-player';window.dispatchEvent(new CustomEvent('chinalife:players', {detail:window.ChinaLifeCloud.players}))}
 function status(text) {message = text; $('cloudStatus').textContent = account ? 'Hafrik · ' + (account.username || account.user_name || 'Connected') : 'Sign in with Hafrik'; $('cloudStatus').title = text}
+function multiplayerReport() {
+  const world=window.ChinaLifeWorld,nearby=window.ChinaLifeCloud.players;
+  return ['Account: '+(account?.user_id ?? account?.id ?? 'guest'),
+    'Server account: '+(presenceCheck.serverId ?? 'not confirmed'),
+    'Location: '+game.state.city+' / '+game.state.place,
+    'Connection: '+(presence?'joined':'not joined'),
+    'Game visible: '+(!document.hidden),
+    'View: '+(world?.view || '3D unavailable'),
+    'Players received in city: '+players.length,
+    'Players received in venue: '+nearby.length,
+    'Avatars rendered: '+(world?.playerIds?.length ?? '3D unavailable'),
+    'Last presence update: '+(presenceCheck.lastSuccess || 'none'),
+    'Presence error: '+(presenceCheck.error || 'none')].join('\n');
+}
 function show() {
   $('cloudContent').innerHTML = '<span class="eyebrow">HAFRIK ACCOUNT</span><h2>Your ChinaLife</h2><p>' + esc(message) + '</p>' + (account ?
     '<p>Signed in as <b>' + esc(account.username || account.user_name || 'Hafrik user') + '</b>. Your character saves automatically.</p><button id="cloudUpload" class="primary-btn">Save now</button><button id="cloudLoad" class="soft-btn">Load account save</button><button id="hafrikLogout" class="soft-btn">Disconnect game</button>' :
     '<h3>Save your ChinaLife</h3><p>Log in with Hafrik to save your character, progress, purchases, relationships and world state across devices.</p><button id="hafrikConnect" class="primary-btn">Continue with Hafrik</button><details><summary>Use username and password instead</summary><form id="hafrikLoginForm" class="cloud-login"><label>Email or username<input id="hafrikLogin" autocomplete="username" required></label><label>Password<input id="hafrikPassword" type="password" autocomplete="current-password" required></label><button type="submit" class="primary-btn">Log in</button><p id="hafrikLoginFeedback" role="status"></p></form></details><p>Inside the Hafrik app, your signed-in account connects automatically.</p>');
+  if(account) {
+    $('cloudContent').insertAdjacentHTML('beforeend','<details><summary>Multiplayer connection check</summary><pre id="multiplayerReport" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre><button id="multiplayerCheck" class="soft-btn">Check connection now</button></details>');
+    $('multiplayerReport').textContent=multiplayerReport();
+    $('multiplayerCheck').onclick=async()=>{await presenceHeartbeat();$('multiplayerReport').textContent=multiplayerReport()};
+  }
   if (!$('cloudDialog').open) $('cloudDialog').showModal();
   if (account) {
     $('cloudUpload').onclick = () => upload(true); $('cloudLoad').disabled = !remote.state;
@@ -42,6 +62,7 @@ async function loadRemote() {
 }
 async function connect(session) {
   const guestStory=game.accountId==null&&game.state.created?JSON.parse(JSON.stringify(game.state)):null;
+  presenceCheck={lastSuccess:null,error:null,serverId:null};
   const connectionGeneration = ++authEpoch; epoch++; clearTimeout(timer); presence = false; players = []; publish(); auto = false; loading = true;
   if (session?.token) liveToken = session.token;
   try {
@@ -129,9 +150,10 @@ async function refreshPresence() {
     const result = await api('/chinalife/presence.php', 'GET', {city});
     if (generation !== epoch || !presence || game.state.city !== city || game.state.place !== place) return false;
     const data = result.data || result, ownId = data.id ?? account.user_id ?? account.id;
+    presenceCheck={lastSuccess:new Date().toISOString(),error:null,serverId:String(ownId)};
     players = (data.players || []).filter(p => !p.own && String(p.user_id ?? p.id) !== String(ownId)).map(p => ({...p,id:String(p.id),city:p.city || city,name:p.name || p.sim_name,x:Number(p.x) || 0,z:Number(p.z) || 0})); publish();
     return true;
-  } catch (error) {status('Shared city: ' + error.message); return false} finally {polling = false}
+  } catch (error) {if(generation===epoch){presenceCheck.error=error.message;status('Shared city: ' + error.message)} return false} finally {polling = false}
 }
 function join() {
   if(!account||!game.state.created||game.state.story?.phase==='preparation')return Promise.resolve(false);
@@ -156,7 +178,11 @@ async function initialize() {
   // Cookie sessions work when the API supports existing Hafrik browser authentication.
   if (storage.getItem(PROFILE_KEY)) return connect();
   if (window.ReactNativeWebView) {status('Connecting your Hafrik app session…'); window.ReactNativeWebView.postMessage(JSON.stringify({type:'chinalife:auth-request'})); notify(); return false}
-  loading = false; status(message); notify(); game.startOnboarding(); return false;
+  // A Hafrik website session can exist without any ChinaLife device cache.
+  // Ask the authenticated API before presenting optional login or character setup.
+  const connected=await connect();
+  if(!connected) game.startOnboarding();
+  return connected;
 }
 window.ChinaLifeAuth = {base:HAFRIK_API,get token(){return liveToken},request:api,connect};
 window.ChinaLifeCloud = {open:show,ready:null,get playerId(){return String(account?.user_id ?? account?.id ?? '')},get signedIn(){return !!account},get joined(){return presence},get players(){return players.filter(p => p.city === game.state.city && p.place === game.state.place)},get cityPlayers(){return players.filter(p => p.city === game.state.city)},refresh:refreshPresence,join,leave,upload,transfer,syncTransfers};

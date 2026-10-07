@@ -1,7 +1,25 @@
 <?php
 declare(strict_types=1);
+// Browser SSO may send Hafrik cookies from the trusted game subdomain.
+// Credentialed CORS requires an exact origin, never a wildcard.
+$clOrigin = $_SERVER['HTTP_ORIGIN'] ?? '';
+$clCookieOrigin = in_array($clOrigin, ['https://china-life.hafrik.com','https://hafrik.com','https://www.hafrik.com'], true);
+function cl_browser_cors(): void {
+    if (!$GLOBALS['clCookieOrigin']) return;
+    header('Access-Control-Allow-Origin: ' . $GLOBALS['clOrigin']);
+    header('Access-Control-Allow-Credentials: true');
+    header('Access-Control-Allow-Headers: Authorization, Content-Type, X-Requested-With, X-Session-Token');
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+    header('Vary: Origin');
+}
+cl_browser_cors();
+if ($clCookieOrigin && strtoupper($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
+    http_response_code(204); exit;
+}
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../helpers.php';
+// Shared Hafrik bootstrap may have supplied its own wildcard CORS headers.
+cl_browser_cors();
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
 set_exception_handler(function(Throwable $error): void {

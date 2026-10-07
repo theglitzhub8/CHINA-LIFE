@@ -129,3 +129,20 @@ test('background first join resumes when the game becomes visible',async()=>{
  const heartbeat=t.intervals.find(fn=>fn.name==='presenceHeartbeat');await heartbeat();assert.equal(t.context.ChinaLifeCloud.joined,false);
  t.document.hidden=false;await heartbeat();assert.equal(t.context.ChinaLifeCloud.joined,true);
 });
+
+
+test('connection check distinguishes an API failure from received and rendered players without exposing tokens',async()=>{
+ const api=server();api.saves.set('alice',fixture());api.failPresence=true;const t=await client(api,'alice');
+ t.context.ChinaLifeCloud.open();assert.match(t.document.getElementById('multiplayerReport').textContent,/Presence error: Unavailable/);
+ api.failPresence=false;t.context.ChinaLifeWorld={view:'venue',playerIds:['bob']};
+ api.players.set('bob',{id:'bob',name:'Bob',city:t.game.state.city,place:t.game.state.place});
+ await t.document.getElementById('multiplayerCheck').onclick();const report=t.document.getElementById('multiplayerReport').textContent;
+ assert.match(report,/Server account: alice/);assert.match(report,/Players received in venue: 1/);assert.match(report,/Avatars rendered: 1/);assert.match(report,/Presence error: none/);assert.doesNotMatch(report,/Bearer|password|token/i);
+});
+
+
+test('fresh browser checks an existing Hafrik cookie session before showing setup',async()=>{
+ const api=server();api.saves.set('alice',{...fixture(),name:'Website Alice'});let cookieRequest;
+ const cookieApi={async fetch(url,request){cookieRequest=request;assert.equal(request.credentials,'include');const response=await api.fetch(url,{...request,headers:{...request.headers,Authorization:'Bearer alice'}});const data=await response.json();if(new URL(url).pathname.endsWith('/save.php')&&request.method==='GET')data.data.account={id:'alice',username:'Website Alice'};return Response.json(data,{status:response.status})}};
+ const t=await client(cookieApi,'unused',{native:false});assert.equal(t.context.ChinaLifeCloud.signedIn,true);assert.equal(t.game.state.name,'Website Alice');assert.equal(t.document.getElementById('onboarding').open,false);assert.equal(t.context.ChinaLifeCloud.joined,true);assert.equal(cookieRequest.credentials,'include');
+});
