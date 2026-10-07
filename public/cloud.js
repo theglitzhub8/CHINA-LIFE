@@ -50,8 +50,7 @@ async function connect(session) {
     const id = profile?.user_id ?? profile?.id;
     if (id == null) throw Error('Your Hafrik session needs an account ID. Open the game from the app or sign in.');
     account = {...profile, signedIn:true}; storage.setItem(PROFILE_KEY, JSON.stringify(account));
-    if (session?.token && window.HafrikSession?.token === session.token) storage.setItem(TOKEN_KEY, '');
-    else storage.setItem(TOKEN_KEY, liveToken);
+    storage.setItem(TOKEN_KEY, liveToken);
     remote = saved; const hasLocal = game.setAccount(id);
     if (remote.state) game.loadSave(remote.state);
     else if(guestStory&&!hasLocal)game.loadSave(guestStory);
