@@ -146,3 +146,18 @@ test('fresh browser checks an existing Hafrik cookie session before showing setu
  const cookieApi={async fetch(url,request){cookieRequest=request;assert.equal(request.credentials,'include');const response=await api.fetch(url,{...request,headers:{...request.headers,Authorization:'Bearer alice'}});const data=await response.json();if(new URL(url).pathname.endsWith('/save.php')&&request.method==='GET')data.data.account={id:'alice',username:'Website Alice'};return Response.json(data,{status:response.status})}};
  const t=await client(cookieApi,'unused',{native:false});assert.equal(t.context.ChinaLifeCloud.signedIn,true);assert.equal(t.game.state.name,'Website Alice');assert.equal(t.document.getElementById('onboarding').open,false);assert.equal(t.context.ChinaLifeCloud.joined,true);assert.equal(cookieRequest.credentials,'include');
 });
+
+
+test('recognized account without a character explains the join blocker and opens setup',async()=>{
+ const t=await client(server(),'alice');t.context.ChinaLifeCloud.open();
+ assert.match(t.document.getElementById('multiplayerReport').textContent,/Join status: Finish character setup/);
+ assert.match(t.document.getElementById('multiplayerReport').textContent,/Character created: false/);
+ await t.document.getElementById('multiplayerCheck').onclick();assert.equal(t.document.getElementById('onboarding').open,true);assert.equal(t.document.getElementById('cloudDialog').open,false);
+});
+
+test('recognized account with an invalid save reports restore failure instead of claiming a join',async()=>{
+ const api=server();api.saves.set('alice',{...fixture(),money:'invalid'});const t=await client(api,'alice');t.context.ChinaLifeCloud.open();
+ assert.match(t.document.getElementById('multiplayerReport').textContent,/Join status: Account character restore failed/);
+ assert.match(t.document.getElementById('multiplayerReport').textContent,/money/);
+ assert.match(t.document.getElementById('multiplayerReport').textContent,/Account save ready: false/);
+});

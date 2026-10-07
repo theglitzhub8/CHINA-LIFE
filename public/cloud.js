@@ -20,12 +20,28 @@ async function api(path, method = 'GET', data) {
 function notify() {window.dispatchEvent(new CustomEvent('chinalife:cloudready'))}
 function publish() {if($('onlineCount'))$('onlineCount').textContent=presence ? (players.filter(p=>p.city===game.state.city).length+1)+' online in this city' : 'Single-player';window.dispatchEvent(new CustomEvent('chinalife:players', {detail:window.ChinaLifeCloud.players}))}
 function status(text) {message = text; $('cloudStatus').textContent = account ? 'Hafrik · ' + (account.username || account.user_name || 'Connected') : 'Sign in with Hafrik'; $('cloudStatus').title = text}
+function multiplayerBlocker() {
+  if(!account)return 'Sign in with Hafrik';
+  if(loading)return 'Your account character is still loading';
+  if(!auto)return 'Account character restore failed: '+message;
+  if(!game.state.created)return 'Finish character setup to enter the shared world';
+  if(game.state.story?.phase==='preparation')return 'Complete the journey to China in Phone → Student story';
+  if(document.hidden)return 'Return to the visible game';
+  if(polling)return 'Waiting for the presence server response';
+  if(presenceCheck.error)return presenceCheck.error;
+  return presence?'none':'Waiting to join the shared world';
+}
 function multiplayerReport() {
   const world=window.ChinaLifeWorld,nearby=window.ChinaLifeCloud.players;
   return ['Account: '+(account?.user_id ?? account?.id ?? 'guest'),
     'Server account: '+(presenceCheck.serverId ?? 'not confirmed'),
     'Location: '+game.state.city+' / '+game.state.place,
     'Connection: '+(presence?'joined':'not joined'),
+    'Join status: '+multiplayerBlocker(),
+    'Character created: '+game.state.created,
+    'Character loading: '+loading,
+    'Account save ready: '+auto,
+    'Story phase: '+(game.state.story?.phase || 'no campaign'),
     'Game visible: '+(!document.hidden),
     'View: '+(world?.view || '3D unavailable'),
     'Players received in city: '+players.length,
@@ -41,7 +57,10 @@ function show() {
   if(account) {
     $('cloudContent').insertAdjacentHTML('beforeend','<details><summary>Multiplayer connection check</summary><pre id="multiplayerReport" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre><button id="multiplayerCheck" class="soft-btn">Check connection now</button></details>');
     $('multiplayerReport').textContent=multiplayerReport();
-    $('multiplayerCheck').onclick=async()=>{await presenceHeartbeat();$('multiplayerReport').textContent=multiplayerReport()};
+    $('multiplayerCheck').onclick=async()=>{
+      await presenceHeartbeat();$('multiplayerReport').textContent=multiplayerReport();
+      if(!loading&&auto&&!game.state.created){$('cloudDialog').close();game.startOnboarding()}
+    };
   }
   if (!$('cloudDialog').open) $('cloudDialog').showModal();
   if (account) {
