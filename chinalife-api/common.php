@@ -65,7 +65,7 @@ function cl_run(string $sql, string $types = '', array $values = []): int {
 }
 function cl_room(array $input): array {
     $cities = ['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];
-    $places = ['home','ef','cafe','market','campus','gym','business','mall','park','night','station','african','church','plaza','airport','university','liaoning','dongbei'];
+    $places = ['home','ef','cafe','market','campus','gym','business','mall','park','night','station','african','church','plaza','airport','university','liaoning','dongbei','blood','skylight'];
     $city = $input['city'] ?? ''; $place = $input['place'] ?? '';
     if (!in_array($city, $cities, true) || !in_array($place, $places, true)) cl_fail('Choose a valid city and venue');
     return [$city, $place];
