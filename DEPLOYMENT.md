@@ -153,3 +153,7 @@ The first activities are Study together (University Quarter), Campus basketball 
 The server's `shared-config.php` defines venues, prompts, durations and modest XP/money rewards. Completion and shared memories are server-side; each pair can earn a reward for each activity once per server calendar day. Completion retries cannot pay twice. XP uses the server-issued `sharedXP` marker and money uses the existing transfer reconciliation, so open clients receive rewards without replacing their character's ongoing progress.
 
 Verify with two different Hafrik accounts: invite, accept, meet at the venue, ready both, choose responses, complete, and reopen both accounts. Test decline/cancel and leaving the venue before completion. The current activity layer uses short choices and existing animations; it does not introduce a physics basketball match or a full academic-performance system.
+
+## Shift feedback
+
+Steady and Focused shift now show availability inside the shift window, including next-day start, one shift per game day, and minimum energy/hunger. Both buttons show their energy cost. This is a client-only update: run the normal update-server script; no database migration is needed for this fix. Verified both shift buttons across all eight jobs and visible feedback for blocked shifts.
