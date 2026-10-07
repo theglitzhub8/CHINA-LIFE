@@ -30,10 +30,20 @@ test('boarding a flight takes off on the map, switches city mid-air and lands at
  t.tick(4);assert.equal(t.world.busy,false);assert.equal(t.game.state.city,'Harbin');assert.equal(t.game.state.place,'airport');assert.equal(t.world.view,'venue');assert.equal(t.game.state.flightBookings[0].status,'flown');
 });
 test('scenic flight circles the city and lands back at the same airport',()=>{
- const t=setup();t.game.state.money=1000;t.game.state.place='airport';t.internal.render();t.game.flights();t.click('scenicFlight');assert.equal(t.world.action,'flight');t.tick(15);assert.equal(t.world.busy,false);assert.equal(t.game.state.city,'Shenyang');assert.equal(t.game.state.money,820);
+ const t=setup();t.game.state.money=1000;t.game.state.place='airport';t.internal.render();t.game.flights();t.click('scenicFlight');assert.equal(t.world.action,'flight');t.tick(15);assert.equal(t.world.busy,false);assert.equal(t.game.state.city,'Shenyang');assert.equal(t.game.state.money,820+1000);assert.ok(t.game.state.secrets.includes('jet-setter'));
 });
 
 test('BLOOD & EMBERS and the SKYLIGHT rooftop are Shenyang clubs with a DJ booth',()=>{
  const t=setup();for(const id of ['blood','skylight']){t.game.state.place=id;t.internal.render();t.world.venue(id);assert.ok(t.game.clubs.includes(id));assert.ok([...t.document.querySelectorAll('.scene-label')].some(l=>/DJ booth/.test(l.textContent)))}
  assert.equal(t.game.locations.find(p=>p[0]==='blood')[1],'BLOOD & EMBERS');assert.equal(t.game.locations.find(p=>p[0]==='skylight')[1],'SKYLIGHT · Rooftop');
+});
+
+test('daily red envelopes appear in their venue, pay once and unlock Treasure Hunter after ten',()=>{
+ const t=setup(),hunt=t.game.huntSummary();assert.equal(hunt.total,3);assert.equal(hunt.hints.length,3);
+ const first=Object.keys(t.game.cityData).length&&['market','cafe','african','hotel','night','blood','skylight','campus','university','liaoning','dongbei','ef','academy','gym','park','mall','plaza','church','business','station','airport'].find(id=>t.game.treasureHere(id));
+ t.game.state.place=first;t.internal.render();t.world.venue(first);const tag=[...t.document.querySelectorAll('.scene-label.treasure')];assert.equal(tag.length,1);
+ const money=t.game.state.money;tag[0].onclick({stopPropagation(){}});assert.ok(t.game.state.money>money);assert.equal(t.game.huntSummary().found,1);assert.equal(t.game.treasureHere(first),null);
+ assert.equal(t.game.collectTreasure(first),false);t.world.venue(first);assert.equal(t.document.querySelectorAll('.scene-label.treasure').length,0);
+ t.game.state.treasureTotal=9;const other=['market','cafe','african','hotel','night','blood','skylight','campus','university','liaoning','dongbei','ef','academy','gym','park','mall','plaza','church','business','station','airport'].find(id=>t.game.treasureHere(id));t.game.state.place=other;t.game.collectTreasure(other);assert.ok(t.game.state.secrets.includes('treasure-hunter'));
+ const saved=JSON.parse(JSON.stringify(t.game.state));t.game.loadSave(saved);assert.equal(t.game.huntSummary().found,2);assert.ok(t.game.state.secrets.includes('treasure-hunter'));
 });
