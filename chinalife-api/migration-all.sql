@@ -1,0 +1,57 @@
+CREATE TABLE IF NOT EXISTS chinalife_saves (
+    user_id INT UNSIGNED NOT NULL,
+    revision INT UNSIGNED NOT NULL DEFAULT 1,
+    character_data LONGTEXT NOT NULL,
+    game_state LONGTEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id),
+    CONSTRAINT fk_chinalife_saves_user
+        FOREIGN KEY (user_id) REFERENCES users (user_id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Run this once in the same Hafrik database used by the API.
+-- If users.user_id is BIGINT, change INT UNSIGNED references below to BIGINT UNSIGNED.
+CREATE TABLE IF NOT EXISTS chinalife_presence (
+ user_id INT UNSIGNED NOT NULL PRIMARY KEY,name VARCHAR(100) NOT NULL,city VARCHAR(80) NOT NULL,place VARCHAR(80) NOT NULL,color CHAR(7) NOT NULL DEFAULT '#246fa7',skin CHAR(7) NOT NULL DEFAULT '#8b5c43',hair VARCHAR(12) NOT NULL DEFAULT 'cropped',x DECIMAL(8,2) NOT NULL DEFAULT 0,z DECIMAL(8,2) NOT NULL DEFAULT 0,seen_at DATETIME NOT NULL,
+ INDEX idx_chinalife_presence_room(city,place,seen_at),CONSTRAINT fk_chinalife_presence_user FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_messages (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,sender_id INT UNSIGNED NOT NULL,recipient_id INT UNSIGNED NULL,city VARCHAR(80) NOT NULL,place VARCHAR(80) NOT NULL,body VARCHAR(400) NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ INDEX idx_chinalife_messages_room(city,place,created_at),INDEX idx_chinalife_messages_direct(sender_id,recipient_id,created_at),CONSTRAINT fk_chinalife_messages_sender FOREIGN KEY(sender_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_voice_members (
+ user_id INT UNSIGNED NOT NULL PRIMARY KEY,session VARCHAR(80) NOT NULL,city VARCHAR(80) NOT NULL,place VARCHAR(80) NOT NULL,muted TINYINT(1) NOT NULL DEFAULT 1,seen_at DATETIME NOT NULL,
+ INDEX idx_chinalife_voice_room(city,place,seen_at),CONSTRAINT fk_chinalife_voice_user FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_voice_signals (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,sender_id INT UNSIGNED NOT NULL,sender_session VARCHAR(80) NOT NULL,target_id INT UNSIGNED NOT NULL,city VARCHAR(80) NOT NULL,place VARCHAR(80) NOT NULL,target_session VARCHAR(80) NOT NULL,payload TEXT NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ INDEX idx_chinalife_voice_signals_target(target_id,target_session,id),CONSTRAINT fk_chinalife_voice_sender FOREIGN KEY(sender_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS chinalife_friends (
+ first_id INT UNSIGNED NOT NULL,second_id INT UNSIGNED NOT NULL,requested_by INT UNSIGNED NOT NULL,status VARCHAR(12) NOT NULL,created_at DATETIME NOT NULL,
+ PRIMARY KEY(first_id,second_id),INDEX(second_id),INDEX(requested_by,status),
+ FOREIGN KEY(first_id) REFERENCES users(user_id) ON DELETE CASCADE,FOREIGN KEY(second_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_blocks (
+ owner_id INT UNSIGNED NOT NULL,peer_id INT UNSIGNED NOT NULL,PRIMARY KEY(owner_id,peer_id),INDEX(peer_id),
+ FOREIGN KEY(owner_id) REFERENCES users(user_id) ON DELETE CASCADE,FOREIGN KEY(peer_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_reports (
+ reporter_id INT UNSIGNED NOT NULL,message_id BIGINT UNSIGNED NOT NULL,reason VARCHAR(24) NOT NULL,message_body VARCHAR(400) NOT NULL,sender_id INT UNSIGNED NOT NULL,created_at DATETIME NOT NULL,
+ PRIMARY KEY(reporter_id,message_id),INDEX(created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_rate_limits (
+ user_id INT UNSIGNED NOT NULL,kind VARCHAR(24) NOT NULL,bucket BIGINT UNSIGNED NOT NULL,hits INT UNSIGNED NOT NULL,
+ PRIMARY KEY(user_id,kind),FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_voice_rooms (city VARCHAR(80) NOT NULL,place VARCHAR(80) NOT NULL,PRIMARY KEY(city,place)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_music (
+ city VARCHAR(80) NOT NULL PRIMARY KEY,track VARCHAR(24) NOT NULL,started_at BIGINT UNSIGNED NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_music_requests (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,user_id INT UNSIGNED NOT NULL,city VARCHAR(80) NOT NULL,track VARCHAR(24) NOT NULL,created_at DATETIME NOT NULL,
+ INDEX(city,created_at,id),INDEX(user_id),FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

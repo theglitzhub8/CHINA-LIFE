@@ -1,0 +1,19 @@
+{
+  "name": "chinalife-world",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "db:generate": "drizzle-kit generate",
+    "test": "npm run build && node --test tests/*.mjs",
+    "test:php": "node --test tests/php-api.mjs",
+    "lint:php": "php scripts/lint-php.php"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.2"
+  },
+  "devDependencies": {
+    "drizzle-kit": "0.31.10",
+    "linkedom": "^0.18.13"
+  }
+}

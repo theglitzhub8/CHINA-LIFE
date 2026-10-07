@@ -1,0 +1,1 @@
+CREATE INDEX `presence_venue_seen` ON `city_presence` (`place`,`seen_at`);

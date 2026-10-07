@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.sites-runtime/
+.DS_Store
+*.tar.gz
+.env
+.env.*
+!.env.example
+china-life.hafrik.com/

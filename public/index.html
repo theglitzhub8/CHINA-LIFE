@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#071f2e" />
+  <title>ChinaLife · Your life in China</title>
+  <meta name="description" content="Explore seven playable cities, meet players and build your life in China." />
+  <link rel="stylesheet" href="style.css" /><link rel="stylesheet" href="world.css" />
+</head>
+<body>
+<div id="worldUI">
+  <div id="worldViewport" aria-label="Interactive three-dimensional city"><div id="sceneLabels"></div><div id="worldLoading">Opening your city…</div></div>
+  <header class="world-hud">
+    <button class="brand-chip" id="worldProfile"><span>中</span><b>ChinaLife<small>BY HAFRIK</small></b></button>
+    <div class="time-chip"><span id="worldClock">08:40</span><span class="hud-divider"></span><span id="worldMood">Feeling good</span></div>
+    <button class="money-chip" id="worldWallet"><b id="worldMoney">¥3,200</b><span>＋</span></button>
+  </header>
+  <div class="world-caption"><button id="worldCity" aria-label="Choose city"><span id="worldDay">Day 1 · Shenyang</span><span aria-hidden="true">⌄</span></button><button id="cloudButton"><span id="cloudStatus">Guest · saved on device</span></button></div>
+  <aside class="world-side">
+    <button class="objective-chip" id="worldGoal"><span>◎</span><div><b id="worldGoalTitle">Find your feet</b><small id="worldGoalText">Explore your new city</small></div></button>
+    <button class="event-chip" id="worldEvent"><span>✦</span><div><b id="worldEventTitle">City event</b><small id="worldEventText">A new story every day</small></div></button>
+    <button class="mini-needs" id="worldNeeds" aria-label="View all six needs"></button>
+    <button class="clean-button" id="worldClean">Hide details</button>
+  </aside>
+  <nav id="mapFilters" class="map-filter" aria-label="Map venue categories" hidden><button data-filter="all" class="active">All</button><button data-filter="social">Social</button><button data-filter="food">Food</button><button data-filter="faith">Faith</button><button data-filter="everyday">Everyday</button></nav><div class="scene-tools"><button id="worldFit" aria-label="Show whole city" hidden>⛶</button><button id="worldRotate" aria-label="Rotate camera">↻</button><button id="worldZoomIn" aria-label="Zoom in">＋</button><button id="worldZoomOut" aria-label="Zoom out">−</button></div>
+  <div id="actionStatus" class="action-status" role="status" hidden><span id="actionIcon">◷</span><div><b id="actionTitle"></b><small id="actionPhase"></small><progress id="actionProgress" max="1" value="0"></progress></div><button id="actionSkip" aria-label="Finish animation">Skip</button></div><div class="scene-guide" id="sceneGuide">Tap the floor to walk · tap a character to meet</div>
+  <div class="world-dock">
+    <section class="venue-card">
+      <div class="venue-heading"><div class="venue-icon" id="worldVenueIcon">⌂</div><div><h1 id="worldVenueTitle">Your apartment</h1><p id="worldVenueSub">Heping District · your new beginning</p></div><button id="worldVenueMore" aria-label="View venue details">⋯</button></div>
+      <div id="worldActivities" class="world-activities"></div><div class="venue-social-controls"><button id="venueChatButton" class="venue-chat-button">💬 Venue chat <span id="venueOnline">Join shared city</span></button><button id="venueVoiceButton" class="venue-chat-button">🎙 Voice <span id="venueVoiceStatus">Off</span></button></div>
+    </section>
+    <nav class="world-nav" aria-label="Game navigation"><button id="navHome"><span>⌂</span>Home</button><button id="navMap"><span>⌖</span>Map</button><button id="navPeople"><span>♡</span>People</button><button id="navPhone"><span>▯</span>Phone</button></nav>
+  </div>
+</div>
+
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="wordmark" href="#"><span class="mark">中</span><span>China<em>Life</em></span><small>BY HAFRIK</small></a>
+      <div class="city-switcher"><span class="pulse"></span><strong>SHENYANG</strong><span>沈阳</span><button id="cityBtn" aria-label="Change city">⌄</button></div>
+      <div class="world-status"><span class="live-dot"></span><span id="onlineCount">Single-player</span> city <button id="helpBtn" aria-label="How to play">?</button></div>
+    </header>
+    <main class="game-layout">
+      <aside class="left-rail">
+        <section class="sim-card"><div class="sim-head"><div class="sim-avatar" id="avatar">◉</div><div><span class="eyebrow">YOUR SIM</span><h1 id="simName">New arrival</h1><p id="simTag">Finding your feet · Day 1</p></div><button id="profileBtn" class="icon-btn" aria-label="Open profile">⋯</button></div><div class="level-row"><span id="levelLabel">LEVEL 1</span><span id="xpLabel">0 / 100 XP</span></div><div class="xp-track"><i id="xpBar"></i></div></section>
+        <section class="needs-card"><div class="section-label"><span>NEEDS</span><button id="needsBtn">Details</button></div><div id="needsList"></div></section>
+        <section class="wallet-card"><div><span class="eyebrow">WALLET</span><strong id="wallet">¥3,200</strong><small>Virtual yuan · no cash value</small></div><button id="phoneBtn" class="phone-button">⌕<span>PHONE</span></button></section>
+        <section class="today-card"><div class="section-label"><span>TODAY</span><span id="weather">−4° · Clear</span></div><div class="today-time"><strong id="clock">08:40</strong><span id="period">Monday · Autumn</span></div><div class="agenda" id="agenda"></div></section>
+        <nav class="rail-nav"><button class="active" data-view="city">⌂ <span>City</span></button><button data-view="phone">▣ <span>Phone</span></button><button data-view="sim">◒ <span>My Sim</span></button><button data-view="home">⌂ <span>Home</span></button></nav>
+      </aside>
+      <section class="city-stage"><div class="stage-head"><div><span class="eyebrow">ONE CITY · MANY STORIES</span><h2>Find your rhythm in Shenyang.</h2><p>Work, wander, make friends, and build a life that feels like yours.</p></div><div class="stage-actions"><button id="mapBtn" class="soft-btn">⌖ Map</button><button id="jobsBtn" class="soft-btn">▤ Jobs</button><button id="questsBtn" class="soft-btn">✦ Goals</button></div></div><div class="map-card"><div class="map-topline"><span>YOU ARE IN <b id="currentPlace">Heping District</b></span><span class="map-hint">Tap a place to see what’s happening</span></div><div class="map-canvas" id="mapCanvas"><svg viewBox="0 0 900 500" role="img" aria-label="Illustrated map of Shenyang districts"><path class="river" d="M-20 355 C150 275 260 390 405 300 S650 230 920 305"/><path class="road road-a" d="M-20 160 C220 140 330 200 470 156 S700 90 920 135"/><path class="road road-b" d="M180 -20 C220 130 180 210 275 310 S360 470 360 520"/><path class="road road-c" d="M580 -20 C565 120 620 180 570 280 S560 410 645 520"/><path class="block" d="M30 215h120v70H30zM380 210h110v74H380zM690 170h140v80H690zM90 390h150v60H90zM690 350h150v70H690z"/><g class="district-labels"><text x="70" y="250">和平区</text><text x="405" y="252">沈河区</text><text x="710" y="215">大东区</text><text x="110" y="425">浑南区</text><text x="715" y="390">皇姑区</text></g></svg><div id="mapPins"></div><div class="map-legend"><span><i class="you-dot"></i> You</span><span><i class="people-dot"></i> City locations</span></div></div></div><div class="feed-head"><div><span class="eyebrow">WHAT’S HAPPENING</span><h3>City pulse</h3></div><button id="refreshPulse" class="text-btn">Refresh ↻</button></div><div class="pulse-grid" id="pulseGrid"></div></section>
+      <aside class="right-panel" id="rightPanel"><div class="panel-kicker">YOUR NEXT MOVE</div><div id="panelContent"></div><div class="panel-tip"><span>✦</span><p id="tipText">Keep your needs balanced. A good day in China starts with enough energy to show up.</p></div></aside>
+    </main>
+  </div>
+  <dialog id="onboarding"><form method="dialog" id="onboardingForm"><div class="onboard-progress"><span id="stepCount">01 / 05</span><div><i id="stepBar"></i></div></div><div id="onboardContent"></div><div class="onboard-actions"><button type="button" class="ghost-btn" id="backStep">Back</button><button type="button" class="primary-btn" id="nextStep">Continue</button></div><p class="fine-print">ChinaLife is a fictional game. Virtual yuan has no real-world value. You can play locally, or sign in with Hafrik to save across devices.</p><button type="button" id="onboardCloud" class="text-btn">Sign in with Hafrik or load your character</button></form></dialog>
+  <dialog id="activityDialog"><div id="activityContent"></div><button class="close-x" id="closeActivity" aria-label="Close">×</button></dialog>
+  <dialog id="phoneDialog"><div class="phone-frame"><div class="phone-status"><span id="phoneTime">08:40</span><span>ChinaLife</span><span>⌁</span></div><div id="phoneContent"></div></div><button class="close-x" id="closePhone" aria-label="Close">×</button></dialog>
+  <dialog id="helpDialog"><h2>How ChinaLife works</h2><p>ChinaLife is a single-player life simulation. You create a foreigner, choose your start, work shifts, manage six needs, travel between districts, build skills and relationships, and improve your home.</p><div class="help-grid"><div><b>1. Make a life</b><span>Look → personality → dream → background → home.</span></div><div><b>2. Keep moving</b><span>Activities take game time and change your needs.</span></div><div><b>3. Build status</b><span>Skills unlock better jobs, businesses and neighbourhoods.</span></div><div><b>4. Live together</b><span>Events, chats and other players will share the same city.</span></div></div><button class="primary-btn" id="closeHelp">Got it</button></dialog>
+  <dialog id="audioDialog"><div id="audioContent" class="activity-panel"></div><button id="closeAudio" class="close-x" aria-label="Close DJ booth">×</button></dialog><dialog id="voiceDialog"><div id="voiceContent" class="activity-panel"></div><button id="closeVoice" class="close-x" aria-label="Close voice controls">×</button></dialog><div id="remoteAudio"></div><dialog id="socialDialog"><div class="social-shell"><header class="social-heading"><div><span class="eyebrow">CHINALIFE TOGETHER</span><h2 id="socialTitle">Venue chat</h2><p id="socialSubtitle"></p></div><button id="closeSocial" class="social-close" aria-label="Close chat">×</button></header><nav id="socialTabs" class="social-tabs" aria-label="Social tabs"></nav><div id="socialBody" class="social-body"></div><form id="chatForm" class="chat-compose" hidden><label class="sr-only" for="chatInput">Your message</label><input id="chatInput" maxlength="400" placeholder="Say something…" autocomplete="off"><button id="chatSend" type="submit">Send</button></form><p id="socialFeedback" role="status"></p></div></dialog><dialog id="cloudDialog"><div id="cloudContent" class="activity-panel"></div><button class="close-x" id="closeCloud" aria-label="Close cloud account">×</button></dialog><div id="toast" role="status"></div><script src="cities.js"></script><script src="catalog.js"></script><script>window.ChinaLifeDeferSetup=true;</script><script src="game.js"></script><script type="module" src="world.js"></script><script type="module" src="preview.js"></script><script type="module" src="cloud.js"></script><script type="module" src="social.js"></script><script type="module" src="audio.js"></script><script type="module" src="voice.js"></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+const reply=(data,status=200)=>Response.json(data,{status,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
+const storage=env=>{if(!env.DB)throw new Error('Database binding unavailable');return env.DB};
+const user=request=>{const id=request.headers.get('oai-authenticated-user-id'),email=request.headers.get('oai-authenticated-user-email');return id&&email?{id,email}:null};
+async function body(request){if(!request.headers.get('content-type')?.startsWith('application/json'))throw Object.assign(new Error('Expected JSON'),{status:415});const text=await request.text();if(text.length>100000)throw Object.assign(new Error('Request is too large'),{status:413});let input;try{input=JSON.parse(text)}catch{throw Object.assign(new Error('Invalid JSON'),{status:400})}if(!input||typeof input!=='object'||Array.isArray(input))throw Object.assign(new Error('Expected a JSON object'),{status:400});return input}
+async function saveRow(db,id){return db.prepare('SELECT state_json, revision, updated_at FROM character_saves WHERE user_id = ?').bind(id).first()}
+function formatSave(row){return row?{state:JSON.parse(row.state_json),revision:row.revision,updatedAt:row.updated_at}:{state:null,revision:0,updatedAt:null}}
+export default {async fetch(request,env){const url=new URL(request.url);if(!url.pathname.startsWith('/api/')){if(!['GET','HEAD'].includes(request.method))return new Response('Method not allowed',{status:405});const asset=assets[url.pathname==='/'?'/index.html':url.pathname];if(!asset)return new Response('Not found',{status:404});return new Response(request.method==='HEAD'?null:asset[1],{headers:{'content-type':asset[0],'cache-control':'no-cache','x-content-type-options':'nosniff','referrer-policy':'same-origin'}})}
+  const identity=user(request);
+  if(url.pathname==='/api/account'&&request.method==='GET')return reply({signedIn:!!identity,email:identity?.email||null,id:identity?await publicIdentity(identity.id):null});
+  if(!identity)return reply({error:'Sign in with ChatGPT to use cloud features.'},401);
+  if(!['GET','HEAD'].includes(request.method)&&request.headers.get('origin')!==url.origin)return reply({error:'This request must come from the game.'},403);
+  try{const db=storage(env);const social=await socialRoute(request,db,identity,url);if(social)return social;const media=await mediaRoute(request,db,identity,url);if(media)return media;
+    if(url.pathname==='/api/save'&&request.method==='GET')return reply(formatSave(await saveRow(db,identity.id)));
+    if(url.pathname==='/api/save'&&request.method==='PUT'){
+      const input=await body(request);if(!Number.isInteger(input.revision)||input.revision<0)return reply({error:'Invalid save revision'},400);let state;try{state=validateSave(input.state)}catch{return reply({error:'Invalid character save'},400)}const json=JSON.stringify(state),now=Date.now();let result;
+      if(input.revision===0)result=await db.prepare('INSERT INTO character_saves (user_id, state_json, revision, updated_at) VALUES (?, ?, 1, ?) ON CONFLICT(user_id) DO NOTHING').bind(identity.id,json,now).run();
+      else result=await db.prepare('UPDATE character_saves SET state_json = ?, revision = revision + 1, updated_at = ? WHERE user_id = ? AND revision = ?').bind(json,now,identity.id,input.revision).run();
+      if(!result.meta?.changes)return reply({error:'A newer cloud save exists. Load it before saving again.',conflict:true,...formatSave(await saveRow(db,identity.id))},409);
+      return reply({revision:input.revision+1,updatedAt:now});
+    }
+    if(url.pathname==='/api/presence'&&request.method==='DELETE'){await db.prepare('DELETE FROM city_presence WHERE user_id = ?').bind(identity.id).run();return reply({ok:true})}
+    if(url.pathname==='/api/presence'&&request.method==='POST'){
+      const input=await body(request);input.city=input.city??'Shenyang';if(!Object.keys(CITY_DATA).includes(input.city)||!L.some(p=>p[0]===input.place)||typeof input.name!=='string'||!input.name.trim()||input.name.length>22||!/^#[0-9a-f]{6}$/i.test(input.color)||!/^#[0-9a-f]{6}$/i.test(input.skin)||!['cropped','bun','cap'].includes(input.hair)||![input.x,input.z].every(n=>Number.isFinite(n)&&Math.abs(n)<=40))return reply({error:'Invalid player presence'},400);
+      const publicId=await publicIdentity(identity.id);await db.prepare('INSERT INTO player_profiles (user_id, public_id, sim_name, color, skin, hair, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET sim_name = excluded.sim_name, color = excluded.color, skin = excluded.skin, hair = excluded.hair, updated_at = excluded.updated_at').bind(identity.id,publicId,input.name.trim(),input.color,input.skin,input.hair,Date.now()).run();
+      await db.prepare('INSERT INTO city_presence (user_id, public_id, sim_name, place, color, skin, hair, x, z, seen_at, city) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET sim_name = excluded.sim_name, place = excluded.place, color = excluded.color, skin = excluded.skin, hair = excluded.hair, x = excluded.x, z = excluded.z, seen_at = excluded.seen_at, city = excluded.city').bind(identity.id,publicId,input.name.trim(),input.place,input.color,input.skin,input.hair,input.x,input.z,Date.now(),input.city).run();
+      const rows=await db.prepare('SELECT public_id AS id, sim_name AS name, color, skin, hair, x, z FROM city_presence WHERE city = ? AND place = ? AND seen_at > ? AND user_id != ? AND NOT EXISTS (SELECT 1 FROM player_blocks b WHERE (b.owner_id = ? AND b.peer_id = city_presence.user_id) OR (b.owner_id = city_presence.user_id AND b.peer_id = ?)) ORDER BY seen_at DESC LIMIT 20').bind(input.city,input.place,Date.now()-60000,identity.id,identity.id,identity.id).all();return reply({players:rows.results||[]});
+    }
+    return reply({error:'Not found'},404);
+  }catch(error){if(error.status)return reply({error:error.message},error.status);console.error('ChinaLife API failed',{route:url.pathname,message:error.message});return reply({error:'Cloud service is temporarily unavailable. Your device save is still safe.'},503)}
+}};

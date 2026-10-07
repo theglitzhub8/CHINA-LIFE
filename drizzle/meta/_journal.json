@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1791246359430,
+      "tag": "0000_flawless_firelord",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1791246461156,
+      "tag": "0001_common_red_wolf",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791248173939,
+      "tag": "0002_huge_wendigo",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1791248480926,
+      "tag": "0003_marvelous_wasp",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1791248612067,
+      "tag": "0004_bumpy_ma_gnuci",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1791249712031,
+      "tag": "0005_married_jane_foster",
+      "breakpoints": true
+    }
+  ]
+}
