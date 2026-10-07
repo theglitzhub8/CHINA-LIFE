@@ -86,3 +86,31 @@ export function moveVehicle(v,dt,moving){
  if(v.axis==='z'){v.body.position.set(v.lane,v.y,v.p);v.body.rotation.y=v.direction>0?-Math.PI/2:Math.PI/2}
  else{v.body.position.set(v.p,v.y,v.lane);v.body.rotation.y=v.direction>0?0:Math.PI}
 }
+
+// A passenger jet pointing along +x: rounded fuselage, swept wings, engines, tail fin and a window stripe.
+export function jet(livery=0x1f6fb5){
+ const g=new THREE.Group();
+ const body=new THREE.Mesh(new THREE.CapsuleGeometry(.42,4.2,6,14),mat(0xf4f6f7));body.rotation.z=Math.PI/2;body.position.y=.9;body.castShadow=true;g.add(body);
+ box(g,4.1,.12,.86,livery,0,.72,0);box(g,3.8,.1,.88,0x2c3e4c,.2,1.08,0);
+ const nose=new THREE.Mesh(new THREE.SphereGeometry(.42,14,10),mat(0xf4f6f7));nose.scale.set(1.4,1,1);nose.position.set(2.5,.9,0);g.add(nose);
+ for(const side of [-1,1]){const wing=box(g,1.5,.1,2.8,0xdfe5e8,-.1,.72,side*1.6);wing.rotation.y=side*.32;const eng=new THREE.Mesh(new THREE.CylinderGeometry(.2,.22,.8,12),mat(0x9aa7ad));eng.rotation.z=Math.PI/2;eng.position.set(.15,.5,side*1.25);g.add(eng);const stab=box(g,.7,.08,1.2,0xdfe5e8,-2.3,1.05,side*.7);stab.rotation.y=side*.35}
+ box(g,.9,1.1,.1,livery,-2.3,1.6,0);
+ g.userData.kind='jet';return g;
+}
+// The airfield beside the airport venue: runway, taxiway, terminal, tower, parked jets,
+// one jet that keeps taking off and landing, and another crossing the sky.
+export function airfield(layout){
+ const g=new THREE.Group(),planes=[],[ax]=layout.positions.airport,runZ=74,x0=ax-36,x1=ax+24;g.userData.kind='airfield';
+ box(g,x1-x0+12,.12,30,0xb9c4bf,(x0+x1)/2,-.04,70);
+ box(g,x1-x0+4,.06,4.4,0x3b4650,(x0+x1)/2,.05,runZ);for(let x=x0+4;x<x1;x+=4)box(g,1.8,.02,.16,0xf3f1e6,x,.09,runZ);for(const dz of [-1.9,1.9])box(g,x1-x0+4,.02,.1,0xf3f1e6,(x0+x1)/2,.09,runZ+dz);
+ for(const x of [x0+1,x1-1])for(let k=-1.5;k<=1.5;k+=.75)box(g,.5,.02,.3,0xf3f1e6,x,.09,runZ+k);
+ box(g,x1-x0-6,.06,2.2,0x4a5560,(x0+x1)/2,.05,runZ-6);for(const x of [x0+6,x1-6])box(g,2.2,.06,6,0x4a5560,x,.05,runZ-3);
+ box(g,26,2.6,4,0xe9eef0,ax-6,1.3,60);box(g,26.2,1.4,4.1,0x6f9bb3,ax-6,1.9,60.02);box(g,27,.3,4.8,0x2f4656,ax-6,2.75,60);
+ box(g,1.4,6,1.4,0xe9eef0,ax+14,3,61);box(g,2.6,1.2,2.6,0x6f9bb3,ax+14,6.4,61);box(g,2.9,.25,2.9,0x2f4656,ax+14,7.1,61);
+ const liveries=[0xc8102e,0x1f6fb5,0x0f8a7e];[-16,-6,4].forEach((dx,i)=>{const p=jet(liveries[i]);p.position.set(ax+dx,0,65.5);p.rotation.y=-Math.PI/2;g.add(p);box(g,.5,.5,2.8,0xd7dde0,ax+dx,1.2,63)});
+ // Take off, climb away, then land again on the same runway (seconds per cycle: 26).
+ const hop=jet(0x0f8a7e);g.add(hop);planes.push({body:hop,update(t){const c=t%26;let x,y=0,z=runZ,pitch=0;if(c<6){const u=c/6;x=x0+2+(x1-x0-4)*u*u;y=u>.7?(u-.7)*3:0;pitch=u>.7?.12:0}else if(c<11){const u=(c-6)/5;x=x1+u*40;y=1+u*18;pitch=.18}else if(c<15){x=1e4}else if(c<21){const u=(c-15)/6;x=x0-40+u*40;y=18*(1-u)+.0;pitch=-.1}else{const u=(c-21)/5,e=1-(1-u)*(1-u);x=x0+(x1-x0-8)*e;y=0;pitch=0}hop.visible=x<1e3;hop.position.set(x,y,z);hop.rotation.set(0,0,pitch)}});
+ // A cruising jet crosses the whole city high above it.
+ const cruise=jet(0xc8102e);cruise.scale.setScalar(.8);g.add(cruise);planes.push({body:cruise,update(t){const c=(t%40)/40;cruise.position.set(-120+240*c,22,-30+c*20);cruise.rotation.set(0,-.08,0)}});
+ return {group:g,planes};
+}
