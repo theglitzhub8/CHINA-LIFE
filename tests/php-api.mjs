@@ -43,7 +43,7 @@ test('save revision prevents lost updates and isolates accounts',async()=>{
 });
 test('presence preserves appearance, excludes self, separates cities and expires stale players',async()=>{
  for(const id of [1,2])assert.equal((await call(id,'presence.php','POST',presence())).httpStatus,200);
- let r=await call(1,'presence.php?city=Shenyang');assert.equal(r.data.players[0].id,'2');assert.equal(r.data.players[0].skin,'#8b5c43');assert.equal(r.data.players[0].hair,'cap');assert.equal(typeof r.data.players[0].x,'number');
+ let r=await call(1,'presence.php?city=Shenyang');assert.equal(r.data.players[0].id,'2');assert.equal(r.data.players[0].skin,'#8b5c43');assert.equal(r.data.players[0].hair,'cap');assert.equal(typeof r.data.players[0].x,'number');assert.equal(typeof r.data.players[0].xp,'number');
  await call(2,'presence.php','POST',presence('Beijing'));assert.equal((await call(1,'presence.php?city=Shenyang')).data.players.length,0);
  sql("USE chinalife_test; UPDATE chinalife_presence SET seen_at=DATE_SUB(NOW(),INTERVAL 1 MINUTE) WHERE user_id=2");assert.equal((await call(1,'presence.php?city=Beijing')).data.players.length,0);
  assert.equal((await call(1,'presence.php','POST',{...presence(),city:'invalid'})).httpStatus,400);

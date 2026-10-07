@@ -157,3 +157,7 @@ Verify with two different Hafrik accounts: invite, accept, meet at the venue, re
 ## Shift feedback
 
 Steady and Focused shift now show availability inside the shift window, including next-day start, one shift per game day, and minimum energy/hunger. Both buttons show their energy cost. This is a client-only update: run the normal update-server script; no database migration is needed for this fix. Verified both shift buttons across all eight jobs and visible feedback for blocked shifts.
+
+## Nearby player ranks
+
+Real-player name labels now show the existing XP rank icon/title beneath the name. Presence reads XP from each account's saved game state, rather than accepting a client-supplied rank. Labels update on presence refresh and persist across map/venue rebuilds. Deploy the API and public files together using update-server.sh; no schema migration is required. Verified with two-account API tests and rank-label update tests.
