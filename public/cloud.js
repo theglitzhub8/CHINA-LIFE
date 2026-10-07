@@ -7,8 +7,9 @@ let message = 'Sign in with Hafrik to save across devices.', liveToken = storage
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(path, method = 'GET', data) {
   const query = method === 'GET' && data ? new URLSearchParams(data).toString() : '';
+  const passwordLogin=path==='/auth/login.php';
   const response = await fetch(HAFRIK_API + path + (query ? (path.includes('?') ? '&' : '?') + query : ''), {
-    method, credentials:liveToken ? 'omit' : 'include', headers:{...(liveToken ? {Authorization:'Bearer ' + liveToken} : {}), ...(data && method !== 'GET' ? {'content-type':'application/json'} : {})},
+    method, credentials:passwordLogin || liveToken ? 'omit' : 'include', headers:{...(liveToken && !passwordLogin ? {Authorization:'Bearer ' + liveToken} : {}), ...(data && method !== 'GET' ? {'content-type':'application/json'} : {})},
     body:data && method !== 'GET' ? JSON.stringify(data) : undefined,
   });
   let result; try {result = await response.json()} catch {throw Error('Hafrik did not return JSON.')}
@@ -70,13 +71,14 @@ async function connect(session) {
   }
 }
 async function login(event) {
-  event.preventDefault(); const feedback = $('hafrikLoginFeedback'); feedback.textContent = 'Connecting…';
+  event.preventDefault(); const feedback = $('hafrikLoginFeedback'),button=$('hafrikLoginForm').querySelector('button[type="submit"]');if(button.disabled)return;button.disabled=true;feedback.textContent = 'Connecting…';
   try {
     const result = await api('/auth/login.php', 'POST', {login:$('hafrikLogin').value.trim(), password:$('hafrikPassword').value});
     if (!result.data?.token) throw Error(result.message || 'Login failed');
     storage.setItem(TOKEN_KEY, result.data.token);
     if (!await connect(result.data)) feedback.textContent = message;
   } catch (error) {feedback.textContent = error.message}
+  finally {button.disabled=false}
 }
 async function logout() {
   authEpoch++; await leave(); auto = false; clearTimeout(timer); liveToken = ''; storage.setItem(TOKEN_KEY, ''); storage.setItem(PROFILE_KEY, '');

@@ -76,3 +76,26 @@ test('guest student character moves into a new Hafrik account and reloads once',
  assert.equal(await t.context.ChinaLifeAuth.connect({token:'alice',user:{id:'alice'}}),true);assert.equal(t.game.state.name,'Guest Student');assert.equal(t.game.state.story.index,1);assert.equal(t.context.ChinaLifeCloud.joined,false);assert.equal(api.saves.get('alice').student.major,'Computer Science');
  const returned=await client(api,'alice');assert.equal(returned.game.state.story.index,1);assert.equal(returned.game.state.student.studyLevel,'Undergraduate');assert.equal(returned.document.getElementById('onboarding').open,false);
 });
+
+test('manual login omits cookies and stale tokens, then restores the account with the new token',async()=>{
+ const api=server();api.saves.set('alice',{...fixture(),name:'Saved Alice'});
+ const t=await client(api,'unused',{native:false});let loginRequest;
+ t.context.fetch=async (url,request)=>{
+  if(new URL(url).pathname.endsWith('/auth/login.php')){
+   loginRequest=request;
+   // Model the browser's rejection of wildcard CORS with credentialed requests.
+   if(request.credentials==='include')throw TypeError('Failed to fetch');
+   return Response.json({status:'success',data:{token:'alice',user:{id:'alice'}}});
+  }
+  return api.fetch(url,request);
+ };
+ t.context.ChinaLifeCloud.open();t.document.getElementById('hafrikLogin').value='alice';t.document.getElementById('hafrikPassword').value='test-only-password';
+ await t.document.getElementById('hafrikLoginForm').onsubmit({preventDefault(){}});
+ assert.equal(loginRequest.credentials,'omit');assert.equal(loginRequest.headers.Authorization,undefined);assert.equal(JSON.parse(loginRequest.body).login,'alice');assert.equal(t.context.ChinaLifeCloud.signedIn,true);assert.equal(t.game.state.name,'Saved Alice');assert.equal(t.document.getElementById('onboarding').open,false);assert.equal(t.document.getElementById('cloudDialog').open,false);assert.equal(t.stored.get('chinalife-hafrik-token'),'alice');
+ // A second password login must also omit the previous account's bearer token.
+ await t.context.ChinaLifeAuth.request('/auth/login.php','POST',{login:'alice',password:'test-only-password'});assert.equal(loginRequest.headers.Authorization,undefined);
+});
+
+test('manual login reports invalid credentials and allows another attempt',async()=>{
+ const t=await client(server(),'unused',{native:false});t.context.fetch=async()=>Response.json({status:'error',message:'Invalid credentials'},{status:401});t.context.ChinaLifeCloud.open();t.document.getElementById('hafrikLogin').value='alice';t.document.getElementById('hafrikPassword').value='wrong-test-password';await t.document.getElementById('hafrikLoginForm').onsubmit({preventDefault(){}});assert.equal(t.document.getElementById('hafrikLoginFeedback').textContent,'Invalid credentials');assert.equal(t.document.querySelector('#hafrikLoginForm button[type="submit"]').disabled,false);assert.equal(t.context.ChinaLifeCloud.signedIn,false);
+});
