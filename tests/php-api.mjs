@@ -20,7 +20,7 @@ before(async()=>{
  const log=fs.openSync(path.join(tmp,'mysql.log'),'a');mysql=spawn('mysqld',['--no-defaults','--datadir='+path.join(tmp,'data'),'--socket='+socket,'--skip-networking','--mysqlx=0','--pid-file='+path.join(tmp,'mysql.pid')],{stdio:['ignore',log,log]});
  await waitFor(()=>sql('SELECT 1').trim()==='1');
  sql('CREATE DATABASE chinalife_test; USE chinalife_test; CREATE TABLE users(user_id INT UNSIGNED PRIMARY KEY,user_name VARCHAR(100)); INSERT INTO users VALUES '+Array.from({length:12},(_,i)=>`(${i+1},'user${i+1}')`).join(','));
- const root=path.join(tmp,'web/api/v4');fs.mkdirSync(root,{recursive:true});fs.cpSync('chinalife-api',path.join(root,'chinalife'),{recursive:true});
+ const root=path.join(tmp,'web/api/v4');fs.mkdirSync(root,{recursive:true});fs.cpSync('chinalife-api',path.join(root,'chinalife'),{recursive:true});fs.writeFileSync(path.join(root,'chinalife/admin-config.php'),`<?php return ['usernames'=>['user1']];`);
  fs.writeFileSync(path.join(root,'db.php'),`<?php mysqli_report(MYSQLI_REPORT_ERROR|MYSQLI_REPORT_STRICT);`);
  fs.writeFileSync(path.join(root,'helpers.php'),`<?php function get_db_connection(){$db=new mysqli('localhost','root','','chinalife_test',0,getenv('CHINALIFE_TEST_SOCKET'));$db->set_charset('utf8mb4');return $db;} if(($_SERVER['REQUEST_METHOD']??'')==='OPTIONS'){http_response_code(204);exit;} function json_response($status,$data=null,$message=''){header('Content-Type: application/json');echo json_encode(compact('status','data','message'));exit;} function auth_user($db){$token=$_SERVER['HTTP_AUTHORIZATION']??'';if(!preg_match('/^Bearer test-([1-9][0-9]*)$/',$token,$m)){http_response_code(401);json_response('error',null,'Unauthorized');}$s=$db->prepare('SELECT * FROM users WHERE user_id=?');$id=(int)$m[1];$s->bind_param('i',$id);$s->execute();return $s->get_result()->fetch_assoc()?:[];}`);
  // Upgrade the schema already uploaded to the Hafrik server, twice, preserving its rows.
@@ -180,4 +180,27 @@ test('online counts players active in each city and the total number of saved pl
  await call(12,'presence.php','POST',presence('Shenyang','plaza'));
  const r=await call(12,'online.php');assert.equal(r.httpStatus,200);assert.ok(r.data.cities.Shenyang>=1);assert.ok(r.data.online>=r.data.cities.Shenyang);assert.ok(r.data.players>=1);
  assert.equal((await call(null,'online.php')).httpStatus,401);
+});
+
+test('only admins can put money in wallets, and grants reach the saved character',async()=>{
+ assert.equal((await call(2,'admin.php','POST',{action:'stats'})).httpStatus,403);
+ const stats=await call(1,'admin.php','POST',{action:'stats'});assert.equal(stats.httpStatus,200);assert.ok(stats.data.players>=1);
+ const found=await call(1,'admin.php','POST',{action:'search',query:'user12'});assert.equal(found.data.players[0].id,'12');
+ const before=(await call(12,'save.php')).data.save.game;
+ const grant=await call(1,'admin.php','POST',{action:'grant',user_id:12,amount:5000,note:'Launch gift'});assert.equal(grant.httpStatus,200);assert.equal(grant.data.balance,before.money+5000);
+ const after=(await call(12,'save.php')).data.save.game;assert.equal(after.money,before.money+5000);assert.equal(after.transferTotal,(before.transferTotal||0)+5000);
+ assert.equal((await call(1,'admin.php','POST',{action:'grant',user_id:12,amount:1.5})).httpStatus,400);
+ assert.equal((await call(2,'admin.php','POST',{action:'grant',user_id:2,amount:999999})).httpStatus,403);
+ assert.ok((await call(1,'admin.php','POST',{action:'stats'})).data.log.some(l=>l.action==='grant'&&l.note==='Launch gift'));
+});
+
+test('admin events reward each player once, only at the venue, and end on request',async()=>{
+ const created=await call(1,'admin.php','POST',{action:'create_event',title:'Afrobeats Night',body:'Dance till late',place:'blood',reward:700,hours:2,billboard:true,link:''});assert.equal(created.httpStatus,200);
+ const list=await call(12,'events.php?city=Shenyang');const ev=list.data.events.find(e=>e.title==='Afrobeats Night');assert.ok(ev&&ev.billboard&&!ev.joined);assert.equal(list.data.admin,false);
+ assert.equal((await call(12,'events.php','POST',{id:Number(ev.id)})).httpStatus,409);
+ await call(12,'presence.php','POST',presence('Shenyang','blood'));const money=(await call(12,'save.php')).data.save.game.money;
+ const joined=await call(12,'events.php','POST',{id:Number(ev.id)});assert.equal(joined.httpStatus,200);assert.equal(joined.data.reward,700);assert.equal((await call(12,'save.php')).data.save.game.money,money+700);
+ assert.equal((await call(12,'events.php','POST',{id:Number(ev.id)})).httpStatus,409);
+ assert.equal((await call(1,'admin.php','POST',{action:'create_event',title:'Bad',place:'nowhere',reward:1,hours:1})).httpStatus,400);
+ await call(1,'admin.php','POST',{action:'end_event',id:Number(ev.id)});assert.ok(!(await call(12,'events.php?city=Shenyang')).data.events.some(e=>e.id===ev.id));
 });

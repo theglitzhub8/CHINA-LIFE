@@ -108,3 +108,24 @@ function cl_message_access(array $row): void {
         if (!in_array($uid,[$sender,$recipient],true) || !cl_friends($sender,$recipient) || cl_blocked($sender,$recipient)) cl_fail('Message unavailable',404);
     } else {cl_presence($uid,$row['city'],$row['place']); if (cl_blocked($uid,$sender)) cl_fail('Message unavailable',404);}
 }
+
+// Admins are Hafrik usernames; admin-config.php on the server (not in git) can replace the list.
+function cl_is_admin(): bool {
+    global $auth;
+    $config=is_file(__DIR__.'/admin-config.php')?require __DIR__.'/admin-config.php':[];
+    $admins=array_map('strtolower',(array)($config['usernames']??['hafrik']));
+    return in_array(strtolower((string)($auth['user_name']??'')),$admins,true);
+}
+function cl_admin(): void {if (!cl_is_admin()) cl_fail('Admin only',403);}
+// Adds money to a saved character the same way transfers do, so an open game picks it up.
+// Call inside a transaction.
+function cl_credit(int $userId, int $amount): int {
+    $row=cl_one('SELECT game_state FROM chinalife_saves WHERE user_id=? FOR UPDATE','i',[$userId]);
+    if (!$row) cl_fail('That player has no saved character yet',404);
+    $game=json_decode($row['game_state'],true,512,JSON_THROW_ON_ERROR);
+    $money=(int)($game['money']??0)+$amount;
+    if ($money>1000000000||$money<-10000000) cl_fail('That would put the balance out of range',409);
+    $game['money']=$money;$game['transferTotal']=(int)($game['transferTotal']??0)+$amount;
+    cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($game,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),$userId]);
+    return $money;
+}

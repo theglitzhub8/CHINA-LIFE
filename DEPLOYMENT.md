@@ -54,6 +54,16 @@ php /path/to/hafrik-root/api/v4/chinalife/migrate.php
 
 The update script uses a fast-forward pull from `main`. A dirty or diverged checkout should be resolved before pulling; it will not reset or discard server edits.
 
+## Admin panel
+
+The Hafrik account `hafrik` sees an **Admin** app on the in-game phone (Overview, Players, Events, Reports). Every admin request is checked on the server. To change who is an admin, create `/www/wwwroot/hafrik.com/api/v4/chinalife/admin-config.php` (not in git):
+
+```php
+<?php return ['usernames' => ['hafrik']];
+```
+
+Admin events and the admin log need the migration after updating.
+
 ## Voice relay (Cloudflare TURN)
 
 Voice connects players directly when it can and relays through Cloudflare TURN when mobile data or strict Wi-Fi blocks a direct connection. The API token must stay on the server only. Create the config once (the deploy script never overwrites or deletes it):

@@ -47,3 +47,11 @@ test('daily red envelopes appear in their venue, pay once and unlock Treasure Hu
  t.game.state.treasureTotal=9;const other=['market','cafe','african','hotel','night','blood','skylight','campus','university','liaoning','dongbei','ef','academy','gym','park','mall','plaza','church','business','station','airport'].find(id=>t.game.treasureHere(id));t.game.state.place=other;t.game.collectTreasure(other);assert.ok(t.game.state.secrets.includes('treasure-hunter'));
  const saved=JSON.parse(JSON.stringify(t.game.state));t.game.loadSave(saved);assert.equal(t.game.huntSummary().found,2);assert.ok(t.game.state.secrets.includes('treasure-hunter'));
 });
+
+test('live events show in the venue panel, on the map and on billboards, and the admin app is admin-only',()=>{
+ const t=setup();t.game.phone();assert.equal(t.document.querySelector('[data-phone="admin"]'),null);
+ t.context.ChinaLifeCloud={isAdmin:true,events:[{id:'5',title:'Afrobeats Night',body:'',place:'blood',reward:700,billboard:true,link:'',joined:false,ends_at:Date.now()+36e5}],joinEvent:async()=>{},players:[],cityPlayers:[]};
+ t.game.state.place='blood';t.internal.render();t.world.venue('blood');assert.ok([...t.document.querySelectorAll('#worldActivities button')].some(b=>/Afrobeats Night/.test(b.textContent)));
+ t.world.map();assert.ok(t.document.querySelector('.venue-label.has-event'));assert.ok([...t.document.querySelectorAll('.ad-label')].every(l=>/Afrobeats Night/.test(l.textContent)));
+ t.game.phone();assert.ok(t.document.querySelector('[data-phone="admin"]'));
+});
