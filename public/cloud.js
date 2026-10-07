@@ -166,7 +166,7 @@ function reconcileTransfers(saved) {
   const delta=(saved.state?.transferTotal||0)-(remote.state?.transferTotal||0);
   if(!delta)return false;
   game.state.money+=delta;game.state.transferTotal=saved.state.transferTotal;remote=saved;
-  game.save();game.refresh?.();game.toast(delta>0?'Received ¥'+delta+' game coins.':'Game coin transfer completed.');
+  game.save();game.refresh?.();game.toast(delta>0?'You received ¥'+delta+'.':'Money sent.');
   return true;
 }
 async function syncTransfers(){if(!account||!auto||busy||loading||!game.state.created||document.hidden)return;const generation=authEpoch,revision=remote.revision;try{const saved=await loadRemote();if(generation===authEpoch&&!busy&&revision===remote.revision)reconcileTransfers(saved)}catch{}}

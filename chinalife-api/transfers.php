@@ -18,8 +18,8 @@ try {
  if($receipt){$db->rollback();if((int)$receipt['recipient_id']!==$peer||(int)$receipt['amount']!==$amount)cl_fail('Request already used',409);json_response('success',['sent'=>true,'duplicate'=>true]);}
  if(count($rows)!==2){$db->rollback();cl_fail('Both players need a saved character',409);}
  $games=[];foreach($rows as $row)$games[(int)$row['user_id']]=json_decode($row['game_state'],true,512,JSON_THROW_ON_ERROR);
- if(($games[$uid]['money']??0)<$amount){$db->rollback();cl_fail('Not enough game coins',409);}
- if(($games[$peer]['money']??0)+$amount>1000000000){$db->rollback();cl_fail('Recipient game coin balance is full',409);}
+ if(($games[$uid]['money']??0)<$amount){$db->rollback();cl_fail('Not enough money',409);}
+ if(($games[$peer]['money']??0)+$amount>1000000000){$db->rollback();cl_fail('Recipient balance is full',409);}
  foreach([$uid=>-$amount,$peer=>$amount] as $id=>$delta){$g=$games[$id];$g['money']+=$delta;$g['transferTotal']=($g['transferTotal']??0)+$delta;cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($g,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),$id]);}
  cl_run('INSERT INTO chinalife_transfers(id,sender_id,recipient_id,amount,created_at) VALUES(?,?,?,?,NOW())','siii',[$key,$uid,$peer,$amount]);$db->commit();json_response('success',['sent'=>true,'amount'=>$amount]);
 }catch(Throwable $e){$db->rollback();throw $e;}
