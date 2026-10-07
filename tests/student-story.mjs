@@ -5,7 +5,7 @@ test('inside-China students keep their university and start at the campus task',
 test('every role starts in Shenyang with its own money, skill and phone',()=>{
  for(const [role,money,skill,first] of [['Student',3200,'Study','Student story'],['Entrepreneur',8000,'Network','My business'],['Worker',3200,'Digital','Career'],['Creator',3200,'Creativity','Studio'],['Tourist',6000,'Social','Trips']]){
   const t=create('inside',role);assert.equal(t.game.state.background,role);assert.equal(t.game.state.money,money);assert.equal(t.game.state.skills[skill],2);assert.equal(t.game.state.city,'Shenyang');assert.equal(Boolean(t.game.state.student),role==='Student');
-  t.game.phone();const apps=[...t.document.querySelectorAll('#phoneContent .phone-app span')].map(x=>x.textContent);assert.equal(apps[0],first);assert.equal(apps.includes('Student story'),role==='Student');assert.equal(apps.includes('Jobs')||apps.includes('Career')||apps.includes('Part-time jobs'),role!=='Tourist');
+  t.game.phone();const apps=[...t.document.querySelectorAll('#phoneContent .phone-app span')].map(x=>x.textContent);assert.equal(t.document.querySelector('#phoneContent .phone-dock .phone-app span').textContent,first);assert.equal(apps.includes('Student story'),role==='Student');assert.equal(apps.includes('Jobs')||apps.includes('Career')||apps.includes('Part-time jobs'),role!=='Tourist');
   assert.equal(harness(JSON.parse(JSON.stringify(t.game.state))).game.state.background,role);
  }
 });
