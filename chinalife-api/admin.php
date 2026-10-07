@@ -48,6 +48,14 @@ if ($action==='end_event') {
     $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);if (!$id) cl_fail('Choose an event');
     cl_run('UPDATE chinalife_events SET ends_at=NOW() WHERE id=? AND ends_at>NOW()','i',[$id]);admin_log('end_event',null,null,(string)$id);json_response('success',['ended'=>true]);
 }
+if ($action==='cities') json_response('success',['open'=>cl_open_cities()]);
+if ($action==='set_cities') {
+    $all=['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];$open=$input['open']??null;
+    if (!is_array($open)||array_diff($open,$all)) cl_fail('Choose valid cities');
+    $value=json_encode(array_values(array_unique(array_merge(['Shenyang'],$open))));
+    cl_run('INSERT INTO chinalife_settings(name,value,updated_at) VALUES(\'open_cities\',?,NOW()) ON DUPLICATE KEY UPDATE value=VALUES(value),updated_at=NOW()','s',[$value]);
+    admin_log('set_cities',null,null,$value);json_response('success',['open'=>json_decode($value,true)]);
+}
 if ($action==='reports') {
     json_response('success',['reports'=>cl_rows('SELECT r.reason,r.message_body body,r.created_at,a.user_name reporter,b.user_name sender FROM chinalife_reports r LEFT JOIN users a ON a.user_id=r.reporter_id LEFT JOIN users b ON b.user_id=r.sender_id ORDER BY r.created_at DESC LIMIT 50')]);
 }

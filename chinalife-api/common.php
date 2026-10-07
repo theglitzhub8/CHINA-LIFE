@@ -129,3 +129,9 @@ function cl_credit(int $userId, int $amount): int {
     cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($game,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),$userId]);
     return $money;
 }
+// Cities players can travel to; Shenyang is always open. Admins change the list from the panel.
+function cl_open_cities(): array {
+    $row=cl_one("SELECT value FROM chinalife_settings WHERE name='open_cities'");
+    $list=$row?json_decode($row['value'],true):null;
+    return array_values(array_unique(array_merge(['Shenyang'],is_array($list)?$list:[])));
+}

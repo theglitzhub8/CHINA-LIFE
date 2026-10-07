@@ -216,7 +216,7 @@ async function refreshOnline(){if(!account||document.hidden)return;try{const res
 setInterval(refreshOnline,30000);window.addEventListener('chinalife:cloudready',refreshOnline);
 // Events created in the admin panel: shown in venues, on the map and on billboards.
 let events=[],admin=false;const seenEvents=new Set();
-async function refreshEvents(){if(!account||document.hidden)return;try{const result=await api('/chinalife/events.php','GET',{city:game.state.city}),data=result.data||result;events=data.events||[];admin=data.admin===true;for(const e of events)if(!seenEvents.has(e.id)){seenEvents.add(e.id);if(!e.joined)game.notify?.('🎉 '+e.title+(e.reward?' · +¥'+e.reward:''),()=>game.eventScreen?.(e.id))}window.dispatchEvent(new CustomEvent('chinalife:events',{detail:events}))}catch{}}
+async function refreshEvents(){if(!account||document.hidden)return;try{const result=await api('/chinalife/events.php','GET',{city:game.state.city}),data=result.data||result;events=data.events||[];admin=data.admin===true;if(Array.isArray(data.cities))game.setOpenCities?.(data.cities);for(const e of events)if(!seenEvents.has(e.id)){seenEvents.add(e.id);if(!e.joined)game.notify?.('🎉 '+e.title+(e.reward?' · +¥'+e.reward:''),()=>game.eventScreen?.(e.id))}window.dispatchEvent(new CustomEvent('chinalife:events',{detail:events}))}catch{}}
 async function joinEvent(id){await api('/chinalife/events.php','POST',{id:Number(id)});await refreshEvents();await syncTransfers()}
 async function adminRequest(action,data={}){const result=await api('/chinalife/admin.php','POST',{action,...data});return result.data||result}
 setInterval(refreshEvents,45000);window.addEventListener('chinalife:cloudready',refreshEvents);

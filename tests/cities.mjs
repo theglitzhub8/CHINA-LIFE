@@ -8,3 +8,8 @@ test('launch opens only Shenyang and lists the other cities as coming soon',()=>
  t.game.trips();assert.match(t.document.getElementById('activityContent').textContent,/Coming soon/);const harbin=Object.keys(t.game.cityData).indexOf('Harbin');t.click('trip-'+harbin);assert.equal(t.game.state.city,'Shenyang');assert.equal(t.game.state.money,100000);
  t.game.state.place='airport';t.game.flights();assert.match(t.document.getElementById('activityContent').textContent,/Coming soon/);t.click('flight-0');assert.equal(t.game.state.flightBookings.length,0);
 });
+
+test('opening a city from the server makes it travelable',()=>{
+ const t=harness({...fixture(),money:100000},{openCities:['Shenyang']});const harbin=Object.keys(t.game.cityData).indexOf('Harbin');t.game.trips();t.click('trip-'+harbin);assert.equal(t.game.state.city,'Shenyang');
+ t.game.setOpenCities(['Shenyang','Harbin']);t.game.trips();t.click('trip-'+harbin);assert.equal(t.game.state.city,'Harbin');
+});

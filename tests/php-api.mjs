@@ -218,3 +218,12 @@ test('the weekly golden envelope pays only the first finder at its venue',async(
  const money=(await call(3,'save.php')).data.save.game.money;const win=await call(3,'golden.php','POST',{});assert.equal(win.httpStatus,200);assert.equal((await call(3,'save.php')).data.save.game.money,money+50000);
  const late=await call(4,'golden.php','POST',{});assert.equal(late.httpStatus,409);assert.match(late.message,/user3/);assert.equal((await call(4,'golden.php')).data.found_by,'user3');
 });
+
+test('admins open cities and every player receives the open list',async()=>{
+ assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['Shenyang']);
+ assert.equal((await call(5,'admin.php','POST',{action:'set_cities',open:['Harbin']})).httpStatus,403);
+ assert.equal((await call(1,'admin.php','POST',{action:'set_cities',open:['Atlantis']})).httpStatus,400);
+ const r=await call(1,'admin.php','POST',{action:'set_cities',open:['Harbin']});assert.deepEqual(r.data.open,['Shenyang','Harbin']);
+ assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['Shenyang','Harbin']);
+ await call(1,'admin.php','POST',{action:'set_cities',open:[]});assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['Shenyang']);
+});
