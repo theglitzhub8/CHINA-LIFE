@@ -22,7 +22,7 @@ php /path/to/hafrik-root/api/v4/chinalife/migrate.php
 
 The first directory contains Hafrik's existing `api/v4/db.php` and `helpers.php`. The second is the document root serving the ChinaLife URL, such as the root for `china-life.hafrik.com` or Hafrik's `china-life` subdirectory. They may be different websites on the same server.
 
-The deploy script copies only the game and its API folder. It does not delete other host files, change existing Hafrik configuration, or run migrations automatically. Run it as the deployment user with access to those two target directories.
+The deploy script copies only the game and its API folder. It does not delete other host files, replace host-specific `.user.ini` settings, change existing Hafrik configuration, or run migrations automatically. Run it as the deployment user with access to those two target directories.
 
 Back up the Hafrik database before the first schema upgrade. `migrate.php` checks whether `users.user_id` is INT UNSIGNED or BIGINT UNSIGNED, creates all required game tables, and adds missing revision/appearance/session columns. It is repeatable and preserves existing rows. Run it from the CLI. `.htaccess` blocks browser access to migrations and schema files on Apache; configure equivalent restrictions if using nginx.
 

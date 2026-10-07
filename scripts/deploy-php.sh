@@ -21,7 +21,7 @@ fi
 command -v rsync >/dev/null || { echo 'Install rsync before deploying' >&2; exit 2; }
 # Do not delete host files or replace Hafrik's shared configuration/authentication.
 # Copy HTML last so newly requested scripts are already available.
-rsync -a --exclude=index.html "$source_root/public/" "$game_root/"
+rsync -a --exclude=index.html --exclude=.user.ini "$source_root/public/" "$game_root/"
 rsync -a "$source_root/chinalife-api/" "$hafrik_root/api/v4/chinalife/"
 rsync -a "$source_root/public/index.html" "$game_root/index.html"
 echo "Files deployed. Run: php '$hafrik_root/api/v4/chinalife/migrate.php'"
