@@ -2,6 +2,7 @@ const game = window.ChinaLife, $ = id => document.getElementById(id);
 const HAFRIK_API = 'https://hafrik.com/api/v4', TOKEN_KEY = 'chinalife-hafrik-token', PROFILE_KEY = 'chinalife-hafrik-profile';
 const storage = {getItem(key) {try {return localStorage.getItem(key)} catch {return null}}, setItem(key, value) {try {localStorage.setItem(key, value)} catch {}}};
 let account = null, remote = {state:null}, auto = false, busy = false, loading = true, timer, presence = false, players = [], epoch = 0, authEpoch = 0, polling = false;
+let joining=null;
 let message = 'Sign in with Hafrik to save across devices.', liveToken = storage.getItem(TOKEN_KEY) || '';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(path, method = 'GET', data) {
@@ -130,7 +131,22 @@ async function refreshPresence() {
     return true;
   } catch (error) {status('Shared city: ' + error.message); return false} finally {polling = false}
 }
-async function join() {if (!account || !game.state.created || game.state.story?.phase==='preparation') return false; if (presence && polling) return true; presence = true; const ok = await refreshPresence(); if (!ok) {presence = false; players = []; publish()} return ok}
+function join() {
+  if(!account||!game.state.created||game.state.story?.phase==='preparation')return Promise.resolve(false);
+  if(joining?.epoch===epoch)return joining.task;
+  const generation=epoch,city=game.state.city,place=game.state.place;presence=true;
+  const task=(async()=>{
+    let ok=await refreshPresence();
+    // Arrival or travel can change the room during the first presence request.
+    if(!ok&&generation===epoch&&presence&&(city!==game.state.city||place!==game.state.place))ok=await refreshPresence();
+    if(generation!==epoch)return false;
+    if(!ok){presence=false;players=[];publish()}
+    return ok;
+  })();
+  joining={epoch:generation,task};
+  task.finally(()=>{if(joining?.task===task)joining=null});
+  return task;
+}
 async function leave() {epoch++; presence = false; players = []; publish(); if (account) try {await api('/chinalife/presence.php', 'DELETE', {})} catch {}}
 async function initialize() {
   if (window.HafrikSession?.token) return connect(window.HafrikSession);
