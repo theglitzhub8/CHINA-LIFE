@@ -53,3 +53,7 @@ test('unaffordable activities open Make money and Today lists what is due',()=>{
  const h=harness({...fixture(),money:5,place:'mall'});h.game.activity('mall',0);assert.match(h.document.getElementById('activityContent').textContent,/Make money/);
  const tasks=h.game.todayTasks().map(t=>t[1]).join(' | ');assert.match(tasks,/Low on money/);assert.match(tasks,/Rent/);h.game.tasks();assert.match(h.document.getElementById('activityContent').textContent,/Today/);
 });
+
+test('a ready daily reward shows a notification banner that opens Rank',()=>{
+ const h=harness({...fixture(),lastVisit:'2000-01-01'});h.internal.render();for(const fn of [...h.timers])if(typeof fn==='function')fn();const banner=h.document.getElementById('gameNotification');assert.ok(banner,'banner');assert.match(banner.textContent,/daily reward/);banner.onclick();assert.match(h.document.getElementById('activityContent').textContent,/Claim daily reward/);
+});

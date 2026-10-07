@@ -228,7 +228,7 @@ async function initialize() {
   return connected;
 }
 window.ChinaLifeAuth = {base:HAFRIK_API,get token(){return liveToken},request:api,connect};
-window.ChinaLifeCloud = {open:show,ready:null,get playerId(){return String(account?.user_id ?? account?.id ?? '')},get signedIn(){return !!account},get joined(){return presence},get players(){return players.filter(p => p.city === game.state.city && p.place === game.state.place)},get cityPlayers(){return players.filter(p => p.city === game.state.city)},refresh:refreshPresence,join,leave,upload,transfer,syncTransfers};
+window.ChinaLifeCloud = {open:show,ready:null,get playerId(){return String(account?.user_id ?? account?.id ?? '')},get signedIn(){return !!account},get joined(){return presence},get players(){return players.filter(p => p.city === game.state.city && p.place === game.state.place)},get online(){return online},get cityPlayers(){return players.filter(p => p.city === game.state.city)},refresh:refreshPresence,join,leave,upload,transfer,syncTransfers};
 $('cloudButton').onclick = show; $('closeCloud').onclick = () => $('cloudDialog').close();
 window.addEventListener('chinalife:save', () => {if (auto && !loading) scheduleSave()});
 window.addEventListener('chinalife:update', () => {if (!loading && account && game.state.created) {if (!presence) join(); else refreshPresence()}});
@@ -241,5 +241,9 @@ async function presenceHeartbeat() {
 }
 setInterval(presenceHeartbeat, 2500);
 setInterval(syncTransfers,5000);
+// Players online per city and in total, for the top bar, travel and rank screens.
+let online=null;
+async function refreshOnline(){if(!account||document.hidden)return;try{const result=await api('/chinalife/online.php'),data=result.data||result;online={online:data.online||0,cities:data.cities||{},players:data.players||0};window.dispatchEvent(new CustomEvent('chinalife:online',{detail:online}))}catch{}}
+setInterval(refreshOnline,30000);window.addEventListener('chinalife:cloudready',refreshOnline);
 window.ChinaLifeCloud.ready = initialize();
 await window.ChinaLifeCloud.ready;

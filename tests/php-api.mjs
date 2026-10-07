@@ -175,3 +175,9 @@ test('leaderboard ranks saved accounts by XP and reports the caller position',as
  const board=await call(10,'leaderboard.php');assert.equal(board.httpStatus,200);const order=board.data.players.map(p=>p.id);assert.ok(order.indexOf('11')<order.indexOf('10'));assert.ok(board.data.players.find(p=>p.id==='10').own);assert.ok(board.data.position>=2);
  assert.equal((await call(null,'leaderboard.php')).httpStatus,401);
 });
+
+test('online counts players active in each city and the total number of saved players',async()=>{
+ await call(12,'presence.php','POST',presence('Shenyang','plaza'));
+ const r=await call(12,'online.php');assert.equal(r.httpStatus,200);assert.ok(r.data.cities.Shenyang>=1);assert.ok(r.data.online>=r.data.cities.Shenyang);assert.ok(r.data.players>=1);
+ assert.equal((await call(null,'online.php')).httpStatus,401);
+});
