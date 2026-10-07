@@ -1,5 +1,5 @@
 window.ChinaLifeCatalog = {
- advertising:{whatsapp:''},
+ advertising:{whatsapp:'+8618940147438'},
  ads:[
  // Open ad space for sale. Every billboard says ADVERTISE HERE and opens WhatsApp to the number below.
  {id:'advertise-city',map:{x:-20,z:-30},venues:['campus','university','liaoning','dongbei','plaza','mall','market','cafe','night','blood','skylight','academy','station','airport','gym','african','ef','business']},
