@@ -108,3 +108,24 @@ test('valid cloud character loads even when the account device cache is invalid'
 test('invalid cloud character is diagnosed and never replaced by the device copy',async()=>{
  const api=server();api.saves.set('alice',{...fixture(),money:'unrecoverable'});const stored=new Map([['chinalife-account-alice',JSON.stringify(fixture())]]);const t=await client(api,'alice',{stored});assert.match(t.document.getElementById('cloudStatus').title,/money/);assert.match(t.document.getElementById('cloudStatus').title,/not been replaced/);assert.equal(api.calls.filter(c=>c.path.endsWith('/save.php')&&c.method==='POST').length,0);assert.equal(api.saves.get('alice').money,'unrecoverable');assert.equal(await t.context.ChinaLifeCloud.upload(),false);
 });
+
+
+test('two accounts recover from an initial presence outage on the regular heartbeat',async()=>{
+ const api=server();for(const id of ['alice','bob'])api.saves.set(id,{...fixture(),name:id,city:'Shenyang'});
+ api.failPresence=true;const a=await client(api,'alice'),b=await client(api,'bob');
+ assert.equal(a.context.ChinaLifeCloud.joined,false);assert.equal(b.context.ChinaLifeCloud.joined,false);
+ api.failPresence=false;
+ const heartbeat=t=>t.intervals.find(fn=>fn.name==='presenceHeartbeat')();
+ await heartbeat(a);await heartbeat(b);await heartbeat(a);
+ assert.equal(a.context.ChinaLifeCloud.players[0].id,'bob');assert.equal(b.context.ChinaLifeCloud.players[0].id,'alice');
+ assert.equal(a.context.ChinaLifeCloud.joined,true);assert.equal(b.context.ChinaLifeCloud.joined,true);
+ await a.context.ChinaLifeCloud.leave();await heartbeat(a);assert.equal(a.context.ChinaLifeCloud.joined,true);
+});
+
+test('background first join resumes when the game becomes visible',async()=>{
+ const api=server();api.saves.set('alice',fixture());const t=await client(api,'alice');
+ await t.context.ChinaLifeCloud.leave();t.document.hidden=true;
+ await t.context.ChinaLifeCloud.join();assert.equal(t.context.ChinaLifeCloud.joined,false);
+ const heartbeat=t.intervals.find(fn=>fn.name==='presenceHeartbeat');await heartbeat();assert.equal(t.context.ChinaLifeCloud.joined,false);
+ t.document.hidden=false;await heartbeat();assert.equal(t.context.ChinaLifeCloud.joined,true);
+});

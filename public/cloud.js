@@ -165,7 +165,12 @@ window.addEventListener('chinalife:save', () => {if (auto && !loading) scheduleS
 window.addEventListener('chinalife:update', () => {if (!loading && account && game.state.created) {if (!presence) join(); else refreshPresence()}});
 window.addEventListener('hafrik:session', event => {if (event.detail?.token) connect(event.detail)});
 document.addEventListener('visibilitychange', () => {if (!document.hidden && account && game.state.created) {if (presence) refreshPresence(); else join()}});
-setInterval(refreshPresence, 2500);
+// A failed first join must not disable all later heartbeats.
+async function presenceHeartbeat() {
+  if (loading || !account || !game.state.created || document.hidden || game.state.story?.phase==='preparation') return false;
+  return presence ? refreshPresence() : join();
+}
+setInterval(presenceHeartbeat, 2500);
 setInterval(syncTransfers,5000);
 window.ChinaLifeCloud.ready = initialize();
 await window.ChinaLifeCloud.ready;
