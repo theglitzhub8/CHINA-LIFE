@@ -45,3 +45,61 @@ dialog{z-index:50;max-height:88dvh;max-width:min(580px,calc(100% - 28px));border
 .phone-role{display:flex;align-items:center;gap:12px;width:100%;margin:18px 0 4px;padding:14px 16px;border-radius:20px;background:#ffffff26;border:1px solid #ffffff40;color:#fff;text-align:left}.phone-role>span{font-size:30px}.phone-role b{display:block;font-size:16px}.phone-role small{display:block;font-size:12px;opacity:.85;margin-top:3px}
 
 html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;overscroll-behavior:none}button,a,input,select,textarea{touch-action:manipulation}input,select,textarea{font-size:max(16px,1em)}
+
+/* ---- Launch UI: one tight, consistent layer over the earlier styles ---- */
+:root{--ui-ink:#0f2a3a;--ui-muted:#6b7f88;--ui-accent:#12907b;--ui-accent-2:#1f5f8b;--ui-glass:rgba(255,255,255,.9);--ui-line:rgba(15,42,58,.08);--ui-radius:16px;--ui-shadow:0 6px 24px rgba(15,42,58,.12)}
+#worldUI{font-family:Manrope,system-ui,-apple-system,sans-serif;color:var(--ui-ink)}
+.world-hud>*,.venue-card,.world-nav,.objective-chip,.event-chip,.mini-needs,.scene-tools button,.world-caption>button,.clean-button{background:var(--ui-glass);-webkit-backdrop-filter:blur(14px) saturate(1.4);backdrop-filter:blur(14px) saturate(1.4);border:1px solid var(--ui-line);box-shadow:var(--ui-shadow)}
+.world-hud>*{border-radius:var(--ui-radius);min-height:46px}
+.time-chip{padding:8px 14px;gap:10px;font-size:14px}
+.money-chip{padding:5px 5px 5px 14px;gap:8px;font-size:15px;font-weight:800}
+.money-chip>span{width:34px;height:34px;border-radius:11px;background:var(--ui-accent);font-size:20px}
+.world-caption>button{border-radius:999px;min-height:28px}
+.world-caption span{font-size:12px;padding:4px 10px;background:none}
+.objective-chip,.event-chip{border-radius:var(--ui-radius);padding:8px 11px}
+.objective-chip>span,.event-chip>span{border-radius:10px;background:var(--ui-accent)}
+.mini-needs{border-radius:var(--ui-radius)}
+.clean-button{border-radius:999px;padding:5px 11px;font-size:11px;color:var(--ui-muted)}
+.scene-tools button{border-radius:12px;color:var(--ui-ink)}
+.world-dock{gap:6px}
+.venue-card{border-radius:20px;padding:10px 12px}
+.venue-icon{border-radius:12px}
+.venue-heading h1{font-size:15px;font-weight:800;letter-spacing:-.2px}
+.world-activities{gap:6px;margin-top:8px}
+.world-activities button{border-radius:12px;padding:8px 12px;font-size:13px;font-weight:700;background:#f1f6f8;border:1px solid var(--ui-line);color:var(--ui-ink)}
+.world-activities button,.world-activities button small{white-space:nowrap}.world-activities button small{font-weight:500}
+.venue-social-controls{gap:6px;margin-top:6px}
+.venue-chat-button{border-radius:12px;font-size:12px;padding:7px 10px}
+.world-nav{border-radius:20px;padding:4px;gap:2px}
+.world-nav button{min-height:46px;padding:5px 0;gap:2px;font-size:11px;font-weight:700;border-radius:15px;color:var(--ui-muted)}
+.world-nav button span{display:grid;place-items:center;height:22px;font-size:20px}
+.world-nav button.active,.world-nav button.active:hover{background:var(--ui-ink);color:#fff}
+.world-nav button:hover{background:#eef4f7}
+dialog{border-radius:22px}
+.activity-panel{padding:22px 20px}
+.activity-panel h2{font-size:24px;letter-spacing:-.4px}
+.choice-action{border-radius:14px;padding:12px 14px;margin-top:6px;border:1px solid var(--ui-line);transition:background .15s,border-color .15s}
+.choice-action:hover{background:#f2f8f7;border-color:#bfe0d8}
+.primary-btn{background:var(--ui-accent);border-radius:14px}
+.soft-btn{border-radius:12px}
+.choice,.trait{border-radius:14px}
+.choice.selected,.trait.selected{border-color:var(--ui-accent);box-shadow:0 0 0 2px rgba(18,144,123,.18)}
+#onboarding form{padding:24px}
+.onboard-title{font-size:30px;margin:22px 0 8px}
+.onboard-subtitle{margin-bottom:18px}
+.onboard-actions{margin-top:22px}
+.phone-frame{border-radius:32px}
+.phone-apps{gap:16px 10px;margin:20px 0;align-items:start}.phone-app span{line-height:1.25}
+.phone-app b{border-radius:15px;height:52px;width:52px}
+@media(max-width:600px){
+ .world-hud>*{min-height:42px}
+ .time-chip{padding:7px 11px;font-size:13px}
+ .money-chip{font-size:14px;padding-left:11px}
+ .money-chip>span{width:30px;height:30px}
+ .world-caption{top:max(60px,calc(env(safe-area-inset-top) + 52px))}
+ .venue-card{border-radius:18px;padding:9px 10px}
+ .world-nav button{min-height:44px}
+ .activity-panel{padding:20px 16px}
+ .activity-panel h2{font-size:22px}
+ .onboard-title{font-size:26px}
+}
