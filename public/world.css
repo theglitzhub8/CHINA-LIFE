@@ -27,3 +27,5 @@ dialog{z-index:50;max-height:88dvh;max-width:min(580px,calc(100% - 28px));border
 @media(min-width:1000px){.world-dock{left:auto;right:16px;transform:none;width:420px}.world-caption{top:22px}.world-side{top:98px}.scene-tools{top:98px}.map-filter{top:86px}.action-status{left:16px;transform:none;bottom:22px;width:360px}.map-view .action-status{bottom:22px}}
 @media(max-height:670px){.world-side .mini-needs{display:none}.venue-heading p,.world-activities button small{display:none}.world-activities button{min-height:36px}.world-nav button{min-height:44px}.venue-social-controls{margin-top:6px}.action-status{bottom:218px}.map-view .action-status{bottom:174px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+
+.scene-label.remote{background:#247ad6;color:#fff;border:2px solid #fff;box-shadow:0 2px 10px #12394a40;padding-left:21px;z-index:3}.scene-label.remote::before{content:"";position:absolute;left:8px;top:50%;transform:translateY(-50%);width:7px;height:7px;border-radius:50%;background:#6dffbc}.scene-label.player:not(.remote){background:#163f53;border:1px solid #fff}.scene-label.remote:hover{background:#155cb0}

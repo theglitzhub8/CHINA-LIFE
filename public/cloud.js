@@ -101,7 +101,7 @@ async function upload(manual = false) {
 }
 async function refreshPresence() {
   if (!account || !presence || !game.state.created || document.hidden || polling) return false;
-  const generation = epoch, state = game.state, city = state.city, place = state.place, position = window.ChinaLifeWorld?.position;
+  const generation = epoch, state = game.state, city = state.city, place = state.place, world = window.ChinaLifeWorld, position = world?.roomPosition ?? (world?.view==='venue'?world.position:null);
   polling = true;
   try {
     await api('/chinalife/presence.php', 'POST', {city,place,name:state.name,color:state.color,skin:state.appearance?.skin || '#8b5c43',hair:state.appearance?.hair || 'cropped',x:position?.x || 0,z:position?.z || 0});
@@ -123,7 +123,7 @@ async function initialize() {
   loading = false; status(message); notify(); game.startOnboarding(); return false;
 }
 window.ChinaLifeAuth = {base:HAFRIK_API,get token(){return liveToken},request:api,connect};
-window.ChinaLifeCloud = {open:show,ready:null,get signedIn(){return !!account},get joined(){return presence},get players(){return players.filter(p => p.city === game.state.city && p.place === game.state.place)},get cityPlayers(){return players.filter(p => p.city === game.state.city)},refresh:refreshPresence,join,leave,upload};
+window.ChinaLifeCloud = {open:show,ready:null,get playerId(){return String(account?.user_id ?? account?.id ?? '')},get signedIn(){return !!account},get joined(){return presence},get players(){return players.filter(p => p.city === game.state.city && p.place === game.state.place)},get cityPlayers(){return players.filter(p => p.city === game.state.city)},refresh:refreshPresence,join,leave,upload};
 $('cloudButton').onclick = show; $('closeCloud').onclick = () => $('cloudDialog').close();
 window.addEventListener('chinalife:save', () => {if (auto && !loading) scheduleSave()});
 window.addEventListener('chinalife:update', () => {if (!loading && account && game.state.created) {if (!presence) join(); else refreshPresence()}});

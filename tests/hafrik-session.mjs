@@ -61,3 +61,11 @@ test('upload caches the exact submitted snapshot when play continues during the 
   api.pendingSave=new Promise(resolve=>release=resolve);const upload=t.context.ChinaLifeCloud.upload();t.game.state.money=9999;release();await upload;
   assert.equal(api.saves.get('alice').money,3200);assert.equal(t.game.state.money,9999);
 });
+
+test('presence publishes room coordinates while viewing the city map',async()=>{
+  const api=server();api.saves.set('alice',fixture());const t=await client(api,'alice');
+  t.context.ChinaLifeWorld={view:'map',position:{x:70,z:-40},roomPosition:{x:2.5,z:3}};
+  await t.context.ChinaLifeCloud.refresh();assert.equal(api.players.get('alice').x,2.5);assert.equal(api.players.get('alice').z,3);
+  t.context.ChinaLifeWorld={view:'venue',position:{x:-1,z:1}};
+  await t.context.ChinaLifeCloud.refresh();assert.equal(api.players.get('alice').x,-1);
+});
