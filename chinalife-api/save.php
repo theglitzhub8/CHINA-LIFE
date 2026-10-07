@@ -24,9 +24,18 @@ $game['name']=$username;$character['name']=$username;
 cl_room($game);
 foreach (['money','xp','day','hour'] as $key) if (!is_numeric($game[$key]??null)||!is_finite((float)$game[$key])) cl_fail('Invalid character save');
 foreach (['energy','hunger','hygiene','bladder','fun','social'] as $key) if (!is_numeric($game['needs'][$key]??null)||$game['needs'][$key]<0||$game['needs'][$key]>100) cl_fail('Invalid character needs');
-$stored=cl_one('SELECT game_state FROM chinalife_saves WHERE user_id=?','i',[$uid]);
+$stored=cl_one('SELECT game_state,TIMESTAMPDIFF(SECOND,updated_at,NOW()) elapsed FROM chinalife_saves WHERE user_id=?','i',[$uid]);
 $storedGame=$stored?json_decode($stored['game_state'],true):[];
 if(($game['transferTotal']??0)!==($storedGame['transferTotal']??0)) {http_response_code(409);json_response('error',cl_save_result($uid),'Refresh your money transfers before saving.');}
+// XP and money come from the player's device, so growth is capped by real time since the last save.
+// Real play stays far below these limits; edited saves are clamped instead of rejected.
+if ($stored) {
+    $minutes=max(0,(int)$stored['elapsed'])/60;
+    foreach ([['xp',300,30],['money',20000,600]] as [$key,$base,$perMinute]) {
+        $limit=(float)($storedGame[$key]??0)+$base+$perMinute*$minutes;
+        if ((float)$game[$key]>$limit) $game[$key]=(int)floor($limit);
+    }
+}
 $gameJson=json_encode($game,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);$characterJson=json_encode($character,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);
 if ($revision===0) $changed=cl_run('INSERT IGNORE INTO chinalife_saves(user_id,character_data,game_state,revision,created_at,updated_at) VALUES(?,?,?,1,NOW(),NOW())','iss',[$uid,$characterJson,$gameJson]);
 else $changed=cl_run('UPDATE chinalife_saves SET character_data=?,game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=? AND revision=?','ssii',[$characterJson,$gameJson,$uid,$revision]);

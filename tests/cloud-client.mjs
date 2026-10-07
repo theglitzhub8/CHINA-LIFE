@@ -20,7 +20,7 @@ async function setup(options={}){
 }
 test('save conflicts retain the newer account save and pause automatic overwrites',async()=>{
  const t=await setup({uploadStatus:409});assert.equal(await t.context.ChinaLifeCloud.upload(),false);
- assert.match(t.document.getElementById('cloudContent').textContent,/newer account save/);
+ assert.match(t.document.getElementById('cloudContent').textContent,/newer save/);
  t.document.getElementById('cloudLoad').onclick();assert.equal(t.game.state.money,5000);
 });
 test('expired app authentication asks the app again and keeps password login optional',async()=>{

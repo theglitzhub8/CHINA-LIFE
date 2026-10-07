@@ -204,3 +204,9 @@ test('admin events reward each player once, only at the venue, and end on reques
  assert.equal((await call(1,'admin.php','POST',{action:'create_event',title:'Bad',place:'nowhere',reward:1,hours:1})).httpStatus,400);
  await call(1,'admin.php','POST',{action:'end_event',id:Number(ev.id)});assert.ok(!(await call(12,'events.php?city=Shenyang')).data.events.some(e=>e.id===ev.id));
 });
+
+test('save caps XP and money growth by real time so edited saves cannot top the leaderboard',async()=>{
+ const cur=(await call(11,'save.php')).data,before=cur.save.game;
+ const r=await call(11,'save.php','POST',{revision:cur.revision,save:{character:{name:'x'},game:{...before,xp:before.xp+999999,money:before.money+99999999}}});assert.equal(r.httpStatus,200);
+ const after=(await call(11,'save.php')).data.save.game;assert.ok(after.xp<=before.xp+400,'xp '+after.xp);assert.ok(after.money<=before.money+21000,'money '+after.money);assert.ok(after.xp>before.xp);
+});
