@@ -3,6 +3,12 @@ declare(strict_types=1);
 // Execute only from the server CLI; it uses Hafrik's existing database configuration.
 if (PHP_SAPI !== 'cli') {http_response_code(404);exit;}
 require_once __DIR__.'/../db.php';
+require_once __DIR__.'/../helpers.php';
+// Hafrik helpers install an HTTP error handler; CLI migrations must fail visibly.
+set_exception_handler(function(Throwable $error): void {
+    fwrite(STDERR, 'ChinaLife migration failed: ' . $error->getMessage() . PHP_EOL);
+    exit(1);
+});
 $db=get_db_connection();
 $schema=$db->query("SELECT COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='user_id'")->fetch_assoc();
 $type=strtolower($schema['COLUMN_TYPE']??'');
