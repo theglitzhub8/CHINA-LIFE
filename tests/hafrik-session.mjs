@@ -99,3 +99,12 @@ test('manual login omits cookies and stale tokens, then restores the account wit
 test('manual login reports invalid credentials and allows another attempt',async()=>{
  const t=await client(server(),'unused',{native:false});t.context.fetch=async()=>Response.json({status:'error',message:'Invalid credentials'},{status:401});t.context.ChinaLifeCloud.open();t.document.getElementById('hafrikLogin').value='alice';t.document.getElementById('hafrikPassword').value='wrong-test-password';await t.document.getElementById('hafrikLoginForm').onsubmit({preventDefault(){}});assert.equal(t.document.getElementById('hafrikLoginFeedback').textContent,'Invalid credentials');assert.equal(t.document.querySelector('#hafrikLoginForm button[type="submit"]').disabled,false);assert.equal(t.context.ChinaLifeCloud.signedIn,false);
 });
+
+test('valid cloud character loads even when the account device cache is invalid',async()=>{
+ const api=server();api.saves.set('alice',{...fixture(),name:'Cloud Character',money:4200});const stored=new Map([['chinalife-account-alice',JSON.stringify({...fixture(),money:'invalid stale cache'})]]);
+ const t=await client(api,'alice',{stored});assert.equal(t.context.ChinaLifeCloud.signedIn,true);assert.equal(t.game.state.name,'Cloud Character');assert.equal(t.game.state.money,4200);assert.equal(t.document.getElementById('onboarding').open,false);assert.equal(api.saves.get('alice').money,4200);
+});
+
+test('invalid cloud character is diagnosed and never replaced by the device copy',async()=>{
+ const api=server();api.saves.set('alice',{...fixture(),money:'unrecoverable'});const stored=new Map([['chinalife-account-alice',JSON.stringify(fixture())]]);const t=await client(api,'alice',{stored});assert.match(t.document.getElementById('cloudStatus').title,/money/);assert.match(t.document.getElementById('cloudStatus').title,/not been replaced/);assert.equal(api.calls.filter(c=>c.path.endsWith('/save.php')&&c.method==='POST').length,0);assert.equal(api.saves.get('alice').money,'unrecoverable');assert.equal(await t.context.ChinaLifeCloud.upload(),false);
+});
