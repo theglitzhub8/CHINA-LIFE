@@ -145,3 +145,17 @@ test('trusted game origin supports browser cookie CORS and unknown origins never
  const response=await fetch(url,{headers:{Origin:origin,Authorization:'Bearer test-1'}});assert.equal(response.status,200);assert.equal(response.headers.get('access-control-allow-origin'),origin);assert.equal(response.headers.get('access-control-allow-credentials'),'true');
  const unknown=await fetch(url,{headers:{Origin:'https://untrusted.example',Authorization:'Bearer test-1'}});assert.notEqual(unknown.headers.get('access-control-allow-credentials'),'true');assert.notEqual(unknown.headers.get('access-control-allow-origin'),'https://untrusted.example');
 });
+
+
+test('message notification feed delivers new venue and private messages, excludes self and blocked senders',async()=>{
+ await call(9,'presence.php','POST',presence());await call(10,'presence.php','POST',presence());
+ const initial=await call(9,'notifications.php?city=Shenyang&place=plaza');assert.deepEqual(initial.data.messages,[]);
+ await call(10,'messages.php','POST',{city:'Shenyang',place:'plaza',text:'New venue notification'});
+ await call(10,'messages.php','POST',{peer:'9',text:'New private notification'});
+ const incoming=await call(9,'notifications.php?city=Shenyang&place=plaza&after='+initial.data.cursor);
+ assert.equal(incoming.httpStatus,200);assert.deepEqual(incoming.data.messages.map(m=>m.channel),['venue','direct']);
+ assert.ok(incoming.data.messages.every(m=>m.player_id==='10'));
+ assert.equal((await call(9,'notifications.php?city=Shenyang&place=plaza&after='+incoming.data.cursor)).data.messages.length,0);
+ assert.equal((await call(9,'block.php','POST',{peer:'10',blocked:true})).httpStatus,200);
+ assert.equal((await call(9,'notifications.php?city=Shenyang&place=plaza&after='+initial.data.cursor)).data.messages.length,0);
+});

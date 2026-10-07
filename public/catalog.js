@@ -1,4 +1,9 @@
 window.ChinaLifeCatalog = {
+ ads:[
+ {id:'community',title:'HAFRIK COMMUNITY',detail:'Meet people. Find your rhythm.',url:'https://hafrik.com/',venues:['campus','university','liaoning','dongbei','plaza'],map:{x:-20,z:-30}},
+ {id:'marketplace',title:'HAFRIK MARKETPLACE',detail:'Discover your next favourite find.',url:'https://hafrik.com/',venues:['mall','market','station'],map:{x:25,z:8}},
+ {id:'events',title:'HAFRIK EVENTS',detail:'Your next night starts here.',url:'https://hafrik.com/',venues:['night','cafe','african'],map:{x:-25,z:33}}
+ ],
  furniture:[
  {id:'bed',name:'Comfortable bed',price:450,detail:'Rest restores 15 extra energy',category:'Essentials'},
  {id:'kitchen',name:'Kitchen kit',price:280,detail:'Home meals restore 10 extra hunger',category:'Essentials'},

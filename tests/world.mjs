@@ -14,3 +14,11 @@ test('reduced motion applies actions without starting a walking sequence',()=>{c
 
 test('remote avatars retain actual coordinates across rebuilds and map return',()=>{const t=setup();const send=detail=>t.context.dispatchEvent(new t.context.CustomEvent('chinalife:players',{detail}));send([{id:2,name:'Neighbour',city:t.game.state.city,place:t.game.state.place,x:3,z:1,color:'#18776d'}]);assert.equal(t.world.playerIds[0],'2');assert.equal(t.world.remotePositions[0].x,3);t.world.venue(t.game.state.place);assert.equal(t.world.playerIds[0],'2');send([{id:2,name:'Neighbour',city:t.game.state.city,place:t.game.state.place,x:-2,z:2,color:'#18776d'}]);t.tick(2);assert.ok(Math.abs(t.world.remotePositions[0].x+2)<.05);const position=t.world.position.clone();t.world.map();assert.equal(t.world.roomPosition.x,position.x);t.world.venue(t.game.state.place);assert.equal(t.world.playerIds[0],'2');assert.equal(t.world.position.x,position.x);});
 test('account entry points are spread across the room',()=>{assert.notDeepEqual(entryPosition('1'),entryPosition('2'));for(let i=0;i<100;i++){const p=entryPosition(String(i));assert.ok(p.x>=-6&&p.x<=6&&p.z<=4.5)}});
+
+
+test('club wall signs use the city club name and sponsored placements appear across map and venues',()=>{
+ const t=setup();t.game.state.place='night';t.world.venue('night');assert.ok(t.world.signs.includes('007 Club'));assert.equal(t.document.querySelectorAll('.ad-label').length,1);
+ t.game.state.city='Guangzhou';t.internal.render();t.world.venue('night');assert.ok(t.world.signs.includes('Empire Club'));
+ t.world.map();assert.equal(t.document.querySelectorAll('.ad-label').length,3);
+ t.world.venue('home');assert.equal(t.document.querySelectorAll('.ad-label').length,0);
+});

@@ -3,3 +3,15 @@ import test from 'node:test';import assert from 'node:assert/strict';import fs f
 async function setup(){const server=backend(),t=harness({...fixture(),name:'alice',place:'night'}),c=t.context;let created=0,notes=0,now=Date.now();c.Date=class extends Date{static now(){return now}};class AudioContext{constructor(){created++;this.state='suspended';this.destination={}}get currentTime(){return now/1000}async resume(){this.state='running'}async suspend(){this.state='suspended'}createGain(){return {gain:{value:0,setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){}}}createOscillator(){return {frequency:{value:0},connect(){},start(){notes++},stop(){}}}}c.AudioContext=AudioContext;c.fetch=(path,options)=>server.call('alice',path,options.method,options.body?JSON.parse(options.body):undefined);await connectClient(t,server,'alice');await vm.runInContext('(async()=>{'+fs.readFileSync('public/audio.js','utf8')+'})()',c);return {...t,server,advanceAudio(){for(let i=0;i<10;i++){now+=100;t.intervals.at(-2)()}},get created(){return created},get notes(){return notes}}}
 test('club sound is opt-in, synthesizes notes, pauses and stops outside the venue',async()=>{const t=await setup();t.context.ChinaLifeAudio.open();assert.equal(t.created,0);await t.context.ChinaLifeAudio.start();assert.equal(t.created,1);t.advanceAudio();assert.ok(t.notes>0);assert.equal(t.context.ChinaLifeAudio.playing,true);t.context.ChinaLifeAudio.stop();assert.equal(t.context.ChinaLifeAudio.playing,false);await t.context.ChinaLifeAudio.start();t.game.state.place='church';t.internal.render();assert.equal(t.context.ChinaLifeAudio.playing,false);assert.equal(t.document.getElementById('audioDialog').open,false)});
 test('DJ request enters the shared queue without automatically playing sound',async()=>{const t=await setup();t.context.ChinaLifeAudio.open();await t.document.querySelector('[data-track="neon"]').onclick();assert.equal(t.created,0);assert.equal(t.server.sqlite.prepare('SELECT track FROM club_music_requests').get().track,'neon');assert.match(t.document.getElementById('djQueue').textContent,/Neon After Hours/)});
+
+
+test('first club tap starts music and explicit mute survives leaving and returning',async()=>{
+ const t=await setup();t.document.dispatchEvent(new t.context.Event('pointerdown'));await new Promise(resolve=>setImmediate(resolve));assert.equal(t.context.ChinaLifeAudio.playing,true);
+ t.context.ChinaLifeAudio.stop();t.game.state.place='home';t.internal.render();t.game.state.place='night';t.internal.render();t.document.dispatchEvent(new t.context.Event('pointerdown'));await new Promise(resolve=>setImmediate(resolve));assert.equal(t.context.ChinaLifeAudio.playing,false);
+});
+
+
+test('a pending audio resume cannot start club music after leaving the club',async()=>{
+ const t=await setup();let resume;t.context.AudioContext.prototype.resume=function(){return new Promise(resolve=>resume=()=>{this.state='running';resolve()})};
+ const starting=t.context.ChinaLifeAudio.start();t.game.state.place='home';t.internal.render();resume();await starting;assert.equal(t.context.ChinaLifeAudio.playing,false);
+});

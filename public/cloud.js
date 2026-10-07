@@ -193,9 +193,13 @@ function join() {
 async function leave() {epoch++; presence = false; players = []; publish(); if (account) try {await api('/chinalife/presence.php', 'DELETE', {})} catch {}}
 async function initialize() {
   if (window.HafrikSession?.token) return connect(window.HafrikSession);
-  if (liveToken) return connect();
+  if (liveToken) {
+    if(await connect())return true;
+    // Only an expired token permits falling back to website authentication.
+    if(liveToken)return false;
+  }
   // Cookie sessions work when the API supports existing Hafrik browser authentication.
-  if (storage.getItem(PROFILE_KEY)) return connect();
+  if (storage.getItem(PROFILE_KEY)) {if(await connect())return true;if(account)return false;}
   if (window.ReactNativeWebView) {status('Connecting your Hafrik app session…'); window.ReactNativeWebView.postMessage(JSON.stringify({type:'chinalife:auth-request'})); notify(); return false}
   // A Hafrik website session can exist without any ChinaLife device cache.
   // Ask the authenticated API before presenting optional login or character setup.

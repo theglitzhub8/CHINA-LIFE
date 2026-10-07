@@ -92,3 +92,13 @@ All routes authenticate with Hafrik's existing helpers. Responses use `{status,m
 | `music.php` | GET, POST | Shared club track and request queue. |
 
 Voice remains opt-in and starts muted. Add a TURN relay for networks where STUN-only peer connections fail. The game economy remains a local simulation synchronized as saves; it is not yet a server-authoritative competitive economy.
+
+### Messages, club audio and promotion placements
+
+The PHP release includes `chinalife-api/notifications.php`. Deploy it with the client; no schema migration is required. The client checks for new private and current-venue messages every three seconds while the game is visible, even with chat closed. Tapping an alert opens the conversation. Notifications respect friendships, blocking and venue presence. This is in-game messaging notification support, not operating-system push when the game is closed.
+
+People checks the current authenticated session after restoration. An expired remembered browser token can fall back to an available Hafrik website session; a failed character restore never triggers replacement of that character.
+
+Club audio uses the existing original instrumental loops and shared DJ queue. It begins on the first club tap permitted by the browser, remembers explicit mute on the device, pauses in the background, and stops outside clubs. Wall signs use each city's configured club name.
+
+`public/catalog.js` contains the promotion campaign titles, links, venue lists and map coordinates. Current boards are labeled Hafrik house promotions, not paid advertiser campaigns. Replace their content and destination URLs when advertiser assets are ready.

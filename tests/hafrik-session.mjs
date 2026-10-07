@@ -161,3 +161,10 @@ test('recognized account with an invalid save reports restore failure instead of
  assert.match(t.document.getElementById('multiplayerReport').textContent,/money/);
  assert.match(t.document.getElementById('multiplayerReport').textContent,/Account save ready: false/);
 });
+
+
+test('expired remembered token falls back to an existing Hafrik website session',async()=>{
+ const api=server();api.saves.set('alice',fixture());let cookiesUsed=false;
+ const browserApi={async fetch(url,request){if(request.headers.Authorization==='Bearer expired')return Response.json({status:'error',message:'Expired'},{status:401});cookiesUsed=true;assert.equal(request.credentials,'include');const response=await api.fetch(url,{...request,headers:{...request.headers,Authorization:'Bearer alice'}});const result=await response.json();if(new URL(url).pathname.endsWith('/save.php')&&request.method==='GET')result.data.account={id:'alice',username:'Alice'};return Response.json(result,{status:response.status})}};
+ const t=await client(browserApi,'unused',{native:false,stored:new Map([['chinalife-hafrik-token','expired']])});assert.equal(cookiesUsed,true);assert.equal(t.context.ChinaLifeCloud.signedIn,true);assert.equal(t.context.ChinaLifeCloud.joined,true);
+});
