@@ -23,10 +23,11 @@ function server() {
     throw Error('Unexpected API: '+url.pathname);
   }};
 }
-async function client(api,id,{stored=new Map(),native=true}={}) {
+async function client(api,id,{stored=new Map(),native=true,webview=false}={}) {
   const t=harness(null),c=t.context;
   c.localStorage={getItem:key=>stored.get(key)||null,setItem:(key,value)=>stored.set(key,value)};
   c.URLSearchParams=URLSearchParams;c.fetch=api.fetch.bind(api);
+  if(webview)c.ReactNativeWebView={postMessage(){}};
   if(native)c.HafrikSession={token:id,user:{id,name:id}};
   await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);
   return {...t,stored};
@@ -167,4 +168,24 @@ test('expired remembered token falls back to an existing Hafrik website session'
  const api=server();api.saves.set('alice',fixture());let cookiesUsed=false;
  const browserApi={async fetch(url,request){if(request.headers.Authorization==='Bearer expired')return Response.json({status:'error',message:'Expired'},{status:401});cookiesUsed=true;assert.equal(request.credentials,'include');const response=await api.fetch(url,{...request,headers:{...request.headers,Authorization:'Bearer alice'}});const result=await response.json();if(new URL(url).pathname.endsWith('/save.php')&&request.method==='GET')result.data.account={id:'alice',username:'Alice'};return Response.json(result,{status:response.status})}};
  const t=await client(browserApi,'unused',{native:false,stored:new Map([['chinalife-hafrik-token','expired']])});assert.equal(cookiesUsed,true);assert.equal(t.context.ChinaLifeCloud.signedIn,true);assert.equal(t.context.ChinaLifeCloud.joined,true);
+});
+
+
+test('app waits for native authentication instead of using a remembered browser account',async()=>{
+ const api=server();api.saves.set('browser',fixture());api.saves.set('app',fixture());const stored=new Map([['chinalife-hafrik-token','browser']]);
+ const t=await client(api,'unused',{stored,native:false,webview:true});assert.equal(api.calls.length,0);assert.equal(t.context.ChinaLifeCloud.signedIn,false);
+ assert.equal(await t.context.ChinaLifeAuth.connect({token:'app',user:{id:'app'}},{source:'app'}),true);assert.equal(t.context.ChinaLifeCloud.playerId,'app');assert.ok(api.calls.every(c=>c.id==='app'));assert.equal(stored.get('chinalife-hafrik-token'),'');
+});
+
+test('obsolete venues in an account save are dropped instead of blocking the character',async()=>{
+ const api=server();api.saves.set('alice',{...fixture(),visited:['home','obsolete-venue'],trips:['Shenyang','Harbin'],claimed:['retired-quest']});const t=await client(api,'alice');
+ assert.equal(t.context.ChinaLifeCloud.signedIn,true);assert.equal(t.document.getElementById('onboarding').open,false);assert.deepEqual([...t.game.state.visited],['home']);assert.deepEqual([...t.game.state.trips],['Harbin']);assert.deepEqual([...t.game.state.claimed],[]);
+});
+
+test('character restore failure shows recovery instead of another password form',async()=>{
+ const api=server();api.saves.set('alice',{...fixture(),name:''});const t=await client(api,'alice');t.context.ChinaLifeCloud.open();
+ assert.match(t.document.getElementById('cloudContent').textContent,/Your login worked/);assert.match(t.document.getElementById('cloudContent').textContent,/character name/);
+ assert.equal(t.document.getElementById('hafrikLoginForm'),null);assert.ok(t.document.getElementById('cloudRetry'));assert.ok(t.document.getElementById('cloudBackup'));
+ assert.equal(await t.context.ChinaLifeCloud.join(),false);assert.equal(api.calls.filter(c=>c.path.endsWith('/save.php')&&c.method==='POST').length,0);
+ api.saves.set('alice',fixture());await t.document.getElementById('cloudRetry').onclick();assert.equal(t.context.ChinaLifeCloud.joined,true);
 });

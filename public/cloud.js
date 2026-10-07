@@ -2,7 +2,7 @@ const game = window.ChinaLife, $ = id => document.getElementById(id);
 const HAFRIK_API = 'https://hafrik.com/api/v4', TOKEN_KEY = 'chinalife-hafrik-token', PROFILE_KEY = 'chinalife-hafrik-profile';
 const storage = {getItem(key) {try {return localStorage.getItem(key)} catch {return null}}, setItem(key, value) {try {localStorage.setItem(key, value)} catch {}}};
 let account = null, remote = {state:null}, auto = false, busy = false, loading = true, timer, presence = false, players = [], epoch = 0, authEpoch = 0, polling = false;
-let joining=null;
+let joining=null,sessionSource='browser',restoreFailed=false,appWaiting=false,appWait;
 let presenceCheck={lastSuccess:null,error:null,serverId:null};
 let message = 'Sign in with Hafrik to save across devices.', liveToken = storage.getItem(TOKEN_KEY) || '';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -50,28 +50,43 @@ function multiplayerReport() {
     'Last presence update: '+(presenceCheck.lastSuccess || 'none'),
     'Presence error: '+(presenceCheck.error || 'none')].join('\n');
 }
+function accountDetails() {return '<details class="account-details"><summary>Account & connection details</summary><p>Sign-in method: '+esc(sessionSource)+'</p><pre id="multiplayerReport"></pre><button id="multiplayerCheck" class="soft-btn">Check connection now</button>'+'<button id="hafrikLogout" class="soft-btn">Disconnect this game</button>'+'</details>'}
+const inApp = () => !!(window.ReactNativeWebView || window.HafrikSession);
+function requestAppSession() {
+  if (!window.ReactNativeWebView) return;
+  window.ReactNativeWebView.postMessage(JSON.stringify({type:'chinalife:auth-request'}));
+  clearTimeout(appWait); appWaiting = true; appWait = setTimeout(() => {appWaiting = false; if (!account && $('cloudDialog').open) show()}, 8000);
+}
 function show() {
-  $('cloudContent').innerHTML = '<span class="eyebrow">HAFRIK ACCOUNT</span><h2>Your ChinaLife</h2><p>' + esc(message) + '</p>' + (account ?
-    '<p>Signed in as <b>' + esc(account.username || account.user_name || 'Hafrik user') + '</b>. Your character saves automatically.</p><button id="cloudUpload" class="primary-btn">Save now</button><button id="cloudLoad" class="soft-btn">Load account save</button><button id="hafrikLogout" class="soft-btn">Disconnect game</button>' :
-    '<h3>Save your ChinaLife</h3><p>Log in with Hafrik to save your character, progress, purchases, relationships and world state across devices.</p><button id="hafrikConnect" class="primary-btn">Continue with Hafrik</button><details><summary>Use username and password instead</summary><form id="hafrikLoginForm" class="cloud-login"><label>Email or username<input id="hafrikLogin" autocomplete="username" required></label><label>Password<input id="hafrikPassword" type="password" autocomplete="current-password" required></label><button type="submit" class="primary-btn">Log in</button><p id="hafrikLoginFeedback" role="status"></p></form></details><p>Inside the Hafrik app, your signed-in account connects automatically.</p>');
-  if(account) {
-    $('cloudContent').insertAdjacentHTML('beforeend','<details><summary>Multiplayer connection check</summary><pre id="multiplayerReport" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre><button id="multiplayerCheck" class="soft-btn">Check connection now</button></details>');
-    $('multiplayerReport').textContent=multiplayerReport();
-    $('multiplayerCheck').onclick=async()=>{
-      await presenceHeartbeat();$('multiplayerReport').textContent=multiplayerReport();
-      if(!loading&&auto&&!game.state.created){$('cloudDialog').close();game.startOnboarding()}
-    };
-  }
+  const name=esc(account?.username || account?.user_name || 'Hafrik user'), head='<span class="eyebrow">HAFRIK ACCOUNT</span>';
+  const passwordForm='<form id="hafrikLoginForm" class="cloud-login"><label>Email or username<input id="hafrikLogin" autocomplete="username" required></label><label>Password<input id="hafrikPassword" type="password" autocomplete="current-password" required></label><button type="submit" class="primary-btn">Log in</button><p id="hafrikLoginFeedback" role="status"></p></form>';
+  const conflict=!!account&&!auto&&!loading&&!restoreFailed;
+  let html;
+  if (account && restoreFailed) html=head+'<h2>Your character needs attention</h2><p class="account-identity">Signed in as <b>'+name+'</b></p><p>Your login worked, but your saved character could not be opened on this device. Nothing has been deleted from your account.</p><p class="account-error" role="alert">'+esc(message)+'</p><button id="cloudRetry" class="primary-btn">Try loading again</button><button id="cloudBackup" class="soft-btn">Download account backup</button>'+accountDetails();
+  else if (conflict) html=head+'<h2>A newer save was found</h2><p class="account-identity">Signed in as <b>'+name+'</b></p><p>Your account has a newer save from another device. Load it to keep playing and saving.</p><button id="cloudLoad" class="primary-btn">Load newer save</button>'+accountDetails();
+  else if (account) html=head+'<h2>Connected to Hafrik</h2><p class="account-identity">Signed in as <b>'+name+'</b></p><p>Your character saves to your Hafrik account automatically.</p><button id="cloudUpload" class="primary-btn">Save now</button>'+accountDetails();
+  // Inside the app the native session is the only login; never ask for a web password first.
+  else if (inApp()) html=head+(appWaiting||loading?'<h2>Connecting your Hafrik account…</h2><p>Getting your login from the Hafrik app.</p>':'<h2>Couldn’t get your Hafrik login</h2><p>The Hafrik app didn’t share your account with the game. Close ChinaLife and open it again from Hafrik. If it keeps happening, update the Hafrik app.</p>'+(message&&!/^Sign in with Hafrik/.test(message)?'<p class="account-error" role="alert">'+esc(message)+'</p>':''))+'<button id="hafrikConnect" class="primary-btn"'+(appWaiting?' disabled':'')+'>Try again</button><details class="account-details"><summary>Sign in with email or username instead</summary>'+passwordForm+'</details>';
+  else html=head+'<h2>Save your ChinaLife</h2><p>Connect your Hafrik account to keep your character and progress across devices.</p><button id="hafrikConnect" class="primary-btn">Continue with Hafrik</button><p id="accountConnectFeedback" role="status"></p><details class="account-details"><summary>Use email or username</summary>'+passwordForm+'</details>';
+  $('cloudContent').innerHTML=html;
   if (!$('cloudDialog').open) $('cloudDialog').showModal();
-  if (account) {
-    $('cloudUpload').onclick = () => upload(true); $('cloudLoad').disabled = !remote.state;
-    $('cloudLoad').onclick = () => {if (remote.state && confirm('Restore your account save on this device?')) {loading = true; try {game.loadSave(remote.state);auto=true} finally {loading = false} $('cloudDialog').close()}};
-    $('hafrikLogout').onclick = logout;
-  } else {
-    $('hafrikLoginForm').onsubmit = login;
-    $('hafrikConnect').onclick = async () => {
-      if (window.ReactNativeWebView) {window.ReactNativeWebView.postMessage(JSON.stringify({type:'chinalife:auth-request'})); status('Connecting your Hafrik app session…')}
-      else {await initialize(); if (!account) {status('No existing Hafrik session was available. Open the game from the Hafrik app or use the optional login.'); show()}}
+  if(account){
+    $('multiplayerReport').textContent=multiplayerReport();
+    $('multiplayerCheck').onclick=async()=>{await presenceHeartbeat();$('multiplayerReport').textContent=multiplayerReport();if(!loading&&auto&&!game.state.created){$('cloudDialog').close();game.startOnboarding()}};
+    $('hafrikLogout').onclick=logout;
+    if(restoreFailed){
+      $('cloudRetry').onclick=async()=>{await connect(undefined,{source:sessionSource});if(!auto)show()};
+      $('cloudBackup').disabled=!remote.state;
+      $('cloudBackup').onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(remote.state,null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='chinalife-account-backup.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+    }else if(conflict){
+      $('cloudLoad').disabled=!remote.state;
+      $('cloudLoad').onclick=()=>{if(!remote.state)return;loading=true;try{game.loadSave(remote.state);auto=true;status('Connected. Your character saves automatically.')}catch(error){restoreFailed=true;status(error.message)}finally{loading=false}if(auto)$('cloudDialog').close();else show()};
+    }else $('cloudUpload').onclick=()=>upload(true);
+  }else{
+    $('hafrikLoginForm').onsubmit=login;
+    $('hafrikConnect').onclick=async()=>{
+      if(window.ReactNativeWebView){requestAppSession();show()}
+      else{await initialize();if(!account)$('accountConnectFeedback').textContent='No Hafrik session was found. Sign in on Hafrik or use email or username below.';else if(!auto)show()}
     };
   }
 }
@@ -79,10 +94,11 @@ async function loadRemote() {
   const result = await api('/chinalife/save.php'), data = result.data || result;
   return {state:data.save?.game || data.state || null, updatedAt:data.updated_at, revision:data.revision ?? 0, account:data.account};
 }
-async function connect(session) {
+async function connect(session,{source}={}) {
+  sessionSource=source || (session?.token && (window.HafrikSession||window.ReactNativeWebView)?'app':sessionSource);
   const guestStory=game.accountId==null&&game.state.created?JSON.parse(JSON.stringify(game.state)):null;
   presenceCheck={lastSuccess:null,error:null,serverId:null};
-  const connectionGeneration = ++authEpoch; epoch++; clearTimeout(timer); presence = false; players = []; publish(); auto = false; loading = true;
+  const connectionGeneration = ++authEpoch; epoch++; clearTimeout(timer); presence = false; players = []; publish(); auto = false; loading = true; restoreFailed = false; clearTimeout(appWait); appWaiting = false;
   if (session?.token) liveToken = session.token;
   try {
     const saved = await loadRemote();
@@ -91,8 +107,10 @@ async function connect(session) {
     // An account identifier is required to keep different users' device saves isolated.
     const id = profile?.user_id ?? profile?.id;
     if (id == null) throw Error('Your Hafrik session needs an account ID. Open the game from the app or sign in.');
+    const nativeId=sessionSource==='app'?(session?.user?.user_id ?? session?.user?.id):null;
+    if(nativeId!=null&&String(nativeId)!==String(id)){account=null;throw Error('The returned Hafrik account does not match your app account. Reopen ChinaLife from Hafrik.')}
     account = {...profile, signedIn:true}; storage.setItem(PROFILE_KEY, JSON.stringify(account));
-    storage.setItem(TOKEN_KEY, liveToken);
+    storage.setItem(TOKEN_KEY, sessionSource==='app'?'':liveToken);
     remote = saved; const hasLocal = game.setAccount(id,{loadLocal:!remote.state});
     if (remote.state) game.loadSave(remote.state);
     else if(guestStory&&!hasLocal)game.loadSave(guestStory);
@@ -104,7 +122,7 @@ async function connect(session) {
     return true;
   } catch (error) {
     if (connectionGeneration !== authEpoch) return false;
-    loading = false; status(error.message);
+    loading = false; status(error.message);if(account){restoreFailed=true;notify();show()}
     // A failed restore must not silently replace an existing account character.
     if (error.status === 401) {liveToken = ''; storage.setItem(TOKEN_KEY, ''); account = null; notify()}
     return false;
@@ -116,7 +134,7 @@ async function login(event) {
     const result = await api('/auth/login.php', 'POST', {login:$('hafrikLogin').value.trim(), password:$('hafrikPassword').value});
     if (!result.data?.token) throw Error(result.message || 'Login failed');
     storage.setItem(TOKEN_KEY, result.data.token);
-    if (!await connect(result.data)) feedback.textContent = message;
+    if (!await connect({...result.data,token:result.data.session_token||result.data.token},{source:'password'})) {if(account)show();else feedback.textContent = message;}
   } catch (error) {feedback.textContent = error.message}
   finally {button.disabled=false}
 }
@@ -175,7 +193,7 @@ async function refreshPresence() {
   } catch (error) {if(generation===epoch){presenceCheck.error=error.message;status('Shared city: ' + error.message)} return false} finally {polling = false}
 }
 function join() {
-  if(!account||!game.state.created||game.state.story?.phase==='preparation')return Promise.resolve(false);
+  if(!account||!auto||!game.state.created||game.state.story?.phase==='preparation')return Promise.resolve(false);
   if(joining?.epoch===epoch)return joining.task;
   const generation=epoch,city=game.state.city,place=game.state.place;presence=true;
   const task=(async()=>{
@@ -192,7 +210,8 @@ function join() {
 }
 async function leave() {epoch++; presence = false; players = []; publish(); if (account) try {await api('/chinalife/presence.php', 'DELETE', {})} catch {}}
 async function initialize() {
-  if (window.HafrikSession?.token) return connect(window.HafrikSession);
+  if (window.HafrikSession?.token) return connect(window.HafrikSession,{source:'app'});
+  if (window.ReactNativeWebView) {loading=false;sessionSource='app';status('Connecting your Hafrik app account…');requestAppSession();notify();return false}
   if (liveToken) {
     if(await connect())return true;
     // Only an expired token permits falling back to website authentication.
@@ -212,11 +231,11 @@ window.ChinaLifeCloud = {open:show,ready:null,get playerId(){return String(accou
 $('cloudButton').onclick = show; $('closeCloud').onclick = () => $('cloudDialog').close();
 window.addEventListener('chinalife:save', () => {if (auto && !loading) scheduleSave()});
 window.addEventListener('chinalife:update', () => {if (!loading && account && game.state.created) {if (!presence) join(); else refreshPresence()}});
-window.addEventListener('hafrik:session', event => {if (event.detail?.token) connect(event.detail)});
+window.addEventListener('hafrik:session', event => {if (event.detail?.token) connect(event.detail,{source:'app'})});
 document.addEventListener('visibilitychange', () => {if (!document.hidden && account && game.state.created) {if (presence) refreshPresence(); else join()}});
 // A failed first join must not disable all later heartbeats.
 async function presenceHeartbeat() {
-  if (loading || !account || !game.state.created || document.hidden || game.state.story?.phase==='preparation') return false;
+  if (loading || !auto || !account || !game.state.created || document.hidden || game.state.story?.phase==='preparation') return false;
   return presence ? refreshPresence() : join();
 }
 setInterval(presenceHeartbeat, 2500);
