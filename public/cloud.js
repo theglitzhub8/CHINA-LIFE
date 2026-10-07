@@ -20,7 +20,7 @@ function status(text) {message = text; $('cloudStatus').textContent = account ? 
 function show() {
   $('cloudContent').innerHTML = '<span class="eyebrow">HAFRIK ACCOUNT</span><h2>Your ChinaLife</h2><p>' + esc(message) + '</p>' + (account ?
     '<p>Signed in as <b>' + esc(account.name || account.username || 'Hafrik user') + '</b>. Your character saves automatically.</p><button id="cloudUpload" class="primary-btn">Save now</button><button id="cloudLoad" class="soft-btn">Load account save</button><button id="hafrikLogout" class="soft-btn">Disconnect game</button>' :
-    '<button id="hafrikConnect" class="primary-btn">Continue with Hafrik</button><details><summary>Use username and password instead</summary><form id="hafrikLoginForm" class="cloud-login"><label>Email or username<input id="hafrikLogin" autocomplete="username" required></label><label>Password<input id="hafrikPassword" type="password" autocomplete="current-password" required></label><button type="submit" class="primary-btn">Log in</button><p id="hafrikLoginFeedback" role="status"></p></form></details><p>Inside the Hafrik app, your signed-in account connects automatically.</p>');
+    '<h3>Save your ChinaLife</h3><p>Log in with Hafrik to save your character, progress, purchases, relationships and world state across devices.</p><button id="hafrikConnect" class="primary-btn">Continue with Hafrik</button><details><summary>Use username and password instead</summary><form id="hafrikLoginForm" class="cloud-login"><label>Email or username<input id="hafrikLogin" autocomplete="username" required></label><label>Password<input id="hafrikPassword" type="password" autocomplete="current-password" required></label><button type="submit" class="primary-btn">Log in</button><p id="hafrikLoginFeedback" role="status"></p></form></details><p>Inside the Hafrik app, your signed-in account connects automatically.</p>');
   if (!$('cloudDialog').open) $('cloudDialog').showModal();
   if (account) {
     $('cloudUpload').onclick = () => upload(true); $('cloudLoad').disabled = !remote.state;
@@ -39,6 +39,7 @@ async function loadRemote() {
   return {state:data.save?.game || data.state || null, updatedAt:data.updated_at, revision:data.revision ?? 0, account:data.account};
 }
 async function connect(session) {
+  const guestStory=game.accountId==null&&game.state.created?JSON.parse(JSON.stringify(game.state)):null;
   const connectionGeneration = ++authEpoch; epoch++; clearTimeout(timer); presence = false; players = []; publish(); auto = false; loading = true;
   if (session?.token) liveToken = session.token;
   try {
@@ -53,9 +54,10 @@ async function connect(session) {
     else storage.setItem(TOKEN_KEY, liveToken);
     remote = saved; const hasLocal = game.setAccount(id);
     if (remote.state) game.loadSave(remote.state);
+    else if(guestStory&&!hasLocal)game.loadSave(guestStory);
     auto = true; loading = false;
     status('Connected. Your character saves automatically.'); notify();
-    if (game.state.created) {if (hasLocal && !remote.state) await upload(); await join()} else game.startOnboarding();
+    if (game.state.created) {if ((hasLocal||guestStory) && !remote.state) await upload(); await join()} else game.startOnboarding();
     if ($('cloudDialog').open) $('cloudDialog').close();
     return true;
   } catch (error) {
@@ -128,7 +130,7 @@ async function refreshPresence() {
     return true;
   } catch (error) {status('Shared city: ' + error.message); return false} finally {polling = false}
 }
-async function join() {if (!account || !game.state.created) return false; if (presence && polling) return true; presence = true; const ok = await refreshPresence(); if (!ok) {presence = false; players = []; publish()} return ok}
+async function join() {if (!account || !game.state.created || game.state.story?.phase==='preparation') return false; if (presence && polling) return true; presence = true; const ok = await refreshPresence(); if (!ok) {presence = false; players = []; publish()} return ok}
 async function leave() {epoch++; presence = false; players = []; publish(); if (account) try {await api('/chinalife/presence.php', 'DELETE', {})} catch {}}
 async function initialize() {
   if (window.HafrikSession?.token) return connect(window.HafrikSession);
