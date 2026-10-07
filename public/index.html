@@ -19,9 +19,11 @@
 <div id="worldUI">
   <div id="worldViewport" aria-label="Interactive three-dimensional city"><div id="sceneLabels"></div><div id="worldLoading">Opening your city…</div></div>
   <header class="world-hud">
-    <button class="brand-chip" id="worldProfile"><span>中</span><b>ChinaLife<small>BY HAFRIK</small></b></button>
-    <div class="time-chip"><span id="worldClock">08:40</span><span class="hud-divider"></span><span id="worldMood">Feeling good</span></div>
+    <div class="hud-bar">
+    <button class="brand-chip" id="worldProfile" aria-label="Your profile"><span>中</span><b>ChinaLife<small>BY HAFRIK</small></b></button>
+    <div class="time-chip"><span id="worldClock">08:40</span><span class="hud-divider"></span><span id="worldMood">Feeling good</span><span class="hud-divider hud-wide"></span><span id="worldOnline" class="hud-online hud-wide">Single-player</span></div>
     <button class="money-chip" id="worldWallet"><b id="worldMoney">¥3,200</b><span>＋</span></button>
+    </div>
   </header>
   <div class="world-caption"><button id="worldCity" aria-label="Choose city"><span id="worldDay">Day 1 · Shenyang</span><span aria-hidden="true">⌄</span></button><button id="cloudButton"><span id="cloudStatus">Guest · saved on device</span></button></div>
   <aside class="world-side">
@@ -35,7 +37,7 @@
   <div class="world-dock">
     <section class="venue-card">
       <div class="venue-heading"><div class="venue-icon" id="worldVenueIcon">⌂</div><div><h1 id="worldVenueTitle">Your apartment</h1><p id="worldVenueSub">Heping District · your new beginning</p></div><button id="worldVenueMore" aria-label="View venue details">⋯</button></div>
-      <div id="worldActivities" class="world-activities"></div><div class="venue-social-controls"><button id="venueChatButton" class="venue-chat-button">💬 Venue chat <span id="venueOnline">Join shared city</span></button><button id="venueVoiceButton" class="venue-chat-button">🎙 Voice <span id="venueVoiceStatus">Off</span></button></div>
+      <button id="venueSay" class="venue-say" type="button">Say something to the players here…</button><div id="worldActivities" class="world-activities"></div><div class="venue-social-controls"><button id="venueChatButton" class="venue-chat-button">💬 Venue chat <span id="venueOnline">Join shared city</span></button><button id="venueVoiceButton" class="venue-chat-button">🎙 Voice <span id="venueVoiceStatus">Off</span></button></div>
     </section>
     <nav class="world-nav" aria-label="Game navigation"><button id="navHome"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg></span>Home</button><button id="navMap"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg></span>Map</button><button id="navPeople"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c.6-3.3 2.8-5 5.5-5s4.9 1.7 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.6c2.3.2 3.9 1.9 4.4 4.4"/></svg></span>People</button><button id="navPhone"><span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18h2"/></svg></span>Phone</button></nav>
   </div>

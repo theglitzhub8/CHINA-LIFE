@@ -131,3 +131,17 @@ dialog{border-radius:22px}
 .leaderboard{list-style:none;padding:0;margin:0;display:grid;gap:4px;counter-reset:rank}.leaderboard li{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:#f7fafb;font-size:13px}.leaderboard li.own{background:#fff4d6;font-weight:800}.leaderboard small{color:#6b7f88}
 .leaderboard li:only-child:not(.own){display:block;color:#6b7f88}
 .scene-label.treasure{background:#d6202a;color:#fff;font-size:18px;padding:4px 8px;box-shadow:0 0 0 3px rgba(255,190,80,.6),0 6px 18px rgba(214,32,42,.45);animation:treasurePulse 1.4s ease-in-out infinite}@keyframes treasurePulse{50%{transform:translate(-50%,-100%) scale(1.12)}}.treasure-chip>span{background:#d6202a!important}
+
+/* ---- Top bar and venue panel, centred like a single app toolbar ---- */
+.world-hud{justify-content:center}
+.world-hud>.hud-bar{display:flex;align-items:center;gap:2px;padding:4px;border-radius:999px;min-height:0;max-width:100%}
+.hud-bar>*{background:none!important;border:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;min-height:40px;border-radius:999px}
+.hud-bar .brand-chip{padding:0 6px}.hud-bar .brand-chip b{display:none}.hud-bar .brand-chip>span{width:34px;height:34px;border-radius:50%}
+.hud-bar .time-chip{flex:0 1 auto;padding:0 12px;gap:10px;font-size:14px;white-space:nowrap;min-width:0;overflow:hidden}
+.hud-online{color:#16805f;font-weight:700}.hud-online::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:6px;vertical-align:1px}
+.hud-bar .money-chip{padding:0 4px 0 12px}
+.world-caption{top:max(64px,calc(env(safe-area-inset-top) + 58px))}
+.venue-say{display:block;width:100%;margin-top:8px;padding:10px 14px;border-radius:14px;background:#f1f5f7;border:1px solid rgba(15,42,58,.06);color:#7a8b93;font-size:14px;text-align:left}
+.venue-say:hover{background:#e8f0f3}
+@media(min-width:1000px){.world-dock{left:50%;right:auto;transform:translateX(-50%);width:min(660px,calc(100% - 520px))}}
+@media(max-width:600px){.hud-wide{display:none}.hud-bar .time-chip{font-size:13px;padding:0 8px;gap:6px}.hud-bar .brand-chip{display:none}.world-hud>.hud-bar{width:100%;justify-content:space-between}.world-caption{top:max(58px,calc(env(safe-area-inset-top) + 52px))}}
