@@ -47,6 +47,7 @@ test('fainting costs time, asking for food helps once a day, and gigs pay once a
  const h=harness({...fixture(),money:0});const hour=h.game.state.hour;h.game.state.needs.hunger=0;h.internal.render();
  assert.match(h.document.getElementById('activityContent').textContent,/You fainted/);assert.equal(h.game.state.hour,hour+90);
  h.click('faintAsk');assert.equal(h.game.state.needs.hunger,40);h.game.state.needs.hunger=0;h.internal.render();h.click('faintAsk');assert.equal(h.game.state.needs.hunger,0);
+ h.game.state.money=100;h.click('faintBuy');assert.match(h.document.getElementById('activityContent').textContent,/Food delivery/);h.click('deliver-0');assert.equal(h.game.state.money,100-20);assert.equal(h.game.state.needs.hunger,30);h.game.state.money=0;
  h.game.state.needs.hunger=60;h.game.state.needs.energy=80;h.game.earn();h.click('gig-tutor');assert.equal(h.game.state.money,80);h.click('gig-tutor');assert.equal(h.game.state.money,80);
  const saved=harness(JSON.parse(JSON.stringify(h.game.state)));assert.equal(saved.game.state.gigs.tutor,h.game.state.day);
 });
