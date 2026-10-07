@@ -177,4 +177,6 @@ dialog{border-radius:22px}
 }
 @media(max-width:380px),(max-height:700px){.world-side .mini-needs{display:none}.world-activities button small{display:none}}
 
-.world-side .event-chip.rank-chip,.world-side .event-chip.treasure-chip{display:flex!important}
+.world-side .event-chip.rank-chip,.world-side .event-chip.treasure-chip,.world-side .event-chip.today-chip{display:flex!important}
+.today-chip>span{background:#2563eb!important}.today-list{display:grid;gap:6px;margin-bottom:8px}.today-list>div{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#f1f6f8}.today-list span{font-size:18px}.today-list b{font-size:14px}
+@media(max-width:600px){.world-side .today-chip small{display:block;font-size:10px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:40vw}.world-side #worldGoal{display:none}}
