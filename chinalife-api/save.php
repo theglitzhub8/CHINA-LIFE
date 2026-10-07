@@ -27,6 +27,7 @@ foreach (['energy','hunger','hygiene','bladder','fun','social'] as $key) if (!is
 $stored=cl_one('SELECT game_state,TIMESTAMPDIFF(SECOND,updated_at,NOW()) elapsed FROM chinalife_saves WHERE user_id=?','i',[$uid]);
 $storedGame=$stored?json_decode($stored['game_state'],true):[];
 if(($game['transferTotal']??0)!==($storedGame['transferTotal']??0)) {http_response_code(409);json_response('error',cl_save_result($uid),'Refresh your money transfers before saving.');}
+if(($game['sharedXP']??0)!==($storedGame['sharedXP']??0)){http_response_code(409);json_response('error',cl_save_result($uid),'Refresh shared activity rewards before saving.');}
 // XP and money come from the player's device, so growth is capped by real time since the last save.
 // Real play stays far below these limits; edited saves are clamped instead of rejected.
 if ($stored) {

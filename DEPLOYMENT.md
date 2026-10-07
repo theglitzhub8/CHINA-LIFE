@@ -141,3 +141,15 @@ People checks the current authenticated session after restoration. An expired re
 Club audio uses the existing original instrumental loops and shared DJ queue. It begins on the first club tap permitted by the browser, remembers explicit mute on the device, pauses in the background, and stops outside clubs. Wall signs use each city's configured club name.
 
 `public/catalog.js` contains the promotion campaign titles, links, venue lists and map coordinates. Current boards are labeled Hafrik house promotions, not paid advertiser campaigns. Replace their content and destination URLs when advertiser assets are ready.
+
+## Shared student activities — Shenyang
+
+Update the PHP API and public files together, then run the PHP 8.4 migration. It adds `chinalife_shared_activities` and preserves existing saves.
+
+Players open **People → player profile → Do something together** to invite a teammate. **Phone → Together** reopens the current invitation/session and shows recent shared memories. Invitations appear as in-game alerts without requiring chat to be open.
+
+The first activities are Study together (University Quarter), Campus basketball (Heping Gym), and Share a warm meal (African Kitchen). Both players accept the activity, travel to its venue, mark themselves ready, choose a response, and complete it after its real-time duration. Both must have fresh presence at the venue to start, respond and finish. Decline/cancel is supported; unanswered invites expire after five minutes and accepted sessions after thirty minutes. Reopening/reconnecting resumes an unexpired session.
+
+The server's `shared-config.php` defines venues, prompts, durations and modest XP/money rewards. Completion and shared memories are server-side; each pair can earn a reward for each activity once per server calendar day. Completion retries cannot pay twice. XP uses the server-issued `sharedXP` marker and money uses the existing transfer reconciliation, so open clients receive rewards without replacing their character's ongoing progress.
+
+Verify with two different Hafrik accounts: invite, accept, meet at the venue, ready both, choose responses, complete, and reopen both accounts. Test decline/cancel and leaving the venue before completion. The current activity layer uses short choices and existing animations; it does not introduce a physics basketball match or a full academic-performance system.

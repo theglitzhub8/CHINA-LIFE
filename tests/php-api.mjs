@@ -246,3 +246,60 @@ test('daily push sends a valid VAPID-signed reminder and removes expired subscri
  assert.equal(JSON.parse(Buffer.from(claims,'base64url')).aud,'http://127.0.0.1:'+port);
  const again=await run();server.close();assert.match(again,/expired removed: 0/);
 });
+
+test('two real clients accept, meet, participate and receive shared activity rewards once',async()=>{
+ for(const id of [11,12]){const r=await call(id,'save.php'),saved=r.data.save?.game||{};assert.equal((await call(id,'save.php','POST',{revision:r.data.revision,save:{character:{},game:{...game(),money:saved.money??3200,xp:saved.xp??0,transferTotal:saved.transferTotal||0,sharedXP:saved.sharedXP||0}}})).httpStatus,200);}
+ async function client(id){const t=harness(null),c=t.context;c.HafrikSession={token:'test-'+id,user:{id}};c.URLSearchParams=URLSearchParams;c.fetch=(url,opts)=>fetch(base+new URL(url).pathname+new URL(url).search,opts);await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);vm.runInContext(fs.readFileSync('public/shared-activities.js','utf8'),c);await c.ChinaLifeShared.ready;return t;}
+ const a=await client(11),b=await client(12);
+ await a.context.ChinaLifeShared.open('12','user12');assert.ok(a.document.querySelector('[data-kind="study"]'));await a.document.querySelector('[data-kind="study"]').onclick();
+ await b.context.ChinaLifeShared.poll();assert.equal(b.document.getElementById('sharedInviteNotice').hidden,false);await b.context.ChinaLifeShared.open();await b.document.querySelector('[data-shared="accept"]').onclick();
+ let session=(await call(11,'activities.php')).data.activities[0];const id=session.id;
+ const reconnect=await client(12);await reconnect.context.ChinaLifeShared.open();assert.match(reconnect.document.getElementById('sharedBody').textContent,/Both players must be present and ready/);
+ assert.equal((await call(11,'activities.php','POST',{action:'ready',id})).httpStatus,409);
+ assert.equal((await call(1,'activities.php','POST',{action:'accept',id})).httpStatus,404);
+ for(const t of [a,b]){t.game.state.place='campus';await t.context.ChinaLifeCloud.upload();await t.context.ChinaLifeCloud.refresh();}
+ for(const t of [a,b]){await t.context.ChinaLifeShared.poll();await t.document.querySelector('[data-shared="ready"]').onclick();}
+ session=(await call(11,'activities.php')).data.activities[0];assert.equal(session.status,'active');
+ assert.equal((await call(11,'activities.php','POST',{action:'finish',id})).httpStatus,409);
+ await a.context.ChinaLifeShared.poll();await a.document.querySelector('[data-choice="nihao"]').onclick();await b.document.querySelector('[data-choice="zaijian"]').onclick();
+ assert.equal((await call(11,'activities.php','POST',{action:'finish',id})).httpStatus,409);
+ sql(`USE chinalife_test; UPDATE chinalife_shared_activities SET started_at=DATE_SUB(NOW(),INTERVAL 60 SECOND) WHERE id=${Number(id)}`);
+ const beforeA={money:a.game.state.money,xp:a.game.state.xp},beforeB={money:b.game.state.money,xp:b.game.state.xp};
+ await a.context.ChinaLifeShared.poll();await a.document.querySelector('[data-shared="finish"]').onclick();await b.context.ChinaLifeCloud.syncTransfers();
+ assert.equal(a.game.state.money,beforeA.money+10);assert.equal(b.game.state.money,beforeB.money+10);assert.equal(a.game.state.xp,beforeA.xp+15);assert.equal(b.game.state.xp,beforeB.xp+15);
+ assert.equal((await call(12,'activities.php','POST',{action:'finish',id})).data.duplicate,true);await b.context.ChinaLifeCloud.syncTransfers();assert.equal(b.game.state.xp,beforeB.xp+15);
+ assert.equal((await call(11,'activities.php','POST',{action:'invite',kind:'study',peer:'12'})).httpStatus,409);
+ assert.equal(await b.context.ChinaLifeCloud.upload(),true);
+ const restart=await client(12);await restart.context.ChinaLifeShared.open();assert.match(restart.document.getElementById('sharedBody').textContent,/shared memory/);assert.equal(restart.game.state.sharedXP,15);
+});
+
+test('shared invitations decline, cancel, expire and require the invited player’s consent',async()=>{
+ await call(11,'presence.php','POST',presence());await call(12,'presence.php','POST',presence());
+ let r=await call(11,'activities.php','POST',{action:'invite',kind:'basketball',peer:'12'});assert.equal(r.httpStatus,200);let id=r.data.id;
+ assert.equal((await call(11,'activities.php','POST',{action:'accept',id})).httpStatus,403);
+ assert.equal((await call(12,'activities.php','POST',{action:'decline',id})).httpStatus,200);
+ r=await call(11,'activities.php','POST',{action:'invite',kind:'meal',peer:'12'});id=r.data.id;
+ assert.equal((await call(12,'activities.php','POST',{action:'accept',id})).httpStatus,200);assert.equal((await call(11,'activities.php','POST',{action:'cancel',id})).httpStatus,200);
+ r=await call(11,'activities.php','POST',{action:'invite',kind:'basketball',peer:'12'});id=r.data.id;sql(`USE chinalife_test; UPDATE chinalife_shared_activities SET expires_at=DATE_SUB(NOW(),INTERVAL 1 SECOND) WHERE id=${Number(id)}`);
+ assert.equal((await call(12,'activities.php','POST',{action:'accept',id})).httpStatus,409);
+ assert.equal((await call(11,'activities.php','POST',{action:'invite',kind:'fake',peer:'12'})).httpStatus,400);
+});
+
+
+test('basketball and meal complete with separate daily limits and persisted shared memories',async()=>{
+ for(const [kind,place,choice] of [['basketball','gym','pass'],['meal','african','mild']]){
+  for(const uid of [11,12])await call(uid,'presence.php','POST',presence('Shenyang',place));
+  const invite=await call(11,'activities.php','POST',{action:'invite',kind,peer:'12'});assert.equal(invite.httpStatus,200);const id=invite.data.id;
+  assert.equal((await call(12,'activities.php','POST',{action:'accept',id})).httpStatus,200);
+  for(const uid of [11,12])assert.equal((await call(uid,'activities.php','POST',{action:'ready',id})).httpStatus,200);
+  for(const uid of [11,12])assert.equal((await call(uid,'activities.php','POST',{action:'choose',id,choice})).httpStatus,200);
+  sql(`USE chinalife_test; UPDATE chinalife_shared_activities SET started_at=DATE_SUB(NOW(),INTERVAL 60 SECOND) WHERE id=${Number(id)}`);
+  // Moving away prevents a reward, even after the activity timer ends.
+  await call(12,'presence.php','POST',presence('Shenyang','plaza'));assert.equal((await call(11,'activities.php','POST',{action:'finish',id})).httpStatus,409);
+  await call(12,'presence.php','POST',presence('Shenyang',place));const completed=await Promise.all([call(11,'activities.php','POST',{action:'finish',id}),call(12,'activities.php','POST',{action:'finish',id})]);assert.ok(completed.every(r=>r.httpStatus===200));assert.equal(completed.filter(r=>r.data.duplicate).length,1);
+  assert.equal((await call(12,'activities.php','POST',{action:'finish',id})).data.duplicate,true);
+ }
+ const list=(await call(11,'activities.php')).data.activities;assert.equal(list.filter(s=>s.status==='completed').length,3);assert.equal(Number(list[0].memories),3);
+ assert.equal((await call(12,'save.php')).data.save.game.sharedXP,40);
+ const saved=await call(12,'save.php');assert.equal((await call(12,'save.php','POST',{revision:saved.data.revision,save:{character:{},game:{...saved.data.save.game,sharedXP:999}}})).httpStatus,409);
+});
