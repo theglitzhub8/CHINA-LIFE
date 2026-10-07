@@ -197,7 +197,7 @@ async function initialize() {
   return connected;
 }
 window.ChinaLifeAuth = {base:HAFRIK_API,get token(){return liveToken},request:api,connect};
-window.ChinaLifeCloud = {open:show,ready:null,get playerId(){return String(account?.user_id ?? account?.id ?? '')},get signedIn(){return !!account},get joined(){return presence},get players(){return players.filter(p => p.city === game.state.city && p.place === game.state.place)},get online(){return online},get events(){return events},get golden(){return golden},claimGolden,get isAdmin(){return admin},joinEvent,admin:adminRequest,refreshEvents,get cityPlayers(){return players.filter(p => p.city === game.state.city)},refresh:refreshPresence,join,leave,upload,transfer,syncTransfers};
+window.ChinaLifeCloud = {open:show,ready:null,get playerId(){return String(account?.user_id ?? account?.id ?? '')},get signedIn(){return !!account},get joined(){return presence},get players(){return players.filter(p => p.city === game.state.city && p.place === game.state.place)},get online(){return online},get events(){return events},enablePush,get golden(){return golden},claimGolden,get isAdmin(){return admin},joinEvent,admin:adminRequest,refreshEvents,get cityPlayers(){return players.filter(p => p.city === game.state.city)},refresh:refreshPresence,join,leave,upload,transfer,syncTransfers};
 $('cloudButton').onclick = show; $('closeCloud').onclick = () => $('cloudDialog').close();
 window.addEventListener('chinalife:save', () => {if (auto && !loading) scheduleSave()});
 window.addEventListener('chinalife:update', () => {if (!loading && account && game.state.created) {if (!presence) join(); else refreshPresence()}});
@@ -218,6 +218,9 @@ setInterval(refreshOnline,30000);window.addEventListener('chinalife:cloudready',
 let events=[],admin=false;const seenEvents=new Set();
 async function refreshEvents(){if(!account||document.hidden)return;try{const result=await api('/chinalife/events.php','GET',{city:game.state.city}),data=result.data||result;events=data.events||[];admin=data.admin===true;if(Array.isArray(data.cities))game.setOpenCities?.(data.cities);for(const e of events)if(!seenEvents.has(e.id)){seenEvents.add(e.id);if(!e.joined)game.notify?.('🎉 '+e.title+(e.reward?' · +¥'+e.reward:''),()=>game.eventScreen?.(e.id))}window.dispatchEvent(new CustomEvent('chinalife:events',{detail:events}))}catch{}}
 async function joinEvent(id){await api('/chinalife/events.php','POST',{id:Number(id)});await refreshEvents();await syncTransfers()}
+// Browser push for the daily reminder while the game is closed.
+async function enablePush(){if(!account)return 'signin';if(!('serviceWorker' in navigator)||!('PushManager' in window))return 'unsupported';const info=await api('/chinalife/push.php'),data=info.data||info;if(!data.enabled)return 'server';const key=data.publicKey.replace(/-/g,'+').replace(/_/g,'/'),raw=atob(key+'='.repeat((4-key.length%4)%4)),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));const reg=await navigator.serviceWorker.ready;const sub=await reg.pushManager.getSubscription()||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes});await api('/chinalife/push.php','POST',{endpoint:sub.endpoint});return 'on'}
+window.addEventListener('chinalife:cloudready',()=>{if(account&&'Notification' in window&&Notification.permission==='granted')enablePush().catch(()=>{})});
 async function adminRequest(action,data={}){const result=await api('/chinalife/admin.php','POST',{action,...data});return result.data||result}
 setInterval(refreshEvents,45000);window.addEventListener('chinalife:cloudready',refreshEvents);
 // Weekly golden envelope: the server decides who found it first.

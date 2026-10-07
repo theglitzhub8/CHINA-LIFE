@@ -1,3 +1,4 @@
+import http from 'node:http';import crypto from 'node:crypto';import {execFile} from 'node:child_process';import {promisify} from 'node:util';
 import test,{before,after} from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -10,7 +11,7 @@ import vm from 'node:vm';
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'chinalife-api-')),socket=path.join(tmp,'mysql.sock');
 let mysql,php,base;
 const sql=command=>execFileSync('mysql',['--no-defaults','--socket='+socket,'-u','root','--batch','--skip-column-names','-e',command],{encoding:'utf8',stdio:['ignore','pipe','pipe']});
-const env={...process.env,CHINALIFE_TEST_SOCKET:socket};
+const env={...process.env,CHINALIFE_TEST_SOCKET:socket,CHINALIFE_PUSH_TEST:'1'};
 async function waitFor(check){for(let i=0;i<100;i++){try{if(await check())return}catch{}await new Promise(resolve=>setTimeout(resolve,100))}throw Error('Test service failed to start')}
 async function call(id,file,method='GET',data){const response=await fetch(base+'/api/v4/chinalife/'+file,{method,headers:{...(id?{Authorization:'Bearer test-'+id}:{}),...(data?{'content-type':'application/json'}:{})},body:data?JSON.stringify(data):undefined});return {...await response.json(),httpStatus:response.status}}
 const presence=(city='Shenyang',place='plaza')=>({city,place,name:'Player',color:'#246fa7',skin:'#8b5c43',hair:'cap',x:1,z:2});
@@ -226,4 +227,22 @@ test('admins open cities and every player receives the open list',async()=>{
  const r=await call(1,'admin.php','POST',{action:'set_cities',open:['Harbin']});assert.deepEqual(r.data.open,['Shenyang','Harbin']);
  assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['Shenyang','Harbin']);
  await call(1,'admin.php','POST',{action:'set_cities',open:[]});assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['Shenyang']);
+});
+
+test('daily push sends a valid VAPID-signed reminder and removes expired subscriptions',async()=>{
+ const dir=path.join(tmp,'web/api/v4/chinalife');assert.equal((await call(6,'push.php')).data.enabled,false);
+ execFileSync('php',[path.join(dir,'push-setup.php'),'mailto:test@example.com'],{env,stdio:'pipe'});
+ const info=await call(6,'push.php');assert.equal(info.data.enabled,true);
+ const hits=[];const server=http.createServer((req,res)=>{hits.push({url:req.url,auth:req.headers.authorization,ttl:req.headers.ttl});res.statusCode=req.url.includes('gone')?410:201;res.end()});await new Promise(r=>server.listen(0,'127.0.0.1',r));const port=server.address().port;
+ assert.equal((await call(6,'push.php','POST',{endpoint:'https://evil.example/x'})).httpStatus,400);
+ assert.equal((await call(6,'push.php','POST',{endpoint:'http://127.0.0.1:'+port+'/push/abcdefgh123'})).httpStatus,200);
+ assert.equal((await call(7,'push.php','POST',{endpoint:'http://127.0.0.1:'+port+'/push/gone-abcdefgh'})).httpStatus,200);
+ // Run the sender asynchronously so this process can answer as the push service.
+ const run=async()=>(await promisify(execFile)('php',[path.join(dir,'push-daily.php')],{env})).stdout;const out=await run();
+ assert.match(out,/sent: 1, expired removed: 1/);assert.equal(hits.length,2);
+ const [, t, k]=hits[0].auth.match(/^vapid t=([^,]+), k=(.+)$/);assert.equal(k,info.data.publicKey);
+ const [head,claims,sig]=t.split('.'),pub=Buffer.from(k,'base64url'),jwk={kty:'EC',crv:'P-256',x:pub.subarray(1,33).toString('base64url'),y:pub.subarray(33).toString('base64url')};
+ assert.ok(crypto.verify('sha256',Buffer.from(head+'.'+claims),{key:crypto.createPublicKey({key:jwk,format:'jwk'}),dsaEncoding:'ieee-p1363'},Buffer.from(sig,'base64url')),'signature');
+ assert.equal(JSON.parse(Buffer.from(claims,'base64url')).aud,'http://127.0.0.1:'+port);
+ const again=await run();server.close();assert.match(again,/expired removed: 0/);
 });

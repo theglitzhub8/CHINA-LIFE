@@ -64,6 +64,23 @@ The Hafrik account `hafrik` sees an **Admin** app on the in-game phone (Overview
 
 Admin events and the admin log need the migration after updating.
 
+## Daily reminder notifications (when the game is closed)
+
+Run once on the server to create this server's push keys (kept in `push-config.php`, not in git):
+
+```sh
+/www/server/php/84/bin/php /www/wwwroot/hafrik.com/api/v4/chinalife/push-setup.php mailto:admin@hafrik.com
+chown www:www /www/wwwroot/hafrik.com/api/v4/chinalife/push-config.php
+```
+
+Then add a daily cron job (aaPanel → Cron → Shell script), for example at 10:00:
+
+```sh
+/www/server/php/84/bin/php /www/wwwroot/hafrik.com/api/v4/chinalife/push-daily.php
+```
+
+Players turn it on in Settings → Turn on notifications. It works in Chrome, Edge, Firefox and Android, and on iPhone when the game is added to the Home Screen. It does not work inside the Hafrik app's built-in browser.
+
 ## Voice relay (Cloudflare TURN)
 
 Voice connects players directly when it can and relays through Cloudflare TURN when mobile data or strict Wi-Fi blocks a direct connection. The API token must stay on the server only. Create the config once (the deploy script never overwrites or deletes it):
