@@ -72,8 +72,8 @@ test('presence publishes room coordinates while viewing the city map',async()=>{
 
 test('guest student character moves into a new Hafrik account and reloads once',async()=>{
  const api=server(),t=await client(api,'alice',{native:false});
- t.document.querySelector('[data-start="outside"]').onclick();t.click('nextStep');t.document.getElementById('onName').oninput({target:{value:'Guest Student'}});for(let i=0;i<4;i++)t.click('nextStep');t.document.getElementById('studentMajor').value='Computer Science';t.click('nextStep');t.click('storyNext');
- assert.equal(await t.context.ChinaLifeAuth.connect({token:'alice',user:{id:'alice'}}),true);assert.equal(t.game.state.name,'Guest Student');assert.equal(t.game.state.story.index,1);assert.equal(t.context.ChinaLifeCloud.joined,false);assert.equal(api.saves.get('alice').student.major,'Computer Science');
+ t.document.querySelector('[data-start="outside"]').onclick();t.click('nextStep');t.document.getElementById('onName').oninput({target:{value:'Guest Student'}});t.click('nextStep');t.click('storyNext');
+ assert.equal(await t.context.ChinaLifeAuth.connect({token:'alice',user:{id:'alice'}}),true);assert.equal(t.game.state.name,'Guest Student');assert.equal(t.game.state.story.index,1);assert.equal(t.context.ChinaLifeCloud.joined,false);assert.equal(api.saves.get('alice').student.start,'outside');
  const returned=await client(api,'alice');assert.equal(returned.game.state.story.index,1);assert.equal(returned.game.state.student.studyLevel,'Undergraduate');assert.equal(returned.document.getElementById('onboarding').open,false);
 });
 
