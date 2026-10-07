@@ -177,7 +177,7 @@ dialog{border-radius:22px}
 }
 @media(max-width:380px),(max-height:700px){.world-side .mini-needs{display:none}.world-activities button small{display:none}}
 
-.world-side .event-chip.rank-chip,.world-side .event-chip.treasure-chip,.world-side .event-chip.today-chip{display:flex!important}
+#worldUI:not(.clean) .world-side .event-chip.rank-chip,#worldUI:not(.clean) .world-side .event-chip.treasure-chip,#worldUI:not(.clean) .world-side .event-chip.today-chip{display:flex!important}
 .today-chip>span{background:#2563eb!important}.today-list{display:grid;gap:6px;margin-bottom:8px}.today-list>div{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#f1f6f8}.today-list span{font-size:18px}.today-list b{font-size:14px}
 @media(max-width:600px){.world-side .today-chip small{display:block;font-size:10px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:40vw}.world-side #worldGoal{display:none}}
 .admin-tabs{margin:4px 0 12px}.admin-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}.admin-stats>div{background:#f1f6f8;border-radius:14px;padding:10px;display:grid;gap:2px}.admin-stats span{font-size:18px}.admin-stats b{font-size:20px}.admin-stats small{color:#6b7f88;font-size:12px}.admin-form{display:grid;gap:8px;margin:8px 0}.admin-form label{display:grid;gap:4px;font-size:13px;font-weight:700}.admin-check{display:flex!important;align-items:center;gap:8px}.admin-player{display:grid;gap:8px;padding:10px 12px;border-radius:14px;background:#f7fafb;margin-top:8px}.admin-player small{display:block;color:#6b7f88;font-size:12px;margin-top:2px}textarea.name-input{min-height:70px;font-family:inherit}
