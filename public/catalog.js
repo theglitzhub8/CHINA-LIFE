@@ -1,8 +1,10 @@
 window.ChinaLifeCatalog = {
+ advertising:{whatsapp:''},
  ads:[
- {id:'community',title:'HAFRIK COMMUNITY',detail:'Meet people. Find your rhythm.',url:'https://hafrik.com/',venues:['campus','university','liaoning','dongbei','plaza'],map:{x:-20,z:-30}},
- {id:'marketplace',title:'HAFRIK MARKETPLACE',detail:'Discover your next favourite find.',url:'https://hafrik.com/',venues:['mall','market','station'],map:{x:25,z:8}},
- {id:'events',title:'HAFRIK EVENTS',detail:'Your next night starts here.',url:'https://hafrik.com/',venues:['night','cafe','african'],map:{x:-25,z:33}}
+ // Open ad space for sale. Every billboard says ADVERTISE HERE and opens WhatsApp to the number below.
+ {id:'advertise-city',map:{x:-20,z:-30},venues:['campus','university','liaoning','dongbei','plaza','mall','market','cafe','night','station','airport','gym','african','ef','business']},
+ {id:'advertise-east',map:{x:25,z:8},venues:[]},
+ {id:'advertise-south',map:{x:-25,z:33},venues:[]}
  ],
  furniture:[
  {id:'bed',name:'Comfortable bed',price:450,detail:'Rest restores 15 extra energy',category:'Essentials'},

@@ -16,9 +16,9 @@ test('remote avatars retain actual coordinates across rebuilds and map return',(
 test('account entry points are spread across the room',()=>{assert.notDeepEqual(entryPosition('1'),entryPosition('2'));for(let i=0;i<100;i++){const p=entryPosition(String(i));assert.ok(p.x>=-6&&p.x<=6&&p.z<=4.5)}});
 
 
-test('club wall signs use the city club name and sponsored placements appear across map and venues',()=>{
+test('club wall signs use the city club name and Advertise here billboards appear across map and venues',()=>{
  const t=setup();t.game.state.place='night';t.world.venue('night');assert.ok(t.world.signs.includes('007 Club'));assert.equal(t.document.querySelectorAll('.ad-label').length,1);
  t.game.state.city='Guangzhou';t.internal.render();t.world.venue('night');assert.ok(t.world.signs.includes('Empire Club'));
- t.world.map();assert.equal(t.document.querySelectorAll('.ad-label').length,3);
+ t.world.map();assert.equal(t.document.querySelectorAll('.ad-label').length,3);assert.ok([...t.document.querySelectorAll('.ad-label')].every(l=>/Advertise here/.test(l.textContent)));
  t.world.venue('home');assert.equal(t.document.querySelectorAll('.ad-label').length,0);
 });
