@@ -54,6 +54,18 @@ php /path/to/hafrik-root/api/v4/chinalife/migrate.php
 
 The update script uses a fast-forward pull from `main`. A dirty or diverged checkout should be resolved before pulling; it will not reset or discard server edits.
 
+## Voice relay (Cloudflare TURN)
+
+Voice connects players directly when it can and relays through Cloudflare TURN when mobile data or strict Wi-Fi blocks a direct connection. The API token must stay on the server only. Create the config once (the deploy script never overwrites or deletes it):
+
+```sh
+cp /www/chinalife-source/chinalife-api/turn-config.example.php /www/wwwroot/hafrik.com/api/v4/chinalife/turn-config.php
+nano /www/wwwroot/hafrik.com/api/v4/chinalife/turn-config.php   # fill in key_id and api_token
+chmod 640 /www/wwwroot/hafrik.com/api/v4/chinalife/turn-config.php && chown www:www /www/wwwroot/hafrik.com/api/v4/chinalife/turn-config.php
+```
+
+Without this file, `ice.php` returns STUN only and voice works on simple networks. If the token is ever exposed, create a new one in the Cloudflare dashboard and update this file.
+
 ## 4. Native Hafrik authentication
 
 Copy `integrations/hafrik-mobile/ChinaLifeScreen.jsx` and `chinaLifeConfig.js` into `src/pages/chinaLife/` in the Hafrik app and rebuild/distribute it. These changes are already applied in the local `Hafrik 5 ` app project.

@@ -160,3 +160,8 @@ test('message notification feed delivers new venue and private messages, exclude
  assert.equal((await call(9,'block.php','POST',{peer:'10',blocked:true})).httpStatus,200);
  assert.equal((await call(9,'notifications.php?city=Shenyang&place=plaza&after='+initial.data.cursor)).data.messages.length,0);
 });
+
+test('voice relay credentials require an account and fall back to STUN without a TURN key',async()=>{
+ assert.equal((await call(null,'ice.php')).httpStatus,401);
+ const r=await call(3,'ice.php');assert.equal(r.httpStatus,200);assert.equal(r.data.turn,false);assert.deepEqual(r.data.iceServers,[{urls:['stun:stun.cloudflare.com:3478']}]);
+});
