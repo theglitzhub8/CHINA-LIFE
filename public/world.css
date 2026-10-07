@@ -43,3 +43,5 @@ dialog{z-index:50;max-height:88dvh;max-width:min(580px,calc(100% - 28px));border
 #cloudContent .account-details{margin-top:18px;padding-top:14px;border-top:1px solid #d9e5df}#cloudContent .account-details summary{cursor:pointer;font-weight:600}#cloudContent pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}#cloudContent .account-error{padding:12px;border-radius:12px;background:#fff0e5;color:#874d29;font-size:14px}#cloudContent .account-identity{color:#18776d}
 
 .phone-role{display:flex;align-items:center;gap:12px;width:100%;margin:18px 0 4px;padding:14px 16px;border-radius:20px;background:#ffffff26;border:1px solid #ffffff40;color:#fff;text-align:left}.phone-role>span{font-size:30px}.phone-role b{display:block;font-size:16px}.phone-role small{display:block;font-size:12px;opacity:.85;margin-top:3px}
+
+html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;overscroll-behavior:none}button,a,input,select,textarea{touch-action:manipulation}input,select,textarea{font-size:max(16px,1em)}
