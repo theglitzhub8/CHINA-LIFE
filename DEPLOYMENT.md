@@ -9,8 +9,10 @@ cd /www/chinalife-source
 ./scripts/update-server.sh \
   /www/wwwroot/hafrik.com \
   /www/wwwroot/china-life.hafrik.com/public
-php /www/wwwroot/hafrik.com/api/v4/chinalife/migrate.php
+/www/server/php/84/bin/php /www/wwwroot/hafrik.com/api/v4/chinalife/migrate.php
 ```
+
+Run the migration with PHP 8.4, the version the Hafrik site uses. The plain `php` command on this server is PHP 8.3, which Hafrik's Composer packages reject with "require a PHP version >= 8.4.1". If the path above does not exist, `ls /www/server/php/` lists the installed versions.
 
 The migration step is safe to repeat; run it whenever an update changes the database. Then hard-refresh the game (or reopen it in the Hafrik app) to load the new files.
 
