@@ -16,10 +16,10 @@ async function api(path, method = 'GET', data) {
 }
 function notify() {window.dispatchEvent(new CustomEvent('chinalife:cloudready'))}
 function publish() {if($('onlineCount'))$('onlineCount').textContent=presence ? (players.filter(p=>p.city===game.state.city).length+1)+' online in this city' : 'Single-player';window.dispatchEvent(new CustomEvent('chinalife:players', {detail:window.ChinaLifeCloud.players}))}
-function status(text) {message = text; $('cloudStatus').textContent = account ? 'Hafrik · ' + (account.name || account.username || 'Connected') : 'Sign in with Hafrik'; $('cloudStatus').title = text}
+function status(text) {message = text; $('cloudStatus').textContent = account ? 'Hafrik · ' + (account.username || account.user_name || 'Connected') : 'Sign in with Hafrik'; $('cloudStatus').title = text}
 function show() {
   $('cloudContent').innerHTML = '<span class="eyebrow">HAFRIK ACCOUNT</span><h2>Your ChinaLife</h2><p>' + esc(message) + '</p>' + (account ?
-    '<p>Signed in as <b>' + esc(account.name || account.username || 'Hafrik user') + '</b>. Your character saves automatically.</p><button id="cloudUpload" class="primary-btn">Save now</button><button id="cloudLoad" class="soft-btn">Load account save</button><button id="hafrikLogout" class="soft-btn">Disconnect game</button>' :
+    '<p>Signed in as <b>' + esc(account.username || account.user_name || 'Hafrik user') + '</b>. Your character saves automatically.</p><button id="cloudUpload" class="primary-btn">Save now</button><button id="cloudLoad" class="soft-btn">Load account save</button><button id="hafrikLogout" class="soft-btn">Disconnect game</button>' :
     '<h3>Save your ChinaLife</h3><p>Log in with Hafrik to save your character, progress, purchases, relationships and world state across devices.</p><button id="hafrikConnect" class="primary-btn">Continue with Hafrik</button><details><summary>Use username and password instead</summary><form id="hafrikLoginForm" class="cloud-login"><label>Email or username<input id="hafrikLogin" autocomplete="username" required></label><label>Password<input id="hafrikPassword" type="password" autocomplete="current-password" required></label><button type="submit" class="primary-btn">Log in</button><p id="hafrikLoginFeedback" role="status"></p></form></details><p>Inside the Hafrik app, your signed-in account connects automatically.</p>');
   if (!$('cloudDialog').open) $('cloudDialog').showModal();
   if (account) {
@@ -55,6 +55,7 @@ async function connect(session) {
     if (remote.state) game.loadSave(remote.state);
     else if(guestStory&&!hasLocal)game.loadSave(guestStory);
     auto = true; loading = false;
+    game.useAccountName(account.username || account.user_name);
     status('Connected. Your character saves automatically.'); notify();
     if (game.state.created) {if ((hasLocal||guestStory) && !remote.state) await upload(); await join()} else game.startOnboarding();
     if ($('cloudDialog').open) $('cloudDialog').close();

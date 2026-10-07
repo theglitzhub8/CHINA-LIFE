@@ -23,5 +23,5 @@ if ($now-(int)$state['started_at']>=60000) {
     cl_run('UPDATE chinalife_music SET track=?,started_at=? WHERE city=?','sis',[$state['track'],$now,$city]);
     if ($next) cl_run('DELETE FROM chinalife_music_requests WHERE id=?','i',[(int)$next['id']]);
 }
-$queue=cl_rows('SELECT r.id,r.track,COALESCE(p.name,u.user_name) name FROM chinalife_music_requests r JOIN users u ON u.user_id=r.user_id LEFT JOIN chinalife_presence p ON p.user_id=r.user_id WHERE r.city=? ORDER BY r.created_at,r.id LIMIT 20','s',[$city]);
+$queue=cl_rows('SELECT r.id,r.track,u.user_name name FROM chinalife_music_requests r JOIN users u ON u.user_id=r.user_id LEFT JOIN chinalife_presence p ON p.user_id=r.user_id WHERE r.city=? ORDER BY r.created_at,r.id LIMIT 20','s',[$city]);
 $db->commit();json_response('success',['track'=>$state['track'],'startedAt'=>(int)$state['started_at'],'serverTime'=>$now,'queue'=>$queue]);

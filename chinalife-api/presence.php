@@ -10,8 +10,9 @@ if ($method === 'DELETE') {
 $input = $method === 'POST' ? cl_body() : $_GET;
 if ($method === 'POST') {
     [$city,$place] = cl_room($input); cl_rate('presence',30,10);
-    $name = $input['name'] ?? '';
-    if (!is_string($name) || trim($name)==='' || mb_strlen($name)>22) cl_fail('Character name must be 1–22 characters');
+    // The in-game name is always the player's Hafrik username.
+    $name = (string)($auth['user_name'] ?? '');
+    if (trim($name)==='' || mb_strlen($name)>64) cl_fail('Your Hafrik account needs a username');
     foreach (['color','skin'] as $key) if (!is_string($input[$key] ?? null) || !preg_match('/^#[0-9a-f]{6}$/i',$input[$key])) cl_fail('Invalid appearance');
     if (!in_array($input['hair'] ?? '',['cropped','bun','cap'],true)) cl_fail('Invalid hairstyle');
     foreach (['x','z'] as $key) if (!is_numeric($input[$key] ?? null) || !is_finite((float)$input[$key]) || abs((float)$input[$key])>100) cl_fail('Invalid player position');

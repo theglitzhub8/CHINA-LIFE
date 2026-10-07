@@ -16,7 +16,11 @@ if ($method==='DELETE') {
 cl_rate('save',15,10);$input=cl_body(1048576);$save=$input['save']??null;$revision=$input['revision']??0;
 if (!is_int($revision)||$revision<0||!is_array($save)) cl_fail('Invalid save revision or payload');
 $game=$save['game']??null;$character=$save['character']??null;
-if (!is_array($game)||($game['created']??false)!==true||!is_string($game['name']??null)||trim($game['name'])===''||mb_strlen($game['name'])>22||!is_array($character)) cl_fail('Invalid character save');
+if (!is_array($game)||($game['created']??false)!==true||!is_array($character)) cl_fail('Invalid character save');
+// The in-game name is always the player's Hafrik username.
+$username=trim((string)($auth['user_name']??''));
+if ($username===''||mb_strlen($username)>64) cl_fail('Your Hafrik account needs a username');
+$game['name']=$username;$character['name']=$username;
 cl_room($game);
 foreach (['money','xp','day','hour'] as $key) if (!is_numeric($game[$key]??null)||!is_finite((float)$game[$key])) cl_fail('Invalid character save');
 foreach (['energy','hunger','hygiene','bladder','fun','social'] as $key) if (!is_numeric($game['needs'][$key]??null)||$game['needs'][$key]<0||$game['needs'][$key]>100) cl_fail('Invalid character needs');
