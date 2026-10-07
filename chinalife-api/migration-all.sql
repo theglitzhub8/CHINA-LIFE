@@ -55,3 +55,15 @@ CREATE TABLE IF NOT EXISTS chinalife_music_requests (
  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,user_id INT UNSIGNED NOT NULL,city VARCHAR(80) NOT NULL,track VARCHAR(24) NOT NULL,created_at DATETIME NOT NULL,
  INDEX(city,created_at,id),INDEX(user_id),FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS chinalife_transfers (
+ id VARCHAR(80) NOT NULL,
+ sender_id INT UNSIGNED NOT NULL,
+ recipient_id INT UNSIGNED NOT NULL,
+ amount INT UNSIGNED NOT NULL,
+ created_at DATETIME NOT NULL,
+ PRIMARY KEY(sender_id,id),
+ KEY recipient_history(recipient_id,created_at),
+ FOREIGN KEY(sender_id) REFERENCES users(user_id) ON DELETE CASCADE,
+ FOREIGN KEY(recipient_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

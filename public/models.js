@@ -4,7 +4,7 @@ function shape(g,geo,c,x,y,z){const m=new THREE.Mesh(geo,mat(c));m.position.set(
 const b=(g,w,h,d,c,x=0,y=h/2,z=0)=>shape(g,new THREE.BoxGeometry(w,h,d),c,x,y,z);
 const cy=(g,r,h,c,x=0,y=h/2,z=0,n=16)=>shape(g,new THREE.CylinderGeometry(r,r,h,n),c,x,y,z);
 const cone=(g,r,h,c,x=0,y=h/2,z=0,n=4)=>shape(g,new THREE.ConeGeometry(r,h,n),c,x,y,z);
-function windows(g,w,y,z){for(let x=-w/2+.5;x<w/2;x+=.85)b(g,.52,.6,.06,0x70b7d3,x,y,z)}
+function windows(g,w,y,z){for(let x=-w/2+.5;x<w/2;x+=.85){b(g,.52,.6,.06,0x70b7d3,x,y,z);b(g,.025,.6,.025,0xe4e6da,x,y,z+.04);b(g,.52,.025,.025,0xe4e6da,x,y,z+.04)}}
 function roof(g,w,d,y,c=0xa0614d){const m=cone(g,w*.73,1.2,c,0,y,0);m.rotation.y=Math.PI/4;m.scale.z=d/w;return m}
 function plant(g,x,y,z){cy(g,.22,.4,0xad7357,x,y+.2,z);cone(g,.45,.9,0x428368,x,y+.85,z,9)}
 export function furnitureModel(id,color='#16897b'){const g=new THREE.Group(),c=new THREE.Color(color).getHex();g.userData.kind=id;

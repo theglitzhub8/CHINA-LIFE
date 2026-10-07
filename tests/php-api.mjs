@@ -100,4 +100,20 @@ test('two actual game clients restore, join, chat, friend and privately message 
  await b.context.ChinaLifeSocial.open('venue');assert.match(b.document.getElementById('socialBody').textContent,/Hello PHP/);assert.equal(b.document.getElementById('socialBody').querySelector('img'),null);
  await a.context.ChinaLifeSocial.player('10');await a.press('request');await b.context.ChinaLifeSocial.open('friends');await b.press('accept');await a.context.ChinaLifeSocial.open('messages');await a.press('direct');
  a.document.getElementById('chatInput').value='Private PHP';await a.document.getElementById('chatForm').onsubmit({preventDefault(){}});await b.context.ChinaLifeSocial.open('messages');await b.press('direct');assert.match(b.document.getElementById('socialBody').textContent,/Private PHP/);
+ const beforeA=a.game.state.money,beforeB=b.game.state.money;await a.context.ChinaLifeSocial.player('10');await a.press('transfer');a.document.getElementById('transferAmount').value='50';await a.document.getElementById('transferForm').onsubmit({preventDefault(){}});await b.context.ChinaLifeCloud.syncTransfers();assert.equal(a.game.state.money,beforeA-50);assert.equal(b.game.state.money,beforeB+50);await b.context.ChinaLifeCloud.syncTransfers();assert.equal(b.game.state.money,beforeB+50);assert.equal(await b.context.ChinaLifeCloud.upload(),true);
+});
+
+test('game coin transfers conserve balances, reject overdrafts and are idempotent',async()=>{
+ for(const id of [3,4]) {const existing=await call(id,'save.php');assert.equal((await call(id,'save.php','POST',{revision:existing.data.revision,save:{character:{},game:game()}})).httpStatus,200);}
+ const data={peer:'4',amount:75,request_id:'transfer-test-000001'};
+ assert.equal((await call(3,'transfers.php','POST',data)).httpStatus,200);
+ assert.equal((await call(3,'transfers.php','POST',data)).data.duplicate,true);
+ assert.equal((await call(3,'save.php')).data.save.game.money,3125);
+ assert.equal((await call(4,'save.php')).data.save.game.money,3275);
+ assert.equal((await call(3,'transfers.php','POST',{...data,amount:999999,request_id:'transfer-test-000002'})).httpStatus,409);
+ assert.equal((await call(3,'transfers.php','POST',{...data,amount:-1})).httpStatus,400);
+ assert.equal((await call(3,'transfers.php','POST',{...data,peer:'3'})).httpStatus,404);
+ const saved=await call(4,'save.php');assert.equal((await call(4,'save.php','POST',{revision:saved.data.revision,save:{character:{},game:{...saved.data.save.game,transferTotal:0}}})).httpStatus,409);
+ assert.equal((await call(4,'transfers.php')).data.transfers.length,1);
+ const attempts=await Promise.all(['parallel-transfer-01','parallel-transfer-02'].map(request_id=>call(3,'transfers.php','POST',{peer:'4',amount:2500,request_id})));assert.deepEqual(attempts.map(r=>r.httpStatus).sort(),[200,409]);assert.equal((await call(3,'save.php')).data.save.game.money,625);
 });

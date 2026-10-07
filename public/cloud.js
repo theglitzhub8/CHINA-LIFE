@@ -93,11 +93,27 @@ async function upload(manual = false) {
     return true;
   } catch (error) {
     if (generation !== authEpoch) return false;
+    if (error.status === 409 && reconcileTransfers({state:error.data?.save?.game,revision:error.data?.revision})) {scheduleSave();return false}
     if (error.status === 409) {auto = false; remote = {state:error.data?.save?.game || null,revision:error.data?.revision ?? 0}; status('A newer account save exists. Open your account and load it to continue saving.'); show()}
     else if (error.status === 401) {auto = false; account = null; liveToken = ''; storage.setItem(TOKEN_KEY, ''); presence = false; players = []; publish(); notify(); status('Your Hafrik session expired. Connect again to save.'); show()}
     else {status('Account save failed: ' + error.message); if (auto) {clearTimeout(timer);timer=setTimeout(()=>upload(),10000)}}
     if (manual) game.toast(message); return false;
   } finally {busy = false}
+}
+function reconcileTransfers(saved) {
+  const delta=(saved.state?.transferTotal||0)-(remote.state?.transferTotal||0);
+  if(!delta)return false;
+  game.state.money+=delta;game.state.transferTotal=saved.state.transferTotal;remote=saved;
+  game.save();game.refresh?.();game.toast(delta>0?'Received ¥'+delta+' game coins.':'Game coin transfer completed.');
+  return true;
+}
+async function syncTransfers(){if(!account||!auto||busy||loading||!game.state.created||document.hidden)return;const generation=authEpoch,revision=remote.revision;try{const saved=await loadRemote();if(generation===authEpoch&&!busy&&revision===remote.revision)reconcileTransfers(saved)}catch{}}
+async function transfer(peer,amount,requestId){
+  const generation=authEpoch;
+  if(!await upload())throw Error('Wait for your account save to finish, then try again.');
+  if(generation!==authEpoch)throw Error('Your account changed. Open the player again.');
+  await api('/chinalife/transfers.php','POST',{peer,amount,request_id:requestId});
+  await syncTransfers();
 }
 async function refreshPresence() {
   if (!account || !presence || !game.state.created || document.hidden || polling) return false;
@@ -123,12 +139,13 @@ async function initialize() {
   loading = false; status(message); notify(); game.startOnboarding(); return false;
 }
 window.ChinaLifeAuth = {base:HAFRIK_API,get token(){return liveToken},request:api,connect};
-window.ChinaLifeCloud = {open:show,ready:null,get playerId(){return String(account?.user_id ?? account?.id ?? '')},get signedIn(){return !!account},get joined(){return presence},get players(){return players.filter(p => p.city === game.state.city && p.place === game.state.place)},get cityPlayers(){return players.filter(p => p.city === game.state.city)},refresh:refreshPresence,join,leave,upload};
+window.ChinaLifeCloud = {open:show,ready:null,get playerId(){return String(account?.user_id ?? account?.id ?? '')},get signedIn(){return !!account},get joined(){return presence},get players(){return players.filter(p => p.city === game.state.city && p.place === game.state.place)},get cityPlayers(){return players.filter(p => p.city === game.state.city)},refresh:refreshPresence,join,leave,upload,transfer,syncTransfers};
 $('cloudButton').onclick = show; $('closeCloud').onclick = () => $('cloudDialog').close();
 window.addEventListener('chinalife:save', () => {if (auto && !loading) scheduleSave()});
 window.addEventListener('chinalife:update', () => {if (!loading && account && game.state.created) {if (!presence) join(); else refreshPresence()}});
 window.addEventListener('hafrik:session', event => {if (event.detail?.token) connect(event.detail)});
 document.addEventListener('visibilitychange', () => {if (!document.hidden && account && game.state.created) {if (presence) refreshPresence(); else join()}});
 setInterval(refreshPresence, 2500);
+setInterval(syncTransfers,5000);
 window.ChinaLifeCloud.ready = initialize();
 await window.ChinaLifeCloud.ready;
