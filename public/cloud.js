@@ -25,7 +25,6 @@ function multiplayerBlocker() {
   if(loading)return 'Your account character is still loading';
   if(!auto)return 'Account character restore failed: '+message;
   if(!game.state.created)return 'Finish character setup to enter the shared world';
-  if(game.state.story?.phase==='preparation')return 'Complete the journey to China in Phone → Student story';
   if(document.hidden)return 'Return to the visible game';
   if(polling)return 'Waiting for the presence server response';
   if(presenceCheck.error)return presenceCheck.error;
@@ -193,8 +192,10 @@ async function refreshPresence() {
   } catch (error) {if(generation===epoch){presenceCheck.error=error.message;status('Shared city: ' + error.message)} return false} finally {polling = false}
 }
 function join() {
-  if(!account||!auto||!game.state.created||game.state.story?.phase==='preparation')return Promise.resolve(false);
+  if(!account||!auto||!game.state.created)return Promise.resolve(false);
   if(joining?.epoch===epoch)return joining.task;
+  // Already joined with a presence update in flight: that update is not a failed join.
+  if(presence&&polling)return Promise.resolve(true);
   const generation=epoch,city=game.state.city,place=game.state.place;presence=true;
   const task=(async()=>{
     let ok=await refreshPresence();
@@ -235,7 +236,7 @@ window.addEventListener('hafrik:session', event => {if (event.detail?.token) con
 document.addEventListener('visibilitychange', () => {if (!document.hidden && account && game.state.created) {if (presence) refreshPresence(); else join()}});
 // A failed first join must not disable all later heartbeats.
 async function presenceHeartbeat() {
-  if (loading || !auto || !account || !game.state.created || document.hidden || game.state.story?.phase==='preparation') return false;
+  if (loading || !auto || !account || !game.state.created || document.hidden) return false;
   return presence ? refreshPresence() : join();
 }
 setInterval(presenceHeartbeat, 2500);

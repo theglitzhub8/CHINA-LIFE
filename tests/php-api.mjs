@@ -122,15 +122,18 @@ test('game coin transfers conserve balances, reject overdrafts and are idempoten
 test('both student origins persist through Hafrik and converge into the same multiplayer venue',async()=>{
  async function studentClient(id,start){
   const t=harness(null),c=t.context,stored=new Map();c.localStorage={getItem:k=>stored.get(k)||null,setItem:(k,v)=>stored.set(k,v)};
-  t.document.querySelector('[data-start="'+start+'"]').onclick();t.click('nextStep');t.document.getElementById('onName').oninput({target:{value:'Student '+id}});t.click('nextStep');
+  t.document.querySelector('[data-start="'+start+'"]').onclick();t.click('nextStep');t.document.querySelector('[data-role="Student"]').onclick();t.click('nextStep');t.document.getElementById('onName').oninput({target:{value:'Student '+id}});t.click('nextStep');
   c.HafrikSession={token:'test-'+id,user:{id}};c.URLSearchParams=URLSearchParams;c.fetch=(url,options)=>fetch(base+new URL(url).pathname+new URL(url).search,options);
   await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);
   return {...t,stored};
  }
  const [outside,inside]=await Promise.all([studentClient(5,'outside'),studentClient(6,'inside')]);
- assert.equal(outside.context.ChinaLifeCloud.joined,false);assert.equal(inside.context.ChinaLifeCloud.joined,true);
- for(let i=0;i<6;i++)outside.click('storyNext');outside.game.state.place='campus';outside.game.refresh();await outside.context.ChinaLifeCloud.upload();
+ // Arriving from abroad no longer locks players out of the shared city.
+ assert.equal(outside.game.state.place,'airport');assert.equal(outside.context.ChinaLifeCloud.joined,true);assert.equal(inside.context.ChinaLifeCloud.joined,true);
+ outside.game.state.place='campus';outside.game.refresh();await outside.context.ChinaLifeCloud.upload();
  await outside.context.ChinaLifeCloud.join();await Promise.all([outside.context.ChinaLifeCloud.refresh(),inside.context.ChinaLifeCloud.refresh()]);
+ // Each client must see the other's heartbeat, so poll once more after both have announced themselves.
+ await inside.context.ChinaLifeCloud.refresh();await outside.context.ChinaLifeCloud.refresh();
 
  assert.ok(outside.context.ChinaLifeCloud.players.some(p=>p.id==='6'));assert.ok(inside.context.ChinaLifeCloud.players.some(p=>p.id==='5'));
  await inside.context.ChinaLifeCloud.upload();const saved=(await call(5,'save.php')).data.save.game;assert.equal(saved.story.phase,'arrival');assert.equal(saved.student.start,'outside');
