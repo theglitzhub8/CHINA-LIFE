@@ -210,3 +210,11 @@ test('save caps XP and money growth by real time so edited saves cannot top the 
  const r=await call(11,'save.php','POST',{revision:cur.revision,save:{character:{name:'x'},game:{...before,xp:before.xp+999999,money:before.money+99999999}}});assert.equal(r.httpStatus,200);
  const after=(await call(11,'save.php')).data.save.game;assert.ok(after.xp<=before.xp+400,'xp '+after.xp);assert.ok(after.money<=before.money+21000,'money '+after.money);assert.ok(after.xp>before.xp);
 });
+
+test('the weekly golden envelope pays only the first finder at its venue',async()=>{
+ const g=await call(3,'golden.php');assert.equal(g.httpStatus,200);assert.equal(g.data.found_by,null);
+ assert.equal((await call(3,'golden.php','POST',{})).httpStatus,409);
+ for(const id of [3,4])await call(id,'presence.php','POST',presence('Shenyang',g.data.place));
+ const money=(await call(3,'save.php')).data.save.game.money;const win=await call(3,'golden.php','POST',{});assert.equal(win.httpStatus,200);assert.equal((await call(3,'save.php')).data.save.game.money,money+50000);
+ const late=await call(4,'golden.php','POST',{});assert.equal(late.httpStatus,409);assert.match(late.message,/user3/);assert.equal((await call(4,'golden.php')).data.found_by,'user3');
+});

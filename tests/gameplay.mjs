@@ -1,3 +1,4 @@
+import vm from 'node:vm';
 import test from 'node:test';import assert from 'node:assert/strict';import {harness,fixture} from './game-harness.mjs';
 test('fresh character creation, name validation, background and isolated defaults',()=>{const h=harness(null);assert(h.document.getElementById('onboarding').open);h.click('nextStep');assert.match(h.document.getElementById('toast').textContent,/begins/);h.document.querySelector('[data-start="inside"]').onclick();h.click('nextStep');h.click('nextStep');assert.match(h.document.getElementById('toast').textContent,/role/);h.document.querySelector('[data-role="Student"]').onclick();h.click('nextStep');h.click('nextStep');assert.match(h.document.getElementById('toast').textContent,/name/);h.document.getElementById('onName').oninput({target:{value:'Adewale'}});h.click('nextStep');assert.equal(h.game.state.name,'Adewale');assert.equal(h.game.state.skills.Study,2);assert.equal(h.game.state.created,true);assert(!h.document.getElementById('onboarding').open);assert(h.writes.length>0)});
 test('corrupt saves recover and blocked local storage does not break play',()=>{const corrupt=harness(null,{raw:'{broken'});assert(corrupt.document.getElementById('onboarding').open);assert.match(corrupt.document.getElementById('toast').textContent,/could not be loaded/);const blocked=harness(fixture(),{blockStorage:true});blocked.game.activity('home',0);assert.equal(blocked.game.state.hour,700);assert.match(blocked.document.getElementById('toast').textContent,/slept/)});
@@ -56,4 +57,11 @@ test('unaffordable activities open Make money and Today lists what is due',()=>{
 
 test('a ready daily reward shows a notification banner that opens Rank',()=>{
  const h=harness({...fixture(),lastVisit:'2000-01-01'});h.internal.render();for(const fn of [...h.timers])if(typeof fn==='function')fn();const banner=h.document.getElementById('gameNotification');assert.ok(banner,'banner');assert.match(banner.textContent,/daily reward/);banner.onclick();assert.match(h.document.getElementById('activityContent').textContent,/Claim daily reward/);
+});
+
+test('dice pays double on a win, returns ties and allows ten rolls a day',()=>{
+ const h=harness({...fixture(),money:10000,rankClaimed:6,secrets:['night-owl','foodie','scholar','jet-setter','treasure-hunter','big-spender']}),M=vm.runInContext('Math',h.context),real=M.random;let seq=[.99,.99,0,0],n=0;M.random=()=>seq[n++%4];
+ h.game.dice();h.click('dice-1000');assert.equal(h.game.state.money,11000);seq=[0,0,.99,.99];n=0;h.click('dice-1000');assert.equal(h.game.state.money,10000);
+ seq=[.5,.5,.5,.5];n=0;h.click('dice-200');assert.equal(h.game.state.money,10000);
+ for(let i=0;i<12;i++)h.click('dice-50');assert.equal(h.game.state.dice.count,10);M.random=real;
 });

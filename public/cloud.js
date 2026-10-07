@@ -197,7 +197,7 @@ async function initialize() {
   return connected;
 }
 window.ChinaLifeAuth = {base:HAFRIK_API,get token(){return liveToken},request:api,connect};
-window.ChinaLifeCloud = {open:show,ready:null,get playerId(){return String(account?.user_id ?? account?.id ?? '')},get signedIn(){return !!account},get joined(){return presence},get players(){return players.filter(p => p.city === game.state.city && p.place === game.state.place)},get online(){return online},get events(){return events},get isAdmin(){return admin},joinEvent,admin:adminRequest,refreshEvents,get cityPlayers(){return players.filter(p => p.city === game.state.city)},refresh:refreshPresence,join,leave,upload,transfer,syncTransfers};
+window.ChinaLifeCloud = {open:show,ready:null,get playerId(){return String(account?.user_id ?? account?.id ?? '')},get signedIn(){return !!account},get joined(){return presence},get players(){return players.filter(p => p.city === game.state.city && p.place === game.state.place)},get online(){return online},get events(){return events},get golden(){return golden},claimGolden,get isAdmin(){return admin},joinEvent,admin:adminRequest,refreshEvents,get cityPlayers(){return players.filter(p => p.city === game.state.city)},refresh:refreshPresence,join,leave,upload,transfer,syncTransfers};
 $('cloudButton').onclick = show; $('closeCloud').onclick = () => $('cloudDialog').close();
 window.addEventListener('chinalife:save', () => {if (auto && !loading) scheduleSave()});
 window.addEventListener('chinalife:update', () => {if (!loading && account && game.state.created) {if (!presence) join(); else refreshPresence()}});
@@ -220,5 +220,10 @@ async function refreshEvents(){if(!account||document.hidden)return;try{const res
 async function joinEvent(id){await api('/chinalife/events.php','POST',{id:Number(id)});await refreshEvents();await syncTransfers()}
 async function adminRequest(action,data={}){const result=await api('/chinalife/admin.php','POST',{action,...data});return result.data||result}
 setInterval(refreshEvents,45000);window.addEventListener('chinalife:cloudready',refreshEvents);
+// Weekly golden envelope: the server decides who found it first.
+let golden=null;
+async function refreshGolden(){if(!account||document.hidden)return;try{const result=await api('/chinalife/golden.php'),data=result.data||result;const changed=JSON.stringify(data)!==JSON.stringify(golden);golden=data;if(changed)window.dispatchEvent(new CustomEvent('chinalife:golden',{detail:golden}))}catch{}}
+async function claimGolden(){const result=await api('/chinalife/golden.php','POST',{});await refreshGolden();await syncTransfers();return result.data||result}
+setInterval(refreshGolden,60000);window.addEventListener('chinalife:cloudready',refreshGolden);
 window.ChinaLifeCloud.ready = initialize();
 await window.ChinaLifeCloud.ready;
