@@ -132,15 +132,12 @@ test('background first join resumes when the game becomes visible',async()=>{
 });
 
 
-test('connection check distinguishes an API failure from received and rendered players without exposing tokens',async()=>{
- const api=server();api.saves.set('alice',fixture());api.failPresence=true;const t=await client(api,'alice');
- t.context.ChinaLifeCloud.open();assert.match(t.document.getElementById('multiplayerReport').textContent,/Presence error: Unavailable/);
- api.failPresence=false;t.context.ChinaLifeWorld={view:'venue',playerIds:['bob']};
- api.players.set('bob',{id:'bob',name:'Bob',city:t.game.state.city,place:t.game.state.place});
- await t.document.getElementById('multiplayerCheck').onclick();const report=t.document.getElementById('multiplayerReport').textContent;
- assert.match(report,/Server account: alice/);assert.match(report,/Players received in venue: 1/);assert.match(report,/Avatars rendered: 1/);assert.match(report,/Presence error: none/);assert.doesNotMatch(report,/Bearer|password|token/i);
+test('account panel keeps user controls without showing connection diagnostics',async()=>{
+ const api=server();api.saves.set('alice',fixture());const t=await client(api,'alice');t.context.ChinaLifeCloud.open();
+ assert.equal(t.document.getElementById('multiplayerReport'),null);assert.equal(t.document.getElementById('multiplayerCheck'),null);
+ assert.doesNotMatch(t.document.getElementById('cloudContent').textContent,/Account & connection details|Sign-in method:|Server account:/);
+ assert.ok(t.document.getElementById('cloudUpload'));assert.ok(t.document.getElementById('hafrikLogout'));
 });
-
 
 test('fresh browser checks an existing Hafrik cookie session before showing setup',async()=>{
  const api=server();api.saves.set('alice',{...fixture(),name:'Website Alice'});let cookieRequest;
@@ -149,20 +146,14 @@ test('fresh browser checks an existing Hafrik cookie session before showing setu
 });
 
 
-test('recognized account without a character explains the join blocker and opens setup',async()=>{
- const t=await client(server(),'alice');t.context.ChinaLifeCloud.open();
- assert.match(t.document.getElementById('multiplayerReport').textContent,/Join status: Finish character setup/);
- assert.match(t.document.getElementById('multiplayerReport').textContent,/Character created: false/);
- await t.document.getElementById('multiplayerCheck').onclick();assert.equal(t.document.getElementById('onboarding').open,true);assert.equal(t.document.getElementById('cloudDialog').open,false);
+test('recognized account without a character keeps its setup available',async()=>{
+ const t=await client(server(),'alice');assert.equal(t.game.state.created,false);assert.equal(t.document.getElementById('onboarding').open,true);
 });
 
-test('recognized account with an invalid save reports restore failure instead of claiming a join',async()=>{
+test('recognized account with an invalid save keeps a useful recovery message',async()=>{
  const api=server();api.saves.set('alice',{...fixture(),money:'invalid'});const t=await client(api,'alice');t.context.ChinaLifeCloud.open();
- assert.match(t.document.getElementById('multiplayerReport').textContent,/Join status: Account character restore failed/);
- assert.match(t.document.getElementById('multiplayerReport').textContent,/money/);
- assert.match(t.document.getElementById('multiplayerReport').textContent,/Account save ready: false/);
+ assert.match(t.document.getElementById('cloudContent').textContent,/money/);assert.ok(t.document.getElementById('cloudRetry'));assert.equal(t.context.ChinaLifeCloud.joined,false);
 });
-
 
 test('expired remembered token falls back to an existing Hafrik website session',async()=>{
  const api=server();api.saves.set('alice',fixture());let cookiesUsed=false;
