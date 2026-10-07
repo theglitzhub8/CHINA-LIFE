@@ -184,3 +184,7 @@ dialog{border-radius:22px}
 .scene-label.venue-label.has-event{background:#d6202a;color:#fff;box-shadow:0 0 0 3px rgba(255,190,80,.5)}
 .scene-label.treasure.golden{background:linear-gradient(135deg,#f5c542,#c8902e);color:#3b2600;font-size:13px}.golden-note{display:grid;gap:4px;padding:12px 14px;border-radius:14px;background:linear-gradient(135deg,#fff4cc,#ffe08a);margin:8px 0}.golden-note span{font-size:13px;color:#6b4f00}.festival-note{padding:10px 12px;border-radius:12px;background:#ffe4e4;color:#9f1c1c;font-weight:700}.dice-result{font-size:20px;font-weight:800;text-align:center;padding:12px;border-radius:14px;background:#f1f6f8}
 .admin-city{padding:10px 12px;border-radius:12px;background:#f7fafb;margin:6px 0;font-weight:700}
+
+/* Wellbeing bars share the panel width so they never spill outside it on small screens. */
+.mini-needs{overflow:hidden;box-sizing:border-box}.mini-need{min-width:0}.mini-need>span{flex:none}.mini-need i{flex:1 1 auto;width:auto!important;min-width:12px}
+@media(max-width:600px){.world-side .mini-needs{width:168px;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px 7px}.mini-need{font-size:11px;gap:3px}.mini-need i{height:5px}}
