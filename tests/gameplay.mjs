@@ -25,3 +25,10 @@ test('homes and the home desk follow the player role',()=>{
  founder.game.home();founder.click('buy-desk');founder.click('homeStudy');assert.equal(founder.game.state.skillXP.Network,25);
  const tourist=harness({...fixture(),background:'Tourist'});assert.equal(tourist.game.locations.find(p=>p[0]==='home')[1],'Your hotel room');
 });
+
+test('Learn lists every skill with places that teach it, and courses raise new skills',()=>{
+ const h=harness({...fixture(),money:5000});h.game.state.background='Worker';h.internal.skillsScreen();const text=h.document.getElementById('activityContent').textContent;
+ for(const skill of ['Chinese','Cooking','Music','Digital'])assert.match(text,new RegExp(skill));assert.match(text,/Shenyang Skills Academy/);
+ h.document.querySelector('[data-learn="academy"]').onclick();h.game.state.place='academy';h.game.activity('academy',2);assert.equal(h.game.state.skillXP.Cooking,20);
+ const saved=harness(JSON.parse(JSON.stringify(h.game.state)));assert.equal(saved.game.state.skillXP.Cooking,20);
+});

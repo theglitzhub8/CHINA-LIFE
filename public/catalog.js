@@ -2,7 +2,7 @@ window.ChinaLifeCatalog = {
  advertising:{whatsapp:''},
  ads:[
  // Open ad space for sale. Every billboard says ADVERTISE HERE and opens WhatsApp to the number below.
- {id:'advertise-city',map:{x:-20,z:-30},venues:['campus','university','liaoning','dongbei','plaza','mall','market','cafe','night','blood','skylight','station','airport','gym','african','ef','business']},
+ {id:'advertise-city',map:{x:-20,z:-30},venues:['campus','university','liaoning','dongbei','plaza','mall','market','cafe','night','blood','skylight','academy','station','airport','gym','african','ef','business']},
  {id:'advertise-east',map:{x:25,z:8},venues:[]},
  {id:'advertise-south',map:{x:-25,z:33},venues:[]}
  ],
