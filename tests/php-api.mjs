@@ -168,3 +168,10 @@ test('voice relay credentials require an account and fall back to STUN without a
  assert.equal((await call(null,'ice.php')).httpStatus,401);
  const r=await call(3,'ice.php');assert.equal(r.httpStatus,200);assert.equal(r.data.turn,false);assert.deepEqual(r.data.iceServers,[{urls:['stun:stun.cloudflare.com:3478']}]);
 });
+
+test('leaderboard ranks saved accounts by XP and reports the caller position',async()=>{
+ // Earlier tests may have saved these accounts, so update on top of their current revision.
+ for(const [id,xp] of [[10,900],[11,4200]]){const cur=(await call(id,'save.php')).data;const r=await call(id,'save.php','POST',{revision:cur.revision||0,save:{character:{name:'x'},game:{...game(),transferTotal:cur.save?.game?.transferTotal??0,xp}}});assert.equal(r.httpStatus,200,r.message)}
+ const board=await call(10,'leaderboard.php');assert.equal(board.httpStatus,200);const order=board.data.players.map(p=>p.id);assert.ok(order.indexOf('11')<order.indexOf('10'));assert.ok(board.data.players.find(p=>p.id==='10').own);assert.ok(board.data.position>=2);
+ assert.equal((await call(null,'leaderboard.php')).httpStatus,401);
+});

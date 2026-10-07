@@ -127,3 +127,6 @@ dialog{border-radius:22px}
 .phone-notice{display:none}
 @media(max-height:700px){.phone-clock{font-size:46px;margin-top:6px}.phone-widgets{margin-top:10px}}
 .learn-places{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.learn-places button{border:1px solid rgba(15,42,58,.1);background:#f1f6f8;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700;color:#0f2a3a}.learn-places button:hover{background:#e3f1ee}
+.rank-progress{width:100%;height:10px;accent-color:#12907b}.rank-list{display:grid;gap:6px}.rank-list>div{display:grid;grid-template-columns:32px 1fr auto;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:#f1f6f8;opacity:.55}.rank-list>div.reached{opacity:1;background:#e6f4f1}.rank-list span{font-size:20px}.rank-list small{color:#6b7f88;font-size:12px}
+.leaderboard{list-style:none;padding:0;margin:0;display:grid;gap:4px;counter-reset:rank}.leaderboard li{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:#f7fafb;font-size:13px}.leaderboard li.own{background:#fff4d6;font-weight:800}.leaderboard small{color:#6b7f88}
+.leaderboard li:only-child:not(.own){display:block;color:#6b7f88}
