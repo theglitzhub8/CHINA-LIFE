@@ -1,5 +1,19 @@
 # Deploy ChinaLife through Git
 
+## Quick update on the live server
+
+After a change is pushed to `main`, run this on the hafrik.com server to pull it and copy the files into place:
+
+```sh
+cd /www/chinalife-source
+./scripts/update-server.sh \
+  /www/wwwroot/hafrik.com \
+  /www/wwwroot/china-life.hafrik.com/public
+php /www/wwwroot/hafrik.com/api/v4/chinalife/migrate.php
+```
+
+The migration step is safe to repeat; run it whenever an update changes the database. Then hard-refresh the game (or reopen it in the Hafrik app) to load the new files.
+
 ## 1. First server checkout
 
 Choose a private source directory outside your websites' public document roots:
