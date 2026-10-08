@@ -358,3 +358,14 @@ test('hidden fortunes award server-configured money once and rich public profile
  for(const id of ['home-campus','home-nanhu','home-hunnan','home-river','home-mansion'])assert.equal((await call(11,'presence.php','POST',presence('Shenyang',id))).httpStatus,200);
 });
 test('hafrik and horlaarsman have admin access alongside configured additional admins',async()=>{sql("USE chinalife_test; INSERT INTO users VALUES(13,'hafrik'),(14,'horlaarsman')");for(const id of [13,14]){assert.equal((await call(id,'admin.php','POST',{action:'stats'})).httpStatus,200);assert.equal((await call(id,'admin.php','POST',{action:'players'})).httpStatus,200)}assert.equal((await call(12,'admin.php','POST',{action:'stats'})).httpStatus,403)});
+
+test('players can report other players and admins see the reports with a running count',async()=>{
+ assert.equal((await call(4,'report.php','POST',{peer:5,reason:'nonsense'})).httpStatus,400);
+ assert.ok((await call(4,'report.php','POST',{peer:4,reason:'scam'})).httpStatus>=400,'cannot report yourself');
+ assert.equal((await call(4,'report.php','POST',{peer:5,reason:'scam',note:'Asked for money outside the game'})).httpStatus,200);
+ assert.equal((await call(6,'report.php','POST',{peer:5,reason:'harassment'})).httpStatus,200);
+ assert.equal((await call(4,'report.php','POST',{peer:5,reason:'scam',note:'Again'})).httpStatus,200);
+ assert.equal((await call(4,'admin.php','POST',{action:'reports'})).httpStatus,403);
+ const reports=(await call(1,'admin.php','POST',{action:'reports'})).data.playerReports.filter(r=>r.player==='user5');
+ assert.equal(reports.length,2);assert.ok(reports.every(r=>+r.total===2));assert.equal(reports.find(r=>r.reason==='scam').note,'Again');
+});

@@ -65,6 +65,6 @@ if ($action==='set_cities') {
     admin_log('set_cities',null,null,$value);json_response('success',['open'=>json_decode($value,true)]);
 }
 if ($action==='reports') {
-    json_response('success',['reports'=>cl_rows('SELECT r.reason,r.message_body body,r.created_at,a.user_name reporter,b.user_name sender FROM chinalife_reports r LEFT JOIN users a ON a.user_id=r.reporter_id LEFT JOIN users b ON b.user_id=r.sender_id ORDER BY r.created_at DESC LIMIT 50')]);
+    json_response('success',['reports'=>cl_rows('SELECT r.reason,r.message_body body,r.created_at,a.user_name reporter,b.user_name sender FROM chinalife_reports r LEFT JOIN users a ON a.user_id=r.reporter_id LEFT JOIN users b ON b.user_id=r.sender_id ORDER BY r.created_at DESC LIMIT 50'),'playerReports'=>cl_rows('SELECT r.reason,r.note,r.city,r.place,r.created_at,a.user_name reporter,b.user_name player,(SELECT COUNT(*) FROM chinalife_player_reports x WHERE x.peer_id=r.peer_id) total FROM chinalife_player_reports r LEFT JOIN users a ON a.user_id=r.reporter_id LEFT JOIN users b ON b.user_id=r.peer_id ORDER BY r.created_at DESC LIMIT 50')]);
 }
 cl_fail('Unknown admin action');
