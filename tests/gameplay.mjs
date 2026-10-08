@@ -99,7 +99,9 @@ test('clubs charge entry each night and unlock VIP, private rooms and the exclus
  g.clubAccess('night');assert.equal(h.document.getElementById('vipTable'),null);assert.equal(h.document.getElementById('exShow'),null,'exclusive needs Insider rank or membership');
  h.click('vipNight');assert.equal(g.state.money,9440);assert.equal(dialog.open,false);g.clubAccess('night');h.click('vipTable');assert.equal(g.state.money,8640);assert.equal(dialog.open,false,'window closes after a VIP activity');
  g.clubAccess('night');h.click('roomBook');assert.equal(g.state.privateRoom.id,'night');g.clubAccess('night');assert.ok(h.document.getElementById('roomParty'));
- // The VIP table ran past midnight, so membership starts from the new day.
+ // The VIP table ran past midnight; tonight's passes last until 6am. The next evening they have expired.
+ assert.ok(g.state.hour<6*60&&g.state.day===day+1);assert.ok(h.document.getElementById('roomParty'),'still tonight after midnight');
+ g.state.hour=21*60;g.clubAccess('night');assert.equal(h.document.getElementById('roomParty'),null);
  const now=g.state.day;h.click('vipMember');assert.equal(g.state.vipUntil,now+30);g.clubAccess('night');assert.ok(h.document.getElementById('exShow'));
  const saved=harness(JSON.parse(JSON.stringify(g.state)));assert.equal(saved.game.state.vipUntil,now+30);assert.equal(saved.game.state.clubPass.night,now);
  g.state.hour=10*60;g.clubAccess('night');assert.match(h.document.getElementById('activityContent').textContent,/Closed now/);
@@ -147,4 +149,36 @@ test('admin-configured ranks rename the ladder and a suspension pauses rank rewa
  g.state.xp=150;h.internal.render();assert.equal(g.state.money,1000,'no rank reward while suspended');
  g.ranks();const text=h.document.getElementById('activityContent').textContent;assert.match(text,/paused/);assert.match(text,/Lantern Festival/);
  g.setRankStatus({badges:[],rankSuspendedUntil:null});h.internal.render();assert.equal(g.state.money,1250,'the configured reward is paid');
+});
+
+test('club jobs pay one gig a night, check skills, and club owners collect daily takings with free entry',()=>{
+ const h=harness({...fixture(),money:900000,place:'night',rankClaimed:6,secrets:['night-owl','foodie','scholar','jet-setter','treasure-hunter','big-spender']}),g=h.game;g.state.hour=22*60;g.state.needs.energy=95;
+ g.clubJobs('night');h.click('gig-dj');assert.equal(g.state.money,900000,'DJ needs Music 3');
+ h.click('gig-promoter');assert.equal(g.state.money,900180);assert.equal(g.state.clubGig.id,'promoter');
+ g.clubJobs('night');h.click('gig-bartender');assert.equal(g.state.money,900180,'one gig a night');
+ g.clubJobs('night');h.click('clubBuy');assert.ok(g.ownsClub('night'));assert.equal(g.state.money,100180);
+ g.clubJobs('night');h.click('clubTakings');assert.equal(g.state.money,100180+4000+50*60);g.clubJobs('night');h.click('clubTakings');assert.equal(g.state.money,107180,'once a day');
+ g.state.clubPass={};assert.equal(g.securityCheck('night'),true);g.bar('night');assert.ok(h.document.getElementById('bar-0'),'owners walk straight in');
+ const saved=harness(JSON.parse(JSON.stringify(g.state)));assert.ok(saved.game.ownsClub('night'));assert.equal(saved.game.state.clubGig.id,'promoter');
+});
+
+test('dance competitions score copied beats plus style, pay prizes once a night and count toward night missions',()=>{
+ const h=harness({...fixture(),money:1000,place:'night',rankClaimed:6,secrets:['night-owl','foodie','scholar','jet-setter','treasure-hunter','big-spender']}),g=h.game;g.state.hour=22*60;g.state.needs.energy=95;
+ g.dance('night');assert.match(h.document.getElementById('activityContent').textContent,/Entry/);
+ g.clubAccess('night');h.click('clubEntry');g.dance('night');h.click('danceStart');assert.equal(g.state.money,1000-60-50);
+ const moves=['Left step','Right step','Jump','Spin'];for(let n=0;n<5;n++){const text=h.document.getElementById('activityContent').textContent,after=text.split('calls: ')[1],call=moves.map((m,i)=>[after.indexOf(m),i]).filter(x=>x[0]>=0).sort((a,b)=>a[0]-b[0])[0][1];h.click('move-'+call)}
+ assert.match(h.document.getElementById('activityContent').textContent,/5\/5 beats/);assert.equal(g.state.danceComp.place,1);assert.equal(g.state.money,890+600);
+ g.dance('night');assert.equal(g.state.money,1490,'one entry a night');
+ g.bar('night');h.click('bar-3');g.missions();assert.match(h.document.getElementById('activityContent').textContent,/3\/5 done/);
+ g.clubJobs('night');h.click('gig-promoter');const before=g.state.money;g.activity('night',0);
+ assert.equal(g.state.nightMission.paid,true);assert.equal(g.state.money,before-35+500,'all five missions pay the bonus');
+});
+
+test('the arcade sells tokens for money but tickets only buy prizes',()=>{
+ const h=harness({...fixture(),money:1000,place:'mall'}),g=h.game;
+ g.arcade();h.click('arcadeWheel');assert.equal(g.state.arcade.tokens,0);
+ h.click('arcadeTokens');assert.equal(g.state.money,900);assert.equal(g.state.arcade.tokens,5);
+ for(let i=0;i<5;i++)h.click('arcadeHoops');assert.equal(g.state.arcade.tokens,0);assert.ok(g.state.arcade.tickets>=35);
+ g.state.arcade.tickets=150;g.arcade();h.click('prize-plush');assert.deepEqual([...g.state.arcade.prizes],['plush']);assert.equal(g.state.arcade.tickets,50);assert.equal(g.state.money,900,'tickets never become money');
+ const saved=harness(JSON.parse(JSON.stringify(g.state)));assert.equal(saved.game.state.arcade.tickets,50);
 });
