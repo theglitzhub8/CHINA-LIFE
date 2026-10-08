@@ -90,3 +90,13 @@ test('map search finds places by name and type, highlights the route and travels
  t.document.getElementById('searchGo').onclick();assert.equal(t.document.getElementById('mapSearchResults').textContent,'');
  t.world.venue('home');assert.equal(t.document.getElementById('mapSearch').hidden,true);
 });
+
+test('action menu plays looping emotes with props, smoking only where allowed, and walking ends them',()=>{
+ const t=setup();t.game.state.place='home';t.internal.render();t.world.venue('home');
+ t.document.getElementById('worldEmote').onclick();assert.equal(t.document.getElementById('emotePanel').hidden,false);assert.ok(t.document.querySelectorAll('#emotePanel [data-emote]').length>=10);
+ t.document.querySelector('[data-emote="dance"]').onclick();assert.equal(t.world.emoteNow,'dance');t.tick(1);assert.equal(t.world.emoteNow,'dance');
+ t.world.emote('smoke');assert.equal(t.world.emoteNow,'dance','no smoking at home');assert.match(t.document.getElementById('toast').textContent,/only allowed/);
+ t.world.emote('drink');assert.equal(t.world.emoteNow,'drink');t.world.emote('stop');assert.equal(t.world.emoteNow,null);
+ t.game.state.place='night';t.internal.render();t.world.venue('night');t.world.emote('smoke');assert.equal(t.world.emoteNow,'smoke');
+ t.world.emote('sit');assert.equal(t.world.emoteNow,'sit');
+});
