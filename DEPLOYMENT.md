@@ -319,3 +319,11 @@ Phone → Food delivery lists the current city's configured restaurants and thei
 The microphone button is tap-to-join, tap-to-mute and tap-to-unmute. Push-to-talk is hidden from the normal voice controls, and the speaker starts at full volume. Advanced voice settings remain available in the voice panel.
 
 Validation: gameplay tests pass after the driving and delivery additions; rebuild succeeds. Deploy with the standard update script and reload clients. Run the full suite in CI before release if concurrent local tests report unrelated admin-config ordering failures.
+
+## Home delivery handoff and home activities
+
+Pending food orders now render a named delivery driver inside the player's private home. The driver label opens the delivery panel so the player can mark the order received; the meal benefits apply only after receipt. The pending order and receipt state continue to save with the character.
+
+Private homes now include **Watch Netflix**, which advances two game hours and restores fun. **Invite girlfriend or the boys** opens the consent-based home invitation flow; only accepted friends can enter, and the existing expiry/revoke rules protect the private residence.
+
+Validation: the focused gameplay/world checks rebuild successfully; the existing legacy delivery assertion still expects hunger to apply at checkout and therefore needs to be updated for the requested receive-first flow. Deploy using the standard update script and reload the client.
