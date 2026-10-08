@@ -4,6 +4,8 @@ export function cityLayout(name,content){
  const positions={home:[-50,-32],church:[-50,-23],ef:[-17,-33],cafe:[-17,-23],campus:[17,-32],gym:[17,-23],university:[34,-32],liaoning:[51,-22],dongbei:[34,-10],station:[68,-32],market:[-50,0],african:[-40,3],plaza:[-17,0],skylight:[7,9],hotel:[-6,10],business:[17,0],mall:[51,0],academy:[40,9],park:[-50,32],palace:[-38,40],zhongjie:[-60,-8],night:[-17,32],blood:[-28,40],airport:[49,48],hq:[0,-74]};
  // Each city's own places (Shenyang content, Guangzhou landmarks) bring their map positions.
  if(content)for(const venues of Object.values(content))if(Array.isArray(venues))for(const venue of venues)if(venue.position)positions[venue.id]=venue.position;
+ // Shenyang City Centre prototype: the hotel tower stands at the back (north-east) so it never hides Hafrik Square.
+ if(name==='Shenyang')positions.hotel=[-6,-9];
  const xs=[-68,-34,0,34,68],zs=[-48,-16,16,48];
  const districts=[{name:'Residential quarter',x:-50,z:-42},{name:'Student quarter',x:-17,z:-42},{name:'University campus',x:17,z:-42},{name:'Rail district',x:51,z:-42},{name:'Food & community',x:-50,z:-9},{name:'City centre',x:-17,z:-9},{name:'Business district',x:17,z:-9},{name:'Shopping district',x:51,z:-9},{name:coastal?'Riverside gardens':'City gardens',x:-50,z:23},{name:'Nightlife district',x:-17,z:23},{name:'Riverfront',x:17,z:23},{name:'Airport district',x:51,z:23}];
  // Guangzhou shows its real districts on the map.
