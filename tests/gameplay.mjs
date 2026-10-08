@@ -104,3 +104,12 @@ test('clubs charge entry each night and unlock VIP, private rooms and the exclus
  const saved=harness(JSON.parse(JSON.stringify(g.state)));assert.equal(saved.game.state.vipUntil,now+30);assert.equal(saved.game.state.clubPass.night,now);
  g.state.hour=10*60;g.clubAccess('night');assert.match(h.document.getElementById('activityContent').textContent,/Closed now/);
 });
+
+test('drinks raise the drunk meter, water and time lower it, and 100% blacks out at home',()=>{
+ const h=harness({...fixture(),money:5000,place:'night',rankClaimed:6,secrets:['night-owl','foodie','scholar','jet-setter','treasure-hunter','big-spender']}),g=h.game;g.state.hour=22*60;g.state.needs.energy=95;g.state.clubPass={night:g.state.day};
+ g.bar('night');h.click('bar-0');assert.equal(Math.round(g.state.drunk),18,'a cocktail adds 18');assert.equal(g.drunkInfo().label,'Sober');
+ g.bar('night');h.click('bar-0');g.bar('night');h.click('bar-1');assert.equal(g.drunkInfo().label,'Tipsy');
+ g.bar('night');h.click('bar-2');const before=g.state.drunk;g.bar('night');h.click('bar-3');assert.ok(g.state.drunk<before-9,'water sobers you up');
+ g.state.drunk=100;h.internal.render();assert.match(h.document.getElementById('activityContent').textContent,/blacked out/);assert.equal(g.state.place,'home');assert.equal(g.state.drunk,30);
+ const saved=harness(JSON.parse(JSON.stringify(g.state)));assert.equal(saved.game.state.drunk,30);
+});
