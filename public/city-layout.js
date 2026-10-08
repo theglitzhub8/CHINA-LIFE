@@ -6,6 +6,8 @@ export function cityLayout(name,content){
  if(content)for(const venues of Object.values(content))if(Array.isArray(venues))for(const venue of venues)if(venue.position)positions[venue.id]=venue.position;
  const xs=[-68,-34,0,34,68],zs=[-48,-16,16,48];
  const districts=[{name:'Residential quarter',x:-50,z:-42},{name:'Student quarter',x:-17,z:-42},{name:'University campus',x:17,z:-42},{name:'Rail district',x:51,z:-42},{name:'Food & community',x:-50,z:-9},{name:'City centre',x:-17,z:-9},{name:'Business district',x:17,z:-9},{name:'Shopping district',x:51,z:-9},{name:coastal?'Riverside gardens':'City gardens',x:-50,z:23},{name:'Nightlife district',x:-17,z:23},{name:'Riverfront',x:17,z:23},{name:'Airport district',x:51,z:23}];
+ // Guangzhou shows its real districts on the map.
+ if(name==='Guangzhou')['Baiyun','Tianhe · University Town','Tianhe · Sports Centre','Huangpu','Liwan · Old Town','Yuexiu · City centre','Zhujiang New Town','Tianhe CBD','Liwan riverside','Haizhu · Pearl River','Haizhu · Pazhou','Panyu · Nansha'].forEach((label,i)=>districts[i].name=label);
  const entries=Object.fromEntries(Object.entries(positions).map(([id,[x,z]])=>{const roadX=xs.reduce((a,b)=>Math.abs(b-x)<Math.abs(a-x)?b:a),roadZ=zs.reduce((a,b)=>Math.abs(b-z)<Math.abs(a-z)?b:a);return [id,Math.abs(roadX-x)<Math.abs(roadZ-z)?{x:roadX,z}:{x,z:roadZ}]}));
  return {name,north,coastal,positions,entries,xs,zs,districts,width:148,depth:112,riverZ:20};
 }

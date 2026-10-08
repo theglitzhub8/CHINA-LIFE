@@ -53,7 +53,7 @@ function boat(seed){const g=new THREE.Group();box(g,2.6,.35,1,seed%2?0xffffff:0x
 
 // Free spots are in the half of each block that venues and the residential rows leave empty.
 export function skyline(layout,blocked){
- const group=new THREE.Group(),kinds={'Business district':'tower','City centre':'tower','Shopping district':'tower','Residential quarter':'house','City gardens':'house','Riverside gardens':'house'};
+ const group=new THREE.Group(),kinds={'Business district':'tower','City centre':'tower','Shopping district':'tower','Residential quarter':'house','City gardens':'house','Riverside gardens':'house','Tianhe CBD':'tower','Zhujiang New Town':'tower','Yuexiu · City centre':'tower','Baiyun':'house','Liwan riverside':'house'};
  group.userData.kind='skyline';
  for(let i=0;i<4;i++)for(let j=0;j<3;j++){
   const cx=(layout.xs[i]+layout.xs[i+1])/2,cz=(layout.zs[j]+layout.zs[j+1])/2,district=layout.districts[j*4+i],kind=kinds[district?.name]||'apartment';
