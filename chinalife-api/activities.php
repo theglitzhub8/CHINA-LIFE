@@ -2,6 +2,14 @@
 declare(strict_types=1);
 require_once __DIR__.'/common.php';cl_methods(['GET','POST']);
 $catalog=require __DIR__.'/shared-config.php';
+function shared_romance(int $a,int $b,string $kind): void {
+ if(!in_array($kind,['girlfriend','boyfriend','date'],true))return;
+ $rows=cl_rows('SELECT user_id,game_state FROM chinalife_saves WHERE user_id IN (?,?)','ii',[$a,$b]);$g=[];
+ foreach($rows as $r)$g[(int)$r['user_id']]=json_decode($r['game_state'],true)['gender']??null;
+ if(!in_array($g[$a]??null,['male','female'],true)||!in_array($g[$b]??null,['male','female'],true))cl_fail('Both players must set their gender in Profile first',409);
+ if($g[$a]===$g[$b])cl_fail('Romantic requests are available between male and female characters',409);
+ if(($kind==='girlfriend'&&$g[$b]!=='female')||($kind==='boyfriend'&&$g[$b]!=='male'))cl_fail('Choose the matching relationship request',409);
+}
 function shared_present(array $row): void {
  $count=cl_one('SELECT COUNT(*) count FROM chinalife_presence WHERE user_id IN (?,?) AND city=? AND place=? AND seen_at>=DATE_SUB(NOW(),INTERVAL 20 SECOND)','iiss',[(int)$row['inviter_id'],(int)$row['invitee_id'],$row['city'],$row['place']]);
  if((int)$count['count']!==2)cl_fail('Both players must be online at this venue',409);
@@ -16,7 +24,7 @@ if($method==='GET') {
 cl_rate('shared_activity',30,60);$input=cl_body();$action=$input['action']??'';
 if($action==='invite') {
  $peer=cl_peer($input['peer']??null);$kind=$input['kind']??'';if(!is_string($kind)||!isset($catalog[$kind]))cl_fail('Choose a shared activity');
- if(cl_blocked($uid,$peer))cl_fail('Player unavailable',403);cl_rate('shared_invite',10,60);
+ shared_romance($uid,$peer,$kind);if(cl_blocked($uid,$peer))cl_fail('Player unavailable',403);cl_rate('shared_invite',10,60);
  $presence=cl_one('SELECT city FROM chinalife_presence WHERE user_id=? AND seen_at>=DATE_SUB(NOW(),INTERVAL 20 SECOND)','i',[$uid]);
  if(($presence['city']??'')!=='Shenyang')cl_fail('Shared student activities start in Shenyang',409);
  cl_presence($peer,'Shenyang',cl_one('SELECT place FROM chinalife_presence WHERE user_id=?','i',[$peer])['place']??'');
@@ -48,7 +56,7 @@ try{
  }else{
   if(cl_blocked((int)$row['inviter_id'],(int)$row['invitee_id']))cl_fail('Player unavailable',403);
   $spec=$catalog[$row['kind']];$slot=$uid===(int)$row['inviter_id']?'a':'b';
-  if($action==='accept'){
+  if($action==='accept'){shared_romance((int)$row['inviter_id'],(int)$row['invitee_id'],$row['kind']);
    if($slot!=='b'||$row['status']!=='pending')cl_fail('Only the invited player can accept',403);
    if(!empty($spec['proposal'])){
     cl_rows('SELECT user_id FROM users WHERE user_id IN (?,?) ORDER BY user_id FOR UPDATE','ii',[(int)$row['inviter_id'],(int)$row['invitee_id']]);

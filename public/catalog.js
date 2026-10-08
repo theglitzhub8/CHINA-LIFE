@@ -15,8 +15,14 @@ window.ChinaLifeCatalog = {
  {id:'lamp',name:'Floor lamp',price:140,detail:'Add a warm corner light',category:'Living'},
  {id:'rug',name:'Woven rug',price:180,detail:'Bring colour into the room',category:'Decor'},
  {id:'plant',name:'Indoor plants',price:95,detail:'A little greenery for your home',category:'Decor'},
+ {id:'tv',name:'Cinema television',price:1200,detail:'A big screen for your living room',category:'Living'},
+ {id:'dining',name:'Dining set',price:900,detail:'A table and chairs for dinner',category:'Living'},
+ {id:'gaming',name:'Gaming setup',price:2800,detail:'A desk, screen and gaming chair',category:'Living'},
+ {id:'piano',name:'Upright piano',price:6500,detail:'A music corner at home',category:'Luxury'},
+ {id:'aquarium',name:'Aquarium',price:1800,detail:'An illuminated fish tank',category:'Decor'},
+ {id:'safe',name:'Luxury safe',price:12000,detail:'A statement piece for your office',category:'Luxury'},
  {id:'art',name:'Statement artwork',price:240,detail:'Make the room feel like yours',category:'Decor'}],
- properties:[{id:'apartment',name:'City apartment',price:6500,detail:'Own your home here. No weekly rent in this city.'},{id:'townhouse',name:'Garden townhouse',price:18000,detail:'A pitched-roof house with a garden. No weekly rent here.'},{id:'villa',name:'Courtyard villa',price:42000,detail:'A larger home with a side wing and courtyard. No weekly rent here.'}],
+ properties:[{id:'penthouse',name:'Skyline penthouse',price:850000,detail:'Panoramic windows, premium finishes and a roof terrace.'},{id:'mansion',name:'Garden mansion',price:2500000,detail:'A grand home with a garden, pool and entertainment space.'},{id:'apartment',name:'City apartment',price:6500,detail:'Own your home here. No weekly rent in this city.'},{id:'townhouse',name:'Garden townhouse',price:18000,detail:'A pitched-roof house with a garden. No weekly rent here.'},{id:'villa',name:'Courtyard villa',price:42000,detail:'A larger home with a side wing and courtyard. No weekly rent here.'}],
  tracks:[{id:'hometown',name:'Hometown Lounge',style:'Warm keys · 90 BPM',bpm:90,notes:[60,64,67,71],bass:[36,36,41,43]},{id:'afrogroove',name:'City Afro Groove',style:'Percussion & bass · 106 BPM',bpm:106,notes:[62,65,69,72],bass:[38,38,43,45]},{id:'neon',name:'Neon After Hours',style:'Club synths · 120 BPM',bpm:120,notes:[57,60,64,67],bass:[33,33,38,40]},{id:'midnight',name:'Midnight Steps',style:'Deep groove · 112 BPM',bpm:112,notes:[59,62,66,69],bass:[35,35,40,42]}]
 };
 
@@ -341,6 +347,58 @@ window.ChinaLifeCatalog.shenyang={
           65,
           14
         ]
+      ]
+    }
+  ],
+  "estates": [
+    {
+      "id": "home-campus",
+      "name": "Campus Garden Apartment",
+      "type": "apartment",
+      "price": 6500,
+      "position": [
+        7,
+        -24
+      ]
+    },
+    {
+      "id": "home-nanhu",
+      "name": "Nanhu Garden Townhouse",
+      "type": "townhouse",
+      "price": 18000,
+      "position": [
+        -60,
+        23
+      ]
+    },
+    {
+      "id": "home-hunnan",
+      "name": "Hunnan Courtyard Villa",
+      "type": "villa",
+      "price": 42000,
+      "position": [
+        41,
+        23
+      ]
+    },
+    {
+      "id": "home-river",
+      "name": "Hun River Penthouse",
+      "type": "penthouse",
+      "price": 850000,
+      "position": [
+        41,
+        44
+      ]
+    },
+    {
+      "id": "home-mansion",
+      "name": "Shenyang Garden Mansion",
+      "type": "mansion",
+      "price": 2500000,
+      "position": [
+        58,
+        44
       ]
     }
   ]

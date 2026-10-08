@@ -1,0 +1,78 @@
+{
+  "furniture": {
+    "bed": 450,
+    "kitchen": 280,
+    "desk": 650,
+    "sofa": 520,
+    "bookshelf": 320,
+    "lamp": 140,
+    "rug": 180,
+    "plant": 95,
+    "art": 240,
+    "tv": 1200,
+    "dining": 900,
+    "gaming": 2800,
+    "piano": 6500,
+    "aquarium": 1800,
+    "safe": 12000
+  },
+  "properties": {
+    "apartment": 6500,
+    "townhouse": 18000,
+    "villa": 42000,
+    "penthouse": 850000,
+    "mansion": 2500000
+  },
+  "estates": [
+    {
+      "id": "home-campus",
+      "name": "Campus Garden Apartment",
+      "type": "apartment",
+      "price": 6500,
+      "position": [
+        7,
+        -24
+      ]
+    },
+    {
+      "id": "home-nanhu",
+      "name": "Nanhu Garden Townhouse",
+      "type": "townhouse",
+      "price": 18000,
+      "position": [
+        -60,
+        23
+      ]
+    },
+    {
+      "id": "home-hunnan",
+      "name": "Hunnan Courtyard Villa",
+      "type": "villa",
+      "price": 42000,
+      "position": [
+        41,
+        9
+      ]
+    },
+    {
+      "id": "home-river",
+      "name": "Hun River Penthouse",
+      "type": "penthouse",
+      "price": 850000,
+      "position": [
+        41,
+        44
+      ]
+    },
+    {
+      "id": "home-mansion",
+      "name": "Shenyang Garden Mansion",
+      "type": "mansion",
+      "price": 2500000,
+      "position": [
+        58,
+        44
+      ]
+    }
+  ]
+}

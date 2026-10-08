@@ -65,7 +65,7 @@ function cl_run(string $sql, string $types = '', array $values = []): int {
 }
 function cl_room(array $input): array {
     $cities = ['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];
-    $places = ['home','ef','cafe','market','campus','gym','business','mall','park','night','station','african','church','plaza','airport','university','liaoning','dongbei','blood','skylight','academy','hotel','palace','zhongjie','medical','aerospace','technology','normal','ligong','jianzhu','agricultural','pharmaceutical','chemical','tcm','medical-college','engineering','youle','ex','rex','orangutan','taxi-club','best-one','cats-eye','silver-knight','black-sheep','tank'];
+    $places = ['home','ef','cafe','market','campus','gym','business','mall','park','night','station','african','church','plaza','airport','university','liaoning','dongbei','blood','skylight','academy','hotel','palace','zhongjie','medical','aerospace','technology','normal','ligong','jianzhu','agricultural','pharmaceutical','chemical','tcm','medical-college','engineering','youle','ex','rex','orangutan','taxi-club','best-one','cats-eye','silver-knight','black-sheep','tank','home-campus','home-nanhu','home-hunnan','home-river','home-mansion'];
     $city = $input['city'] ?? ''; $place = $input['place'] ?? '';
     if (!in_array($city, $cities, true) || !in_array($place, $places, true)) cl_fail('Choose a valid city and venue');
     return [$city, $place];

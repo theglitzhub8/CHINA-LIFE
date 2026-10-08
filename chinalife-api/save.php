@@ -22,6 +22,7 @@ $username=trim((string)($auth['user_name']??''));
 if ($username===''||mb_strlen($username)>64) cl_fail('Your Hafrik account needs a username');
 $game['name']=$username;$character['name']=$username;
 cl_room($game);
+if(!in_array($game['gender']??null,[null,'male','female'],true))cl_fail('Choose a valid gender');
 foreach (['money','xp','day','hour'] as $key) if (!is_numeric($game[$key]??null)||!is_finite((float)$game[$key])) cl_fail('Invalid character save');
 foreach (['energy','hunger','hygiene','bladder','fun','social'] as $key) if (!is_numeric($game['needs'][$key]??null)||$game['needs'][$key]<0||$game['needs'][$key]>100) cl_fail('Invalid character needs');
 $stored=cl_one('SELECT game_state,TIMESTAMPDIFF(SECOND,updated_at,NOW()) elapsed FROM chinalife_saves WHERE user_id=?','i',[$uid]);

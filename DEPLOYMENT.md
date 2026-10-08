@@ -193,3 +193,30 @@ Travel now offers Walk, Shared bike, Metro, Bus, Cab, DiDi Economy and DiDi Prem
 Validation: full 152-test suite passed, including two actual game-client sessions against local PHP/MySQL, consent/refusal, relationship reconnect/block, both restaurants and every club invitation, all university presence endpoints, university selection/save reload, seven transportation payment/cancellation paths, and reachable activities in every venue. This is local integration testing; the live server still needs deployment and a two-device smoke test.
 
 Reference checks: [Northeastern University](https://english.neu.edu.cn/index.htm), [Shenyang Aerospace University](https://en.sau.edu.cn/index.htm), [Shenyang club listings](https://sg.trip.com/toplist/tripbest/recommend/shenyang/best-clubs/100900006707/), and [Black Sheep listing](https://5ishenyang.com/2024/08/15/black-sheep-western-restaurant/). Tank's specific real-world details and 007's real-world size were not verified; Tank uses the supplied name and a game-designed dining room, and 007 is largest specifically within ChinaLife. Other venue opening times, prices and interiors are game settings.
+
+## Home portfolios, fortunes and gender-based invitations
+
+Players can set **male/female in Profile → Edit appearance**, or during character creation. Existing accounts keep their character and start with unset gender. Opposite-gender romantic requests show the matching boyfriend/girlfriend label, and dates use the same rule. Both players must have set their gender; the PHP API checks invitations and acceptance. Friendships, dinners and club invitations stay available independently of gender. Existing relationships are preserved.
+
+**Admin → Players** automatically lists saved ChinaLife characters, online first, with wallet, XP and last location. It has 25-player pages and an optional username filter. Existing wallet grants and server-side admin authorization remain.
+
+**Phone → Homes** lists owned home types and five purchasable Shenyang addresses, also shown on the map. Home types now include penthouse and mansion. Buying another type retains earlier purchases; switching back costs nothing. A selected address becomes the Home navigation destination. Older single-home saves populate the portfolio automatically. Different home types change the map building and interior floor, scenery and signage. New furniture: television, dining set, gaming station, piano, aquarium and safe. All purchased items render in owned residences, with fixed positions and saved finishes.
+
+**Phone → Fortunes** contains three hidden progression opportunities worth ¥250,000, ¥1,000,000 and ¥2,500,000 in virtual currency. Exploring relevant locations reveals rewards; skills, activities, studio orders and career progress unlock claims. Values and requirements live in `chinalife-api/fortune-config.php`. PHP verifies the saved requirements and records each reward once per account in `chinalife_fortune_claims`. Wallet revision/transfer synchronization keeps rewarded balances across reconnects. Progression still uses the existing client-save model with server growth caps; this is not a fully server-authoritative economy.
+
+Other players' profiles show a wealth tier, estimated virtual net worth, homes and owned furniture. The authenticated profile endpoint exposes only these public fields, honors blocks and excludes the private save. Asset valuation is configured in `chinalife-api/assets.json`.
+
+Scope: city addresses currently represent personal game homes at shared venue coordinates. Furniture inventory is shared across your owned residences; per-address decoration layouts, exclusive ownership of a city plot, selling homes and private visitor instances are future work. Housing purchases extend the existing saved-character purchase system.
+
+Deploy with the usual update script **and run the migration** for the new reward-claim table:
+
+```bash
+cd /www/chinalife-source
+./scripts/update-server.sh \
+  /www/wwwroot/hafrik.com \
+  /www/wwwroot/china-life.hafrik.com/public
+/www/server/php/84/bin/php \
+  /www/wwwroot/hafrik.com/api/v4/chinalife/migrate.php
+```
+
+After deployment, reload both devices. Set gender on existing profiles, test a request/acceptance with two accounts, buy a home and furniture, then reconnect and inspect that account from the other player's profile. Verify Admin → Players loads without typing a username. The local integration suite covers two client sessions, persisted consent, rejected mismatched requests, once-only fortunes, public wealth, automatic admin listing, portfolio reloads, furniture rendering and reachable home activities. Live server/device validation remains necessary.

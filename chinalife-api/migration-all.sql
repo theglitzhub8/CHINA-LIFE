@@ -99,3 +99,7 @@ CREATE TABLE IF NOT EXISTS chinalife_shared_activities (
  FOREIGN KEY(inviter_id) REFERENCES users(user_id) ON DELETE CASCADE,
  FOREIGN KEY(invitee_id) REFERENCES users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_fortune_claims (
+ user_id INT UNSIGNED NOT NULL,reward_id VARCHAR(40) NOT NULL,amount INT UNSIGNED NOT NULL,claimed_at DATETIME NOT NULL,
+ PRIMARY KEY(user_id,reward_id),FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

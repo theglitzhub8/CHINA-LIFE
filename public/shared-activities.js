@@ -1,10 +1,11 @@
 const game=window.ChinaLife,esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dialog=document.getElementById('sharedDialog');dialog.innerHTML='<div class="activity-panel"><span class="eyebrow">SHENYANG · TOGETHER</span><h2>Make a shared memory</h2><div id="sharedBody"></div><p id="sharedFeedback" role="status"></p></div><button id="closeShared" class="close-x" aria-label="Close shared activities">×</button>';
 const banner=document.createElement('button');banner.id='sharedInviteNotice';banner.className='shared-invite-notice';banner.hidden=true;document.body.append(banner);
-let catalog={},relationships=[],preferred=null,sessions=[],peer=null,peerName='',account='',generation=0,polling=false,offset=0,seen=new Set(),busy=false,pending=null;
+let catalog={},relationships=[],preferred=null,peerGender=null,sessions=[],peer=null,peerName='',account='',generation=0,polling=false,offset=0,seen=new Set(),busy=false,pending=null;
 const $=id=>document.getElementById(id),mine=()=>window.ChinaLifeCloud?.playerId;
 async function api(method='GET',data){const r=await window.ChinaLifeAuth.request('/chinalife/activities.php',method,data);return r.data||r}
 function note(text){$('sharedFeedback').textContent=text}
+function allowed(kind){if(!['girlfriend','boyfriend','date'].includes(kind))return true;if(!game.state.gender||!peerGender||game.state.gender===peerGender)return false;return kind==='date'||kind===(peerGender==='male'?'boyfriend':'girlfriend')}
 function active(){return sessions.find(s=>['pending','accepted','active'].includes(s.status))}
 function render(){
  const s=active(),id=mine();let html='';
@@ -17,7 +18,7 @@ function render(){
   html+='<button class="soft-btn" data-shared="cancel">Cancel activity</button>';
  }else{
   html+='<p>Invite someone in Shenyang. Both players accept, meet at the venue, and participate.</p>';
-  if(peer)html+='<p>With <b>'+esc(peerName||peer)+'</b></p>'+Object.entries(catalog).filter(([kind])=>!preferred||(preferred==='dinner'?kind.startsWith('dinner-'):preferred==='club'?kind.startsWith('club-'):kind===preferred)).map(([kind,spec])=>'<button class="choice-action" data-shared="invite" data-kind="'+kind+'"><b>'+esc(spec.title)+'</b><span>'+esc(game.locations.find(p=>p[0]===spec.place)?.[1]||spec.place)+(spec.proposal?' · optional relationship':' · '+spec.seconds+' seconds')+'</span></button>').join('');
+  if(peer)html+='<p>With <b>'+esc(peerName||peer)+'</b></p>'+Object.entries(catalog).filter(([kind])=>allowed(kind)&&(!preferred||(preferred==='dinner'?kind.startsWith('dinner-'):preferred==='club'?kind.startsWith('club-'):kind===preferred))).map(([kind,spec])=>'<button class="choice-action" data-shared="invite" data-kind="'+kind+'"><b>'+esc(spec.title)+'</b><span>'+esc(game.locations.find(p=>p[0]===spec.place)?.[1]||spec.place)+(spec.proposal?' · optional relationship':' · '+spec.seconds+' seconds')+'</span></button>').join('');
   else html+='<button class="primary-btn" data-shared="people">Find a teammate</button>';
   const completed=sessions.filter(s=>s.status==='completed');if(completed.length)html+='<h3>Your recent shared memories</h3>'+completed.map(s=>'<p>'+esc(catalog[s.kind]?.title||s.kind)+' · '+esc(s.inviter_id===mine()?s.invitee_name:s.inviter_name)+' · '+Number(s.memories)+' shared '+(Number(s.memories)===1?'memory':'memories')+'</p>').join('');
  }
@@ -35,7 +36,7 @@ async function pollInternal(){
  }catch(e){if(dialog.open)note(e.message)}finally{polling=false}
 }
 function poll(){if(pending)return pending;const task=pollInternal();pending=task;task.finally(()=>{if(pending===task)pending=null});return task}
-async function open(id=null,name='',kind=null){await window.ChinaLifeCloud?.ready;note('');await poll();peer=id;peerName=name;preferred=kind;render();if(!dialog.open)dialog.showModal()}
+async function open(id=null,name='',kind=null){await window.ChinaLifeCloud?.ready;note('');await poll();peer=id;peerName=name;preferred=kind;peerGender=null;if(id)try{const r=await window.ChinaLifeAuth.request('/chinalife/profile.php?peer='+encodeURIComponent(id),'GET');peerGender=(r.data||r).profile?.gender}catch{}render();if(!dialog.open)dialog.showModal()}
 async function act(action,data={}){
  if(busy)return;busy=true;note('');try{
   if(action==='people'){dialog.close();await window.ChinaLifeSocial.open('people');return}

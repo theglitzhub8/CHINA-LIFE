@@ -305,13 +305,14 @@ test('basketball and meal complete with separate daily limits and persisted shar
 });
 
 test('relationships require consent, survive reconnect and can be ended by either partner',async()=>{
+ sql("USE chinalife_test; UPDATE chinalife_saves SET game_state=JSON_SET(game_state,'$.gender',IF(user_id=11,'male','female')) WHERE user_id IN (11,12)");
  for(const id of [11,12])await call(id,'presence.php','POST',presence());
  const before=(await call(11,'save.php')).data.save.game;
  let r=await call(11,'activities.php','POST',{action:'invite',kind:'girlfriend',peer:'12'});assert.equal(r.httpStatus,200);let id=r.data.id;
  assert.equal((await call(11,'activities.php','POST',{action:'accept',id})).httpStatus,403);
  assert.equal((await call(12,'activities.php','POST',{action:'decline',id})).httpStatus,200);
  assert.equal((await call(11,'activities.php')).data.relationships.length,0);
- r=await call(11,'activities.php','POST',{action:'invite',kind:'boyfriend',peer:'12'});id=r.data.id;
+ r=await call(11,'activities.php','POST',{action:'invite',kind:'girlfriend',peer:'12'});id=r.data.id;
  assert.equal((await call(12,'activities.php','POST',{action:'accept',id})).httpStatus,200);
  for(const who of [11,12])assert.equal((await call(who,'activities.php')).data.relationships[0].id,id);
  sql(`USE chinalife_test; UPDATE chinalife_shared_activities SET expires_at=DATE_SUB(NOW(),INTERVAL 2 DAY),completed_at=DATE_SUB(NOW(),INTERVAL 2 DAY) WHERE id=${Number(id)}`);
@@ -344,4 +345,15 @@ test('two game clients send a partner request, accept it, reconnect and end it b
  const restarted=await client(11);await restarted.context.ChinaLifeShared.open();assert.match(restarted.document.getElementById('sharedBody').textContent,/Partner: user12/);assert.ok(restarted.document.querySelector('[data-shared="end-relationship"]'));
  assert.equal((await call(12,'block.php','POST',{peer:'11',blocked:true})).httpStatus,200);for(const id of [11,12])assert.equal((await call(id,'activities.php')).data.relationships.length,0);
  await call(12,'block.php','POST',{peer:'11',blocked:false});
+});
+
+test('admin browses saved players without search and ordinary accounts cannot access the list',async()=>{const r=await call(1,'admin.php','POST',{action:'players'});assert.equal(r.httpStatus,200);assert.ok(r.data.players.length>1);assert.ok(r.data.total>=r.data.players.length);assert.equal((await call(11,'admin.php','POST',{action:'players'})).httpStatus,403)});
+test('partner title follows saved gender and server rejects incompatible romantic requests',async()=>{sql("USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (11,12)");for(const id of [11,12])await call(id,'presence.php','POST',presence());assert.equal((await call(11,'activities.php','POST',{action:'invite',kind:'boyfriend',peer:'12'})).httpStatus,409);sql("USE chinalife_test; UPDATE chinalife_saves SET game_state=JSON_SET(game_state,'$.gender','male') WHERE user_id=12");assert.equal((await call(11,'activities.php','POST',{action:'invite',kind:'date',peer:'12'})).httpStatus,409);sql("USE chinalife_test; UPDATE chinalife_saves SET game_state=JSON_SET(game_state,'$.gender','female') WHERE user_id=12");const r=await call(12,'activities.php','POST',{action:'invite',kind:'boyfriend',peer:'11'});assert.equal(r.httpStatus,200);await call(11,'activities.php','POST',{action:'decline',id:r.data.id})});
+test('hidden fortunes award server-configured money once and rich public profiles persist',async()=>{
+ sql("USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id=11");assert.equal((await call(11,'fortune.php','POST',{id:'city-founder',reward:999999999})).httpStatus,409);
+ sql("USE chinalife_test; UPDATE chinalife_saves SET updated_at=DATE_SUB(NOW(),INTERVAL 1 DAY) WHERE user_id=11");const current=await call(11,'save.php');const g=current.data.save.game;Object.assign(g,{money:8000,gender:'male',ownedHomes:['home-mansion','home-nanhu'],activeHome:'home-mansion',propertyPortfolio:{Shenyang:['apartment','penthouse']},properties:{Shenyang:'penthouse'},upgrades:['piano','safe'],visited:['campus','business','market','university','mall','station'],xp:8000,stats:{activities:120,shifts:25},skills:{...g.skills,Creativity:6,Digital:6,Social:6,Network:6},business:{level:3,orders:40,revenue:10000,lastOrder:1}});
+ assert.equal((await call(11,'save.php','POST',{revision:current.data.revision,save:{character:{},game:g}})).httpStatus,200);
+ const list=await call(11,'fortune.php');assert.ok(list.data.opportunities.every(o=>o.ready));for(const [id,reward] of [['creator-breakthrough',250000],['community-contract',1000000],['city-founder',2500000]]){const r=await call(11,'fortune.php','POST',{id,reward:1});assert.equal(r.httpStatus,200);assert.equal(r.data.reward,reward);assert.equal((await call(11,'fortune.php','POST',{id})).data.duplicate,true)}
+ const loaded=await call(11,'save.php');assert.equal(loaded.data.save.game.money,3758000);assert.equal(loaded.data.save.game.activeHome,'home-mansion');assert.ok((await call(11,'fortune.php')).data.opportunities.every(o=>o.claimed));const profile=(await call(12,'profile.php?peer=11')).data.profile;assert.equal(profile.wealth,'Property magnate');assert.equal(profile.homes.length,4);assert.deepEqual(profile.items,['piano','safe']);assert.equal(profile.game,undefined);assert.equal((await call(null,'profile.php?peer=11')).httpStatus,401);
+ for(const id of ['home-campus','home-nanhu','home-hunnan','home-river','home-mansion'])assert.equal((await call(11,'presence.php','POST',presence('Shenyang',id))).httpStatus,200);
 });

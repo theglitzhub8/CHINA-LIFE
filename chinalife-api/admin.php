@@ -17,6 +17,14 @@ if ($action==='stats') {
         'reports'=>(int)cl_one('SELECT COUNT(*) n FROM chinalife_reports')['n'],
         'log'=>cl_rows('SELECT l.action,l.amount,l.note,l.created_at,u.user_name target FROM chinalife_admin_log l LEFT JOIN users u ON u.user_id=l.target_id ORDER BY l.id DESC LIMIT 15')]);
 }
+if ($action==='players') {
+ $q=trim((string)($input['query']??''));if(mb_strlen($q)>60)cl_fail('Filter is too long');
+ $page=filter_var($input['page']??0,FILTER_VALIDATE_INT);if($page===false||$page<0||$page>100000)cl_fail('Choose a valid page');$offset=$page*25;$like='%'.str_replace(['%','_'],['\\%','\\_'],$q).'%';
+ $total=(int)cl_one('SELECT COUNT(*) n FROM users u JOIN chinalife_saves s ON s.user_id=u.user_id WHERE u.user_name LIKE ?','s',[$like])['n'];
+ $rows=cl_rows("SELECT u.user_id id,u.user_name name,$money money,$xp xp,s.updated_at,p.city,p.place,COALESCE(p.seen_at>=DATE_SUB(NOW(),INTERVAL 20 SECOND),0) online FROM users u JOIN chinalife_saves s ON s.user_id=u.user_id LEFT JOIN chinalife_presence p ON p.user_id=u.user_id WHERE u.user_name LIKE ? ORDER BY online DESC,s.updated_at DESC,u.user_id LIMIT 25 OFFSET $offset",'s',[$like]);
+ foreach($rows as &$r){$r['id']=(string)$r['id'];$r['money']=(int)$r['money'];$r['xp']=(int)$r['xp'];$r['online']=(bool)$r['online'];}unset($r);
+ json_response('success',['players'=>$rows,'total'=>$total,'hasMore'=>$offset+count($rows)<$total]);
+}
 if ($action==='search') {
     $q=trim((string)($input['query']??''));if ($q===''||mb_strlen($q)>60) cl_fail('Type a username');
     // Exact username first, then names that start with the search.
