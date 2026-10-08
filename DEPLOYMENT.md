@@ -258,3 +258,17 @@ The city picker and airport departures show only server-activated cities. Admin 
 No new schema migration is required. Deploy using the standard update script and reload both devices. Check studio launch feedback, one client order, Home's current-city choices, a premium residence, and city/flight lists with only Shenyang enabled.
 
 Validation: full 173-test suite passed, including panel-visible studio requirements/results, visible client-order animation, current-city-only home choices, home switching without purchase charges, premium fixtures with reachable activities, inactive-city filtering and refunds for disabled-city flight tickets. Live server/device smoke testing remains outstanding.
+
+## Studio client contracts
+
+**Phone → Studio → Client contract board** extends the existing daily studio order. Three fictional clients offer poster, photo-campaign and project-launch briefs. Contracts specify studio level, skill requirements, base fee and a deadline in game days. One contract can be active at a time; accepting has no upfront cost, and withdrawing pays nothing.
+
+Work at the current city's business hub. Choose quick, balanced or polished delivery; effort changes time, needs cost, payment and rating. Delivery after the deadline (including work that finishes after the final day) earns half the effort-adjusted fee and a 2/5 rating. Contracts share the ordinary studio order's one-delivery-per-game-day limit. Completing contracts contributes to existing order counts, expansion, business earnings, skills and XP.
+
+Two deliveries rated at least 4/5 for a client unlock a 10% repeat-client quote. Client trust persists beyond the last 20 reviews. Active contracts, accepted base-fee quote, deadlines, reviews and client trust save with the character, including account saves and the legacy Worker validator. Existing studios need no reset. The original daily order remains available.
+
+Client briefs, pricing, deadlines, effort options and repeat bonuses are centralized in `chinalife-api/studio-config.php`, loaded through authenticated, read-only `studio.php`. Contract-board access requires Hafrik sign-in; guest studios can still use their original order system. This extends the current client-driven progression/save model and server growth caps; contract deliveries are not fully server-authoritative or real commercial services. Quotes keep their accepted base fee while later effort/late rules come from the current catalogue.
+
+Deploy with the normal update script. No database migration is required. Reload, open the contract board, accept a brief, reconnect to verify its deadline, then travel to the business hub and deliver. Verify the review, payment and daily limit.
+
+Validation: full 185-test suite and PHP syntax checks passed. Tests cover eligibility, quote/deadline restoration, once-only completion, shared daily limits, late delivery, ratings, repeat-client trust, location/needs feedback, visible work animation with stale-character callback protection, authenticated catalogue access and PHP account-save restoration. Live server/device smoke testing remains outstanding.
