@@ -39,7 +39,7 @@ function show() {
   // Inside the app the native session is the only login; never ask for a web password first.
   else if (inApp()) html=head+(appWaiting||loading?'<h2>Connecting your Hafrik account…</h2><p>Getting your login from the Hafrik app.</p>':'<h2>Couldn’t get your Hafrik login</h2><p>The Hafrik app didn’t share your account with the game. Close ChinaLife and open it again from Hafrik. If it keeps happening, update the Hafrik app.</p>'+(message&&!/^Sign in with Hafrik/.test(message)?'<p class="account-error" role="alert">'+esc(message)+'</p>':''))+'<button id="hafrikConnect" class="primary-btn"'+(appWaiting?' disabled':'')+'>Try again</button><details class="account-details"><summary>Sign in with email or username instead</summary>'+passwordForm+'</details>';
   else html=head+'<h2>Your life continues here.</h2><p>One Hafrik account. Your character, friends and homes — wherever you play.</p><button id="hafrikConnect" class="primary-btn">Continue with Hafrik</button><p id="accountConnectFeedback" role="status"></p><div class="auth-divider">or sign in with your account</div>'+passwordForm;
-  $('cloudContent').innerHTML='<div class="auth-card">'+html+(!account?'<div class="auth-footer"><a href="https://hafrik.com/get" target="_blank" rel="noopener">New to Hafrik? Create an account ↗</a><a href="https://hafrik.com/how-to-play/" target="_blank" rel="noopener">📖 How to play</a><button id="authExplore" type="button">Keep exploring</button></div>':'')+'</div>';if($('showHafrikPassword'))$('showHafrikPassword').onclick=()=>{const input=$('hafrikPassword'),visible=input.type==='password';input.type=visible?'text':'password';$('showHafrikPassword').textContent=visible?'Hide':'Show';$('showHafrikPassword').setAttribute('aria-label',visible?'Hide password':'Show password')};if($('authExplore'))$('authExplore').onclick=()=>{$('cloudDialog').close();game.startOnboarding()};
+  $('cloudContent').innerHTML='<div class="auth-card">'+html+(!account?'<div class="auth-footer"><a href="https://hafrik.com/get" target="_blank" rel="noopener">New to Hafrik? Create an account ↗</a><a href="https://hafrik.com/how-to-play/" target="_blank" rel="noopener">📖 How to play</a></div>':'')+'</div>';if($('showHafrikPassword'))$('showHafrikPassword').onclick=()=>{const input=$('hafrikPassword'),visible=input.type==='password';input.type=visible?'text':'password';$('showHafrikPassword').textContent=visible?'Hide':'Show';$('showHafrikPassword').setAttribute('aria-label',visible?'Hide password':'Show password')};$('closeCloud').hidden=!account;
   if (!$('cloudDialog').open) $('cloudDialog').showModal();
   if(account){
     $('hafrikLogout').onclick=logout;
@@ -109,7 +109,7 @@ async function login(event) {
 }
 async function logout() {
   authEpoch++; await leave(); auto = false; clearTimeout(timer); liveToken = ''; storage.setItem(TOKEN_KEY, ''); storage.setItem(PROFILE_KEY, '');
-  account = null; remote = {state:null}; game.setAccount(null); notify(); status('Disconnected. Your account character is kept.'); game.startOnboarding(); show();
+  account = null; remote = {state:null}; game.setAccount(null); notify(); status('Disconnected. Your account character is kept.'); show();
 }
 function scheduleSave() {clearTimeout(timer); timer = setTimeout(() => upload(), 1500)}
 async function upload(manual = false) {
@@ -197,12 +197,18 @@ async function initialize() {
   // A Hafrik website session can exist without any ChinaLife device cache.
   // Ask the authenticated API before presenting optional login or character setup.
   const connected=await connect();
-  if(!connected) game.startOnboarding();
+  // Playing requires a Hafrik login; character setup starts only after signing in.
+  if(!connected) show();
   return connected;
 }
 window.ChinaLifeAuth = {base:HAFRIK_API,get token(){return liveToken},request:api,connect};
 window.ChinaLifeCloud = {open:show,ready:null,get playerId(){return String(account?.user_id ?? account?.id ?? '')},get signedIn(){return !!account},get joined(){return presence},get players(){if(game.state.place==='home'||game.state.place.startsWith('home-'))return players.filter(p=>p.place===game.state.place&&String(p.homeOwner)===String(window.ChinaLifeHomeVisits?.current?.owner||account?.user_id||account?.id));return players.filter(p => p.city === game.state.city && p.place === game.state.place)},get online(){return online},get events(){return events},enablePush,get golden(){return golden},claimGolden,get isAdmin(){return admin},joinEvent,admin:adminRequest,refreshEvents,get cityPlayers(){return players.filter(p => p.city === game.state.city)},refresh:refreshPresence,join,leave,upload,transfer,syncTransfers};
-$('cloudButton').onclick = show; $('closeCloud').onclick = () => $('cloudDialog').close();
+$('cloudButton').onclick = show; $('closeCloud').onclick = () => {if (account) $('cloudDialog').close()};
+// The login window cannot be dismissed (× or Escape) until the player is signed in.
+$('cloudDialog').addEventListener('cancel', e => {if (!account) e.preventDefault()});
+// Browsers may still close it (e.g. a second Escape); reopen at once while nobody is signed in.
+$('cloudDialog').addEventListener('close', () => {if (!account) setTimeout(() => {if (!account) show()}, 0)});
+setInterval(() => {if (!account && !$('cloudDialog').open && window.ChinaLifeCloud?.ready) show()}, 1000);
 window.addEventListener('chinalife:save', () => {if (auto && !loading) scheduleSave()});
 window.addEventListener('chinalife:update', () => {if (!loading && account && game.state.created) {if (!presence) join(); else refreshPresence()}});
 window.addEventListener('hafrik:session', event => {if (event.detail?.token) connect(event.detail,{source:'app'})});
@@ -232,5 +238,5 @@ let golden=null;
 async function refreshGolden(){if(!account||document.hidden)return;try{const result=await api('/chinalife/golden.php'),data=result.data||result;const changed=JSON.stringify(data)!==JSON.stringify(golden);golden=data;if(changed)window.dispatchEvent(new CustomEvent('chinalife:golden',{detail:golden}))}catch{}}
 async function claimGolden(){const result=await api('/chinalife/golden.php','POST',{});await refreshGolden();await syncTransfers();return result.data||result}
 setInterval(refreshGolden,60000);window.addEventListener('chinalife:cloudready',refreshGolden);
-window.ChinaLifeCloud.ready = initialize();
+window.ChinaLifeCloud.ready = initialize().then(ok => {if (!account) show(); return ok});
 await window.ChinaLifeCloud.ready;

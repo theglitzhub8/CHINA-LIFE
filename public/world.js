@@ -36,10 +36,15 @@ function adPlacement(ad,x,z,wall=false){
  const number=String(game.catalog.advertising?.whatsapp||'').replace(/\D/g,'');
  const ev=billboardEvent();const l=label(ev?'🎉 '+ev.title:'📣 Advertise here',x,wall?3.4:4.1,z,'ad-label',()=>{if(ev)return game.eventScreen(ev.id);if(number)window.open('https://wa.me/'+number+'?text='+encodeURIComponent('Hello, I want to advertise in ChinaLife.'),'_blank','noopener,noreferrer');else game.toast('Advertise in ChinaLife: contact Hafrik.')});l.el.title='Put your brand in ChinaLife';
 }
+// A flat, always-lit name board drawn from canvas text.
+function nameBoard(text,w,h,fg,bg){const c=document.createElement('canvas');c.width=1024;c.height=Math.max(64,Math.round(1024*h/w));const ctx=c.getContext('2d');ctx.fillStyle=bg;ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle=fg;ctx.font='900 '+Math.floor(Math.min(c.height*.72,1900/Math.max(4,text.length)))+'px Manrope, system-ui, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,c.width/2,c.height/2+2);const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:tex}));m.userData.privateMaterial=true;return m}
 // Hafrik HQ: a campus north of every city, reached by an avenue from the top road, with three glass towers.
 function hqTowers(){const g=new THREE.Group();g.userData.kind='hq';box(30,1.6,18,0x1d2f3d,0,.8,0,g);box(31,.2,19,0xf2b632,0,1.65,0,g);
  for(const [x,w,h] of [[-11,7,20],[0,10,36],[11,7,26]]){box(w,h,w,0x2f6f9a,x,1.6+h/2,0,g);for(let y=4;y<h;y+=4)box(w+.12,.25,w+.12,0x9fd3ef,x,1.6+y,0,g);box(w+.4,.6,w+.4,0xf2b632,x,1.9+h,0,g)}
- box(4,4,1,0xf2b632,0,40.5,0,g);cylinder(.15,6,0xdbe6e0,0,43,0,g);for(const x of [-14,14])for(const z of [-10,10]){cylinder(.4,1.4,0x7d6a4e,x,.7,z,g);ball(1.4,0x3c8f5a,x,2.2,z,g)}return g}
+ box(4,4,1,0xf2b632,0,40.5,0,g);cylinder(.15,6,0xdbe6e0,0,43,0,g);
+ // The name on the building: HAFRIK down the main tower's two visible faces, and HAFRIK HEADQUARTERS on the podium.
+ for(const [rot,x,z] of [[0,0,5.06],[Math.PI/2,5.06,0]]){const big=nameBoard('HAFRIK',10,3.2,'#f2b632','#0f2a3d');big.position.set(x,30,z);big.rotation.y=rot;g.add(big);const sub=nameBoard('HAFRIK HQ',9,1.6,'#ffffff','#173e60');sub.position.set(x,25.6,z);sub.rotation.y=rot;g.add(sub)}
+ for(const [rot,x,z] of [[0,0,9.06],[Math.PI/2,15.06,0]]){const base=nameBoard('HAFRIK HEADQUARTERS',rot?17:28,1.3,'#0f2a3d','#f2b632');base.position.set(x,.8,z);base.rotation.y=rot;g.add(base)}for(const x of [-14,14])for(const z of [-10,10]){cylinder(.4,1.4,0x7d6a4e,x,.7,z,g);ball(1.4,0x3c8f5a,x,2.2,z,g)}return g}
 function hqGrounds(){const [x,z]=layout.positions.hq||[];if(x===undefined)return;box(76,.12,36,0xd9e4dc,x,-.04,z);box(6,.1,16,0x526b79,x,.07,z+18);for(const dx of [-3.6,3.6])box(.8,.1,16,0xdce1db,x+dx,.1,z+18);for(let i=0;i<4;i++)for(const dx of [-5,5])tree(x+dx,z+12+i*3.5);box(40,.06,4,0xe3e6d6,x,.06,z+13)}
 // A delivery rider: a scooter with an insulated food box and a rider in a helmet.
 function deliveryRider(){const g=new THREE.Group();g.name='delivery-rider';for(const x of [-.55,.55]){const wheel=mesh(new THREE.TorusGeometry(.26,.08,8,16),0x1d262c,x,.3,0,g);wheel.rotation.y=Math.PI/2}
