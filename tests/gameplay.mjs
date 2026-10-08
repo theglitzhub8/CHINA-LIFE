@@ -69,7 +69,7 @@ test('dice pays double on a win, returns ties and allows ten rolls a day',()=>{
 
 test('food menus charge and feed at the venue, clubs keep night hours, and skills earn certificates',()=>{
  const h=harness({...fixture(),money:1000,place:'african',secrets:['night-owl','foodie','scholar','jet-setter','treasure-hunter','big-spender'],rankClaimed:6});h.game.state.needs.hunger=20;h.game.menu('african');h.click('menu-0');assert.equal(h.game.state.money,955);assert.equal(h.game.state.needs.hunger,75);
- h.game.state.place='blood';h.game.state.hour=10*60;const money=h.game.state.money;h.game.activity('blood',0);assert.equal(h.game.state.money,money);assert.match(h.document.getElementById('toast').textContent,/opens at 20:00/);
+ h.game.state.place='blood';h.game.state.hour=10*60;const money=h.game.state.money;h.game.activity('blood',0);assert.equal(h.game.state.money,money);assert.match(h.document.getElementById('activityContent').textContent,/Pay entry/,'open all day; entry is still required');
  h.game.state.hour=22*60;h.game.state.needs.energy=90;h.game.state.clubPass={blood:h.game.state.day};h.game.activity('blood',1);assert.equal(h.game.state.money,money-60);
  const m=h.game.state.money;h.game.state.skills.Chinese=3;h.internal.render();assert.deepEqual([...h.game.state.certs],['hsk1','hsk2']);assert.equal(h.game.state.money,m+1300);h.internal.render();assert.equal(h.game.state.money,m+1300);
  assert.ok(h.game.locations.some(p=>p[0]==='palace'));assert.ok(h.game.locations.some(p=>p[0]==='zhongjie'));
@@ -104,7 +104,7 @@ test('clubs charge entry each night and unlock VIP, private rooms and the exclus
  g.state.hour=21*60;g.clubAccess('night');assert.equal(h.document.getElementById('roomParty'),null);
  const now=g.state.day;h.click('vipMember');assert.equal(g.state.vipUntil,now+30);g.clubAccess('night');assert.ok(h.document.getElementById('exShow'));
  const saved=harness(JSON.parse(JSON.stringify(g.state)));assert.equal(saved.game.state.vipUntil,now+30);assert.equal(saved.game.state.clubPass.night,now);
- g.state.hour=10*60;g.clubAccess('night');assert.match(h.document.getElementById('activityContent').textContent,/Closed now/);
+ g.state.hour=10*60;assert.equal(g.clubOpen('night'),true,'clubs are open all day for now');g.clubAccess('night');assert.doesNotMatch(h.document.getElementById('activityContent').textContent,/Closed/);
 });
 
 test('drinks raise the drunk meter, water and time lower it, and 100% blacks out at home',()=>{
@@ -192,4 +192,15 @@ test('food delivery lists every city restaurant, a rider takes time to arrive an
  g.state.place='home';g.collectFood(order.id);assert.equal(g.state.foodOrders[0].received,true);assert.ok(g.state.needs.hunger>=20+dish-2);
  g.home();for(const id of ['homeRest','homeNap','homeShower','homeToilet','homeOrder','homeNoodles','homeNetflix','homeShop'])assert.ok(h.document.getElementById(id),id);
  const saved=harness(JSON.parse(JSON.stringify(g.state)));assert.equal(saved.game.state.foodOrders[0].from,'tank');
+});
+
+test('the VIP flow: members get in everywhere, perks run once a night, passes need you at the club and past security',()=>{
+ const h=harness({...fixture(),money:20000,place:'night',rankClaimed:6,secrets:['night-owl','foodie','scholar','jet-setter','treasure-hunter','big-spender']}),g=h.game;g.state.hour=14*60;g.state.needs.energy=95;
+ g.clubAccess('night');h.click('vipMember');assert.equal(g.state.money,17000);assert.equal(h.document.getElementById('activityDialog').open,false,'window closes after buying');
+ g.state.place='blood';g.clubAccess('blood');assert.match(h.document.getElementById('activityContent').textContent,/free entry and VIP at every club/);assert.equal(h.document.getElementById('clubEntry'),null,'members never pay entry');
+ h.click('vipDj');const xp=g.state.xp;g.clubAccess('blood');assert.match(h.document.getElementById('activityContent').textContent,/Done tonight/);h.click('vipDj');assert.equal(g.state.xp,xp,'free perks run once a night');
+ h.click('exShow');assert.equal(g.state.money,16800,'members reach the exclusive lounge');
+ g.state.place='plaza';g.clubAccess('skylight');h.click('roomBook');assert.equal(g.state.money,16800,'buy passes at the club itself');
+ g.state.place='skylight';g.state.clubBan={skylight:g.state.day};h.click('roomBook');assert.equal(g.state.money,16800,'banned players cannot buy');
+ const saved=harness(JSON.parse(JSON.stringify(g.state)));assert.ok(Object.keys(saved.game.state.clubPerks).includes('blood:DJ lounge'));
 });
