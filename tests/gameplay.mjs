@@ -47,7 +47,7 @@ test('fainting costs time, asking for food helps once a day, and gigs pay once a
  const h=harness({...fixture(),money:0});const hour=h.game.state.hour;h.game.state.needs.hunger=0;h.internal.render();
  assert.match(h.document.getElementById('activityContent').textContent,/You fainted/);assert.equal(h.game.state.hour,hour+90);
  h.click('faintAsk');assert.equal(h.game.state.needs.hunger,40);h.game.state.needs.hunger=0;h.internal.render();h.click('faintAsk');assert.equal(h.game.state.needs.hunger,0);
- h.game.state.money=100;h.click('faintBuy');assert.match(h.document.getElementById('activityContent').textContent,/Food delivery/);h.click('deliver-0');assert.equal(h.game.state.money,100-20);assert.equal(h.game.state.needs.hunger,30);h.game.state.money=0;
+ h.game.state.money=100;h.click('faintBuy');assert.match(h.document.getElementById('activityContent').textContent,/Order food/);assert.ok(h.document.getElementById('shop-black-sheep'),'every restaurant in the city is listed');h.click('shop-market');const [,price,dish]=h.game.menus.market[0],hungry=h.game.state.needs.hunger;h.click('deliver-0');assert.equal(h.game.state.money,100-price-8);assert.ok(h.game.state.needs.hunger>=hungry+dish-2,'a fainted player gets the food straight away');h.game.state.money=0;
  h.game.state.needs.hunger=60;h.game.state.needs.energy=80;h.game.earn();h.click('gig-tutor');assert.equal(h.game.state.money,80);h.click('gig-tutor');assert.equal(h.game.state.money,80);
  const saved=harness(JSON.parse(JSON.stringify(h.game.state)));assert.equal(saved.game.state.gigs.tutor,h.game.state.day);
 });
@@ -181,4 +181,15 @@ test('the arcade sells tokens for money but tickets only buy prizes',()=>{
  for(let i=0;i<5;i++)h.click('arcadeHoops');assert.equal(g.state.arcade.tokens,0);assert.ok(g.state.arcade.tickets>=35);
  g.state.arcade.tickets=150;g.arcade();h.click('prize-plush');assert.deepEqual([...g.state.arcade.prizes],['plush']);assert.equal(g.state.arcade.tickets,50);assert.equal(g.state.money,900,'tickets never become money');
  const saved=harness(JSON.parse(JSON.stringify(g.state)));assert.equal(saved.game.state.arcade.tickets,50);
+});
+
+test('food delivery lists every city restaurant, a rider takes time to arrive and the food is collected at home',()=>{
+ const h=harness({...fixture(),money:500,place:'home'}),g=h.game;g.state.needs.hunger=20;
+ g.delivery();for(const id of ['black-sheep','tank','african','market','cafe'])assert.ok(h.document.getElementById('shop-'+id),id+' delivers');
+ h.click('shop-tank');const [,price,dish]=g.menus.tank[0];h.click('deliver-0');assert.equal(g.state.money,500-price-8);assert.equal(g.state.needs.hunger,20,'nothing to eat until the rider arrives');
+ const order=g.pendingDeliveries()[0];assert.equal(order.from,'tank');assert.equal(order.arrived,false);g.collectFood(order.id);assert.equal(g.state.foodOrders[0].received,false);
+ g.state.foodOrders[0].eta=Date.now()-1;g.state.place='plaza';g.collectFood(order.id);assert.equal(g.state.foodOrders[0].received,false,'collect it at home');
+ g.state.place='home';g.collectFood(order.id);assert.equal(g.state.foodOrders[0].received,true);assert.ok(g.state.needs.hunger>=20+dish-2);
+ g.home();for(const id of ['homeRest','homeNap','homeShower','homeToilet','homeOrder','homeNoodles','homeNetflix','homeShop'])assert.ok(h.document.getElementById(id),id);
+ const saved=harness(JSON.parse(JSON.stringify(g.state)));assert.equal(saved.game.state.foodOrders[0].from,'tank');
 });
