@@ -11,4 +11,4 @@ $items=[];foreach(array_unique($g['upgrades']??[]) as $item)if(isset($assets['fu
 $netWorth=max(0,(int)($g['money']??0))+$value;
 // Other players only ever see a status badge, never the balance or net worth.
 $title=$netWorth>=1000000000?'🏆 Billionaire':($netWorth>=10000000?'👑 Big Laoban':($netWorth>=1000000?'💎 Millionaire':($netWorth>=100000?'💰 Rising Baller':'🌱 Building a life')));$own=$id===$uid;
-json_response('success',['profile'=>['id'=>(string)$id,'name'=>$row['name'],'gender'=>in_array($g['gender']??null,['male','female'],true)?$g['gender']:null,'xp'=>(int)($g['xp']??0),'wealth'=>$title,'netWorth'=>$own?$netWorth:null,'homes'=>$homes,'items'=>$items]]);
+json_response('success',['profile'=>['id'=>(string)$id,'name'=>$row['name'],'gender'=>in_array($g['gender']??null,['male','female'],true)?$g['gender']:null,'xp'=>(int)($g['xp']??0),'wealth'=>$title,'netWorth'=>$own?$netWorth:null,'homes'=>$homes,'items'=>$items,'badges'=>cl_rank_status($id)['badges']]]);

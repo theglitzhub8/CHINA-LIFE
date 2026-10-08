@@ -434,3 +434,25 @@ test('sparring challenges respect the target player setting, friendship and a on
  assert.equal((await call(11,'activities.php','POST',{action:'invite',peer:'12',kind:'spar'})).httpStatus,429,'no repeat challenge after a decline');
  assert.ok((await call(11,'activities.php')).data.catalog.spar.money===0,'sparring never moves money');
 });
+
+test('admins edit the rank ladder, set a player rank with an audit log, award badges and suspend rank privileges',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (1,5,11)');
+ const ladder=[{xp:0,name:'Fresh',icon:'🌱',reward:0},{xp:100,name:'Known',icon:'⭐',reward:250},{xp:900,name:'Boss',icon:'👑',reward:2000}];
+ assert.equal((await call(5,'admin.php','POST',{action:'set_ranks',ranks:ladder})).httpStatus,403,'players cannot edit ranks');
+ assert.equal((await call(1,'admin.php','POST',{action:'set_ranks',ranks:[{xp:5,name:'Bad',icon:'x',reward:0},{xp:1,name:'Worse',icon:'y',reward:0}]})).httpStatus,400);
+ assert.equal((await call(1,'admin.php','POST',{action:'set_ranks',ranks:ladder})).httpStatus,200);
+ assert.deepEqual((await call(11,'events.php?city=Shenyang')).data.ranks.map(r=>r.name),['Fresh','Known','Boss'],'every player receives the ladder');
+ assert.equal((await call(1,'admin.php','POST',{action:'set_rank',user_id:11,rank:2})).httpStatus,400,'a reason is required');
+ assert.equal((await call(1,'admin.php','POST',{action:'set_rank',user_id:11,rank:2,note:'Festival winner'})).httpStatus,200);
+ assert.equal((await call(11,'save.php')).data.save.game.xp,900);
+ assert.equal((await call(1,'admin.php','POST',{action:'award_badge',user_id:11,icon:'🏮',name:'Lantern Festival 2026'})).httpStatus,200);
+ assert.deepEqual((await call(12,'profile.php?peer=11')).data.profile.badges.map(b=>b.name),['Lantern Festival 2026']);
+ assert.equal((await call(1,'admin.php','POST',{action:'suspend_rank',user_id:11,days:3})).httpStatus,400,'a reason is required to suspend');
+ assert.equal((await call(1,'admin.php','POST',{action:'suspend_rank',user_id:11,days:3,note:'Exploit abuse'})).httpStatus,200);
+ const me=(await call(11,'events.php?city=Shenyang')).data.me;assert.ok(me.rankSuspendedUntil>Date.now());assert.equal(me.rankSuspendedReason,'Exploit abuse');
+ assert.ok(!(await call(12,'leaderboard.php')).data.players.some(p=>p.id==='11'),'suspended players leave the leaderboard');
+ await call(1,'admin.php','POST',{action:'suspend_rank',user_id:11,days:0});assert.equal((await call(11,'events.php?city=Shenyang')).data.me.rankSuspendedUntil,null);
+ const log=(await call(1,'admin.php','POST',{action:'ranks'})).data.log;assert.deepEqual(log.slice(0,5).map(l=>l.action),['suspend_rank','suspend_rank','award_badge','set_rank','set_ranks']);assert.match(log[3].note,/Festival winner/);
+ assert.equal((await call(11,'events.php?city=Shenyang')).data.admin,false,'top rank never grants admin');
+ sql("USE chinalife_test; DELETE FROM chinalife_settings WHERE name='ranks'");
+});

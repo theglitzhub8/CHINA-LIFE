@@ -139,3 +139,29 @@ function cl_open_cities(): array {
     $list=$row?json_decode($row['value'],true):null;
     return array_values(array_unique(array_merge(['Shenyang'],is_array($list)?$list:[])));
 }
+// Player ranks (XP ladder) are configured by admins. They are game status only and never grant admin access.
+function cl_default_ranks(): array {
+    $list=[[0,'Newcomer','🌱'],[200,'Explorer','🧭'],[600,'Local','🏮'],[1500,'Regular','⭐'],[3500,'Insider','💎'],[7000,'Shenyang Star','🌟'],[12000,'Legend','👑']];
+    return array_map(fn($r,$i)=>['xp'=>$r[0],'name'=>$r[1],'icon'=>$r[2],'reward'=>$i*500],$list,array_keys($list));
+}
+function cl_valid_ranks($list): ?array {
+    if (!is_array($list)||count($list)<2||count($list)>12) return null;$out=[];
+    foreach (array_values($list) as $i=>$r) {
+        $xp=$r['xp']??null;$reward=$r['reward']??null;$name=trim((string)($r['name']??''));$icon=trim((string)($r['icon']??''));
+        if (!is_int($xp)||$xp<0||$xp>10000000||($i===0&&$xp!==0)||($i>0&&$xp<=$out[$i-1]['xp'])) return null;
+        if (!is_int($reward)||$reward<0||$reward>1000000||$name===''||mb_strlen($name)>30||$icon===''||mb_strlen($icon)>8) return null;
+        $out[]=['xp'=>$xp,'name'=>$name,'icon'=>$icon,'reward'=>$i?$reward:0];
+    }
+    return $out;
+}
+function cl_ranks(): array {
+    $row=cl_one("SELECT value FROM chinalife_settings WHERE name='ranks'");
+    return ($row?cl_valid_ranks(json_decode($row['value'],true)):null)??cl_default_ranks();
+}
+// Admin-awarded event badges and rank suspensions, shown to the player and on public profiles.
+function cl_rank_status(int $userId): array {
+    $badges=cl_rows('SELECT id,icon,name FROM chinalife_badges WHERE user_id=? ORDER BY id DESC LIMIT 30','i',[$userId]);
+    foreach ($badges as &$b) $b['id']=(string)$b['id'];unset($b);
+    $s=cl_one('SELECT UNIX_TIMESTAMP(until)*1000 until_ms,reason FROM chinalife_rank_suspensions WHERE user_id=? AND until>NOW()','i',[$userId]);
+    return ['badges'=>$badges,'rankSuspendedUntil'=>$s?(int)$s['until_ms']:null,'rankSuspendedReason'=>$s['reason']??null];
+}

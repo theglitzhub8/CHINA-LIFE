@@ -137,3 +137,14 @@ test('a club fight gets a security warning first, then police fines, detention a
  g.state.record=[{day:g.state.day,place:'blood',type:'fight',fined:500}];g.state.place='skylight';g.state.clubPass={skylight:g.state.day};g.state.money=200;g.trouble('skylight');h.click('fightPunch');assert.equal(g.state.money,0,'takes what you have');assert.match(h.document.getElementById('activityContent').textContent,/2 extra hours/);
  g.state.reputation=10;g.state.clubPass={};g.state.clubBan={};assert.equal(g.securityCheck('night'),false,'a bad reputation keeps you out');
 });
+
+test('admin-configured ranks rename the ladder and a suspension pauses rank rewards and perks',()=>{
+ const h=harness({...fixture(),money:1000,xp:0,rankClaimed:0}),g=h.game;
+ g.setRanks([{xp:0,name:'Fresh',icon:'🌱',reward:0},{xp:100,name:'Known',icon:'⭐',reward:250},{xp:300,name:'Boss',icon:'👑',reward:2000}]);
+ assert.deepEqual([...g.rankLadder().map(r=>r[1])],['Fresh','Known','Boss']);
+ g.setRanks([{xp:5,name:'Broken',icon:'x',reward:0}]);assert.equal(g.rankLadder().length,3,'invalid ladders are ignored');
+ g.setRankStatus({badges:[{id:'1',icon:'🏮',name:'Lantern Festival'}],rankSuspendedUntil:Date.now()+86400000,rankSuspendedReason:'Exploit'});
+ g.state.xp=150;h.internal.render();assert.equal(g.state.money,1000,'no rank reward while suspended');
+ g.ranks();const text=h.document.getElementById('activityContent').textContent;assert.match(text,/paused/);assert.match(text,/Lantern Festival/);
+ g.setRankStatus({badges:[],rankSuspendedUntil:null});h.internal.render();assert.equal(g.state.money,1250,'the configured reward is paid');
+});
