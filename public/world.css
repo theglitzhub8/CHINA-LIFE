@@ -194,3 +194,4 @@ dialog{border-radius:22px}
 .scene-label.remote .player-rank{display:block;font-size:10px;font-weight:600;line-height:1.4;color:#e3f3ff}.scene-label.remote:after{content:none}
 /* The message bubble is a popover: undo the browser's default popover box so it keeps its own position. */
 #toast[popover]{top:auto;right:auto;margin:0;border:0;overflow:visible}
+.onboard-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:8px 0 0;font-size:13px}.onboard-links a{color:#0c6f60;font-weight:700;text-decoration:none}.onboard-links[hidden]{display:none}
