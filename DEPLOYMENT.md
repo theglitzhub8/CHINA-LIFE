@@ -130,7 +130,7 @@ All routes authenticate with Hafrik's existing helpers. Responses use `{status,m
 | `voice-signal.php` | GET, POST | Validated WebRTC signaling for current source/target sessions. |
 | `music.php` | GET, POST | Shared club track and request queue. |
 
-Voice remains opt-in and starts muted. Add a TURN relay for networks where STUN-only peer connections fail. The game economy remains a local simulation synchronized as saves; it is not yet a server-authoritative competitive economy.
+Voice remains opt-in; Join & talk starts with the microphone on. Add a TURN relay for networks where STUN-only peer connections fail. The game economy remains a local simulation synchronized as saves; it is not yet a server-authoritative competitive economy.
 
 ### Messages, club audio and promotion placements
 
@@ -232,3 +232,15 @@ Switching to a purchased city address while inside a residence now moves the act
 Use the normal server update command. No new schema migration is required specifically for this wallet/admin/home-switch update; run the existing migration if the earlier fortune-claims update has not been migrated yet.
 
 Validation: full 162-test suite passed, PHP syntax checks passed, and the subsequent Home-map navigation fix passed the focused 28-test world/wallet suite. Tests cover both built-in admins, unauthorized access rejection, escaped transfer names and directions, stale response handling, wallet copying, immediate house changes and travel to the chosen home. Live server deployment/device smoke testing remains outstanding.
+
+## Simpler voice and redesigned Hafrik login
+
+The wallet, showcase and copied brag text no longer display “Virtual game currency · no cash value”. Currency behavior is unchanged.
+
+Voice now has one **Join & talk** action. Its introductory text explains that this enables the microphone; the permission request starts directly from the tap. Successful joining enables talking immediately. Joined players see **Mute/Unmute** and **Leave voice**. Incoming audio plays automatically, with **Hear players** shown only when playback is blocked. The outdated experimental/TURN footer is removed. Permission-denied, missing-microphone and busy-microphone failures give short recovery instructions. Leaving, changing venues or backgrounding still stops the microphone. A late permission response after leaving cannot activate voice.
+
+Voice still depends on browser/app microphone permissions and the existing TURN configuration for restrictive networks. A UI update cannot grant native app microphone permissions or configure a relay on the production server. The existing Voice relay section above describes the server configuration; keep its tokens private.
+
+The Hafrik account dialog now uses a dedicated card layout. Browser players see **Continue with Hafrik** and manual email/username login together, with Show/Hide password, a Hafrik account link and **Keep exploring**. Inside the app, native Hafrik authentication remains primary, with manual login as a fallback. Connected, conflicting-save and failed-character-load states retain their existing safeguards and controls.
+
+Validation: full 166-test suite passed, including two voice clients, one-tap unmuted joining, mute/leave, playback-blocked recovery, late permission cancellation, manual login visibility and password toggling, existing authentication/restoration cases, and wallet copy text. Live microphone playback must still be tested on two actual devices after deployment. Use the standard update script; this release adds no schema migration.
