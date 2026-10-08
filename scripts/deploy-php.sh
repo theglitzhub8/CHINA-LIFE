@@ -24,5 +24,8 @@ command -v rsync >/dev/null || { echo 'Install rsync before deploying' >&2; exit
 rsync -a --exclude=index.html --exclude=.user.ini "$source_root/public/" "$game_root/"
 rsync -a "$source_root/chinalife-api/" "$hafrik_root/api/v4/chinalife/"
 rsync -a "$source_root/public/index.html" "$game_root/index.html"
+# Public "How to play" page at hafrik.com/how-to-play
+mkdir -p "$hafrik_root/how-to-play"
+rsync -a "$source_root/landing/how-to-play/" "$hafrik_root/how-to-play/"
 echo "Files deployed. Run: php '$hafrik_root/api/v4/chinalife/migrate.php'"
 echo 'Then test two Hafrik accounts in the same city and venue.'

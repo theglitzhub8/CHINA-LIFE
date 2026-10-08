@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>How to play ChinaLife · Hafrik</title>
+<meta name="description" content="ChinaLife by Hafrik: live a life in China. Study, work, party, travel and meet real players in Shenyang and Guangzhou. Learn how to play in five minutes.">
+<meta name="theme-color" content="#071f2e">
+<meta property="og:title" content="ChinaLife by Hafrik · How to play">
+<meta property="og:description" content="Study, work, party, travel and meet real players in a 3D China. Free in your browser and the Hafrik app.">
+<meta property="og:image" content="img/city.jpg">
+<link rel="icon" href="img/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0f2a3a;--muted:#5d7380;--line:#e3ebee;--paper:#f6f9f8;--teal:#12907b;--teal-dark:#0c6f60;--navy:#071f2e;--gold:#f5b331;--red:#d6202a;--radius:20px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:Manrope,system-ui,-apple-system,sans-serif;color:var(--ink);background:var(--paper);line-height:1.6;-webkit-text-size-adjust:100%}
+img{max-width:100%;height:auto;display:block}
+a{color:inherit}
+.wrap{width:min(1120px,100% - 32px);margin:0 auto}
+h1,h2{font-family:'Playfair Display',Georgia,serif;letter-spacing:-.5px;line-height:1.1;margin:0}
+h2{font-size:clamp(28px,4.4vw,42px)}
+h3{margin:0 0 6px;font-size:18px}
+p{margin:0}
+.eyebrow{display:inline-block;font-size:12px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:var(--teal)}
+.lead{color:var(--muted);font-size:18px;margin-top:12px;max-width:640px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 22px;border-radius:14px;font-weight:800;text-decoration:none;transition:transform .15s,box-shadow .15s}
+.btn:hover{transform:translateY(-1px)}
+.btn-primary{background:var(--teal);color:#fff;box-shadow:0 10px 24px rgba(18,144,123,.3)}
+.btn-ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+section{padding:64px 0}
+.section-head{margin-bottom:28px}
+/* Top bar */
+.top{position:sticky;top:0;z-index:10;background:rgba(7,31,46,.92);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.top .wrap{display:flex;align-items:center;gap:16px;height:60px}
+.brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:800}
+.brand img{width:32px;height:32px;border-radius:9px}
+.brand small{display:block;font-size:10px;letter-spacing:1.5px;color:#9fc3c0;font-weight:700}
+.top nav{margin-left:auto;display:flex;gap:18px}
+.top nav a{color:#cfe3e1;text-decoration:none;font-size:14px;font-weight:600}
+.top .btn{padding:9px 14px;font-size:14px}
+@media(max-width:760px){.top nav{display:none}.top .btn{margin-left:auto}}
+/* Hero */
+.hero{background:radial-gradient(120% 80% at 10% 0%,#1d4e63 0%,transparent 60%),linear-gradient(180deg,#071f2e,#0c2c3d);color:#fff;padding:56px 0 0;overflow:hidden}
+.hero .wrap{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center}
+.hero h1{font-size:clamp(40px,6.5vw,68px)}
+.hero h1 em{font-style:normal;color:var(--gold)}
+.hero .lead{color:#c4d8db}
+.hero .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}
+.hero .note{margin-top:14px;font-size:13px;color:#8fb2b4}
+.hero-shot{border-radius:22px 22px 0 0;box-shadow:0 30px 70px rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.1);border-bottom:0;margin-top:24px}
+@media(max-width:860px){.hero .wrap{grid-template-columns:1fr}.hero{padding-top:40px}}
+/* Cards */
+.grid{display:grid;gap:16px}
+.grid-3{grid-template-columns:repeat(3,1fr)}
+.grid-5{grid-template-columns:repeat(5,1fr)}
+@media(max-width:900px){.grid-3,.grid-5{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.grid-3,.grid-5{grid-template-columns:1fr}}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:22px}
+.card .icon{font-size:30px;line-height:1;margin-bottom:12px}
+.card p{color:var(--muted);font-size:15px}
+/* Steps */
+.steps{counter-reset:step;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.step{position:relative;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:24px 22px 22px}
+.step::before{counter-increment:step;content:counter(step);display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:var(--teal);color:#fff;font-weight:800;margin-bottom:14px}
+.step p{color:var(--muted);font-size:15px}
+@media(max-width:760px){.steps{grid-template-columns:1fr}}
+/* Split feature rows */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+.split.reverse .media{order:-1}
+.split .media img{border-radius:22px;box-shadow:0 20px 50px rgba(15,42,58,.18)}
+.split .media.phone img{max-width:340px;margin:0 auto;box-shadow:none}
+@media(max-width:860px){.split{grid-template-columns:1fr}.split.reverse .media{order:0}}
+.list{list-style:none;padding:0;margin:20px 0 0;display:grid;gap:12px}
+.list li{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start}
+.list li span{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:#e8f4f1;font-size:20px}
+.list li b{display:block}
+.list li small{display:block;color:var(--muted);font-size:14px}
+/* Needs bars */
+.needs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+.need{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px}
+.need b{font-size:14px}
+.need i{display:block;height:6px;border-radius:6px;background:#e3ebee;margin-top:8px;overflow:hidden}
+.need i::after{content:'';display:block;height:100%;width:var(--v);background:var(--teal);border-radius:6px}
+.need.low i::after{background:#e99048}
+@media(max-width:560px){.needs{grid-template-columns:repeat(2,1fr)}}
+.callout{margin-top:18px;padding:16px 18px;border-radius:16px;background:#fff4e5;color:#7a4b12;font-size:15px}
+/* Rewards */
+.rewards{background:linear-gradient(180deg,#0c2c3d,#071f2e);color:#fff}
+.rewards .card{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12)}
+.rewards .card p{color:#b9cfd2}
+.rewards .lead{color:#b9cfd2}
+.rewards .eyebrow{color:var(--gold)}
+.big{font-size:26px;font-weight:800;color:var(--gold);display:block;margin:4px 0}
+/* Roles */
+.role{text-align:center}
+.role .icon{font-size:36px}
+/* Cities */
+.city{display:flex;align-items:center;gap:14px}
+.badge{margin-left:auto;font-size:12px;font-weight:800;padding:5px 10px;border-radius:999px;background:#e8f4f1;color:var(--teal-dark);white-space:nowrap}
+.badge.soon{background:#f0f2f4;color:var(--muted)}
+.city h3{margin:0}
+.city small{display:block;color:var(--muted);font-size:13px}
+/* Tips & FAQ */
+.tips{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.tip{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;font-size:15px}
+.tip b{color:var(--teal-dark)}
+@media(max-width:700px){.tips{grid-template-columns:1fr}}
+details{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-top:10px}
+summary{cursor:pointer;font-weight:800;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::after{content:'+';float:right;color:var(--teal);font-size:20px;line-height:1}
+details[open] summary::after{content:'–'}
+details p{color:var(--muted);margin-top:10px;font-size:15px}
+/* Final CTA */
+.cta{text-align:center;background:var(--teal);color:#fff;border-radius:28px;padding:48px 24px;margin:0 auto}
+.cta p{color:#d9f3ec;margin:12px auto 24px;max-width:520px}
+.cta .btn{background:#fff;color:var(--teal-dark)}
+footer{padding:32px 0 48px;color:var(--muted);font-size:14px;text-align:center}
+footer a{color:var(--teal-dark);font-weight:700}
+</style>
+</head>
+<body>
+
+<header class="top">
+ <div class="wrap">
+  <a class="brand" href="#top"><img src="img/icon.png" alt="" width="32" height="32"><span>ChinaLife<small>BY HAFRIK</small></span></a>
+  <nav aria-label="Sections"><a href="#start">Get started</a><a href="#play">How to play</a><a href="#rewards">Rewards</a><a href="#cities">Cities</a><a href="#faq">FAQ</a></nav>
+  <a class="btn btn-primary" href="https://china-life.hafrik.com/">Play now</a>
+ </div>
+</header>
+
+<main id="top">
+<section class="hero">
+ <div class="wrap">
+  <div>
+   <span class="eyebrow" style="color:#7fd7c4">Season 0 · Shenyang is open</span>
+   <h1>You don’t play ChinaLife.<br><em>You live it.</em></h1>
+   <p class="lead">Study at a Chinese university, find a job, start a business, dance at the clubs and travel between cities. Real players, real places, a 3D China in your pocket.</p>
+   <div class="actions"><a class="btn btn-primary" href="https://china-life.hafrik.com/">▶ Play ChinaLife free</a><a class="btn btn-ghost" href="#start">How to start</a></div>
+   <p class="note">Free · plays in your browser and inside the Hafrik app · in-game money only</p>
+  </div>
+  <img class="hero-shot" src="img/city.jpg" alt="The 3D city map of Shenyang in ChinaLife, with universities, clubs, shops and traffic" width="1337" height="896">
+ </div>
+</section>
+
+<section>
+ <div class="wrap">
+  <div class="section-head"><span class="eyebrow">What is ChinaLife</span><h2>A life simulation set in real Chinese cities</h2><p class="lead">Every city is built from real neighbourhoods and landmarks. Every other character you meet in a venue might be a real Hafrik user.</p></div>
+  <div class="grid grid-3">
+   <div class="card"><div class="icon">🏙️</div><h3>Explore real cities</h3><p>Walk, take a taxi or the metro around Shenyang: universities, Mukden Palace, malls, markets and nightlife. Fly to Guangzhou when it opens.</p></div>
+   <div class="card"><div class="icon">👋</div><h3>Meet real players</h3><p>See other players in the same venue, chat, use voice, add friends and send each other money.</p></div>
+   <div class="card"><div class="icon">🎯</div><h3>Build your story</h3><p>Pick who you are in China, earn, learn new skills, buy homes and climb from Newcomer to Legend.</p></div>
+  </div>
+ </div>
+</section>
+
+<section id="start" style="padding-top:0">
+ <div class="wrap">
+  <div class="section-head"><span class="eyebrow">Get started</span><h2>Start in three steps</h2></div>
+  <div class="steps">
+   <div class="step"><h3>Sign in with Hafrik</h3><p>Open <a href="https://china-life.hafrik.com/">china-life.hafrik.com</a> or ChinaLife inside the Hafrik app. Your Hafrik username becomes your name in the game and your progress saves across devices.</p></div>
+   <div class="step"><h3>Choose where you start</h3><p>Already in China or coming from abroad? Then choose your role: Student, Entrepreneur, Professional, Creator or Tourist.</p></div>
+   <div class="step"><h3>Build your character</h3><p>Pick your skin tone, hairstyle and outfit. Tap <b>Begin my ChinaLife</b> and you land in Shenyang, ready to go.</p></div>
+  </div>
+ </div>
+</section>
+
+<section style="padding-top:0">
+ <div class="wrap">
+  <div class="section-head"><span class="eyebrow">Your role</span><h2>Who are you in China?</h2><p class="lead">Your role decides where you start, your first skill and which apps sit at the front of your phone.</p></div>
+  <div class="grid grid-5">
+   <div class="card role"><div class="icon">🎓</div><h3>Student</h3><p>Classes, campus tasks and part-time jobs.</p></div>
+   <div class="card role"><div class="icon">🚀</div><h3>Entrepreneur</h3><p>Start a business and grow your network.</p></div>
+   <div class="card role"><div class="icon">💼</div><h3>Professional</h3><p>Work shifts, get promoted, get paid.</p></div>
+   <div class="card role"><div class="icon">🎥</div><h3>Creator</h3><p>Run a studio and build an audience.</p></div>
+   <div class="card role"><div class="icon">🧳</div><h3>Tourist</h3><p>Sights, food, trips and flights.</p></div>
+  </div>
+ </div>
+</section>
+
+<section id="play" style="background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+ <div class="wrap">
+  <div class="split">
+   <div>
+    <span class="eyebrow">How to play</span><h2>Go places. Do things. Live.</h2>
+    <ul class="list">
+     <li><span>🗺️</span><div><b>Move around</b><small>Tap the floor to walk. Tap <b>Map</b> to see the whole city, then tap a place and choose walk, metro or taxi.</small></div></li>
+     <li><span>✨</span><div><b>Do activities</b><small>Every venue has activities at the bottom of the screen: attend a lecture, work a shift, eat jollof, dance, swim. Each one takes game time and changes your needs.</small></div></li>
+     <li><span>📱</span><div><b>Use your phone</b><small>Tap <b>Phone</b> for everything else: jobs, learning, food delivery, wallet, homes, rank, chat and settings.</small></div></li>
+     <li><span>⏱</span><div><b>Check Today</b><small>The Today chip on the left shows what is due next: a meal, your shift, rent or your daily reward.</small></div></li>
+    </ul>
+   </div>
+   <div class="media"><img src="img/club.jpg" alt="A ChinaLife nightclub with players dancing, a DJ booth and sofas" width="1316" height="897" loading="lazy"></div>
+  </div>
+ </div>
+</section>
+
+<section>
+ <div class="wrap">
+  <div class="split reverse">
+   <div>
+    <span class="eyebrow">Stay alive</span><h2>Look after your six needs</h2>
+    <p class="lead">Hunger, energy, fun, social, hygiene and bladder drop as time passes. Keep them up and you feel great; let them hit zero and you faint.</p>
+    <div class="needs">
+     <div class="need"><b>🍜 Hunger</b><i style="--v:70%"></i></div><div class="need"><b>⚡ Energy</b><i style="--v:85%"></i></div><div class="need"><b>🎉 Fun</b><i style="--v:60%"></i></div>
+     <div class="need"><b>💬 Social</b><i style="--v:45%"></i></div><div class="need"><b>🫧 Hygiene</b><i style="--v:80%"></i></div><div class="need low"><b>🚻 Bladder</b><i style="--v:20%"></i></div>
+    </div>
+    <p class="callout">😵 <b>Fainted?</b> You lose 90 minutes. Ask a stranger for food (free once a day), order <b>🛵 Food delivery</b> wherever you are, or go home and rest.</p>
+   </div>
+   <div class="media phone"><img src="img/phone.jpg" alt="The ChinaLife in-game phone with apps for learning, jobs, homes, wallet and food delivery" width="672" height="1157" loading="lazy"></div>
+  </div>
+ </div>
+</section>
+
+<section style="padding-top:0">
+ <div class="wrap">
+  <div class="section-head"><span class="eyebrow">Money & skills</span><h2>Earn, learn and grow</h2></div>
+  <div class="grid grid-3">
+   <div class="card"><div class="icon">💼</div><h3>Get a job</h3><p>Phone → Jobs. Work one shift a day at your workplace: café assistant, tutor, designer, translator, delivery rider and more. Promotions raise your pay.</p></div>
+   <div class="card"><div class="icon">🛵</div><h3>Quick gigs</h3><p>Out of money? Phone → <b>Make money</b>: deliver food, tutor online or hand out flyers, or head to the office.</p></div>
+   <div class="card"><div class="icon">📚</div><h3>Learn skills</h3><p>Phone → Learn shows where to train Chinese, coding, cooking, music, fitness and more. Level up to unlock jobs and earn certificates like HSK 1–4.</p></div>
+   <div class="card"><div class="icon">🏠</div><h3>Own homes</h3><p>Rent first, then buy and furnish apartments, townhouses and villas. Owning a home ends rent in that city.</p></div>
+   <div class="card"><div class="icon">💸</div><h3>Send money</h3><p>Tap a player or friend and choose <b>Send money</b>. Everything uses in-game yuan with no cash value.</p></div>
+   <div class="card"><div class="icon">✈️</div><h3>Travel</h3><p>Book a flight at the airport and watch your plane take off and land. Try the scenic flight over Shenyang.</p></div>
+  </div>
+ </div>
+</section>
+
+<section id="rewards" class="rewards">
+ <div class="wrap">
+  <div class="section-head"><span class="eyebrow">Rewards</span><h2>The more you play, the more you earn</h2><p class="lead">Ranks, streaks, hidden treasure and live events. Here is where the big money is.</p></div>
+  <div class="grid grid-3">
+   <div class="card"><div class="icon">🏆</div><h3>Ranks</h3><span class="big">7 ranks</span><p>Everything you do earns XP. Climb from 🌱 Newcomer to 👑 Legend and get paid at every rank-up, ¥10,500 in total.</p></div>
+   <div class="card"><div class="icon">🎁</div><h3>Daily streak</h3><span class="big">Every day</span><p>Open the game each day and claim your reward from the rank chip. Seven days in a row pays the most.</p></div>
+   <div class="card"><div class="icon">🧧</div><h3>Red envelopes</h3><span class="big">¥8,888 jackpot</span><p>Three red envelopes hide in Shenyang venues every day. Tap the 🧧 chip for hints, find the glow and tap it. Festival days pay double.</p></div>
+   <div class="card"><div class="icon">🌟</div><h3>Golden envelope</h3><span class="big">¥50,000</span><p>One per week. The first player to find it wins it all, and everyone sees who did.</p></div>
+   <div class="card"><div class="icon">🔒</div><h3>Secret tasks</h3><span class="big">¥15,000</span><p>Hidden achievements stay “???” until you complete them. Hint: visit every club in one night.</p></div>
+   <div class="card"><div class="icon">🎉</div><h3>Live events</h3><span class="big">Join & earn</span><p>Watch for 🎉 on the map and on billboards. Go to the venue and tap <b>Join</b> to collect the event reward.</p></div>
+  </div>
+ </div>
+</section>
+
+<section id="cities">
+ <div class="wrap">
+  <div class="section-head"><span class="eyebrow">Cities</span><h2>Where you can live</h2></div>
+  <div class="grid grid-3">
+   <div class="card city"><div class="icon" style="margin:0">🏯</div><div><h3>Shenyang · 沈阳</h3><small>Universities, Mukden Palace, 007 Club, BLOOD & EMBERS, SKYLIGHT</small></div><span class="badge">Open now</span></div>
+   <div class="card city"><div class="icon" style="margin:0">🗼</div><div><h3>Guangzhou · 广州</h3><small>Canton Tower, the Canton Fair, Baima Market, 15 universities</small></div><span class="badge soon">Opening next</span></div>
+   <div class="card city"><div class="icon" style="margin:0">🌆</div><div><h3>Beijing, Shanghai, Shenzhen, Chengdu, Harbin</h3><small>Being built</small></div><span class="badge soon">Coming soon</span></div>
+  </div>
+ </div>
+</section>
+
+<section style="padding-top:0">
+ <div class="wrap">
+  <div class="section-head"><span class="eyebrow">Tips</span><h2>Play smarter</h2></div>
+  <div class="tips">
+   <div class="tip"><b>Eat before you work.</b> Shifts need energy and hunger above a quarter. Order food delivery from your phone.</div>
+   <div class="tip"><b>Sleep at home.</b> Resting restores energy fastest; a better bed helps even more.</div>
+   <div class="tip"><b>Clubs open at night.</b> Most clubs run 20:00–04:00. SKYLIGHT opens at 17:00 for sunset drinks.</div>
+   <div class="tip"><b>Check Today first.</b> It always shows the most urgent thing to do next.</div>
+   <div class="tip"><b>Hunt envelopes daily.</b> New red envelopes appear every day, and festival days pay double.</div>
+   <div class="tip"><b>Sign in with Hafrik.</b> Your character, money and homes are saved to your account on every device.</div>
+  </div>
+ </div>
+</section>
+
+<section style="padding-top:0">
+ <div class="wrap">
+  <div class="split">
+   <div>
+    <span class="eyebrow">Install</span><h2>Put ChinaLife on your home screen</h2>
+    <ul class="list">
+     <li><span>🤖</span><div><b>Android / Chrome</b><small>Open china-life.hafrik.com, tap the ⋮ menu, then <b>Install app</b> or <b>Add to Home screen</b>.</small></div></li>
+     <li><span>🍎</span><div><b>iPhone / Safari</b><small>Open china-life.hafrik.com, tap Share, then <b>Add to Home Screen</b>.</small></div></li>
+     <li><span>🔔</span><div><b>Turn on reminders</b><small>In the game: Phone → Settings → <b>Turn on notifications</b> to hear when your daily reward is ready.</small></div></li>
+    </ul>
+   </div>
+   <div id="faq">
+    <span class="eyebrow">FAQ</span><h2>Questions</h2>
+    <details><summary>Is ChinaLife free?</summary><p>Yes. ChinaLife is free to play in your browser and inside the Hafrik app.</p></details>
+    <details><summary>Is the money real?</summary><p>No. ChinaLife uses in-game yuan with no cash value. Nothing you buy, win or send in the game costs or pays real money.</p></details>
+    <details><summary>Are the places real?</summary><p>The cities, neighbourhoods and landmarks are inspired by real places, but the venues, prices and stories are game versions, not real services or bookings.</p></details>
+    <details><summary>How do I save my progress?</summary><p>Sign in with Hafrik. Your character saves automatically and loads on any device you sign in on.</p></details>
+    <details><summary>Can I play with friends?</summary><p>Yes. Go to the same venue, chat or use voice, add each other as friends and send money.</p></details>
+    <details><summary>How do I advertise in ChinaLife?</summary><p>Billboards across the city are available. Message us on WhatsApp: <a href="https://wa.me/8618940147438">+86 189 4014 7438</a>.</p></details>
+   </div>
+  </div>
+ </div>
+</section>
+
+<section style="padding-top:0">
+ <div class="wrap">
+  <div class="cta">
+   <h2>Your life in China starts now</h2>
+   <p>Create your character in under a minute and land in Shenyang.</p>
+   <a class="btn" href="https://china-life.hafrik.com/">▶ Play ChinaLife</a>
+  </div>
+ </div>
+</section>
+</main>
+
+<footer>
+ <div class="wrap">ChinaLife is a game by <a href="https://hafrik.com/">Hafrik</a>. Virtual yuan has no real-world value. Places are game interpretations.</div>
+</footer>
+</body>
+</html>
