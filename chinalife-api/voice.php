@@ -5,7 +5,7 @@ if ($method==='DELETE') {
     cl_run('DELETE FROM chinalife_voice_members WHERE user_id=? AND session=?','is',[$uid,$session]);
     cl_run('DELETE FROM chinalife_voice_signals WHERE (sender_id=? AND sender_session=?) OR (target_id=? AND target_session=?)','isis',[$uid,$session,$uid,$session]);json_response('success',['left'=>true]);
 }
-[$city,$place]=cl_room($input);cl_presence($uid,$city,$place);$action=$input['action']??'';
+[$city,$place]=cl_scoped_room($input);cl_presence($uid,$city,$place);$action=$input['action']??'';
 if (!is_bool($input['muted']??null)||!is_int($input['after']??null)||$input['after']<0) cl_fail('Invalid voice state');
 cl_rate('voice',20,10);$muted=$input['muted']?1:0;
 if ($action==='join') {

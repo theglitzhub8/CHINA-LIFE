@@ -13,7 +13,7 @@ $peer=isset($input['peer']) && $input['peer']!=='' ? cl_peer($input['peer']):nul
 if ($peer) {
     if (cl_blocked($uid,$peer)||!cl_friends($uid,$peer)) cl_fail('Accept a friend request before private messaging',403);
     $city='';$place='';
-} else {[$city,$place]=cl_room($input);cl_presence($uid,$city,$place);}
+} else {[$city,$place]=cl_scoped_room($input);cl_presence($uid,$city,$place);}
 if ($method==='POST') {
     $text=$input['text']??null;
     if (!is_string($text)||trim($text)===''||mb_strlen($text)>400) cl_fail('Write a message between 1 and 400 characters');

@@ -70,6 +70,9 @@ function cl_room(array $input): array {
     if (!in_array($city, $cities, true) || !in_array($place, $places, true)) cl_fail('Choose a valid city and venue');
     return [$city, $place];
 }
+// Private residence instances are derived from authentication, never a client-supplied owner.
+function cl_private_place(string $place): bool {return $place==='home'||str_starts_with($place,'home-')||str_starts_with($place,'home@');}
+function cl_scoped_room(array $input): array {global $uid;[$city,$place]=cl_room($input);return [$city,cl_private_place($place)?$place.'@'.$uid:$place];}
 function cl_presence(int $userId, string $city, string $place): void {
     if (!cl_one('SELECT user_id FROM chinalife_presence WHERE user_id=? AND city=? AND place=? AND seen_at>=DATE_SUB(NOW(),INTERVAL 20 SECOND)', 'iss', [$userId,$city,$place])) cl_fail('Join this venue first', 403);
 }

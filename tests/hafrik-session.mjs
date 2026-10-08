@@ -33,7 +33,7 @@ async function client(api,id,{stored=new Map(),native=true,webview=false}={}) {
   return {...t,stored};
 }
 test('two signed-in users register automatically and see each other in the same venue',async()=>{
-  const api=server();for(const id of ['alice','bob'])api.saves.set(id,{...fixture(),name:id,city:'Shenyang'});
+  const api=server();for(const id of ['alice','bob'])api.saves.set(id,{...fixture(),name:id,city:'Shenyang',place:'plaza'});
   const a=await client(api,'alice'),b=await client(api,'bob');await a.context.ChinaLifeCloud.refresh();
   assert.equal(a.context.ChinaLifeCloud.players[0].name,'bob');assert.equal(b.context.ChinaLifeCloud.players[0].name,'alice');
   assert.equal(api.players.size,2);assert.ok(api.calls.some(c=>c.method==='POST'&&c.path.endsWith('/presence.php')));
@@ -112,7 +112,7 @@ test('invalid cloud character is diagnosed and never replaced by the device copy
 
 
 test('two accounts recover from an initial presence outage on the regular heartbeat',async()=>{
- const api=server();for(const id of ['alice','bob'])api.saves.set(id,{...fixture(),name:id,city:'Shenyang'});
+ const api=server();for(const id of ['alice','bob'])api.saves.set(id,{...fixture(),name:id,city:'Shenyang',place:'plaza'});
  api.failPresence=true;const a=await client(api,'alice'),b=await client(api,'bob');
  assert.equal(a.context.ChinaLifeCloud.joined,false);assert.equal(b.context.ChinaLifeCloud.joined,false);
  api.failPresence=false;
@@ -181,3 +181,10 @@ test('character restore failure shows recovery instead of another password form'
  api.saves.set('alice',fixture());await t.document.getElementById('cloudRetry').onclick();assert.equal(t.context.ChinaLifeCloud.joined,true);
 });
 test('redesigned browser login exposes manual sign-in and a working password visibility toggle',async()=>{const t=await client(server(),'unused',{native:false});t.context.ChinaLifeCloud.open();assert.ok(t.document.querySelector('.auth-card'));assert.equal(t.document.querySelector('#hafrikLoginForm').closest('details'),null);assert.equal(t.document.getElementById('hafrikPassword').type,'password');t.document.getElementById('showHafrikPassword').onclick();assert.equal(t.document.getElementById('hafrikPassword').type,'text');t.document.getElementById('showHafrikPassword').onclick();assert.equal(t.document.getElementById('hafrikPassword').type,'password');assert.ok(t.document.getElementById('authExplore'));assert.equal(t.context.ChinaLifeCloud.signedIn,false)});
+
+test('separate home clients never render neighbours from legacy flat presence responses',async()=>{
+ const api=server();for(const id of ['alice','bob'])api.saves.set(id,{...fixture(),name:id,city:'Shenyang',place:'home'});
+ const a=await client(api,'alice'),b=await client(api,'bob');await a.context.ChinaLifeCloud.refresh();
+ assert.equal(a.context.ChinaLifeCloud.players.length,0);assert.equal(b.context.ChinaLifeCloud.players.length,0);
+ const restored=await client(api,'alice');assert.equal(restored.game.state.place,'home');assert.equal(restored.context.ChinaLifeCloud.players.length,0);
+});

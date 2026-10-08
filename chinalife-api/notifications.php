@@ -2,7 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__.'/common.php';
 cl_methods(['GET']);
-[$city,$place]=cl_room($_GET);
+[$city,$place]=cl_scoped_room($_GET);
 $after=$_GET['after']??null;
 $cursor=(string)(cl_one('SELECT COALESCE(MAX(id),0) id FROM chinalife_messages')['id']);
 if($after===null)json_response('success',['cursor'=>$cursor,'messages'=>[]]);

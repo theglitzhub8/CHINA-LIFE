@@ -371,3 +371,27 @@ test('players can report other players and admins see the reports with a running
 });
 test('studio contract catalogue is account-authenticated, read-only and configured on the server',async()=>{const r=await call(1,'studio.php');assert.equal(r.httpStatus,200);assert.equal(r.data.catalog.clients.length,3);assert.equal(r.data.catalog.clients[0].fee,420);assert.equal(r.data.catalog.styles.polished.rating,5);assert.equal((await call(null,'studio.php')).httpStatus,401);assert.equal((await call(1,'studio.php','POST',{fee:9999999})).httpStatus,405)});
 test('account save retains an accepted studio deadline, review and repeat-client progress',async()=>{const current=await call(11,'save.php');const g=current.data.save.game;g.business={level:2,orders:5,revenue:2400,lastOrder:1,activeContract:{client:'student-founders',acceptedDay:1,dueDay:3,fee:980},clientHistory:[{client:'campus-society',day:1,rating:4,pay:420}],clientTrust:{'campus-society':2}};assert.equal((await call(11,'save.php','POST',{revision:current.data.revision,save:{character:{},game:g}})).httpStatus,200);const restored=(await call(11,'save.php')).data.save.game;assert.equal(restored.business.activeContract.dueDay,3);assert.equal(restored.business.clientHistory[0].rating,4);assert.equal(restored.business.clientTrust['campus-society'],2)});
+
+test('two owners have separate starter and purchased home presence, chat and voice rooms',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (11,12)');
+ for(const place of ['home','home-campus','home-nanhu','home-hunnan','home-river','home-mansion']){
+  for(const id of [11,12])assert.equal((await call(id,'presence.php','POST',presence('Shenyang',place))).httpStatus,200);
+  for(const id of [11,12]){const r=await call(id,'presence.php?city=Shenyang&place='+place);assert.equal(r.httpStatus,200);assert.ok(!r.data.players.some(p=>p.id===String(id===11?12:11)));}
+ }
+ const room={city:'Shenyang',place:'home-mansion'};
+ assert.equal((await call(11,'messages.php','POST',{...room,text:'Private mansion message'})).httpStatus,200);
+ assert.ok((await call(11,'messages.php?city=Shenyang&place=home-mansion')).data.messages.some(m=>m.body==='Private mansion message'));
+ assert.ok(!(await call(12,'messages.php?city=Shenyang&place=home-mansion')).data.messages.some(m=>m.body==='Private mansion message'));
+ for(const id of [11,12]){const r=await call(id,'voice.php','POST',{...room,action:'join',session:'private-home-'+id,muted:false,after:0});assert.equal(r.httpStatus,200);assert.deepEqual(r.data.members.map(m=>m.id),[String(id)]);}
+ assert.equal((await call(11,'voice-signal.php','POST',{...room,session:'private-home-11',peer:'12',peerSession:'private-home-12',payload:{type:'offer',sdp:'test'}})).httpStatus,403);
+ assert.ok(!(await call(12,'notifications.php?city=Shenyang&place=home-mansion&after=0')).data.messages.some(m=>m.body==='Private mansion message'));
+ assert.equal((await call(12,'presence.php','POST',presence('Shenyang','home-mansion@11'))).httpStatus,400);
+ assert.equal((await call(12,'messages.php?city=Shenyang&place=home-mansion%4011')).httpStatus,400);
+ for(const id of [11,12])await call(id,'presence.php','POST',presence());
+ assert.ok((await call(11,'presence.php?city=Shenyang&place=plaza')).data.players.some(p=>p.id==='12'));
+ assert.ok((await call(12,'presence.php?city=Shenyang&place=plaza')).data.players.some(p=>p.id==='11'));
+ const saved=await call(11,'save.php');saved.data.save.game.place='home-mansion';assert.equal((await call(11,'save.php','POST',{revision:saved.data.revision,save:saved.data.save})).httpStatus,200);
+ const reconnected=await call(11,'save.php');assert.equal(reconnected.data.save.game.place,'home-mansion');assert.equal(reconnected.data.save.game.activeHome,'home-mansion');
+ assert.equal((await call(11,'presence.php','POST',presence('Shenyang',reconnected.data.save.game.place))).httpStatus,200);
+ assert.ok(!(await call(12,'presence.php?city=Shenyang&place=plaza')).data.players.some(p=>p.id==='11'));
+});

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/common.php';cl_methods(['GET','POST']);$input=$method==='POST'?cl_body():$_GET;
-[$city,$place]=cl_room($input);$session=cl_session($input['session']??null);cl_voice($uid,$session,$city,$place);
+[$city,$place]=cl_scoped_room($input);$session=cl_session($input['session']??null);cl_voice($uid,$session,$city,$place);
 cl_run('DELETE FROM chinalife_voice_signals WHERE created_at<DATE_SUB(NOW(),INTERVAL 2 MINUTE)');
 if ($method==='POST') {
     cl_rate('signal',120,10);$peer=cl_peer($input['peer']??null);$peerSession=cl_session($input['peerSession']??null);

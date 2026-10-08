@@ -272,3 +272,14 @@ Client briefs, pricing, deadlines, effort options and repeat bonuses are central
 Deploy with the normal update script. No database migration is required. Reload, open the contract board, accept a brief, reconnect to verify its deadline, then travel to the business hub and deliver. Verify the review, payment and daily limit.
 
 Validation: full 185-test suite and PHP syntax checks passed. Tests cover eligibility, quote/deadline restoration, once-only completion, shared daily limits, late delivery, ratings, repeat-client trust, location/needs feedback, visible work animation with stale-character callback protection, authenticated catalogue access and PHP account-save restoration. Live server/device smoke testing remains outstanding.
+
+
+## Private player homes
+
+Starter homes and all purchased residence addresses now use private room instances derived from the authenticated owner plus the home address. Players can own the same property type without sharing an interior. Presence, room chat, message notifications and voice/signaling are isolated server-side; saved city/place IDs remain unchanged, so existing characters, selected homes and furnishings are preserved. Public venues still share multiplayer presence normally.
+
+Other players' private home coordinates are excluded from city presence. Friends retain online status with a private-home location label. The generic venue invitation asks homeowners to choose a public venue; permission-based home visits are future work.
+
+Deploy using the standard update script, then reload both devices. No schema migration is required. Test two different Hafrik accounts at the same home address: neither should see or hear the other; return both to the plaza and verify they appear together. Existing shared-home chat history remains stored but is excluded from the new private rooms.
+
+Validation: full 190-test suite and PHP syntax checks passed, including two-owner PHP and Worker home isolation, blocked cross-home voice signaling and notifications, public-venue reunion, saved-home restoration and client protection against legacy shared-home responses. Live two-device verification remains to be done after deployment.
