@@ -81,3 +81,12 @@ test('Guangzhou has its own landmarks and real names, and Shenyang-only places s
 });
 test('premium houses include richer furnishings without granting inventory or blocking actions',()=>{const t=setup();t.game.state.upgrades=[];for(const type of ['apartment','townhouse','villa','penthouse','mansion']){t.game.state.properties.Shenyang=type;t.world.venue('home');for(const id of t.game.homeInteriors[type].included)assert.ok(t.world.furniture.includes(id),type+':'+id);assert.equal(t.game.state.upgrades.length,0);let done=0;t.world.perform({...activityMotion('home',1),label:'Cook'},()=>done++);t.tick(20);assert.equal(done,1,type)}});
 test('studio order animation closes the panel so the player can see their work',()=>{const t=setup();t.game.state.place='business';t.game.state.business={level:1,orders:0,revenue:0,lastOrder:0};t.world.venue('business');t.game.business();t.document.getElementById('businessOrder').onclick();assert.equal(t.document.getElementById('activityDialog').open,false);assert.equal(t.world.busy,true);t.tick(20);assert.equal(t.game.state.business.orders,1);assert.equal(t.world.busy,false)});
+
+test('map search finds places by name and type, highlights the route and travels on Go there',()=>{
+ const t=setup();t.world.map();assert.equal(t.document.getElementById('mapSearch').hidden,false);
+ const clubs=t.world.search('club');assert.ok(clubs.length>=2);assert.ok(clubs.every(id=>t.game.clubs.includes(id)));
+ assert.deepEqual([...t.world.search('Mukden')],['palace']);assert.ok([...t.world.search('univ')].includes('campus'),'type search');
+ t.world.showRoute('palace');assert.match(t.document.getElementById('mapSearchResults').textContent,/Mukden Palace/);assert.ok(t.document.querySelector('.scene-label.search-hit'));
+ t.document.getElementById('searchGo').onclick();assert.equal(t.document.getElementById('mapSearchResults').textContent,'');
+ t.world.venue('home');assert.equal(t.document.getElementById('mapSearch').hidden,true);
+});
