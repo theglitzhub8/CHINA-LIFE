@@ -309,3 +309,13 @@ Map categories and search now share a stacked container instead of overlapping a
 Reload both clients after migration. Test two accounts in separate owned homes, send/accept a friend invitation, verify host furnishings and shared avatars/chat/voice, revoke the invitation, then verify the guest returns to their own home. Also check the map on mobile and tap the microphone icon without opening the voice panel. Live microphone/device and responsive-layout smoke testing remains outstanding.
 
 Validation: full 202-test suite passed with two test files running concurrently to avoid local resource contention; PHP syntax checks passed. Coverage includes two-account home access/voice/chat, revocation, expiry, guest character preservation, visible fixtures and purchased furnishings, map control grouping, on-screen join/mute/unmute, existing home purchases and save restoration.
+
+## Driving, cars, home food delivery and simple voice
+
+Phone → Driving & cars now guides a character through three paid lessons, then a driving test. Passing grants a licence; only licensed players can buy the ¥85,000 city sedan. Driving progress and the car save with the character.
+
+Phone → Food delivery lists the current city's configured restaurants and their menus. Ordering from home charges the menu item plus delivery, creates an on-the-way order, advances delivery time and lets the player mark it received. Receipt applies the meal's hunger, fun and energy benefits. Orders and receipt state persist in the character save.
+
+The microphone button is tap-to-join, tap-to-mute and tap-to-unmute. Push-to-talk is hidden from the normal voice controls, and the speaker starts at full volume. Advanced voice settings remain available in the voice panel.
+
+Validation: gameplay tests pass after the driving and delivery additions; rebuild succeeds. Deploy with the standard update script and reload clients. Run the full suite in CI before release if concurrent local tests report unrelated admin-config ordering failures.
