@@ -3,7 +3,9 @@
 $catalog = [
  'study'=>['title'=>'Study together','place'=>'campus','seconds'=>20,'xp'=>15,'money'=>10,'prompt'=>'Practise a greeting together. How would you say hello?','choices'=>['nihao'=>'你好 · Nǐ hǎo','zaijian'=>'再见 · Zàijiàn']],
  'basketball'=>['title'=>'Campus basketball','place'=>'gym','seconds'=>20,'xp'=>15,'money'=>10,'prompt'=>'Your teammate is open. Choose your next move.','choices'=>['pass'=>'Pass to your teammate','shoot'=>'Take the shot']],
- 'meal'=>['title'=>'Share a warm meal','place'=>'african','seconds'=>15,'xp'=>10,'money'=>5,'prompt'=>'Pick your meal and talk about your first week in Shenyang.','choices'=>['mild'=>'Something mild','spicy'=>'Something spicy']]
+ 'meal'=>['title'=>'Share a warm meal','place'=>'african','seconds'=>15,'xp'=>10,'money'=>5,'prompt'=>'Pick your meal and talk about your first week in Shenyang.','choices'=>['mild'=>'Something mild','spicy'=>'Something spicy']],
+ // Player-vs-player fighting only exists as this consensual, gloved gym spar: no money, no injuries, either player can stop.
+ 'spar'=>['title'=>'Friendly boxing spar','place'=>'gym','seconds'=>20,'xp'=>20,'money'=>0,'prompt'=>'Gloves and headgear on. Pick your style. Either of you can stop at any time.','choices'=>['jab'=>'Quick jabs and footwork','guard'=>'Keep your guard up and counter']]
 ];
 foreach(['girlfriend'=>'Girlfriend request','boyfriend'=>'Boyfriend request'] as $kind=>$title)$catalog[$kind]=['title'=>$title,'place'=>'plaza','seconds'=>0,'xp'=>0,'money'=>0,'proposal'=>true,'prompt'=>'Only accept if you want this relationship. You can end it at any time.','choices'=>[]];
 $catalog['date']=['title'=>'Go on a date','place'=>'park','seconds'=>20,'xp'=>0,'money'=>0,'prompt'=>'What would you like to do together?','choices'=>['walk'=>'Walk and talk','sit'=>'Sit and get to know each other']];

@@ -46,7 +46,7 @@ async function act(action,data={}){
   await api('POST',action==='invite'?{action,peer,kind:data.kind}:{action,id:action==='end-relationship'?data.id:s.id,...(action==='choose'?{choice:data.choice}:{})});
   await window.ChinaLifeCloud.syncTransfers();await poll();render();
   if(action==='choose'&&window.ChinaLifeWorld&&!window.ChinaLifeWorld.busy){
-    const spec=catalog[s.kind],motions={study:{kind:'study',x:-1,z:2},basketball:{kind:'basketball',x:1,z:2},meal:{kind:'eat',x:2,z:3.2}};
+    const spec=catalog[s.kind],motions={study:{kind:'study',x:-1,z:2},basketball:{kind:'basketball',x:1,z:2},meal:{kind:'eat',x:2,z:3.2},spar:{kind:'box',x:-1,z:1.5}};
     dialog.close();if(!window.ChinaLifeWorld.perform({...(motions[s.kind]||(s.kind.startsWith('club-')?{kind:data.choice==='lounge'?'talk':'dance',x:0,z:0}:s.kind==='date'?{kind:'talk',x:-3,z:2}:{kind:'eat',x:2,z:3.2})),duration:5,label:spec.title},()=>open()))open();
   }
  }catch(e){note(e.message)}finally{busy=false}

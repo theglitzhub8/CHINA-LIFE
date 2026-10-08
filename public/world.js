@@ -195,6 +195,7 @@ if(['study','type','eat','sit','pray'].includes(a.kind)){left.rotation.x=right.r
 else if(a.kind==='sleep'){player.rotation.x=Math.PI/2;player.position.set(-3,.9,-3);target.copy(player.position);player.rotation.y=0;armL.rotation.x=armR.rotation.x=-.3}
 else if(a.kind==='dance'){player.rotation.y+=.012;player.position.y=Math.abs(w)*.12;armL.rotation.z=.65+w*.4;armR.rotation.z=-.65-w*.4;left.rotation.x=w*.35;right.rotation.x=-w*.35}
 else if(a.kind==='exercise'){player.position.y=-Math.abs(w)*.35;armL.rotation.z=.6+Math.abs(w);armR.rotation.z=-.6-Math.abs(w);left.rotation.x=right.rotation.x=Math.abs(w)*.5}
+else if(a.kind==='box'){player.position.y=Math.abs(w)*.05;armL.rotation.x=-1.4-Math.max(0,w)*.5;armR.rotation.x=-1.4-Math.max(0,-w)*.5;left.rotation.x=.25;right.rotation.x=-.25}
 else if(a.kind==='basketball'){armR.rotation.x=-.6+w*.4;player.getObjectByName('action-prop').position.y=Math.abs(w)*.6}
 else if(a.kind==='perform'){armR.rotation.x=-1.2;armL.rotation.z=w*.25;player.rotation.y=-.4}
 else if(a.kind==='wash'){armL.rotation.x=armR.rotation.x=-1+w*.3;player.rotation.y=Math.sin(t)*.3}

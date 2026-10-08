@@ -24,7 +24,14 @@ if($method==='GET') {
 cl_rate('shared_activity',30,60);$input=cl_body();$action=$input['action']??'';
 if($action==='invite') {
  $peer=cl_peer($input['peer']??null);$kind=$input['kind']??'';if(!is_string($kind)||!isset($catalog[$kind]))cl_fail('Choose a shared activity');
- shared_romance($uid,$peer,$kind);if(cl_blocked($uid,$peer))cl_fail('Player unavailable',403);cl_rate('shared_invite',10,60);
+ shared_romance($uid,$peer,$kind);if(cl_blocked($uid,$peer))cl_fail('Player unavailable',403);
+ if($kind==='spar'){
+  // Harassment controls: players choose who may challenge them, and a declined challenge cannot be repeated for a day.
+  $from=json_decode(cl_one('SELECT game_state FROM chinalife_saves WHERE user_id=?','i',[$peer])['game_state']??'{}',true)['sparFrom']??'friends';
+  if($from==='off'||($from!=='everyone'&&!cl_friends($uid,$peer)))cl_fail('This player is not taking sparring challenges from you',403);
+  if(cl_one('SELECT id FROM chinalife_shared_activities WHERE inviter_id=? AND invitee_id=? AND kind="spar" AND status="declined" AND created_at>=DATE_SUB(NOW(),INTERVAL 1 DAY) LIMIT 1','ii',[$uid,$peer]))cl_fail('They declined your last spar. Wait a day before asking again',429);
+ }
+ cl_rate('shared_invite',10,60);
  $presence=cl_one('SELECT city FROM chinalife_presence WHERE user_id=? AND seen_at>=DATE_SUB(NOW(),INTERVAL 20 SECOND)','i',[$uid]);
  if(($presence['city']??'')!=='Shenyang')cl_fail('Shared student activities start in Shenyang',409);
  cl_presence($peer,'Shenyang',cl_one('SELECT place FROM chinalife_presence WHERE user_id=?','i',[$peer])['place']??'');

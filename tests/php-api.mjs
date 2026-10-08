@@ -422,3 +422,15 @@ test('expired home invitations cannot reconnect even if previously accepted',asy
  assert.equal((await call(12,'presence.php','POST',{...presence('Shenyang','home'),homeOwner:'11'})).httpStatus,403);
  assert.equal((await call(12,'voice.php','POST',{city:'Shenyang',place:'home',homeOwner:'11',session:'expired-home-12',action:'join',muted:false,after:0})).httpStatus,403);
 });
+
+test('sparring challenges respect the target player setting, friendship and a one-day cool-down after a decline',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (11,12,13); UPDATE chinalife_shared_activities SET status="cancelled" WHERE status IN ("pending","accepted","active"); INSERT INTO chinalife_friends(first_id,second_id,requested_by,status,created_at) VALUES(11,12,11,"accepted",NOW()) ON DUPLICATE KEY UPDATE status="accepted"; UPDATE chinalife_saves SET game_state=JSON_SET(game_state,"$.sparFrom","off") WHERE user_id=12');
+ for(const id of [11,12])await call(id,'presence.php','POST',presence('Shenyang','gym'));
+ assert.equal((await call(11,'activities.php','POST',{action:'invite',peer:'12',kind:'spar'})).httpStatus,403,'challenges switched off');
+ assert.equal((await call(11,'activities.php','POST',{action:'invite',peer:'13',kind:'spar'})).httpStatus,403,'strangers need the target to allow everyone');
+ sql('USE chinalife_test; UPDATE chinalife_saves SET game_state=JSON_SET(game_state,"$.sparFrom","friends") WHERE user_id=12');
+ const invited=await call(11,'activities.php','POST',{action:'invite',peer:'12',kind:'spar'});assert.equal(invited.httpStatus,200);
+ assert.equal((await call(12,'activities.php','POST',{action:'decline',id:invited.data.id})).httpStatus,200);
+ assert.equal((await call(11,'activities.php','POST',{action:'invite',peer:'12',kind:'spar'})).httpStatus,429,'no repeat challenge after a decline');
+ assert.ok((await call(11,'activities.php')).data.catalog.spar.money===0,'sparring never moves money');
+});

@@ -125,3 +125,15 @@ test('club security refuses very drunk guests, warns once, then throws them out 
  const saved=harness(JSON.parse(JSON.stringify(g.state)));assert.equal(saved.game.reputation(),45);assert.equal(saved.game.securityCheck('night'),false);
  g.state.day++;assert.equal(g.securityCheck('night'),true,'welcome back tomorrow');
 });
+
+test('a club fight gets a security warning first, then police fines, detention and reputation loss',()=>{
+ const h=harness({...fixture(),money:5000,place:'night',rankClaimed:6,secrets:['night-owl','foodie','scholar','jet-setter','treasure-hunter','big-spender']}),g=h.game;g.state.hour=22*60;g.state.needs.energy=95;g.state.clubPass={night:g.state.day};
+ g.state.drunk=40;g.bar('night');assert.ok(h.document.getElementById('barTrouble'),'trouble finds you after a few drinks');h.click('barTrouble');
+ h.click('fightWalk');assert.equal(g.reputation(),51,'walking away is rewarded');
+ g.trouble('night');h.click('fightPunch');assert.match(h.document.getElementById('activityContent').textContent,/Removed by security/);assert.equal(g.state.place,'plaza');assert.equal(g.reputation(),46);assert.equal(g.state.money,5000,'no fine for a first warning');
+ g.state.place='blood';g.state.clubPass={blood:g.state.day};g.state.hour=19*60;const hour=g.state.hour;g.trouble('blood');h.click('fightPunch');
+ assert.match(h.document.getElementById('activityContent').textContent,/Police detained you/);assert.equal(g.state.money,4500);assert.equal(g.reputation(),36);assert.equal(g.policeRecord().length,2);assert.ok((g.state.hour-hour+1440)%1440>=4*60-30,'detention takes hours');
+ const saved=harness(JSON.parse(JSON.stringify(g.state)));assert.equal(saved.game.policeRecord().length,2);assert.equal(saved.game.reputation(),36);
+ g.state.record=[{day:g.state.day,place:'blood',type:'fight',fined:500}];g.state.place='skylight';g.state.clubPass={skylight:g.state.day};g.state.money=200;g.trouble('skylight');h.click('fightPunch');assert.equal(g.state.money,0,'takes what you have');assert.match(h.document.getElementById('activityContent').textContent,/2 extra hours/);
+ g.state.reputation=10;g.state.clubPass={};g.state.clubBan={};assert.equal(g.securityCheck('night'),false,'a bad reputation keeps you out');
+});
