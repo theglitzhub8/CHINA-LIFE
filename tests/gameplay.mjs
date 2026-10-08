@@ -75,3 +75,12 @@ test('food menus charge and feed at the venue, clubs keep night hours, and skill
  assert.ok(h.game.locations.some(p=>p[0]==='palace'));assert.ok(h.game.locations.some(p=>p[0]==='zhongjie'));
 });
 test('studio launch and expansion explain blocked actions inside the open panel',()=>{const t=harness();t.game.business();t.click('businessLaunch');assert.match(t.document.getElementById('businessStatus').textContent,/Network and Digital/);assert.equal(t.game.state.business,null);t.game.state.skills.Network=2;t.game.state.skills.Digital=2;t.game.state.money=100;t.click('businessLaunch');assert.match(t.document.getElementById('businessStatus').textContent,/¥900/);t.game.state.money=3200;t.click('businessLaunch');assert.equal(t.game.state.business.level,1);assert.match(t.document.getElementById('businessStatus').textContent,/studio is open/);assert.ok(t.document.getElementById('businessOrder'));t.click('businessExpand');assert.match(t.document.getElementById('businessStatus').textContent,/3 orders/);t.click('businessOrder');assert.match(t.document.getElementById('businessStatus').textContent,/Go to/)});
+
+test('Chinese class shows the lesson, scores a three-question quiz and tracks attendance once a day',()=>{
+ const h=harness({...fixture(),place:'campus',secrets:['night-owl','foodie','scholar','jet-setter','treasure-hunter','big-spender'],rankClaimed:6});
+ assert.ok(h.game.isClassroom('campus'));h.game.classroom();assert.match(h.document.getElementById('activityContent').textContent,/你好/);
+ const xp=h.game.state.xp;h.click('quizStart');for(let q=0;q<3;q++){const answer=h.game.currentLesson()[1][q][2];const btn=[...h.document.querySelectorAll('[id^="quizOpt"]')].find(b=>b.textContent.trim().startsWith(answer));assert.ok(btn,'option '+answer);btn.onclick()}
+ assert.equal(h.game.state.classCount,1);assert.equal(h.game.state.classStreak,1);assert.equal(h.game.state.xp,xp+5+15+10);assert.equal(h.game.state.skillXP.Chinese,30);
+ h.game.classroom();assert.match(h.document.getElementById('activityContent').textContent,/already attended/);assert.equal(h.document.getElementById('quizStart'),null);
+ assert.equal(h.game.currentLesson()[0],'Numbers');const saved=harness(JSON.parse(JSON.stringify(h.game.state)));assert.equal(saved.game.state.classCount,1);
+});
