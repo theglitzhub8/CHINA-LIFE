@@ -244,3 +244,17 @@ Voice still depends on browser/app microphone permissions and the existing TURN 
 The Hafrik account dialog now uses a dedicated card layout. Browser players see **Continue with Hafrik** and manual email/username login together, with Show/Hide password, a Hafrik account link and **Keep exploring**. Inside the app, native Hafrik authentication remains primary, with manual login as a fallback. Connected, conflicting-save and failed-character-load states retain their existing safeguards and controls.
 
 Validation: full 166-test suite passed, including two voice clients, one-tap unmuted joining, mute/leave, playback-blocked recovery, late permission cancellation, manual login visibility and password toggling, existing authentication/restoration cases, and wallet copy text. Live microphone playback must still be tested on two actual devices after deployment. Use the standard update script; this release adds no schema migration.
+
+## Studio feedback, home chooser and active-city lists
+
+Studio launch/expansion failures now explain their requirements inside the open studio panel, with current skill levels, balance and order counts. Successful launch changes the panel to the working studio and confirms the result. Starting a client-order animation closes the panel so the player can see their character working. Location and needs failures stay in the panel. The current city's hub name is used for order-travel feedback.
+
+**Home** in the main navigation and phone opens **Which home in [city]?**. It lists only that city's owned home types and addresses; players with no purchased homes get their starter home. Selecting a home costs nothing, saves the selection and offers the existing transport flow when travel is needed. The main home keeps routines/furnishing controls separate from this destination chooser.
+
+Home interior presets now distinguish starter homes, apartments, townhouses, villas, penthouses and mansions. Higher tiers include richer fixtures and decor, with different finishes, signs, garden/courtyard details, skyline windows/terraces, pools and premium lighting. Mansion and penthouse camera framing reveals their grounds/terrace. Fixtures included with the property are rendered without adding free objects to the separate furniture inventory; purchased furniture and finishes still appear. The traversable living-room footprint remains compatible with multiplayer coordinates; multi-floor rooms and editable decoration layouts are future work.
+
+The city picker and airport departures show only server-activated cities. Admin city management retains all cities so admins can activate them. Existing tickets to a subsequently disabled city remain visible for refunds, but boarding is blocked. Profile/origin information can still describe a player's real-world city independently of playable destinations.
+
+No new schema migration is required. Deploy using the standard update script and reload both devices. Check studio launch feedback, one client order, Home's current-city choices, a premium residence, and city/flight lists with only Shenyang enabled.
+
+Validation: full 173-test suite passed, including panel-visible studio requirements/results, visible client-order animation, current-city-only home choices, home switching without purchase charges, premium fixtures with reachable activities, inactive-city filtering and refunds for disabled-city flight tickets. Live server/device smoke testing remains outstanding.
