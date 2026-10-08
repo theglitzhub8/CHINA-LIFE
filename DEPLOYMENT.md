@@ -283,3 +283,11 @@ Other players' private home coordinates are excluded from city presence. Friends
 Deploy using the standard update script, then reload both devices. No schema migration is required. Test two different Hafrik accounts at the same home address: neither should see or hear the other; return both to the plaza and verify they appear together. Existing shared-home chat history remains stored but is excluded from the new private rooms.
 
 Validation: full 190-test suite and PHP syntax checks passed, including two-owner PHP and Worker home isolation, blocked cross-home voice signaling and notifications, public-venue reunion, saved-home restoration and client protection against legacy shared-home responses. Live two-device verification remains to be done after deployment.
+
+## House purchase and travel flow repair
+
+Buying a home from a public venue now reveals a **Go to this home** action. Owned city-home types have usable portfolio buttons; choosing one selects its interior and opens transport. Purchased address homes offer the same explicit travel action. Home switching remains free, with transport charged only on arrival. Existing ownership, private instances and furnishings are preserved.
+
+Unowned address destinations open their purchase screen before entry. Shenyang addresses are only listed in Shenyang, and their purchase/selection actions reject another current city. Other-city owned property types remain visible as portfolio summaries. A stale shop button opened in a previous city refreshes the shop without charging or buying in the new city.
+
+Validation: full 195-test suite passed. Tests cover purchases from public venues, actionable portfolios, insufficient funds and repeat charges through existing checks, cross-city/stale-button protection, saved ownership, home switching and animated taxi arrival into the purchased mansion interior. Deploy with the standard update script; no migration is required. Reload clients and verify the flow on the live server. Purchases continue to use the existing character-save system.

@@ -100,3 +100,7 @@ test('action menu plays looping emotes with props, smoking only where allowed, a
  t.game.state.place='night';t.internal.render();t.world.venue('night');t.world.emote('smoke');assert.equal(t.world.emoteNow,'smoke');
  t.world.emote('sit');assert.equal(t.world.emoteNow,'sit');
 });
+
+test('buying a house from a public venue routes into the purchased private interior',()=>{
+ const t=setup();t.game.state.place='plaza';t.game.state.money=5000000;t.world.venue('plaza');t.game.estate('home-mansion');t.click('estateBuy');const balance=t.game.state.money;assert.equal(t.game.state.place,'plaza');t.click('estateGoHome');t.click('cabTravel');t.tick(20);assert.equal(t.game.state.place,'home-mansion');assert.equal(t.world.homeStyle,'mansion');assert.equal(t.game.state.money,balance-25);assert.equal(t.document.getElementById('activityDialog').open,false);
+});
