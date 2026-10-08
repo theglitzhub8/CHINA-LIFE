@@ -128,7 +128,7 @@ footer a{color:var(--teal-dark);font-weight:700}
  <div class="wrap">
   <a class="brand" href="#top"><img src="img/icon.png" alt="" width="32" height="32"><span>ChinaLife<small>BY HAFRIK</small></span></a>
   <nav aria-label="Sections"><a href="#start">Get started</a><a href="#play">How to play</a><a href="#rewards">Rewards</a><a href="#cities">Cities</a><a href="#faq">FAQ</a></nav>
-  <a class="btn btn-primary" href="https://china-life.hafrik.com/">Play now</a>
+  <a class="btn btn-primary" href="https://china-life.hafrik.com/" target="_blank" rel="noopener" data-play>Play now</a>
  </div>
 </header>
 
@@ -139,7 +139,7 @@ footer a{color:var(--teal-dark);font-weight:700}
    <span class="eyebrow" style="color:#7fd7c4">Season 0 · Shenyang is open</span>
    <h1>You don’t play ChinaLife.<br><em>You live it.</em></h1>
    <p class="lead">Study at a Chinese university, find a job, start a business, dance at the clubs and travel between cities. Real players, real places, a 3D China in your pocket.</p>
-   <div class="actions"><a class="btn btn-primary" href="https://china-life.hafrik.com/">▶ Play ChinaLife free</a><a class="btn btn-ghost" href="#start">How to start</a></div>
+   <div class="actions"><a class="btn btn-primary" href="https://china-life.hafrik.com/" target="_blank" rel="noopener" data-play>▶ Play ChinaLife free</a><a class="btn btn-ghost" href="#start">How to start</a></div>
    <p class="note">Free · plays in your browser and inside the Hafrik app · in-game money only</p>
   </div>
   <img class="hero-shot" src="img/city.jpg" alt="The 3D city map of Shenyang in ChinaLife, with universities, clubs, shops and traffic" width="1337" height="896">
@@ -161,7 +161,7 @@ footer a{color:var(--teal-dark);font-weight:700}
  <div class="wrap">
   <div class="section-head"><span class="eyebrow">Get started</span><h2>Start in three steps</h2></div>
   <div class="steps">
-   <div class="step"><h3>Sign in with Hafrik</h3><p>Open <a href="https://china-life.hafrik.com/">china-life.hafrik.com</a> or ChinaLife inside the Hafrik app. Your Hafrik username becomes your name in the game and your progress saves across devices. No account yet? <a href="https://hafrik.com/get"><b>Get Hafrik</b></a>.</p></div>
+   <div class="step"><h3>Sign in with Hafrik</h3><p>Open <a href="https://china-life.hafrik.com/" target="_blank" rel="noopener" data-play>china-life.hafrik.com</a> or ChinaLife inside the Hafrik app. Your Hafrik username becomes your name in the game and your progress saves across devices. No account yet? <a href="https://hafrik.com/get"><b>Get Hafrik</b></a>.</p></div>
    <div class="step"><h3>Choose where you start</h3><p>Already in China or coming from abroad? Then choose your role: Student, Entrepreneur, Professional, Creator or Tourist.</p></div>
    <div class="step"><h3>Build your character</h3><p>Pick your skin tone, hairstyle and outfit. Tap <b>Begin my ChinaLife</b> and you land in Shenyang, ready to go.</p></div>
   </div>
@@ -297,7 +297,7 @@ footer a{color:var(--teal-dark);font-weight:700}
   <div class="cta">
    <h2>Your life in China starts now</h2>
    <p>Create your character in under a minute and land in Shenyang.</p>
-   <a class="btn" href="https://china-life.hafrik.com/">▶ Play ChinaLife</a>
+   <a class="btn" href="https://china-life.hafrik.com/" target="_blank" rel="noopener" data-play>▶ Play ChinaLife</a>
   </div>
  </div>
 </section>
@@ -306,5 +306,17 @@ footer a{color:var(--teal-dark);font-weight:700}
 <footer>
  <div class="wrap">ChinaLife is a game by <a href="https://hafrik.com/">Hafrik</a>. Virtual yuan has no real-world value. Places are game interpretations.</div>
 </footer>
+<script>
+// Play buttons open the game outside this page. Inside in-app browsers (WhatsApp, Instagram,
+// Facebook, the Hafrik app...) ask the phone for its real browser; otherwise open a new tab.
+(function(){
+ var ua=navigator.userAgent||'',inApp=/FBAN|FBAV|Instagram|Line\/|WhatsApp|Snapchat|TikTok|MicroMessenger|; wv\)|Hafrik/i.test(ua),url='https://china-life.hafrik.com/';
+ if(!inApp)return;
+ document.querySelectorAll('[data-play]').forEach(function(a){a.addEventListener('click',function(e){
+  if(/Android/i.test(ua)){e.preventDefault();location.href='intent://china-life.hafrik.com/#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url='+encodeURIComponent(url)+';end';}
+  else if(/iPhone|iPad|iPod/i.test(ua)){e.preventDefault();var started=Date.now();location.href='x-safari-'+url;setTimeout(function(){if(Date.now()-started<2500&&!document.hidden)window.open(url,'_blank','noopener')},1200);}
+ });});
+})();
+</script>
 </body>
 </html>
