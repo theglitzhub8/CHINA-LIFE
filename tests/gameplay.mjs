@@ -84,3 +84,10 @@ test('Chinese class shows the lesson, scores a three-question quiz and tracks at
  h.game.classroom();assert.match(h.document.getElementById('activityContent').textContent,/already attended/);assert.equal(h.document.getElementById('quizStart'),null);
  assert.equal(h.game.currentLesson()[0],'Numbers');const saved=harness(JSON.parse(JSON.stringify(h.game.state)));assert.equal(saved.game.state.classCount,1);
 });
+
+test('settings has separate music and voice volume sliders',()=>{
+ const h=harness();let music=null,voice=null;h.context.ChinaLifeAudio={volume:.3,setVolume:v=>music=v};h.context.ChinaLifeVoice={prefs:{volume:80},setVolume:v=>voice=v};
+ h.game.phone();h.document.querySelector('[data-phone="settings"]').onclick();
+ const m=h.document.getElementById('musicVolume'),v=h.document.getElementById('voiceVolumeSetting');assert.equal(m.getAttribute('value'),'30');assert.equal(v.getAttribute('value'),'80');
+ m.oninput({target:{value:'60'}});v.oninput({target:{value:'40'}});assert.equal(music,.6);assert.equal(voice,40);
+});

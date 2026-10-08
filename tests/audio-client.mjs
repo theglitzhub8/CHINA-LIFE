@@ -15,3 +15,11 @@ test('a pending audio resume cannot start club music after leaving the club',asy
  const t=await setup();let resume;t.context.AudioContext.prototype.resume=function(){return new Promise(resolve=>resume=()=>{this.state='running';resolve()})};
  const starting=t.context.ChinaLifeAudio.start();t.game.state.place='home';t.internal.render();resume();await starting;assert.equal(t.context.ChinaLifeAudio.playing,false);
 });
+
+test('club music is loudest at the DJ booth, fades by the door and on the map, and its volume is remembered',async()=>{
+ const t=await setup(),a=t.context.ChinaLifeAudio,stored=new Map();t.context.localStorage={getItem:k=>stored.get(k)??null,setItem:(k,v)=>stored.set(k,v)};
+ t.context.ChinaLifeWorld={view:'venue',position:{x:0,z:-3}};const booth=a.nearness;
+ t.context.ChinaLifeWorld.position={x:5,z:4};const door=a.nearness;t.context.ChinaLifeWorld.view='map';const map=a.nearness;
+ assert.equal(booth,1);assert.ok(door<booth&&door>=.35,'door '+door);assert.equal(map,.2);
+ a.setVolume(.75);assert.equal(a.volume,.75);assert.equal(stored.get('chinalife-music-volume'),'0.75');a.setVolume(3);assert.equal(a.volume,1);
+});

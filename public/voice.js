@@ -30,4 +30,4 @@ window.addEventListener('chinalife:update',()=>{if((active||joining)&&room&&(roo
 window.addEventListener('chinalife:players',()=>{if(active&&!window.ChinaLifeCloud?.joined)leave('You left the shared city. Voice switched off.')});
 const typing=e=>/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName||'');document.addEventListener('keydown',e=>{if(e.code==='Space'&&prefs.ptt&&active&&!typing(e)&&!e.repeat){e.preventDefault();talking=true;applyMic()}});document.addEventListener('keyup',e=>{if(e.code==='Space'&&prefs.ptt&&talking){talking=false;applyMic()}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&(active||joining))leave()});window.addEventListener('pagehide',()=>leave());
-window.ChinaLifeVoice={open,join,leave,pulse,get prefs(){return prefs},get active(){return active},get muted(){return muted},get peers(){return peers.size}};
+window.ChinaLifeVoice={open,join,leave,pulse,get prefs(){return prefs},setVolume:v=>{prefs.volume=Math.round(Math.min(100,Math.max(0,v)));savePrefs();applySpeakers()},get active(){return active},get muted(){return muted},get peers(){return peers.size}};
