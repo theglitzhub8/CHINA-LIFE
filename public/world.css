@@ -192,3 +192,5 @@ dialog{border-radius:22px}
 @media(max-width:600px){.world-side .mini-needs{width:168px;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px 7px}.mini-need{font-size:11px;gap:3px}.mini-need i{height:5px}}
 
 .scene-label.remote .player-rank{display:block;font-size:10px;font-weight:600;line-height:1.4;color:#e3f3ff}.scene-label.remote:after{content:none}
+/* The message bubble is a popover: undo the browser's default popover box so it keeps its own position. */
+#toast[popover]{top:auto;right:auto;margin:0;border:0;overflow:visible}
