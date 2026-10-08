@@ -14,7 +14,13 @@ function cyl(parent,r1,r2,h,material,x,y,z,seg=14){const m=new THREE.Mesh(new TH
 
 // ---- Canvas textures: facades are drawn once and tiled, so a tall tower and a small shop share materials. ----
 function canvasTexture(w,h,draw,repeat=true){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');draw(g,w,h);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;if(repeat){t.wrapS=t.wrapT=THREE.RepeatWrapping}t.anisotropy=4;return t}
-const textured=(key,draw,tint=0xffffff)=>mat('t'+key,()=>new THREE.MeshStandardMaterial({map:canvasTexture(128,128,draw),color:tint,roughness:.75}));
+// Night windows: an emissive map holding only the cool, dark window panes of a facade, so at night windows glow
+// and walls (brick, tile, stone) stay dark. world.js sets the emissive strength from the time of day.
+function windowMask(source,key=''){const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');try{if(/^(paving|sidewalk)/.test(key)){g.fillStyle='#000';g.fillRect(0,0,128,128);throw 0}
+ // Glass curtain walls: only some panes are lit, so towers read as offices at night rather than lanterns.
+ if(key.startsWith('glass')){g.fillStyle='#000';g.fillRect(0,0,128,128);g.fillStyle='#fff';g.fillRect(10,14,46,38);g.fillStyle='#777';g.fillRect(70,70,48,40);throw 0}
+ g.drawImage(source,0,0);const img=g.getImageData(0,0,128,128),d=img.data;for(let i=0;i<d.length;i+=4){const r=d[i],gr=d[i+1],b=d[i+2],lum=(r*.3+gr*.59+b*.11)/255,win=b>r+8&&lum<.62;d[i]=d[i+1]=d[i+2]=win?255:0;d[i+3]=255}g.putImageData(img,0,0)}catch{}const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t}
+const textured=(key,draw,tint=0xffffff)=>mat('t'+key,()=>{const map=canvasTexture(128,128,draw),m=new THREE.MeshStandardMaterial({map,color:tint,roughness:.75,emissive:0x000000,emissiveMap:windowMask(map.image,key)});m.userData.facade=true;return m});
 // One tile = one window bay and one storey.
 const FACADES={
  glass:g=>{const grd=g.createLinearGradient(0,0,128,128);grd.addColorStop(0,'#5d93b8');grd.addColorStop(1,'#2d5f86');g.fillStyle=grd;g.fillRect(0,0,128,128);g.fillStyle='#9fd0ec55';g.fillRect(8,8,52,104);g.fillStyle='#1d3f5a';g.fillRect(0,0,128,6);g.fillRect(0,0,5,128);g.fillRect(62,0,4,128)},

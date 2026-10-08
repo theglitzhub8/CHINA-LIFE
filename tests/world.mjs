@@ -134,3 +134,11 @@ test('the Shenyang City Centre prototype replaces the generic block only in Shen
  for(const id of ['plaza','hotel','black-sheep'])assert.ok(t.game.locations.some(p=>p[0]===id),id+' keeps its place ID');
  const gz=t.context.cityLayout('Guangzhou',t.game.contentFor('Guangzhou'));assert.deepEqual([...gz.positions.hotel],[-6,10],'Guangzhou is unchanged');
  t.game.setOpenCities(['Guangzhou']);t.world.browse('Guangzhou');assert.match(t.document.getElementById('worldVenueTitle').textContent,/Guangzhou/);assert.ok(t.context.ChinaLifeWorld.stats().meshes<700)});
+
+test('outdoor light follows the game clock, each city has daily weather, and interiors keep their own lighting',()=>{const t=setup(),W=t.context.ChinaLifeWorld;t.game.state.place='plaza';
+ const dayOf=want=>{for(let d=1;d<400;d++)if(W.weatherFor('Shenyang',d)===want)return d};t.game.state.day=dayOf('clear');
+ t.game.state.hour=13*60;t.world.map();const noon=W.lighting().sun;t.game.state.hour=23*60;t.world.map();const night=W.lighting().sun;assert.ok(noon>2.5&&night<1,'noon '+noon+' night '+night);
+ assert.equal(W.weatherFor('Shenyang',5),W.weatherFor('Shenyang',5),'weather is stable for the day');assert.ok(['clear','cloudy','rain','snow'].includes(W.weatherFor('Guangzhou',3)));
+ for(let d=1;d<200;d++)assert.notEqual(W.weatherFor('Guangzhou',d),'snow','no snow in Guangzhou');
+ t.game.state.day=dayOf('snow');t.game.state.hour=13*60;t.world.map();assert.equal(W.lighting().weather,'snow');
+ t.game.state.place='gym';t.world.venue('gym');assert.equal(W.lighting().outdoor,false);assert.equal(W.lighting().weather,'clear','no snow indoors');assert.equal(W.lighting().sun,3)});
