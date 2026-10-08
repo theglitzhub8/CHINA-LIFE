@@ -113,3 +113,15 @@ test('drinks raise the drunk meter, water and time lower it, and 100% blacks out
  g.state.drunk=100;h.internal.render();assert.match(h.document.getElementById('activityContent').textContent,/blacked out/);assert.equal(g.state.place,'home');assert.equal(g.state.drunk,30);
  const saved=harness(JSON.parse(JSON.stringify(g.state)));assert.equal(saved.game.state.drunk,30);
 });
+
+test('club security refuses very drunk guests, warns once, then throws them out for the night',()=>{
+ const h=harness({...fixture(),money:5000,place:'night',rankClaimed:6,secrets:['night-owl','foodie','scholar','jet-setter','treasure-hunter','big-spender']}),g=h.game;g.state.hour=22*60;g.state.needs.energy=95;
+ g.state.drunk=85;assert.equal(g.securityCheck('night'),false);assert.match(h.document.getElementById('activityContent').textContent,/Not tonight/);
+ g.state.clubPass={night:g.state.day};assert.equal(g.securityCheck('night'),false);assert.match(h.document.getElementById('activityContent').textContent,/warning/);
+ h.click('secWater');assert.equal(g.state.drunk,75);assert.equal(g.securityCheck('night'),true);
+ g.state.drunk=90;assert.equal(g.securityCheck('night'),false);assert.match(h.document.getElementById('activityContent').textContent,/Thrown out/);
+ assert.equal(g.state.place,'plaza');assert.equal(g.reputation(),45);assert.equal(g.state.clubPass.night,undefined);
+ g.state.drunk=0;assert.equal(g.securityCheck('night'),false,'banned for the rest of the night');
+ const saved=harness(JSON.parse(JSON.stringify(g.state)));assert.equal(saved.game.reputation(),45);assert.equal(saved.game.securityCheck('night'),false);
+ g.state.day++;assert.equal(g.securityCheck('night'),true,'welcome back tomorrow');
+});
