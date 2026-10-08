@@ -70,7 +70,7 @@ test('dice pays double on a win, returns ties and allows ten rolls a day',()=>{
 test('food menus charge and feed at the venue, clubs keep night hours, and skills earn certificates',()=>{
  const h=harness({...fixture(),money:1000,place:'african',secrets:['night-owl','foodie','scholar','jet-setter','treasure-hunter','big-spender'],rankClaimed:6});h.game.state.needs.hunger=20;h.game.menu('african');h.click('menu-0');assert.equal(h.game.state.money,955);assert.equal(h.game.state.needs.hunger,75);
  h.game.state.place='blood';h.game.state.hour=10*60;const money=h.game.state.money;h.game.activity('blood',0);assert.equal(h.game.state.money,money);assert.match(h.document.getElementById('toast').textContent,/opens at 20:00/);
- h.game.state.hour=22*60;h.game.state.needs.energy=90;h.game.activity('blood',1);assert.equal(h.game.state.money,money-60);
+ h.game.state.hour=22*60;h.game.state.needs.energy=90;h.game.state.clubPass={blood:h.game.state.day};h.game.activity('blood',1);assert.equal(h.game.state.money,money-60);
  const m=h.game.state.money;h.game.state.skills.Chinese=3;h.internal.render();assert.deepEqual([...h.game.state.certs],['hsk1','hsk2']);assert.equal(h.game.state.money,m+1300);h.internal.render();assert.equal(h.game.state.money,m+1300);
  assert.ok(h.game.locations.some(p=>p[0]==='palace'));assert.ok(h.game.locations.some(p=>p[0]==='zhongjie'));
 });
@@ -90,4 +90,17 @@ test('settings has separate music and voice volume sliders',()=>{
  h.game.phone();h.document.querySelector('[data-phone="settings"]').onclick();
  const m=h.document.getElementById('musicVolume'),v=h.document.getElementById('voiceVolumeSetting');assert.equal(m.getAttribute('value'),'30');assert.equal(v.getAttribute('value'),'80');
  m.oninput({target:{value:'60'}});v.oninput({target:{value:'40'}});assert.equal(music,.6);assert.equal(voice,40);
+});
+
+test('clubs charge entry each night and unlock VIP, private rooms and the exclusive lounge',()=>{
+ const h=harness({...fixture(),money:10000,place:'night',hour:22*60,rankClaimed:6,secrets:['night-owl','foodie','scholar','jet-setter','treasure-hunter','big-spender']}),g=h.game,day=g.state.day;g.state.hour=22*60;g.state.needs.energy=90;
+ g.activity('night',0);assert.match(h.document.getElementById('activityContent').textContent,/Pay entry/);assert.equal(g.state.money,10000);
+ h.click('clubEntry');assert.equal(g.state.money,9940);assert.equal(g.state.clubPass.night,day);assert.equal(h.document.getElementById('vipTable'),null);
+ assert.equal(h.document.getElementById('exShow'),null,'exclusive needs Insider rank or membership');
+ h.click('vipNight');assert.equal(g.state.money,9440);assert.ok(h.document.getElementById('vipTable'));h.click('vipTable');assert.equal(g.state.money,8640);
+ g.clubAccess('night');h.click('roomBook');assert.equal(g.state.privateRoom.id,'night');assert.ok(h.document.getElementById('roomParty'));
+ // The VIP table ran past midnight, so membership starts from the new day.
+ const now=g.state.day;g.clubAccess('night');h.click('vipMember');assert.equal(g.state.vipUntil,now+30);assert.ok(h.document.getElementById('exShow'));
+ const saved=harness(JSON.parse(JSON.stringify(g.state)));assert.equal(saved.game.state.vipUntil,now+30);assert.equal(saved.game.state.clubPass.night,now);
+ g.state.hour=10*60;g.clubAccess('night');assert.match(h.document.getElementById('activityContent').textContent,/Closed now/);
 });
