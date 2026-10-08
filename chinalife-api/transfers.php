@@ -3,7 +3,7 @@ declare(strict_types=1);
 require_once __DIR__.'/common.php';
 cl_methods(['GET','POST']);
 if($method==='GET') {
- $rows=cl_rows('SELECT id,sender_id,recipient_id,amount,created_at FROM chinalife_transfers WHERE sender_id=? OR recipient_id=? ORDER BY created_at DESC LIMIT 20','ii',[$uid,$uid]);
+ $rows=cl_rows('SELECT t.id,t.sender_id,t.recipient_id,t.amount,t.created_at,s.user_name sender_name,r.user_name recipient_name FROM chinalife_transfers t JOIN users s ON s.user_id=t.sender_id JOIN users r ON r.user_id=t.recipient_id WHERE t.sender_id=? OR t.recipient_id=? ORDER BY t.created_at DESC,t.id DESC LIMIT 20','ii',[$uid,$uid]);
  json_response('success',['transfers'=>$rows]);
 }
 cl_rate('transfer',10,10);$input=cl_body();$peer=cl_peer($input['peer']??null);$amount=$input['amount']??null;$key=$input['request_id']??'';

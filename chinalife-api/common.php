@@ -109,11 +109,11 @@ function cl_message_access(array $row): void {
     } else {cl_presence($uid,$row['city'],$row['place']); if (cl_blocked($uid,$sender)) cl_fail('Message unavailable',404);}
 }
 
-// Admins are Hafrik usernames; admin-config.php on the server (not in git) can replace the list.
+// Product admins plus optional additional usernames in the server-only admin-config.php.
 function cl_is_admin(): bool {
     global $auth;
     $config=is_file(__DIR__.'/admin-config.php')?require __DIR__.'/admin-config.php':[];
-    $admins=array_map('strtolower',(array)($config['usernames']??['hafrik']));
+    $admins=array_map('strtolower',array_merge(['hafrik','horlaarsman'],(array)($config['usernames']??[])));
     return in_array(strtolower((string)($auth['user_name']??'')),$admins,true);
 }
 function cl_admin(): void {if (!cl_is_admin()) cl_fail('Admin only',403);}

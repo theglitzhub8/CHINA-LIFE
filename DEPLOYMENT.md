@@ -56,7 +56,7 @@ The update script uses a fast-forward pull from `main`. A dirty or diverged chec
 
 ## Admin panel
 
-The Hafrik account `hafrik` sees an **Admin** app on the in-game phone (Overview, Players, Events, Reports). Every admin request is checked on the server. To change who is an admin, create `/www/wwwroot/hafrik.com/api/v4/chinalife/admin-config.php` (not in git):
+The Hafrik accounts `hafrik` and `horlaarsman` see an **Admin** app on the in-game phone (Overview, Players, Events, Reports). Every admin request is checked on the server. These two product admins remain enabled. To authorize additional admins, create `/www/wwwroot/hafrik.com/api/v4/chinalife/admin-config.php` (not in git):
 
 ```php
 <?php return ['usernames' => ['hafrik']];
@@ -220,3 +220,15 @@ cd /www/chinalife-source
 ```
 
 After deployment, reload both devices. Set gender on existing profiles, test a request/acceptance with two accounts, buy a home and furniture, then reconnect and inspect that account from the other player's profile. Verify Admin → Players loads without typing a username. The local integration suite covers two client sessions, persisted consent, rejected mismatched requests, once-only fortunes, public wealth, automatic admin listing, portfolio reloads, furniture rendering and reachable home activities. Live server/device validation remains necessary.
+
+## Bank-style wallet and home switching
+
+The wallet now includes a Hafrik card with available virtual-yuan balance, account holder and wealth tier. It shows net worth, owned-home count, asset value, rent and the last 20 player transfers, with usernames and incoming/outgoing amounts. **Show off your wallet** opens a clean brag card; **Copy my brag card** copies its text for sharing, with a selectable-text fallback. The card clearly identifies all values as virtual game currency.
+
+`hafrik` and `horlaarsman` are the two built-in product admin usernames, checked by the PHP API. The server-only `admin-config.php` can authorize additional usernames and no longer replaces these two. Updating the API is sufficient; reconnect/reload each admin account to refresh the phone's Admin app.
+
+Switching to a purchased city address while inside a residence now moves the active scene to that address. Selecting a different owned home type while inside an address-based house now returns to the main home and renders the selected type. The selected house and location are saved together; selecting an already-owned home does not charge again. When outside a residence, selecting a home changes the Home destination while preserving your current venue. Switching during an unfinished movement/activity is blocked.
+
+Use the normal server update command. No new schema migration is required specifically for this wallet/admin/home-switch update; run the existing migration if the earlier fortune-claims update has not been migrated yet.
+
+Validation: full 162-test suite passed, PHP syntax checks passed, and the subsequent Home-map navigation fix passed the focused 28-test world/wallet suite. Tests cover both built-in admins, unauthorized access rejection, escaped transfer names and directions, stale response handling, wallet copying, immediate house changes and travel to the chosen home. Live server deployment/device smoke testing remains outstanding.
