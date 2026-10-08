@@ -106,3 +106,5 @@ test('buying a house from a public venue routes into the purchased private inter
 });
 
 test('private homes render bathroom fixtures, purchased finishes and a fan',()=>{const t=setup();t.game.state.upgrades=['toilet','shower','fan'];t.game.state.furnitureColors.fan='#426dba';t.world.venue('home');for(const id of ['toilet','shower','fan'])assert.ok(t.world.furniture.includes(id),id);assert.ok(t.world.signs.every(s=>!s.includes('Shared')));t.world.map();assert.equal(t.document.getElementById('mapSearch').parentNode,t.document.getElementById('mapFilters').parentNode)});
+
+test('static scenery is merged so the city map stays within a phone-friendly mesh budget',()=>{const t=setup();t.world.map();const map=t.context.ChinaLifeWorld.stats();assert.ok(map.meshes<700,'map meshes '+map.meshes);assert.ok(map.triangles>40000,'scenery is still drawn');t.game.state.place='hq';t.world.venue('hq');const hq=t.context.ChinaLifeWorld.stats();assert.ok(hq.meshes<200,'hq meshes '+hq.meshes);assert.equal(hq.view,'venue')});
