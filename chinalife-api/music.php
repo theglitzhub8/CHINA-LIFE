@@ -1,13 +1,14 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/common.php';cl_methods(['GET','POST']);$input=$method==='POST'?cl_body():$_GET;
-$club=$input['place']??'night';if(!in_array($club,['night','blood','skylight'],true)) cl_fail('Choose a club');
+$club=$input['place']??'night';if(!in_array($club,['night', 'youle', 'ex', 'rex', 'orangutan', 'taxi-club', 'best-one', 'cats-eye', 'silver-knight', 'blood', 'skylight'],true)) cl_fail('Choose a club');
 [$city,$place]=cl_room(['city'=>$input['city']??'','place'=>$club]);cl_presence($uid,$city,$place);
 // Each club keeps its own DJ queue; 007 Club keeps the original per-city key.
 $room=$place==='night'?$city:$city.':'.$place;
 $now=(int)floor(microtime(true)*1000);
 $db->begin_transaction();
-cl_run("INSERT IGNORE INTO chinalife_music(city,track,started_at) VALUES(?,'hometown',?)",'si',[$room,$now]);
+$defaultTrack=['youle'=>'afrogroove','ex'=>'neon','rex'=>'hometown','orangutan'=>'midnight','taxi-club'=>'afrogroove','best-one'=>'midnight','cats-eye'=>'midnight','silver-knight'=>'neon'][$place]??'hometown';
+cl_run('INSERT IGNORE INTO chinalife_music(city,track,started_at) VALUES(?,?,?)','ssi',[$room,$defaultTrack,$now]);
 $state=cl_one('SELECT track,started_at FROM chinalife_music WHERE city=? FOR UPDATE','s',[$room]);
 cl_run('DELETE FROM chinalife_music_requests WHERE created_at<DATE_SUB(NOW(),INTERVAL 1 HOUR)');
 if ($method==='POST') {

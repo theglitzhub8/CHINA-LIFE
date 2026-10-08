@@ -6,5 +6,6 @@ export function entryPosition(identity) {
   return {x:-4.5 + slot * .9,z:3.65};
 }
 export function roomPosition(value) {
-  return {x:Math.max(-6,Math.min(6,Number(value?.x) || 0)),z:Math.max(-4.5,Math.min(4.5,Number(value?.z) || 0))};
+  const bounds=value?.place==='night'?{x:8,z:6}:{x:6,z:4.5};
+  return {x:Math.max(-bounds.x,Math.min(bounds.x,Number(value?.x) || 0)),z:Math.max(-bounds.z,Math.min(bounds.z,Number(value?.z) || 0))};
 }

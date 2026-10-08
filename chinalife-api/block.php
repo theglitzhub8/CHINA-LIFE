@@ -7,5 +7,6 @@ $db->begin_transaction();
 if ($input['blocked']) {
     cl_run('INSERT IGNORE INTO chinalife_blocks(owner_id,peer_id) VALUES(?,?)','ii',[$uid,$peer]);
     cl_run('DELETE FROM chinalife_friends WHERE first_id=? AND second_id=?','ii',[$first,$second]);
+    cl_run('UPDATE chinalife_shared_activities SET status="cancelled" WHERE LEAST(inviter_id,invitee_id)=? AND GREATEST(inviter_id,invitee_id)=? AND (status IN ("pending","accepted","active") OR (kind IN ("girlfriend","boyfriend") AND status="completed"))','ii',[$first,$second]);
 } else cl_run('DELETE FROM chinalife_blocks WHERE owner_id=? AND peer_id=?','ii',[$uid,$peer]);
 $db->commit();json_response('success',['ok'=>true]);

@@ -2,6 +2,7 @@ const needs=["energy", "hunger", "hygiene", "bladder", "fun", "social"];
 const traits=["Curious", "Ambitious", "Warm", "Independent", "Creative", "Patient"];
 const cityData=CITY_DATA,catalog=CATALOG;
 const L=[["home"], ["ef"], ["cafe"], ["market"], ["campus"], ["gym"], ["business"], ["mall"], ["park"], ["night"], ["station"], ["african"], ["church"], ["plaza"], ["airport"], ["university"], ["liaoning"], ["dongbei"]];
+L.push(...CATALOG.shenyang.universities.filter(s=>!L.some(p=>p[0]===s.id)).map(s=>[s.id]),...CATALOG.shenyang.clubs.filter(s=>!L.some(p=>p[0]===s.id)).map(s=>[s.id]),...CATALOG.shenyang.restaurants.map(s=>[s.id]));
 const jobs=[["cafe-job"], ["teacher"], ["content"], ["designer"], ["sales"], ["coach"]];
 const contacts=[["mei"], ["tunde"], ["amina"], ["leo"]];
 const quests=[{"id": "explorer"}, {"id": "routine"}, {"id": "payday"}, {"id": "language"}, {"id": "friend"}, {"id": "home"}, {"id": "founder"}];

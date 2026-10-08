@@ -161,3 +161,35 @@ Steady and Focused shift now show availability inside the shift window, includin
 ## Nearby player ranks
 
 Real-player name labels now show the existing XP rank icon/title beneath the name. Presence reads XP from each account's saved game state, rather than accepting a client-supplied rank. Labels update on presence refresh and persist across map/venue rebuilds. Deploy the API and public files together using update-server.sh; no schema migration is required. Verified with two-account API tests and rank-label update tests.
+
+## Shenyang universities, nightlife, dining and social invitations
+
+Deploy PHP API and public files together using the normal update-server script. This release reuses the existing shared-activities table; no new schema migration is required if the previous shared-activities migration has already run. Reopen the game or hard-refresh after updating.
+
+All 15 requested universities are in character setup and **Profile → Your university**. Selecting a university updates the student profile and future story destinations without resetting story progress or teleporting the player. They have separate locations on the compressed Shenyang game map, campus activities and wall signs. The former Dongbei venue ID remains a Northeastern study annex to preserve existing character locations; Dongbei University of Finance and Economics is no longer offered as a Shenyang university choice. These are reusable campus scenes, not detailed reproductions of each real campus. Additional Shenyang venues are not offered on other city maps.
+
+The catalogue's `shenyang` section defines university identity, focus and map positions; clubs define their names, positions, accents, room styles and preferred music. Map placement is a game layout, not real street coordinates. Universities share campus logic, restaurants share food/menu logic, and clubs share DJ queues. Existing BLOOD & EMBERS and SKYLIGHT remain available.
+
+| Club | ChinaLife atmosphere |
+| --- | --- |
+| 007 Club | Largest room and map building; main stage, speakers and side lounge areas; existing open-mic/drinks retained |
+| Youle Singing & Dancing Club | Pink karaoke and sing-along stage |
+| EX PLAYMALL | Cyan neon and arcade cabinets |
+| REX MUSIC CLUB | Amber live-band stage and drum props |
+| Orangutan Bunker | Green industrial bass room and pillars |
+| Taxi Club | Yellow street-style lounge |
+| BEST ONE CLUB | Gold VIP seating |
+| CAT'S EYE | Purple intimate lounge |
+| Silver Knight | Silver-blue electronic hall with light bars |
+
+Each club has a wall name, evening opening hours, activities and its own PHP music queue. Music remains the existing original instrumental loop system. Game atmospheres are creative interpretations, not claims about real venue interiors or music policies.
+
+Black Sheep Restaurant & Bar and Tank have separate dining locations, wall signs, different decor and game menus. Food is ordered and paid for through each venue's Menu. Their dinner invitations do not automatically purchase meals or charge another player.
+
+Travel now offers Walk, Shared bike, Metro, Bus, Cab, DiDi Economy and DiDi Premium. Central travel options define virtual fares, game minutes and energy costs; payment happens once on arrival, and cancelling the animation costs nothing. Bikes, buses and ride-hailing have travel props/status messages. Metro and bus currently use the existing simulated street journey; real stations, timetables, bookings and a DiDi service integration are not part of this release.
+
+**People → player profile** now offers girlfriend/boyfriend requests, a date, dinner at either restaurant, and a club invitation. These extend **Phone → Together**. Requests alert the invited player; they can accept or decline. Date/dinner/club sessions require both players at the destination, ready and participating. Partnership requests become a saved relationship only when the invited player accepts. Both see their partner in Together after reconnecting; either can end it. Blocking ends the relationship and cancels invitations. Romantic requests grant no money or XP. Relationship state is stored server-side in the existing invitation records rather than a client-editable character field.
+
+Validation: full 152-test suite passed, including two actual game-client sessions against local PHP/MySQL, consent/refusal, relationship reconnect/block, both restaurants and every club invitation, all university presence endpoints, university selection/save reload, seven transportation payment/cancellation paths, and reachable activities in every venue. This is local integration testing; the live server still needs deployment and a two-device smoke test.
+
+Reference checks: [Northeastern University](https://english.neu.edu.cn/index.htm), [Shenyang Aerospace University](https://en.sau.edu.cn/index.htm), [Shenyang club listings](https://sg.trip.com/toplist/tripbest/recommend/shenyang/best-clubs/100900006707/), and [Black Sheep listing](https://5ishenyang.com/2024/08/15/black-sheep-western-restaurant/). Tank's specific real-world details and 007's real-world size were not verified; Tank uses the supplied name and a game-designed dining room, and 007 is largest specifically within ChinaLife. Other venue opening times, prices and interiors are game settings.

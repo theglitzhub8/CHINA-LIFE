@@ -303,3 +303,45 @@ test('basketball and meal complete with separate daily limits and persisted shar
  assert.equal((await call(12,'save.php')).data.save.game.sharedXP,40);
  const saved=await call(12,'save.php');assert.equal((await call(12,'save.php','POST',{revision:saved.data.revision,save:{character:{},game:{...saved.data.save.game,sharedXP:999}}})).httpStatus,409);
 });
+
+test('relationships require consent, survive reconnect and can be ended by either partner',async()=>{
+ for(const id of [11,12])await call(id,'presence.php','POST',presence());
+ const before=(await call(11,'save.php')).data.save.game;
+ let r=await call(11,'activities.php','POST',{action:'invite',kind:'girlfriend',peer:'12'});assert.equal(r.httpStatus,200);let id=r.data.id;
+ assert.equal((await call(11,'activities.php','POST',{action:'accept',id})).httpStatus,403);
+ assert.equal((await call(12,'activities.php','POST',{action:'decline',id})).httpStatus,200);
+ assert.equal((await call(11,'activities.php')).data.relationships.length,0);
+ r=await call(11,'activities.php','POST',{action:'invite',kind:'boyfriend',peer:'12'});id=r.data.id;
+ assert.equal((await call(12,'activities.php','POST',{action:'accept',id})).httpStatus,200);
+ for(const who of [11,12])assert.equal((await call(who,'activities.php')).data.relationships[0].id,id);
+ sql(`USE chinalife_test; UPDATE chinalife_shared_activities SET expires_at=DATE_SUB(NOW(),INTERVAL 2 DAY),completed_at=DATE_SUB(NOW(),INTERVAL 2 DAY) WHERE id=${Number(id)}`);
+ assert.equal((await call(12,'activities.php')).data.relationships.length,1);
+ assert.equal((await call(1,'activities.php','POST',{action:'end-relationship',id})).httpStatus,404);
+ assert.equal((await call(11,'activities.php','POST',{action:'invite',kind:'girlfriend',peer:'12'})).httpStatus,409);
+ const after=(await call(11,'save.php')).data.save.game;assert.equal(after.money,before.money);assert.equal(after.xp,before.xp);
+ assert.equal((await call(12,'activities.php','POST',{action:'end-relationship',id})).httpStatus,200);
+ assert.equal((await call(11,'activities.php')).data.relationships.length,0);
+});
+test('date, both restaurant dinners and every club invitation use consent and venue participation',async()=>{
+ const catalog=(await call(11,'activities.php')).data.catalog;
+ for(const kind of ['date',...Object.keys(catalog).filter(k=>k.startsWith('dinner-')||k.startsWith('club-'))]){
+  sql("USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (11,12)");const spec=catalog[kind];for(const who of [11,12])assert.equal((await call(who,'presence.php','POST',presence('Shenyang',spec.place))).httpStatus,200);
+  const invited=await call(11,'activities.php','POST',{action:'invite',kind,peer:'12'});assert.equal(invited.httpStatus,200,kind);const id=invited.data.id;
+  assert.equal((await call(12,'activities.php','POST',{action:'accept',id})).httpStatus,200);
+  for(const who of [11,12])assert.equal((await call(who,'activities.php','POST',{action:'ready',id})).httpStatus,200);
+  for(const who of [11,12])assert.equal((await call(who,'activities.php','POST',{action:'choose',id,choice:Object.keys(spec.choices)[0]})).httpStatus,200);
+  sql(`USE chinalife_test; UPDATE chinalife_shared_activities SET started_at=DATE_SUB(NOW(),INTERVAL 60 SECOND) WHERE id=${Number(id)}`);
+  assert.equal((await call(11,'activities.php','POST',{action:'finish',id})).httpStatus,200);
+ }
+ sql("USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (11,12)");for(const place of harness().game.universityIds)assert.equal((await call(11,'presence.php','POST',presence('Shenyang',place))).httpStatus,200,place);
+});
+
+test('two game clients send a partner request, accept it, reconnect and end it by blocking',async()=>{
+ sql("USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (11,12)");
+ async function client(id){const t=harness(null),c=t.context;c.HafrikSession={token:'test-'+id,user:{id}};c.URLSearchParams=URLSearchParams;c.fetch=(url,opts)=>fetch(base+new URL(url).pathname+new URL(url).search,opts);await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);vm.runInContext(fs.readFileSync('public/shared-activities.js','utf8'),c);await c.ChinaLifeShared.ready;return t;}
+ const a=await client(11),b=await client(12);await a.context.ChinaLifeShared.open('12','user12','girlfriend');assert.equal(a.document.querySelectorAll('[data-kind]').length,1);await a.document.querySelector('[data-kind="girlfriend"]').onclick();
+ await b.context.ChinaLifeShared.poll();assert.equal(b.document.getElementById('sharedInviteNotice').hidden,false);await b.context.ChinaLifeShared.open();await b.document.querySelector('[data-shared="accept"]').onclick();assert.match(b.document.getElementById('sharedBody').textContent,/Partner: user11/);
+ const restarted=await client(11);await restarted.context.ChinaLifeShared.open();assert.match(restarted.document.getElementById('sharedBody').textContent,/Partner: user12/);assert.ok(restarted.document.querySelector('[data-shared="end-relationship"]'));
+ assert.equal((await call(12,'block.php','POST',{peer:'11',blocked:true})).httpStatus,200);for(const id of [11,12])assert.equal((await call(id,'activities.php')).data.relationships.length,0);
+ await call(12,'block.php','POST',{peer:'11',blocked:false});
+});

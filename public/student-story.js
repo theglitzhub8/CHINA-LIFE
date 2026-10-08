@@ -2,7 +2,7 @@
 window.ChinaLifeStudentStory={
  supportedCities:['Shenyang'],
  studyLevels:['Language programme','Foundation','Undergraduate','Masters','Doctorate','Exchange'],
- universities:[['campus','Northeastern University'],['university','Shenyang University'],['liaoning','Liaoning University'],['dongbei','Dongbei University of Finance and Economics']],
+ universities:window.ChinaLifeCatalog.shenyang.universities.map(s=>[s.id,s.name]),
  preparation:[
  {title:'Meet your student guide',text:'Visit the fictional Hafrik partner desk in your departure city. Your guide explains the game journey and your chosen study destination.',button:'Meet the guide'},
  {title:'Prepare your application',text:'In this simulation, collect your passport, academic records and study plan. No documents are uploaded or sent anywhere.',button:'Prepare the game checklist'},
