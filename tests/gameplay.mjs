@@ -93,14 +93,14 @@ test('settings has separate music and voice volume sliders',()=>{
 });
 
 test('clubs charge entry each night and unlock VIP, private rooms and the exclusive lounge',()=>{
- const h=harness({...fixture(),money:10000,place:'night',hour:22*60,rankClaimed:6,secrets:['night-owl','foodie','scholar','jet-setter','treasure-hunter','big-spender']}),g=h.game,day=g.state.day;g.state.hour=22*60;g.state.needs.energy=90;
+ const h=harness({...fixture(),money:10000,place:'night',hour:22*60,rankClaimed:6,secrets:['night-owl','foodie','scholar','jet-setter','treasure-hunter','big-spender']}),g=h.game,day=g.state.day,dialog=h.document.getElementById('activityDialog');g.state.hour=22*60;g.state.needs.energy=90;
  g.activity('night',0);assert.match(h.document.getElementById('activityContent').textContent,/Pay entry/);assert.equal(g.state.money,10000);
- h.click('clubEntry');assert.equal(g.state.money,9940);assert.equal(g.state.clubPass.night,day);assert.equal(h.document.getElementById('vipTable'),null);
- assert.equal(h.document.getElementById('exShow'),null,'exclusive needs Insider rank or membership');
- h.click('vipNight');assert.equal(g.state.money,9440);assert.ok(h.document.getElementById('vipTable'));h.click('vipTable');assert.equal(g.state.money,8640);
- g.clubAccess('night');h.click('roomBook');assert.equal(g.state.privateRoom.id,'night');assert.ok(h.document.getElementById('roomParty'));
+ h.click('clubEntry');assert.equal(g.state.money,9940);assert.equal(g.state.clubPass.night,day);assert.equal(dialog.open,false,'window closes after buying');
+ g.clubAccess('night');assert.equal(h.document.getElementById('vipTable'),null);assert.equal(h.document.getElementById('exShow'),null,'exclusive needs Insider rank or membership');
+ h.click('vipNight');assert.equal(g.state.money,9440);assert.equal(dialog.open,false);g.clubAccess('night');h.click('vipTable');assert.equal(g.state.money,8640);assert.equal(dialog.open,false,'window closes after a VIP activity');
+ g.clubAccess('night');h.click('roomBook');assert.equal(g.state.privateRoom.id,'night');g.clubAccess('night');assert.ok(h.document.getElementById('roomParty'));
  // The VIP table ran past midnight, so membership starts from the new day.
- const now=g.state.day;g.clubAccess('night');h.click('vipMember');assert.equal(g.state.vipUntil,now+30);assert.ok(h.document.getElementById('exShow'));
+ const now=g.state.day;h.click('vipMember');assert.equal(g.state.vipUntil,now+30);g.clubAccess('night');assert.ok(h.document.getElementById('exShow'));
  const saved=harness(JSON.parse(JSON.stringify(g.state)));assert.equal(saved.game.state.vipUntil,now+30);assert.equal(saved.game.state.clubPass.night,now);
  g.state.hour=10*60;g.clubAccess('night');assert.match(h.document.getElementById('activityContent').textContent,/Closed now/);
 });
