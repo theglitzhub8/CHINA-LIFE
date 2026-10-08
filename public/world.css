@@ -233,3 +233,24 @@ dialog{border-radius:22px}
 @media(max-width:600px){.place-sheet{bottom:calc(max(8px,env(safe-area-inset-bottom)) + 64px);padding:12px 13px;border-radius:18px}.place-sheet-desc{font-size:12px}}
 /* The place sheet always sits above building labels. */
 #placeSheet.place-sheet{z-index:40}
+
+/* ---- Clean map: the map gets the screen. Controls appear only when needed. ---- */
+/* Zoom and rotate buttons are gone (pinch and drag replace them); the whole-city button lives in the panel. */
+#worldZoomIn,#worldZoomOut,#worldRotate,#worldFit{display:none!important}
+.map-view #worldEmote{display:none}
+.scene-tools #mapLabelMode{width:38px;min-width:0;padding:0;border-radius:50%;font-size:17px}
+/* City tabs moved into the panel list; filters and search open from the 🔍 button. */
+.map-cities{display:none!important}
+.map-view .map-controls{display:none}
+.map-view.search-open .map-controls{display:grid;top:max(104px,calc(env(safe-area-inset-top) + 96px));left:12px;right:60px}
+.map-view.search-open .map-search{display:block}
+.map-view.search-open #mapSearchBtn{background:#173e60;color:#fff}
+/* The panel on the map is a slim bar showing the city; tap it to slide the full panel up. */
+.map-view:not(.dock-open) .venue-card .venue-say,.map-view:not(.dock-open) .venue-card .world-activities,.map-view:not(.dock-open) .venue-card .venue-social-controls{display:none}
+.map-view:not(.dock-open) .venue-card{padding:8px 12px;border-radius:18px}
+.map-view:not(.dock-open) .venue-heading{cursor:pointer}
+.map-view:not(.dock-open) .venue-heading::after{content:'⌃';margin-left:auto;padding:0 6px;color:#5f7882;font-size:18px}
+.map-view.dock-open .venue-heading::after{content:'⌄';margin-left:auto;padding:0 6px;color:#5f7882;font-size:18px}
+.map-view .venue-card{transition:padding .2s ease}
+.map-view.dock-open .venue-card{animation:sheetIn .22s ease-out}
+@media(max-width:600px){.map-view:not(.dock-open) .venue-heading h1{font-size:15px}.map-view:not(.dock-open) .venue-heading p{font-size:11px}}

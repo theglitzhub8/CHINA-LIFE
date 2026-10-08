@@ -116,12 +116,12 @@ test('map labels switch between names, icons and hidden, remember the choice and
  const again=setup();again.world.map();assert.ok(again.document.getElementById('worldUI').classList.contains('labels-names'));
  t.world.map(true);t.tick();const all=t.document.querySelectorAll('.venue-label').length;assert.ok(shown().length<all,'zoomed out, less important or overlapping labels step aside ('+shown().length+'/'+all+')')});
 
-test('browsing another city map never moves the player, and travel is a separate choice',()=>{const t=setup();t.game.setOpenCities(['Guangzhou']);t.world.map();const cities=t.document.getElementById('mapCities');assert.equal(cities.hidden,false);
- const place=t.game.state.place;cities.querySelector('[data-city="Guangzhou"]').onclick();assert.equal(t.game.state.city,'Shenyang','still in Shenyang');assert.equal(t.game.state.place,place);
+test('browsing another city map never moves the player, and travel is a separate choice',()=>{const t=setup();t.game.setOpenCities(['Guangzhou']);t.world.map();const look=[...t.document.querySelectorAll('#worldActivities button')].find(b=>/Look around Guangzhou/.test(b.textContent));assert.ok(look,'the map panel offers browsing other open cities');
+ const place=t.game.state.place;look.click();assert.equal(t.game.state.city,'Shenyang','still in Shenyang');assert.equal(t.game.state.place,place);
  assert.match(t.document.getElementById('worldVenueTitle').textContent,/Guangzhou/);assert.ok([...t.document.querySelectorAll('.venue-label')].some(l=>/Canton Tower/.test(l.dataset.name)),'shows Guangzhou places');
  const tower=[...t.document.querySelectorAll('.venue-label')].find(l=>/Canton Tower/.test(l.dataset.name));tower.onclick({stopPropagation(){}});assert.match(t.document.getElementById('placeGo').textContent,/Travel to Guangzhou/);
  t.document.getElementById('placeGo').onclick();assert.equal(t.game.state.city,'Shenyang','travel opens the flight screen, it does not teleport');assert.equal(t.document.getElementById('activityDialog').open,true);
- t.document.getElementById('activityDialog').close();cities.querySelector('[data-city="Shenyang"]').onclick();assert.match(t.document.getElementById('worldVenueTitle').textContent,/Shenyang/)});
+ t.document.getElementById('activityDialog').close();t.document.getElementById('mapLocate').onclick();assert.match(t.document.getElementById('worldVenueTitle').textContent,/Shenyang/)});
 
 test('two-finger pinch zooms the map and a drag keeps gliding with momentum',()=>{const t=setup();t.context.performance=performance;t.world.map();t.tick();const canvas=t.document.querySelector('#worldViewport canvas'),fire=(type,id,x,y)=>{const e=new t.context.Event(type);Object.assign(e,{pointerId:id,clientX:x,clientY:y,preventDefault(){}});canvas.dispatchEvent(e)};
  assert.equal(t.world.stats().view,'map');
