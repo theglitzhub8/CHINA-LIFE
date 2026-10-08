@@ -114,4 +114,35 @@ if ($action==='suspend_rank') {
         admin_log('suspend_rank',(int)$target,$days,$note);}
     json_response('success',cl_rank_status((int)$target));
 }
+// Hafrik HQ service applications.
+if ($action==='applications') {
+    $status=$input['status']??'pending';if (!in_array($status,['pending','approved','declined','all'],true)) cl_fail('Choose a status');
+    $rows=cl_rows('SELECT a.id,a.service,a.name,a.contact,a.city,a.message,a.status,a.admin_note,a.created_at,u.user_name username FROM chinalife_applications a LEFT JOIN users u ON u.user_id=a.user_id'.($status==='all'?'':' WHERE a.status=?').' ORDER BY a.id DESC LIMIT 100',$status==='all'?'':'s',$status==='all'?[]:[$status]);
+    foreach ($rows as &$r) $r['id']=(string)$r['id'];unset($r);
+    json_response('success',['applications'=>$rows,'services'=>require __DIR__.'/services-config.php','pending'=>(int)cl_one('SELECT COUNT(*) n FROM chinalife_applications WHERE status="pending"')['n']]);
+}
+if ($action==='set_application') {
+    $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);$status=$input['status']??'';$note=mb_substr(trim((string)($input['note']??'')),0,300);
+    if (!$id||!in_array($status,['pending','approved','declined'],true)) cl_fail('Choose an application and a status');
+    $row=cl_one('SELECT user_id,service FROM chinalife_applications WHERE id=?','i',[$id]);if (!$row) cl_fail('Application not found',404);
+    cl_run('UPDATE chinalife_applications SET status=?,admin_note=?,updated_at=NOW() WHERE id=?','ssi',[$status,$note,$id]);
+    admin_log('set_application',(int)$row['user_id'],null,$row['service'].' → '.$status.($note!==''?' · '.$note:''));json_response('success',['ok'=>true]);
+}
+// Partner restaurants per city, with menus and order links.
+if ($action==='restaurants') {
+    $city=$input['city']??'Shenyang';if (!is_string($city)||mb_strlen($city)>40) cl_fail('Choose a city');
+    json_response('success',['restaurants'=>cl_restaurants($city,true)]);
+}
+if ($action==='save_restaurant') {
+    $r=cl_valid_restaurant($input);$id=filter_var($input['id']??null,FILTER_VALIDATE_INT);
+    if ($id) {if (!cl_one('SELECT id FROM chinalife_restaurants WHERE id=?','i',[$id])) cl_fail('Restaurant not found',404);
+        cl_run('UPDATE chinalife_restaurants SET city=?,name=?,icon=?,district=?,description=?,menu=?,order_link=?,wechat_id=?,whatsapp=?,active=?,updated_at=NOW() WHERE id=?','sssssssssii',[...array_values($r),$id]);}
+    else {if ((int)cl_one('SELECT COUNT(*) n FROM chinalife_restaurants WHERE city=?','s',[$r['city']])['n']>=200) cl_fail('A city can have up to 200 partner restaurants',409);
+        $q=cl_query('INSERT INTO chinalife_restaurants(city,name,icon,district,description,menu,order_link,wechat_id,whatsapp,active,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,NOW(),NOW())','sssssssssi',array_values($r));$id=$q->insert_id;$q->close();}
+    admin_log('save_restaurant',null,null,$r['city'].' · '.$r['name']);json_response('success',['id'=>(string)$id]);
+}
+if ($action==='delete_restaurant') {
+    $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);$row=$id?cl_one('SELECT city,name FROM chinalife_restaurants WHERE id=?','i',[$id]):null;if (!$row) cl_fail('Restaurant not found',404);
+    cl_run('DELETE FROM chinalife_restaurants WHERE id=?','i',[$id]);admin_log('delete_restaurant',null,null,$row['city'].' · '.$row['name']);json_response('success',['deleted'=>true]);
+}
 cl_fail('Unknown admin action');

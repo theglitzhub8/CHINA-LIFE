@@ -1,7 +1,7 @@
 // Fictional neighbourhoods, with a connected street network in every city.
 export function cityLayout(name,content){
  const north=['Shenyang','Harbin','Beijing'].includes(name),coastal=['Guangzhou','Shenzhen','Shanghai'].includes(name);
- const positions={home:[-50,-32],church:[-50,-23],ef:[-17,-33],cafe:[-17,-23],campus:[17,-32],gym:[17,-23],university:[34,-32],liaoning:[51,-22],dongbei:[34,-10],station:[68,-32],market:[-50,0],african:[-40,3],plaza:[-17,0],skylight:[7,9],hotel:[-6,10],business:[17,0],mall:[51,0],academy:[40,9],park:[-50,32],palace:[-38,40],zhongjie:[-60,-8],night:[-17,32],blood:[-28,40],airport:[49,48]};
+ const positions={home:[-50,-32],church:[-50,-23],ef:[-17,-33],cafe:[-17,-23],campus:[17,-32],gym:[17,-23],university:[34,-32],liaoning:[51,-22],dongbei:[34,-10],station:[68,-32],market:[-50,0],african:[-40,3],plaza:[-17,0],skylight:[7,9],hotel:[-6,10],business:[17,0],mall:[51,0],academy:[40,9],park:[-50,32],palace:[-38,40],zhongjie:[-60,-8],night:[-17,32],blood:[-28,40],airport:[49,48],hq:[0,-74]};
  // Each city's own places (Shenyang content, Guangzhou landmarks) bring their map positions.
  if(content)for(const venues of Object.values(content))if(Array.isArray(venues))for(const venue of venues)if(venue.position)positions[venue.id]=venue.position;
  const xs=[-68,-34,0,34,68],zs=[-48,-16,16,48];
@@ -9,6 +9,8 @@ export function cityLayout(name,content){
  // Guangzhou shows its real districts on the map.
  if(name==='Guangzhou')['Baiyun','Tianhe · University Town','Tianhe · Sports Centre','Huangpu','Liwan · Old Town','Yuexiu · City centre','Zhujiang New Town','Tianhe CBD','Liwan riverside','Haizhu · Pearl River','Haizhu · Pazhou','Panyu · Nansha'].forEach((label,i)=>districts[i].name=label);
  const entries=Object.fromEntries(Object.entries(positions).map(([id,[x,z]])=>{const roadX=xs.reduce((a,b)=>Math.abs(b-x)<Math.abs(a-x)?b:a),roadZ=zs.reduce((a,b)=>Math.abs(b-z)<Math.abs(a-z)?b:a);return [id,Math.abs(roadX-x)<Math.abs(roadZ-z)?{x:roadX,z}:{x,z:roadZ}]}));
+ // Hafrik HQ sits north of the grid; its entrance is at the front of its avenue, not inside the towers.
+ if(positions.hq)entries.hq={x:positions.hq[0],z:positions.hq[1]+13};
  return {name,north,coastal,positions,entries,xs,zs,districts,width:148,depth:112,riverZ:20};
 }
 export function streetRoute(layout,from,to){const a=layout.entries[from],b=layout.entries[to];if(!a||!b)return [];const nodes=[];for(const x of layout.xs)for(const z of layout.zs)nodes.push({x,z});nodes.push(a,b);const ai=nodes.length-2,bi=nodes.length-1,distance=nodes.map(()=>Infinity),prev=[],pending=new Set(nodes.map((_,i)=>i));distance[ai]=0;while(pending.size){const i=[...pending].reduce((a,b)=>distance[a]<distance[b]?a:b);pending.delete(i);if(i===bi||!Number.isFinite(distance[i]))break;for(const j of pending){const p=nodes[i],q=nodes[j];if(p.x!==q.x&&p.z!==q.z)continue;const cost=Math.abs(p.x-q.x)+Math.abs(p.z-q.z);if(distance[i]+cost<distance[j]){distance[j]=distance[i]+cost;prev[j]=i}}}if(!Number.isFinite(distance[bi]))return [];let route=[],i=bi;while(i!==undefined){route.push(nodes[i]);i=prev[i]}return route.reverse()}

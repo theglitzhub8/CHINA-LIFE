@@ -204,3 +204,12 @@ test('the VIP flow: members get in everywhere, perks run once a night, passes ne
  g.state.place='skylight';g.state.clubBan={skylight:g.state.day};h.click('roomBook');assert.equal(g.state.money,16800,'banned players cannot buy');
  const saved=harness(JSON.parse(JSON.stringify(g.state)));assert.ok(Object.keys(saved.game.state.clubPerks).includes('blood:DJ lounge'));
 });
+
+test('Hafrik HQ is a venue in every city and partner restaurants open their real order links',()=>{
+ const h=harness({...fixture(),money:500,place:'home'}),g=h.game;
+ for(const city of ['Shenyang','Guangzhou']){g.state.city=city;assert.ok(g.locations.some(p=>p[0]==='hq'),'HQ in '+city)}
+ g.state.city='Shenyang';g.setPartnerRestaurants([{id:'1',name:'Lanzhou Noodle House',icon:'🍜',district:'Heping',menu:[['Beef noodles',28]],order_link:'https://u.wechat.com/abc',wechat_id:'noodle_house88',whatsapp:'8618940147438'}]);
+ g.delivery();assert.match(h.document.getElementById('activityContent').textContent,/Order for real/);h.click('partner-0');
+ const links=[...h.document.querySelectorAll('#activityContent a.external-app')].map(a=>a.getAttribute('href'));assert.ok(links.includes('https://u.wechat.com/abc'));assert.ok(links.some(u=>u.startsWith('https://wa.me/8618940147438')));
+ assert.match(h.document.getElementById('activityContent').textContent,/Beef noodles · ¥28/);assert.ok(h.document.getElementById('partnerWechat'));assert.equal(g.state.money,500,'real orders never touch game money');
+});

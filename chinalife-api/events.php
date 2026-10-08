@@ -6,7 +6,7 @@ if ($method==='GET') {
     $city=$_GET['city']??'Shenyang';
     $rows=cl_rows('SELECT e.id,e.title,e.body,e.place,e.reward,e.billboard,e.link,UNIX_TIMESTAMP(e.ends_at)*1000 ends_at,EXISTS(SELECT 1 FROM chinalife_event_claims c WHERE c.event_id=e.id AND c.user_id=?) joined FROM chinalife_events e WHERE e.city=? AND e.starts_at<=NOW() AND e.ends_at>NOW() ORDER BY e.id DESC LIMIT 20','is',[$uid,$city]);
     foreach ($rows as &$r) {$r['id']=(string)$r['id'];$r['reward']=(int)$r['reward'];$r['billboard']=(bool)$r['billboard'];$r['joined']=(bool)$r['joined'];$r['ends_at']=(int)$r['ends_at'];}unset($r);
-    json_response('success',['events'=>$rows,'admin'=>cl_is_admin(),'cities'=>cl_open_cities(),'ranks'=>cl_ranks(),'me'=>cl_rank_status($uid)]);
+    json_response('success',['events'=>$rows,'admin'=>cl_is_admin(),'cities'=>cl_open_cities(),'ranks'=>cl_ranks(),'me'=>cl_rank_status($uid),'restaurants'=>cl_restaurants(is_string($city)?mb_substr($city,0,40):'Shenyang')]);
 }
 cl_rate('event',10,60);$input=cl_body();$id=filter_var($input['id']??null,FILTER_VALIDATE_INT);if (!$id) cl_fail('Choose an event');
 $db->begin_transaction();

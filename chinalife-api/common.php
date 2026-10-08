@@ -158,6 +158,27 @@ function cl_ranks(): array {
     $row=cl_one("SELECT value FROM chinalife_settings WHERE name='ranks'");
     return ($row?cl_valid_ranks(json_decode($row['value'],true)):null)??cl_default_ranks();
 }
+// Partner restaurants are added by admins per city. Ordering opens their own WeChat, WhatsApp or order link.
+function cl_restaurants(string $city, bool $all=false): array {
+    $rows=cl_rows('SELECT id,city,name,icon,district,description,menu,order_link,wechat_id,whatsapp,active FROM chinalife_restaurants WHERE city=?'.($all?'':' AND active=1').' ORDER BY name LIMIT 200','s',[$city]);
+    foreach ($rows as &$r) {$r['id']=(string)$r['id'];$r['menu']=json_decode($r['menu'],true)?:[];$r['active']=(bool)$r['active'];}unset($r);
+    return $rows;
+}
+function cl_valid_restaurant(array $input): array {
+    $name=trim((string)($input['name']??''));$icon=trim((string)($input['icon']??''))?:'🍽';$district=trim((string)($input['district']??''));$description=trim((string)($input['description']??''));
+    $link=trim((string)($input['order_link']??''));$wechat=trim((string)($input['wechat_id']??''));$whatsapp=preg_replace('/[^0-9]/','',(string)($input['whatsapp']??''));
+    if (!in_array($input['city']??'',['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'],true)) cl_fail('Choose a city');
+    if ($name===''||mb_strlen($name)>80||mb_strlen($icon)>8||mb_strlen($district)>80||mb_strlen($description)>300) cl_fail('Give the restaurant a name (up to 80 characters)');
+    if ($link!==''&&!preg_match('#^(https://|weixin://)[^\s<>"]{3,290}$#',$link)) cl_fail('Order links must start with https:// or weixin://');
+    if ($wechat!==''&&!preg_match('/^[A-Za-z][-_A-Za-z0-9]{5,39}$/',$wechat)) cl_fail('Enter a valid WeChat ID (6 to 40 letters, numbers, - or _)');
+    if ($whatsapp!==''&&(strlen($whatsapp)<8||strlen($whatsapp)>15)) cl_fail('Enter the WhatsApp number with country code, e.g. 8618940147438');
+    $menu=$input['menu']??[];if (!is_array($menu)||count($menu)<1||count($menu)>80) cl_fail('Add 1 to 80 dishes to the menu');
+    $dishes=[];foreach ($menu as $d) {$dish=trim((string)($d[0]??''));$price=$d[1]??null;
+        if ($dish===''||mb_strlen($dish)>60||!is_numeric($price)||$price<0||$price>100000) cl_fail('Each dish needs a name and a price from 0 to 100,000');
+        $dishes[]=[$dish,round((float)$price,2)];}
+    if ($link===''&&$wechat===''&&$whatsapp==='') cl_fail('Add at least one way to order: a link, a WeChat ID or a WhatsApp number');
+    return ['city'=>$input['city'],'name'=>$name,'icon'=>$icon,'district'=>$district,'description'=>$description,'menu'=>json_encode($dishes,JSON_UNESCAPED_UNICODE),'order_link'=>$link,'wechat_id'=>$wechat,'whatsapp'=>$whatsapp,'active'=>empty($input['active'])&&array_key_exists('active',$input)?0:1];
+}
 // Admin-awarded event badges and rank suspensions, shown to the player and on public profiles.
 function cl_rank_status(int $userId): array {
     $badges=cl_rows('SELECT id,icon,name FROM chinalife_badges WHERE user_id=? ORDER BY id DESC LIMIT 30','i',[$userId]);

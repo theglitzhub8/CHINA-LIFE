@@ -456,3 +456,30 @@ test('admins edit the rank ladder, set a player rank with an audit log, award ba
  assert.equal((await call(11,'events.php?city=Shenyang')).data.admin,false,'top rank never grants admin');
  sql("USE chinalife_test; DELETE FROM chinalife_settings WHERE name='ranks'");
 });
+
+test('Hafrik HQ applications are private to the player and reviewed by admins',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (1,5,11,12)');
+ const list=await call(11,'applications.php');assert.equal(list.httpStatus,200);assert.ok(list.data.services.visa);
+ assert.equal((await call(11,'applications.php','POST',{service:'spaceship',name:'A',contact:'+8612345678'})).httpStatus,400);
+ assert.equal((await call(11,'applications.php','POST',{service:'visa',name:'Ada',contact:''})).httpStatus,400,'a contact is required');
+ const sent=await call(11,'applications.php','POST',{service:'visa',name:'Ada',contact:'wa +8613800000000',city:'Shenyang',message:'Residence permit renewal'});assert.equal(sent.httpStatus,200);
+ assert.equal((await call(11,'applications.php','POST',{service:'visa',name:'Ada',contact:'wa +8613800000000'})).httpStatus,409,'one open application per service');
+ assert.equal((await call(12,'applications.php')).data.applications.length,0,'others never see it');
+ assert.equal((await call(5,'admin.php','POST',{action:'applications'})).httpStatus,403);
+ const pending=(await call(1,'admin.php','POST',{action:'applications',status:'pending'})).data;assert.ok(pending.applications.some(a=>a.id===sent.data.id&&a.contact.includes('8613800000000')));
+ assert.equal((await call(1,'admin.php','POST',{action:'set_application',id:Number(sent.data.id),status:'approved',note:'We will call you tomorrow'})).httpStatus,200);
+ const mine=(await call(11,'applications.php')).data.applications.find(a=>a.id===sent.data.id);assert.equal(mine.status,'approved');assert.equal(mine.admin_note,'We will call you tomorrow');
+});
+
+test('admins add partner restaurants with menus and order links, and players in that city receive them',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (1,5,11)');
+ const r={city:'Shenyang',name:'Lanzhou Noodle House',icon:'🍜',district:'Heping',menu:[['Beef noodles',28],['Dumplings',22]],whatsapp:'+86 189 4014 7438',wechat_id:'noodle_house88',order_link:'https://u.wechat.com/abc123'};
+ assert.equal((await call(5,'admin.php','POST',{action:'save_restaurant',...r})).httpStatus,403);
+ assert.equal((await call(1,'admin.php','POST',{action:'save_restaurant',...r,order_link:'javascript:alert(1)'})).httpStatus,400,'only https or weixin links');
+ assert.equal((await call(1,'admin.php','POST',{action:'save_restaurant',...r,order_link:'',wechat_id:'',whatsapp:''})).httpStatus,400,'needs a way to order');
+ const saved=await call(1,'admin.php','POST',{action:'save_restaurant',...r});assert.equal(saved.httpStatus,200);
+ const got=(await call(11,'events.php?city=Shenyang')).data.restaurants.find(x=>x.id===saved.data.id);assert.equal(got.whatsapp,'8618940147438');assert.deepEqual(got.menu.map(m=>m[0]),['Beef noodles','Dumplings']);
+ assert.ok(!(await call(11,'events.php?city=Guangzhou')).data.restaurants.some(x=>x.id===saved.data.id),'only in its own city');
+ await call(1,'admin.php','POST',{action:'save_restaurant',...r,id:Number(saved.data.id),active:false});assert.ok(!(await call(11,'events.php?city=Shenyang')).data.restaurants.some(x=>x.id===saved.data.id),'hidden restaurants are not shown');
+ assert.equal((await call(1,'admin.php','POST',{action:'delete_restaurant',id:Number(saved.data.id)})).httpStatus,200);
+});
