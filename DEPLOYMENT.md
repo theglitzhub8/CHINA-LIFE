@@ -291,3 +291,21 @@ Buying a home from a public venue now reveals a **Go to this home** action. Owne
 Unowned address destinations open their purchase screen before entry. Shenyang addresses are only listed in Shenyang, and their purchase/selection actions reject another current city. Other-city owned property types remain visible as portfolio summaries. A stale shop button opened in a previous city refreshes the shop without charging or buying in the new city.
 
 Validation: full 195-test suite passed. Tests cover purchases from public venues, actionable portfolios, insufficient funds and repeat charges through existing checks, cross-city/stale-button protection, saved ownership, home switching and animated taxi arrival into the purchased mansion interior. Deploy with the standard update script; no migration is required. Reload clients and verify the flow on the live server. Purchases continue to use the existing character-save system.
+
+## Private home visits, bathroom fixtures and accessible voice
+
+Student starter homes and garden townhouses now use private-home wording. A generic Home destination resolves to the selected owned address. Every residence includes a visible toilet, shower and standing fan; these products can also be purchased/upgraded through the existing shop, with their selected finishes rendered and saved. Existing furniture remains visible in the home. The toilet and shower labels open the corresponding home action.
+
+From your own home, open **Home → Invite friends to your home**. Only accepted Hafrik friends can be invited; the guest must accept. The production PHP API authorizes the guest against a persistent invitation before joining the owner's room. Avatars, chat and voice then share that owner's instance. Guest rendering uses a restricted snapshot of host furnishings and property style while preserving the guest's character, money and inventory. Visits expire after two hours; owners can revoke access. Leaving, changing venue or reconnecting restores the guest's own home context. Home visits currently use the production Hafrik PHP backend; the legacy Worker retains private homes without guest visits.
+
+Map categories and search now share a stacked container instead of overlapping absolute positions. The game screen has a microphone icon: tap to join voice, then tap to mute/unmute. If push-to-talk is enabled in settings, a separate **Hold to talk** control appears on the game screen. Advanced volume, participant controls and leaving voice remain in the voice panel.
+
+**Migration required for home invitations:** deploy with the standard update script, then run:
+
+```bash
+/www/server/php/84/bin/php /www/wwwroot/hafrik.com/api/v4/chinalife/migrate.php
+```
+
+Reload both clients after migration. Test two accounts in separate owned homes, send/accept a friend invitation, verify host furnishings and shared avatars/chat/voice, revoke the invitation, then verify the guest returns to their own home. Also check the map on mobile and tap the microphone icon without opening the voice panel. Live microphone/device and responsive-layout smoke testing remains outstanding.
+
+Validation: full 202-test suite passed with two test files running concurrently to avoid local resource contention; PHP syntax checks passed. Coverage includes two-account home access/voice/chat, revocation, expiry, guest character preservation, visible fixtures and purchased furnishings, map control grouping, on-screen join/mute/unmute, existing home purchases and save restoration.

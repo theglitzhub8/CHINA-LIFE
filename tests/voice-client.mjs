@@ -17,3 +17,5 @@ test('push to talk only sends while held, the LIVE pill follows the mic, and per
  const mute=a.document.querySelector('[data-voice-mute]');assert.ok(mute,'mute button for the other player');mute.onclick();assert.equal(a.context.ChinaLifeVoice.prefs.mutedPeers.length,1);
  await a.context.ChinaLifeVoice.leave();assert.equal(live().hidden,true);
 });
+
+test('on-screen microphone joins and toggles mute without opening a dialog',async()=>{const t=await setup(backend(),'alice');const b=t.document.getElementById('quickVoice');assert.equal(t.document.getElementById('voiceDialog').open,false);await b.onclick();assert.equal(t.context.ChinaLifeVoice.active,true);assert.equal(t.track.enabled,true);await b.onclick();assert.equal(t.track.enabled,false);assert.equal(b.getAttribute('aria-label'),'Unmute microphone');await b.onclick();assert.equal(t.track.enabled,true);assert.equal(t.document.getElementById('voiceDialog').open,false);await t.context.ChinaLifeVoice.leave();assert.equal(t.track.stopped,true)});

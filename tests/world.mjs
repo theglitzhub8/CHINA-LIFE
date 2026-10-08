@@ -104,3 +104,5 @@ test('action menu plays looping emotes with props, smoking only where allowed, a
 test('buying a house from a public venue routes into the purchased private interior',()=>{
  const t=setup();t.game.state.place='plaza';t.game.state.money=5000000;t.world.venue('plaza');t.game.estate('home-mansion');t.click('estateBuy');const balance=t.game.state.money;assert.equal(t.game.state.place,'plaza');t.click('estateGoHome');t.click('cabTravel');t.tick(20);assert.equal(t.game.state.place,'home-mansion');assert.equal(t.world.homeStyle,'mansion');assert.equal(t.game.state.money,balance-25);assert.equal(t.document.getElementById('activityDialog').open,false);
 });
+
+test('private homes render bathroom fixtures, purchased finishes and a fan',()=>{const t=setup();t.game.state.upgrades=['toilet','shower','fan'];t.game.state.furnitureColors.fan='#426dba';t.world.venue('home');for(const id of ['toilet','shower','fan'])assert.ok(t.world.furniture.includes(id),id);assert.ok(t.world.signs.every(s=>!s.includes('Shared')));t.world.map();assert.equal(t.document.getElementById('mapSearch').parentNode,t.document.getElementById('mapFilters').parentNode)});

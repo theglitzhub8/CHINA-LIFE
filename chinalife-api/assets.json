@@ -14,7 +14,10 @@
     "gaming": 2800,
     "piano": 6500,
     "aquarium": 1800,
-    "safe": 12000
+    "safe": 12000,
+    "toilet": 350,
+    "shower": 800,
+    "fan": 180
   },
   "properties": {
     "apartment": 6500,

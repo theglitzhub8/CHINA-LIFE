@@ -7,6 +7,9 @@ window.ChinaLifeCatalog = {
  {id:'advertise-south',map:{x:-25,z:33},venues:[]}
  ],
  furniture:[
+ {id:'toilet',name:'Modern toilet',price:350,detail:'Upgrade your private bathroom',category:'Bathroom'},
+ {id:'shower',name:'Glass shower',price:800,detail:'A glass shower enclosure in your bathroom',category:'Bathroom'},
+ {id:'fan',name:'Standing fan',price:180,detail:'Keep your home comfortable',category:'Essentials'},
  {id:'bed',name:'Comfortable bed',price:450,detail:'Rest restores 15 extra energy',category:'Essentials'},
  {id:'kitchen',name:'Kitchen kit',price:280,detail:'Home meals restore 10 extra hunger',category:'Essentials'},
  {id:'desk',name:'Study desk',price:650,detail:'Train Digital from home',category:'Essentials'},

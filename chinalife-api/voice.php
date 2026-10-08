@@ -20,5 +20,6 @@ if ($action==='join') {
     cl_run('UPDATE chinalife_voice_members SET muted=?,seen_at=NOW() WHERE user_id=? AND session=?','iis',[$muted,$uid,$session]);
 } else cl_fail('Choose join or pulse');
 $rows=cl_rows('SELECT v.user_id id,v.session,p.name,v.muted FROM chinalife_voice_members v JOIN chinalife_presence p ON p.user_id=v.user_id AND p.city=v.city AND p.place=v.place AND p.seen_at>=DATE_SUB(NOW(),INTERVAL 20 SECOND) WHERE v.city=? AND v.place=? AND v.seen_at>=DATE_SUB(NOW(),INTERVAL 15 SECOND) AND NOT EXISTS(SELECT 1 FROM chinalife_blocks b WHERE (b.owner_id=? AND b.peer_id=v.user_id) OR (b.owner_id=v.user_id AND b.peer_id=?)) ORDER BY v.user_id','ssii',[$city,$place,$uid,$uid]);
+if(cl_private_place($place)&&str_contains($place,'@')){[$base,$owner]=explode('@',$place,2);$rows=array_values(array_filter($rows,function($r)use($city,$base,$owner){$peer=(int)$r['id'];return $peer===(int)$owner||(cl_friends((int)$owner,$peer)&&!cl_blocked((int)$owner,$peer)&&cl_one('SELECT id FROM chinalife_home_visits WHERE owner_id=? AND guest_id=? AND city=? AND place=? AND status="accepted" AND expires_at>NOW()','iiss',[(int)$owner,$peer,$city,$base]));}));}
 foreach ($rows as &$row) {$row['id']=(string)$row['id'];$row['muted']=(bool)$row['muted'];}unset($row);
 json_response('success',['id'=>(string)$uid,'members'=>$rows,'signals'=>[]]);

@@ -20,7 +20,7 @@ test('all appearance controls update the saved character',()=>{const h=harness()
 test('save import preserves progress and closes initial setup',()=>{const h=harness(null);h.game.loadSave({...fixture(),name:'Restored'});assert.equal(h.game.state.name,'Restored');assert(!h.document.getElementById('onboarding').open);assert.throws(()=>h.game.loadSave({...fixture(),money:'bad'}));assert.equal(h.game.state.name,'Restored')});
 
 test('homes and the home desk follow the player role',()=>{
- const student=harness({...fixture(),background:'Student'});assert.equal(student.game.locations.find(p=>p[0]==='home')[1],'Your student dorm');
+ const student=harness({...fixture(),background:'Student'});assert.equal(student.game.locations.find(p=>p[0]==='home')[1],'Your private student home');
  const founder=harness({...fixture(),background:'Entrepreneur',money:50000});assert.equal(founder.game.locations.find(p=>p[0]==='home')[1],'Your city apartment');
  founder.game.shop('properties','villa');assert.match(founder.document.getElementById('activityContent').textContent,/Penthouse villa/);
  founder.game.home();founder.click('buy-desk');founder.click('homeStudy');assert.equal(founder.game.state.skillXP.Network,25);

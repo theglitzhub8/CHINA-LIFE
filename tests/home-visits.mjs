@@ -1,0 +1,8 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';import {harness,fixture} from './game-harness.mjs';
+test('accepting a home invitation uses host decor without replacing the guest character',async()=>{
+ const t=harness({...fixture(),place:'plaza',properties:{Shenyang:'apartment'},upgrades:['desk']}),c=t.context;const requests=[];let open=true;
+ const invitation={id:'1',owner_id:'11',guest_id:'12',owner_name:'Host',guest_name:'Guest',city:'Shenyang',place:'home',status:'pending'};
+ c.ChinaLifeCloud={signedIn:true,playerId:'12',async refresh(){return true}};c.ChinaLifeVoice={async leave(){}};c.ChinaLifeAuth={async request(path,method,data){requests.push({path,method,data});if(path.includes('social.php'))return {data:{friends:[]}};if(method==='GET')return {data:{visits:open?[invitation]:[]}};if(data.action==='accept')return {data:{visit:{id:'1',owner:'11',city:'Shenyang',place:'home',home:{properties:{Shenyang:'mansion'},upgrades:['piano'],furnitureColors:{},ownedHomes:[]}}}};open=false;return {data:{closed:true}}}};
+ await vm.runInContext('(async()=>{'+fs.readFileSync('public/home-visits.js','utf8')+'})()',c);await c.ChinaLifeHomeVisits.open();await t.document.querySelector('[data-home-action="accept"]').onclick();assert.equal(t.game.homeType(),'mansion');assert.equal(t.game.state.properties.Shenyang,'apartment');assert.deepEqual([...t.game.state.upgrades],['desk']);assert.equal(c.ChinaLifeHomeVisits.current.owner,'11');
+ await c.ChinaLifeHomeVisits.leave();assert.equal(c.ChinaLifeHomeVisits.current,null);assert.equal(t.game.homeType(),'apartment');assert.ok(requests.some(r=>r.data?.action==='leave'));
+});

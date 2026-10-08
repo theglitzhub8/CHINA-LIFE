@@ -395,3 +395,30 @@ test('two owners have separate starter and purchased home presence, chat and voi
  assert.equal((await call(11,'presence.php','POST',presence('Shenyang',reconnected.data.save.game.place))).httpStatus,200);
  assert.ok(!(await call(12,'presence.php?city=Shenyang&place=plaza')).data.players.some(p=>p.id==='11'));
 });
+
+test('private home invitations require mutual friendship, acceptance and owner permission',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (11,12); INSERT INTO chinalife_friends(first_id,second_id,requested_by,status,created_at) VALUES(11,12,11,"accepted",NOW()) ON DUPLICATE KEY UPDATE status="accepted"');
+ const room={city:'Shenyang',place:'home-mansion'};await call(11,'presence.php','POST',presence('Shenyang',room.place));await call(12,'presence.php','POST',presence('Shenyang',room.place));
+ assert.equal((await call(12,'presence.php','POST',{...presence('Shenyang',room.place),homeOwner:'11'})).httpStatus,403);
+ assert.equal((await call(11,'home-visits.php','POST',{action:'invite',peer:'13',...room})).httpStatus,403);
+ const invited=await call(11,'home-visits.php','POST',{action:'invite',peer:'12',...room});assert.equal(invited.httpStatus,200);const id=invited.data.id;
+ assert.equal((await call(11,'home-visits.php','POST',{action:'accept',id})).httpStatus,403);
+ const accepted=await call(12,'home-visits.php','POST',{action:'accept',id});assert.equal(accepted.httpStatus,200);assert.equal(accepted.data.visit.home.properties.Shenyang,'penthouse');assert.ok(accepted.data.visit.home.upgrades.includes('piano'));
+ assert.equal((await call(12,'presence.php','POST',{...presence('Shenyang',room.place),homeOwner:'11'})).httpStatus,200);
+ const peers=(await call(11,'presence.php?city=Shenyang')).data.players;assert.ok(peers.some(p=>p.id==='12'&&p.homeOwner==='11'));
+ assert.ok((await call(12,'presence.php?city=Shenyang&homeOwner=11')).data.players.some(p=>p.id==='11'));
+ assert.equal((await call(12,'messages.php','POST',{...room,homeOwner:'11',text:'Invited guest here'})).httpStatus,200);assert.ok((await call(11,'messages.php?city=Shenyang&place=home-mansion')).data.messages.some(m=>m.body==='Invited guest here'));
+ for(const uid of [11,12])assert.equal((await call(uid,'voice.php','POST',{...room,homeOwner:'11',session:'home-visit-'+uid,action:'join',muted:false,after:0})).httpStatus,200);
+ assert.equal((await call(11,'voice.php','POST',{...room,session:'home-visit-11',action:'pulse',muted:false,after:0})).data.members.length,2);
+ assert.equal((await call(12,'home-visits.php','POST',{action:'revoke',id})).httpStatus,403);
+ assert.equal((await call(11,'home-visits.php','POST',{action:'revoke',id})).httpStatus,200);
+ assert.equal((await call(12,'messages.php?city=Shenyang&place=home-mansion&homeOwner=11')).httpStatus,403);
+ assert.equal((await call(12,'presence.php','POST',{...presence('Shenyang',room.place),homeOwner:'11'})).httpStatus,403);
+ assert.equal((await call(11,'voice.php','POST',{...room,session:'home-visit-11',action:'pulse',muted:false,after:0})).data.members.length,1);
+});
+
+test('expired home invitations cannot reconnect even if previously accepted',async()=>{
+ sql('USE chinalife_test; INSERT INTO chinalife_home_visits(owner_id,guest_id,city,place,status,expires_at) VALUES(11,12,"Shenyang","home","accepted",DATE_SUB(NOW(),INTERVAL 1 SECOND))');
+ assert.equal((await call(12,'presence.php','POST',{...presence('Shenyang','home'),homeOwner:'11'})).httpStatus,403);
+ assert.equal((await call(12,'voice.php','POST',{city:'Shenyang',place:'home',homeOwner:'11',session:'expired-home-12',action:'join',muted:false,after:0})).httpStatus,403);
+});

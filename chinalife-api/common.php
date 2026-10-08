@@ -72,8 +72,9 @@ function cl_room(array $input): array {
 }
 // Private residence instances are derived from authentication, never a client-supplied owner.
 function cl_private_place(string $place): bool {return $place==='home'||str_starts_with($place,'home-')||str_starts_with($place,'home@');}
-function cl_scoped_room(array $input): array {global $uid;[$city,$place]=cl_room($input);return [$city,cl_private_place($place)?$place.'@'.$uid:$place];}
+function cl_scoped_room(array $input): array {global $uid;[$city,$place]=cl_room($input);if(!cl_private_place($place))return [$city,$place];$owner=$uid;if(isset($input['homeOwner'])&&(string)$input['homeOwner']!==(string)$uid){$owner=filter_var($input['homeOwner'],FILTER_VALIDATE_INT);if(!$owner||!cl_one('SELECT id FROM chinalife_home_visits WHERE owner_id=? AND guest_id=? AND city=? AND place=? AND status="accepted" AND expires_at>NOW()','iiss',[$owner,$uid,$city,$place])||!cl_friends($owner,$uid)||cl_blocked($owner,$uid))cl_fail('This home invitation is unavailable',403);}return [$city,$place.'@'.$owner];}
 function cl_presence(int $userId, string $city, string $place): void {
+    if(cl_private_place($place)&&str_contains($place,'@')){[$base,$owner]=explode('@',$place,2);if((int)$owner!==$userId&&(!cl_friends((int)$owner,$userId)||cl_blocked((int)$owner,$userId)||!cl_one('SELECT id FROM chinalife_home_visits WHERE owner_id=? AND guest_id=? AND city=? AND place=? AND status="accepted" AND expires_at>NOW()','iiss',[(int)$owner,$userId,$city,$base])))cl_fail('This home invitation ended',403);}
     if (!cl_one('SELECT user_id FROM chinalife_presence WHERE user_id=? AND city=? AND place=? AND seen_at>=DATE_SUB(NOW(),INTERVAL 20 SECOND)', 'iss', [$userId,$city,$place])) cl_fail('Join this venue first', 403);
 }
 function cl_peer(mixed $value): int {
