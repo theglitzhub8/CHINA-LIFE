@@ -205,3 +205,31 @@ dialog{border-radius:22px}
 /* Stack map categories and search; dynamic results never cover the category row. */
 .map-controls{position:absolute;z-index:6;top:max(110px,calc(env(safe-area-inset-top) + 100px));left:12px;right:64px;display:grid;gap:8px;pointer-events:auto}.map-controls .map-filter{position:static;transform:none;max-width:100%;width:100%;margin:0;box-sizing:border-box;overflow-x:auto}.map-controls .map-search{position:relative;top:auto;left:auto;transform:none;width:min(420px,100%);justify-self:center}.quick-voice{position:absolute;z-index:7;right:12px;bottom:290px;width:48px;height:48px;border-radius:50%;background:#123b48;color:white;font-size:22px;border:2px solid #fff}.quick-voice[aria-pressed="true"]{background:#15987b}.quick-talk{position:absolute;z-index:7;right:66px;bottom:295px;background:#15987b;color:white;border-radius:20px;padding:10px 15px;touch-action:none}.quick-talk[hidden]{display:none}@media(min-width:1000px){.map-controls{top:86px;left:230px;right:80px}.quick-voice{bottom:24px;right:456px}.quick-talk{bottom:28px;right:510px}}
 .drunk-chip>span{background:#7c3aed!important}#worldUI:not(.clean) .world-side .event-chip.drunk-chip:not([hidden]){display:flex!important}.world-side .drunk-chip[hidden]{display:none!important}@media(max-width:600px){.world-side .drunk-chip small{display:block;font-size:10px;margin-top:1px}}
+
+/* ---- Map navigation (Phase 1): city tabs, label modes, compact tools and the place sheet ---- */
+.map-cities{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px}.map-cities[hidden]{display:none}.map-cities::-webkit-scrollbar{display:none}
+.map-cities button{flex:none;border:1px solid var(--ui-line,#dfe7ec);background:var(--ui-glass,#ffffffee);color:#3c5a66;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:0 2px 10px #17384b14}
+.map-cities button.active{background:#173e60;color:#fff;border-color:#173e60}
+.scene-tools .map-only{display:none}.map-view .scene-tools .map-only{display:block}
+.scene-tools #mapLabelMode{width:auto;min-width:42px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap}
+/* Label modes: names (icon + name), icons only, or hidden. */
+.scene-label.venue-label{display:flex;align-items:center;gap:5px}.scene-label.venue-label[hidden]{display:none}
+.labels-icons .scene-label.venue-label{padding:4px 6px;border-radius:50%;min-width:28px;justify-content:center}.labels-icons .scene-label.venue-label .vl-name{display:none}
+.labels-hidden .scene-label.venue-label{display:none}
+.scene-label.venue-label .vl-name{overflow:hidden;text-overflow:ellipsis}
+/* The map gets the screen: quest cards and the walking guide step aside while browsing it. */
+.map-view .world-side,.map-view .scene-guide{display:none}
+.map-view .scene-tools{gap:6px}.map-view .scene-tools button{width:38px;height:38px;font-size:18px}
+/* Place sheet: tap a building to see it before travelling. */
+.place-sheet{position:absolute;z-index:9;left:50%;transform:translateX(-50%);bottom:calc(max(12px,env(safe-area-inset-bottom)) + 74px);width:min(560px,calc(100% - 24px));box-sizing:border-box;background:var(--ui-glass,#fffffff2);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);border:1px solid var(--ui-line,#e3eaee);border-radius:22px;padding:14px 16px;box-shadow:0 14px 40px #10283a33;animation:sheetIn .22s ease-out}
+.place-sheet[hidden]{display:none}@keyframes sheetIn{from{transform:translate(-50%,24px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+.place-sheet-head{display:flex;align-items:center;gap:10px}.place-sheet-head>div{flex:1;min-width:0}.place-sheet-head b{display:block;font-size:17px;color:#10283a}.place-sheet-head small{color:#5f7882;font-size:12px}
+.place-sheet-icon{width:42px;height:42px;border-radius:14px;background:#eef4f7;display:grid;place-items:center;font-size:22px;flex:none}
+.place-sheet .close-x{position:static}
+.place-sheet-desc{margin:8px 0;color:#38535e;font-size:13px;line-height:1.4}.place-sheet-event{margin:8px 0 0;background:#fff1d6;border-radius:12px;padding:6px 10px;font-weight:700;font-size:13px}
+.place-sheet-acts{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:4px}.place-sheet-acts li{display:flex;justify-content:space-between;gap:8px;background:#f2f6f8;border-radius:10px;padding:6px 10px;font-size:12px}.place-sheet-acts small{color:#5f7882;white-space:nowrap}
+.place-sheet-actions{display:flex;gap:8px}.place-sheet-actions .primary-btn{flex:1}
+.sheet-open .world-dock .venue-card{visibility:hidden}
+@media(max-width:600px){.place-sheet{bottom:calc(max(8px,env(safe-area-inset-bottom)) + 64px);padding:12px 13px;border-radius:18px}.place-sheet-desc{font-size:12px}}
+/* The place sheet always sits above building labels. */
+#placeSheet.place-sheet{z-index:40}
