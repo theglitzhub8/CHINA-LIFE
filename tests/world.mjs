@@ -18,7 +18,7 @@ test('account entry points are spread across the room',()=>{assert.notDeepEqual(
 
 test('club wall signs use the city club name and Advertise here billboards appear across map and venues',()=>{
  const t=setup();t.game.state.place='night';t.world.venue('night');assert.ok(t.world.signs.includes('007 Club'));assert.equal(t.document.querySelectorAll('.ad-label').length,1);
- t.game.state.city='Guangzhou';t.internal.render();t.world.venue('night');assert.ok(t.world.signs.includes('Empire Club'));
+ t.game.state.city='Guangzhou';t.internal.render();t.world.venue('night');assert.ok(t.world.signs.includes('True Color Club'));
  t.world.map();assert.equal(t.document.querySelectorAll('.ad-label').length,3);assert.ok([...t.document.querySelectorAll('.ad-label')].every(l=>/Advertise here/.test(l.textContent)));
  t.world.venue('home');assert.equal(t.document.querySelectorAll('.ad-label').length,0);
 });
@@ -69,3 +69,13 @@ test('remote players retain their positions in the expanded 007 room',()=>{const
 test('owned homes change interior style, render every purchased item and keep actions reachable',()=>{const t=setup();t.game.state.upgrades=t.game.catalog.furniture.map(f=>f.id);for(const type of ['apartment','townhouse','villa','penthouse','mansion']){t.game.state.properties.Shenyang=type;t.world.venue('home');assert.equal(t.world.homeStyle,type);for(const id of t.game.state.upgrades)assert.ok(t.world.furniture.includes(id),type+':'+id);let completed=0;t.world.perform({...activityMotion('home',1),label:'Cook'},()=>completed++);t.tick(20);assert.equal(completed,1,type)} });
 test('switching city addresses and owned home types immediately changes the active house scene',()=>{const t=setup();t.game.state.money=5000000;for(const [id,type] of [['home-mansion','mansion'],['home-nanhu','townhouse']]){t.game.estate(id);t.document.getElementById('estateBuy').onclick();assert.equal(t.game.state.place,id);assert.equal(t.world.homeStyle,type)}t.game.shop('properties','penthouse');t.document.getElementById('shopBuy').onclick();assert.equal(t.game.state.place,'home');assert.equal(t.world.homeStyle,'penthouse');t.game.estate('home-mansion');const money=t.game.state.money;t.document.getElementById('estateBuy').onclick();assert.equal(t.game.state.money,money);assert.equal(t.world.homeStyle,'mansion');assert.equal(t.game.homeAddress(),'home-mansion')});
 test('Home navigation from the map travels to the selected owned address',()=>{const t=setup();t.game.state.ownedHomes=['home-mansion'];t.game.state.activeHome='home-mansion';t.game.state.place='plaza';t.world.map();t.document.getElementById('navHome').onclick();assert.ok(t.document.getElementById('cabTravel'));t.document.getElementById('cabTravel').onclick();t.tick(12);assert.equal(t.game.state.place,'home-mansion');assert.equal(t.world.homeStyle,'mansion')});
+
+test('Guangzhou has its own landmarks and real names, and Shenyang-only places stay in Shenyang',()=>{
+ const t=setup();t.game.state.city='Guangzhou';t.game.state.place='home';t.internal.render();
+ const ids=t.game.locations.map(p=>p[0]);for(const id of ['cantontower','cantonfair','baima','consulates','hospital','shamian','beijingroad','kama','partypier','bingsheng','bosphorus','gdufs'])assert.ok(ids.includes(id),id);
+ for(const id of ['palace','zhongjie','blood','skylight'])assert.ok(!ids.includes(id),id);
+ assert.equal(t.game.locations.find(p=>p[0]==='campus')[1],'Sun Yat-sen University');assert.equal(t.game.locations.find(p=>p[0]==='mall')[1],'Taikoo Hui');
+ t.world.map();assert.ok([...t.document.querySelectorAll('.venue-label')].some(l=>/Canton Tower/.test(l.dataset.name)));
+ for(const id of ['cantontower','cantonfair','consulates','hospital','kama','bingsheng','shamian']){t.game.state.place=id;t.internal.render();t.world.venue(id);assert.equal(t.world.view,'venue')}
+ assert.ok(t.game.clubs.includes('kama'));t.game.state.city='Shenyang';t.internal.render();assert.ok(!t.game.locations.some(p=>p[0]==='cantontower'));
+});

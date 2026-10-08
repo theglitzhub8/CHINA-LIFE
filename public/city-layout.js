@@ -2,7 +2,8 @@
 export function cityLayout(name,content){
  const north=['Shenyang','Harbin','Beijing'].includes(name),coastal=['Guangzhou','Shenzhen','Shanghai'].includes(name);
  const positions={home:[-50,-32],church:[-50,-23],ef:[-17,-33],cafe:[-17,-23],campus:[17,-32],gym:[17,-23],university:[34,-32],liaoning:[51,-22],dongbei:[34,-10],station:[68,-32],market:[-50,0],african:[-40,3],plaza:[-17,0],skylight:[7,9],hotel:[-6,10],business:[17,0],mall:[51,0],academy:[40,9],park:[-50,32],palace:[-38,40],zhongjie:[-60,-8],night:[-17,32],blood:[-28,40],airport:[49,48]};
- if(name==='Shenyang'&&content)for(const venues of Object.values(content))for(const venue of venues)positions[venue.id]=venue.position;
+ // Each city's own places (Shenyang content, Guangzhou landmarks) bring their map positions.
+ if(content)for(const venues of Object.values(content))if(Array.isArray(venues))for(const venue of venues)if(venue.position)positions[venue.id]=venue.position;
  const xs=[-68,-34,0,34,68],zs=[-48,-16,16,48];
  const districts=[{name:'Residential quarter',x:-50,z:-42},{name:'Student quarter',x:-17,z:-42},{name:'University campus',x:17,z:-42},{name:'Rail district',x:51,z:-42},{name:'Food & community',x:-50,z:-9},{name:'City centre',x:-17,z:-9},{name:'Business district',x:17,z:-9},{name:'Shopping district',x:51,z:-9},{name:coastal?'Riverside gardens':'City gardens',x:-50,z:23},{name:'Nightlife district',x:-17,z:23},{name:'Riverfront',x:17,z:23},{name:'Airport district',x:51,z:23}];
  const entries=Object.fromEntries(Object.entries(positions).map(([id,[x,z]])=>{const roadX=xs.reduce((a,b)=>Math.abs(b-x)<Math.abs(a-x)?b:a),roadZ=zs.reduce((a,b)=>Math.abs(b-z)<Math.abs(a-z)?b:a);return [id,Math.abs(roadX-x)<Math.abs(roadZ-z)?{x:roadX,z}:{x,z:roadZ}]}));
