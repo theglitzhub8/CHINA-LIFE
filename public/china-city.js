@@ -29,10 +29,10 @@ export function chineseResidential(name,index=0){
  for(let y=1;y<height;y+=1.2)for(const x of [-1.5,0,1.5]){box(group,.85,.75,.08,style.glass,x,y,1.79);if(!hutong){box(group,1.05,.09,.45,0xd2d1bf,x,y-.38,1.97);box(group,.6,.38,.18,0xd7ddd8,x+.5,y-.1,1.95)}}
  box(group,.9,1.5,.08,0x365b5c,0,.75,1.81);return group;
 }
-export function chineseCityDetails(layout,name,{skipCentre=false}={}){
+export function chineseCityDetails(layout,name,{skipCentre=false,skipCrosswalks=false}={}){
  const group=new THREE.Group(),style=styles[name]||styles.Shenyang;group.userData.kind='chinese-streets';
  // Crosswalks and bicycle lanes define the streets rather than a decorative backdrop.
- for(const x of layout.xs.slice(1,-1))for(const z of layout.zs.slice(1,-1))for(let stripe=0;stripe<6;stripe++)box(group,.32,.02,3,0xeee9d9,x-1.45+stripe*.58,.16,z+3.9);
+ if(!skipCrosswalks)for(const x of layout.xs.slice(1,-1))for(const z of layout.zs.slice(1,-1))for(let stripe=0;stripe<6;stripe++)box(group,.32,.02,3,0xeee9d9,x-1.45+stripe*.58,.16,z+3.9);
  for(const z of [-48,16]){box(group,136,.03,.65,0x4e9785,0,.16,z+3.2);for(const x of [-51,-17,17,51]){box(group,.08,2.6,.08,0x435e67,x,1.3,z+3.8);textSign(group,style.sign,x,2.5,z+3.85,5)}}
  // The upgraded City Centre prototype brings its own metro entrance, square gateway and decorations.
  if(!skipCentre){const metro=new THREE.Group();metro.position.set(-30,0,4);box(metro,3,.15,2.4,0x7b8d8c,0,.08);for(const x of [-1.35,1.35])box(metro,.1,1.1,2.3,0x415d67,x,.6);box(metro,3.2,.14,2.6,style.roof,0,1.25);textSign(metro,'地铁 METRO · 2号线',0,1.8,1.3,3.8);group.add(metro)}

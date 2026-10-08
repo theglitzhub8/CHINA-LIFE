@@ -5,46 +5,7 @@ import * as THREE from './vendor/three.module.js';
 // furniture, so the extra detail stays cheap on phones once static meshes are merged by world.js.
 export const CENTRE={x0:-34,x1:0,z0:-16,z1:16,cx:-17,cz:0};
 
-const mats=new Map();
-function mat(key,make){if(!mats.has(key))mats.set(key,make());return mats.get(key)}
-const solid=(color,rough=.8,metal=0)=>mat('c'+color+rough+metal,()=>new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal}));
-const glow=color=>mat('g'+color,()=>new THREE.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.9,roughness:.4}));
-function box(parent,w,h,d,material,x,y,z,ry=0){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);m.position.set(x,y,z);m.rotation.y=ry;m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
-function cyl(parent,r1,r2,h,material,x,y,z,seg=14){const m=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,seg),material);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
-
-// ---- Canvas textures: facades are drawn once and tiled, so a tall tower and a small shop share materials. ----
-function canvasTexture(w,h,draw,repeat=true){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');draw(g,w,h);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;if(repeat){t.wrapS=t.wrapT=THREE.RepeatWrapping}t.anisotropy=4;return t}
-// Night windows: an emissive map holding only the cool, dark window panes of a facade, so at night windows glow
-// and walls (brick, tile, stone) stay dark. world.js sets the emissive strength from the time of day.
-function windowMask(source,key=''){const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');try{if(/^(paving|sidewalk)/.test(key)){g.fillStyle='#000';g.fillRect(0,0,128,128);throw 0}
- // Glass curtain walls: only some panes are lit, so towers read as offices at night rather than lanterns.
- if(key.startsWith('glass')){g.fillStyle='#000';g.fillRect(0,0,128,128);g.fillStyle='#fff';g.fillRect(10,14,46,38);g.fillStyle='#777';g.fillRect(70,70,48,40);throw 0}
- g.drawImage(source,0,0);const img=g.getImageData(0,0,128,128),d=img.data;for(let i=0;i<d.length;i+=4){const r=d[i],gr=d[i+1],b=d[i+2],lum=(r*.3+gr*.59+b*.11)/255,win=b>r+8&&lum<.62;d[i]=d[i+1]=d[i+2]=win?255:0;d[i+3]=255}g.putImageData(img,0,0)}catch{}const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t}
-const textured=(key,draw,tint=0xffffff)=>mat('t'+key,()=>{const map=canvasTexture(128,128,draw),m=new THREE.MeshStandardMaterial({map,color:tint,roughness:.75,emissive:0x000000,emissiveMap:windowMask(map.image,key)});m.userData.facade=true;return m});
-// One tile = one window bay and one storey.
-const FACADES={
- glass:g=>{const grd=g.createLinearGradient(0,0,128,128);grd.addColorStop(0,'#5d93b8');grd.addColorStop(1,'#2d5f86');g.fillStyle=grd;g.fillRect(0,0,128,128);g.fillStyle='#9fd0ec55';g.fillRect(8,8,52,104);g.fillStyle='#1d3f5a';g.fillRect(0,0,128,6);g.fillRect(0,0,5,128);g.fillRect(62,0,4,128)},
- resi:g=>{g.fillStyle='#ece5d6';g.fillRect(0,0,128,128);g.fillStyle='#d9d0bd';g.fillRect(0,100,128,28);g.fillStyle='#4b6577';g.fillRect(18,22,40,58);g.fillRect(72,22,38,58);g.fillStyle='#f6d58a';g.fillRect(72,22,38,24);g.fillStyle='#c9c2b3';g.fillRect(12,82,104,8);g.fillStyle='#8f9aa0';for(let x=14;x<116;x+=8)g.fillRect(x,70,2,14)},
- brick:g=>{g.fillStyle='#8e4a34';g.fillRect(0,0,128,128);g.strokeStyle='#6e3524';g.lineWidth=2;for(let y=0;y<128;y+=10){g.beginPath();g.moveTo(0,y);g.lineTo(128,y);g.stroke();for(let x=(y/10)%2?0:16;x<128;x+=32){g.beginPath();g.moveTo(x,y);g.lineTo(x,y+10);g.stroke()}}g.fillStyle='#2c3a42';g.fillRect(30,26,68,64);g.fillStyle='#f0c27a';g.fillRect(36,32,26,26);g.fillStyle='#e9dccb';g.fillRect(26,90,76,8)},
- shop:g=>{g.fillStyle='#e8dcc4';g.fillRect(0,0,128,128);g.fillStyle='#3d566a';g.fillRect(20,24,88,56);g.fillStyle='#a9c9dc';g.fillRect(24,28,38,48);g.fillStyle='#b9a98c';g.fillRect(14,82,100,10);g.fillStyle='#d5c8ae';g.fillRect(0,110,128,18)},
- stone:g=>{g.fillStyle='#d8cdb8';g.fillRect(0,0,128,128);g.fillStyle='#c4b79e';g.fillRect(0,0,128,4);g.fillRect(0,0,4,128);g.fillStyle='#3f5466';g.fillRect(22,18,84,76);g.fillStyle='#8fb5cc';g.fillRect(26,22,36,68);g.fillStyle='#bfb197';g.fillRect(16,96,96,8)},
- office:g=>{g.fillStyle='#bcc8cf';g.fillRect(0,0,128,128);g.fillStyle='#2f4d63';g.fillRect(6,10,116,84);g.fillStyle='#7fb2d1';g.fillRect(10,14,52,76);g.fillStyle='#e2e8ea';g.fillRect(0,96,128,12)},
- paving:g=>{g.fillStyle='#d9d2c4';g.fillRect(0,0,128,128);g.fillStyle='#cbc3b2';for(let x=0;x<128;x+=32)for(let y=0;y<128;y+=32)if((x+y)/32%2)g.fillRect(x,y,32,32);g.strokeStyle='#bfb6a4';g.lineWidth=2;for(let i=0;i<=128;i+=32){g.beginPath();g.moveTo(i,0);g.lineTo(i,128);g.stroke();g.beginPath();g.moveTo(0,i);g.lineTo(128,i);g.stroke()}},
- sidewalk:g=>{g.fillStyle='#c9ccc7';g.fillRect(0,0,128,128);g.strokeStyle='#b4b8b2';g.lineWidth=2;for(let i=0;i<=128;i+=42.6){g.beginPath();g.moveTo(i,0);g.lineTo(i,128);g.stroke();g.beginPath();g.moveTo(0,i);g.lineTo(128,i);g.stroke()}}};
-// A box whose texture repeats every tileW x tileH world units on every face (so windows keep their size).
-function facade(parent,w,h,d,style,x,y,z,tileW=1.6,tileH=1.15,tint){const geo=new THREE.BoxGeometry(w,h,d),uv=geo.attributes.uv,sizes=[[d,h],[d,h],[w,d],[w,d],[w,h],[w,h]];for(let f=0;f<6;f++)for(let v=0;v<4;v++){const i=f*4+v;uv.setXY(i,uv.getX(i)*sizes[f][0]/tileW,uv.getY(i)*sizes[f][1]/tileH)}const m=new THREE.Mesh(geo,textured(style+(tint||''),FACADES[style],tint));m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
-// Roofs: a cap, a parapet and rooftop plant (AC units, water tanks) so skylines read as real buildings.
-function roof(parent,w,d,x,y,z,color=0x6f7c84,seed=0){box(parent,w+.15,.18,d+.15,solid(color),x,y+.09,z);box(parent,w+.15,.35,.14,solid(0xd9d4c8),x,y+.3,z-d/2);box(parent,w+.15,.35,.14,solid(0xd9d4c8),x,y+.3,z+d/2);box(parent,.14,.35,d,solid(0xd9d4c8),x-w/2,y+.3,z);box(parent,.14,.35,d,solid(0xd9d4c8),x+w/2,y+.3,z);
- if(w>2.2&&d>2.2){box(parent,w*.3,.5,d*.25,solid(0xb8c0c4),x-w*.18,y+.43,z+((seed%2)?d*.18:-d*.18));cyl(parent,.32,.32,.7,solid(0x8aa1ad),x+w*.25,y+.53,z-d*.2,10)}}
-
-// ---- One shared sign atlas: every bilingual sign in the district is one material, so they merge into one draw call. ----
-const SIGNS=[['哈弗里克广场','HAFRIK SQUARE','#f2b632','#10283a'],['和平大酒店','HEPING GRAND HOTEL','#f6e3b0','#6e1b1b'],['黑羊餐吧','BLACK SHEEP','#f3ead9','#1b1b1b'],['便利店','24H MART','#ffffff','#2f8a57'],['咖啡','COFFEE','#fff5e6','#6b4630'],['奶茶','BUBBLE TEA','#ffffff','#d0517a'],['书店','BOOKS','#10283a','#f2d36b'],['药店','PHARMACY','#ffffff','#1f8d84'],['和平影城','CINEMA','#ffe27a','#3b1f5c'],['和平商务中心','HEPING CENTRE','#ffffff','#1e4c73'],['公交 和平广场站','BUS · HEPING SQ','#ffffff','#1d6fb8'],['地铁 2号线','METRO LINE 2','#ffffff','#c8102e'],['火锅','HOT POT','#ffe9c7','#b22222'],['欢迎来到沈阳','WELCOME TO SHENYANG','#ffffff','#c8102e'],['和平','HEPING','#f2b632','#10283a'],['银行','BANK','#ffffff','#7a5c1e']];
-const signIndex=Object.fromEntries(SIGNS.map((s,i)=>[s[1],i]));
-const ROWS=16,signMat=()=>mat('signs',()=>{const tex=canvasTexture(1024,128*ROWS,(g,w)=>{SIGNS.forEach(([zh,en,fg,bg],i)=>{const y=i*128;g.fillStyle=bg;g.fillRect(0,y,w,128);g.fillStyle=fg;g.textAlign='center';g.textBaseline='middle';g.font='900 54px "PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif';g.fillText(zh,w/2,y+44);g.font='800 34px Manrope,system-ui,sans-serif';g.fillText(en,w/2,y+96)})},false);return new THREE.MeshBasicMaterial({map:tex})});
-function sign(parent,en,w,h,x,y,z,ry=0){const i=signIndex[en],geo=new THREE.PlaneGeometry(w,h),uv=geo.attributes.uv;for(let k=0;k<uv.count;k++)uv.setY(k,1-(i+1)/ROWS+uv.getY(k)/ROWS);const m=new THREE.Mesh(geo,signMat());m.position.set(x,y,z);m.rotation.y=ry;parent.add(m);return m}
-
-// ---- Instanced street furniture: hundreds of parts, a handful of draw calls. ----
-function instances(parent,geo,material,items,cast=true){if(!items.length)return;const m=new THREE.InstancedMesh(geo,material,items.length),o=new THREE.Object3D();items.forEach((it,i)=>{o.position.set(it[0],it[1],it[2]);o.rotation.set(0,it[3]||0,0);o.scale.setScalar(it[4]||1);o.updateMatrix();m.setMatrixAt(i,o.matrix)});m.castShadow=cast;m.receiveShadow=true;parent.add(m)}
+import {mat,solid,glow,box,cyl,textured,FACADES,facade,roof,sign,instances,treesAndLamps} from './city-kit.js';
 
 // ---- Venue landmarks (built around their own origin; world.js places them at the venue position). ----
 function hafrikSquare(){const g=new THREE.Group();g.userData.kind='plaza';
@@ -98,17 +59,9 @@ export function buildCityCentre(){const g=new THREE.Group();g.userData.kind='cit
  // Street trees and lamps along every sidewalk, bollards, benches and a shared-bike rack (instanced).
  const trees=[],lamps=[],bollards=[],bikes=[];for(let x=x0+4;x<=x1-4;x+=4.4){trees.push([x,0,z0+3.1,0,.9+((x*7)%3)*.08],[x,0,z1-3.1,0,.95]);lamps.push([x+2.2,0,z0+3.1,0],[x+2.2,0,z1-3.1,Math.PI])}for(let z=z0+6;z<=z1-6;z+=4.4){trees.push([x0+3.1,0,z,0,.92],[x1-3.1,0,z,0,1]);lamps.push([x0+3.1,0,z+2.2,Math.PI/2],[x1-3.1,0,z+2.2,-Math.PI/2])}
  for(let i=0;i<8;i++)bollards.push([cx-6.8+i*1.95,0,6.9]);for(let i=0;i<6;i++)bikes.push([-12.6+i*.75,0,9.4,Math.PI/2]);
- instances(g,new THREE.CylinderGeometry(.11,.15,1.5,6),solid(0x6d5236),trees.map(t=>[t[0],.75*(t[4]||1),t[2],0,t[4]]));
- instances(g,new THREE.IcosahedronGeometry(1,0),solid(0x4f8f57),trees.map(t=>[t[0],2.05*(t[4]||1),t[2],t[0],t[4]]));
- instances(g,new THREE.CylinderGeometry(.06,.08,3.4,6),solid(0x34434c,.5,.5),lamps.map(l=>[l[0],1.7,l[2]]));instances(g,new THREE.BoxGeometry(.55,.14,.24),glow(0xfff1c4),lamps.map(l=>[l[0],3.4,l[2],l[3]]),false);
+ treesAndLamps(g,trees,lamps);
  instances(g,new THREE.CylinderGeometry(.09,.09,.6,6),solid(0x4a5a63,.5,.4),bollards.map(b=>[b[0],.5,b[2]]));
  instances(g,new THREE.BoxGeometry(1.1,.45,.08),solid(0xf2b632),bikes.map(b=>[b[0],.55,b[2],b[3]]));instances(g,new THREE.TorusGeometry(.24,.04,5,10),solid(0x23303a),bikes.flatMap(b=>[[b[0],.42,b[2]-.38,b[3]],[b[0],.42,b[2]+.38,b[3]]]));
- // Four corner intersections: zebra crossings on every approach, stop lines and traffic lights.
- const white=solid(0xf1efe6,.9),corners=[[x0,z0],[x1,z0],[x0,z1],[x1,z1]],stripes=[],lights=[];
- for(const [ix,iz] of corners){for(const s of [-1,1]){for(let k=0;k<6;k++){stripes.push([ix-1.45+k*.58,.17,iz+s*3.9,0]);stripes.push([ix+s*3.9,.17,iz-1.45+k*.58,Math.PI/2])}box(g,3.2,.02,.25,white,ix-1,.17,iz+s*5.3);box(g,.25,.02,3.2,white,ix+s*5.3,.17,iz+1)}
-  for(const [dx,dz,ry] of [[-2.9,-2.9,0],[2.9,2.9,Math.PI]]){const px=ix+dx,pz=iz+dz;lights.push([px,pz,ry])}}
- instances(g,new THREE.BoxGeometry(.32,.03,3),white,stripes,false);
- for(const [px,pz,ry] of lights){const pole=new THREE.Group();pole.position.set(px,0,pz);pole.rotation.y=ry;cyl(pole,.08,.1,3.6,solid(0x2d3a42,.5,.5),0,1.8,0,8);box(pole,2.2,.12,.12,solid(0x2d3a42,.5,.5),1.1,3.5,0);box(pole,.32,.9,.3,solid(0x1c242a),2.1,3.05,0);for(const [y,c] of [[3.35,0xd6202a],[3.05,0xf5b331],[2.75,0x2fbf71]])box(pole,.2,.2,.05,glow(c),2.1,y,.17);g.add(pole)}
  return {group:g,venues:{plaza:hafrikSquare(),hotel:hepingHotel(),'black-sheep':blackSheep()}}}
 // Circles that keep generic filler buildings out of the prototype block.
 export function centreBlocked(){const out=[];for(let x=CENTRE.x0+3;x<=CENTRE.x1-3;x+=5)for(let z=CENTRE.z0+3;z<=CENTRE.z1-3;z+=5)out.push([x,z,4]);return out}
