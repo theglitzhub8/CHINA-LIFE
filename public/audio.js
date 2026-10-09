@@ -5,13 +5,15 @@ let lastClub=game.state.place;
 const artistSongs=()=>(window.ChinaLifeCloud?.songs||[]).filter(s=>s.active!==false);
 const trackFor=id=>{if(String(id).startsWith('song:')){const s=artistSongs().find(x=>'song:'+x.id===id);return {id,name:s?s.title+' · '+s.artist:'Artist song',style:'ChinaLife artist',song:s||null}}return tracks.find(t=>t.id===id)||tracks[0]};
 let songEl=null,songCheck=0;const songAudio=()=>songEl||(songEl=Object.assign(new Audio(),{preload:'auto'}));
-function songTick(){if(Date.now()-songCheck<400)return;songCheck=Date.now();const s=track.song;if(!playing||!s){if(songEl&&!songEl.paused)songEl.pause();return}songAudio();if(songEl.dataset.id!==s.id){songEl.src=s.url;songEl.dataset.id=s.id}const at=(Date.now()+serverOffset-startedAt)/1000;songEl.volume=Math.min(1,volume*nearness()*(duck?.3:1)*2.2);if(at>=(s.duration||Infinity)){songEl.pause();return}if(songEl.paused){try{songEl.currentTime=Math.max(0,at)}catch{}songEl.play().catch(()=>{})}else if(Math.abs(songEl.currentTime-at)>2.5){try{songEl.currentTime=at}catch{}}}
+function songTick(){if(Date.now()-songCheck<400)return;songCheck=Date.now();const s=track.song;if(!playing||!s||radioOn){if(songEl&&!songEl.paused)songEl.pause();return}songAudio();if(songEl.dataset.id!==s.id){songEl.src=s.url;songEl.dataset.id=s.id}const at=(Date.now()+serverOffset-startedAt)/1000;songEl.volume=Math.min(1,volume*nearness()*(duck?.3:1)*2.2);if(at>=(s.duration||Infinity)){songEl.pause();return}if(songEl.paused){try{songEl.currentTime=Math.max(0,at)}catch{}songEl.play().catch(()=>{})}else if(Math.abs(songEl.currentTime-at)>2.5){try{songEl.currentTime=at}catch{}}}
 let ctx,master,playing=false,track=venueTrack(),startedAt=Date.now(),volume=(()=>{try{const v=Number(localStorage.getItem('chinalife-music-volume'));return Number.isFinite(v)&&localStorage.getItem('chinalife-music-volume')!==null?Math.min(1,Math.max(0,v)):.3}catch{return .3}})(),duck=false,nextStep=0,polling=false,queue=[],serverOffset=0;
 let enabled=true,unlocked=false,audioGeneration=0;try{enabled=localStorage.getItem('chinalife-club-music')!=='off'}catch{}
 const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(method='GET',data){const result=await window.ChinaLifeAuth.request('/chinalife/music.php',method,{place:game.state.place,...(data||{city:game.state.city})});return result.data||result}
 function nearness(){const w=window.ChinaLifeWorld;if(!w||w.view==='map')return .2;const p=w.position;if(!p)return 1;const d=Math.hypot(p.x,p.z+3.5);return Math.max(.35,Math.min(1,1-(d-2)/9))}
-function gain(){if(master)master.gain.value=playing?volume*nearness()*(duck?.3:1):0}
+// While ChinaLife Radio plays, the club's own music steps aside.
+let radioOn=false;
+function gain(){if(master)master.gain.value=playing&&!radioOn?volume*nearness()*(duck?.3:1):0}
 function setVolume(v){volume=Math.min(1,Math.max(0,v));try{localStorage.setItem('chinalife-music-volume',String(volume))}catch{}gain()}
 setInterval(()=>{if(playing)gain()},300);
 function note(text){if($('djFeedback'))$('djFeedback').textContent=text}
@@ -26,6 +28,7 @@ function open(){if(!game.clubs.includes(game.state.place))return game.toast('Vis
 $('closeAudio').onclick=()=>$('audioDialog').close();setInterval(tick,40);setInterval(sync,2500);
 window.addEventListener('chinalife:update',()=>{if(lastClub!==game.state.place){lastClub=game.state.place;track=venueTrack();startedAt=Date.now();queue=[];align();sync()}if(!game.clubs.includes(game.state.place)){stop(false);if($('audioDialog').open)$('audioDialog').close()}else if(enabled&&unlocked&&!playing&&!document.hidden)start()});
 window.addEventListener('chinalife:voice',e=>{duck=e.detail.active;gain()});
+window.addEventListener('chinalife:radio',e=>{radioOn=!!e.detail?.playing;gain();songCheck=0;songTick()});
 window.ChinaLifeAudio={open,start,stop,setVolume,get volume(){return volume},get nearness(){return nearness()},get playing(){return playing},get track(){return track.id}};
 
 document.addEventListener('pointerdown',event=>{if(event.target?.closest?.('#djToggle'))return;if(game.clubs.includes(game.state.place)&&enabled&&!playing&&!document.hidden)start()},{capture:true});

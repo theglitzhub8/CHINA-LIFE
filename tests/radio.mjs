@@ -13,9 +13,11 @@ test('ChinaLife Radio plays approved artists one after another, loops, and lets 
  sheet.querySelector('[data-play="1"]').onclick();await Promise.resolve();assert.equal(t.radio.current.title,'Harbin Snow');
  t.radio.pause();assert.equal(t.radio.playing,false);
 });
-test('the radio steps aside in clubs, comes back outside, and goes quiet while the mic is live',async()=>{const t=setup();await t.radio.play();const loud=t.audio.volume;
+test('the radio keeps playing in clubs and on the map, starts on the first tap, and goes quiet while the mic is live',async()=>{const t=setup();let radioState=null;t.context.addEventListener('chinalife:radio',e=>{radioState=e.detail.playing});
+ t.document.dispatchEvent(new t.context.Event('pointerdown'));await Promise.resolve();assert.equal(t.radio.playing,true,'first tap starts the radio');assert.equal(radioState,true,'club music is told to step aside');const loud=t.audio.volume;
  t.context.dispatchEvent(new t.context.CustomEvent('chinalife:voice',{detail:{active:true}}));assert.ok(t.audio.volume<loud,'quieter while talking');t.context.dispatchEvent(new t.context.CustomEvent('chinalife:voice',{detail:{active:false}}));assert.equal(t.audio.volume,loud);
- t.game.state.place='night';t.context.dispatchEvent(new t.context.CustomEvent('chinalife:update'));assert.equal(t.audio.paused,true,'paused in the club');
- t.game.state.place='plaza';t.context.dispatchEvent(new t.context.CustomEvent('chinalife:update'));await Promise.resolve();assert.equal(t.audio.paused,false,'resumes outside');
+ t.game.state.place='night';t.context.dispatchEvent(new t.context.CustomEvent('chinalife:update'));assert.equal(t.audio.paused,false,'still playing in the club');
+ t.game.state.place='plaza';t.context.dispatchEvent(new t.context.CustomEvent('chinalife:update'));assert.equal(t.audio.paused,false,'and outside');
+ t.radio.pause();assert.equal(radioState,false,'club music comes back when the radio is paused');
 });
 test('with no approved songs the radio button stays hidden',()=>{const t=setup();t.context.ChinaLifeCloud.songs=[];t.context.dispatchEvent(new t.context.CustomEvent('chinalife:songs'));assert.equal(t.document.getElementById('radioFab').hidden,true)});
