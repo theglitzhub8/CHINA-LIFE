@@ -33,7 +33,7 @@ async function pollInternal(){
   if(incoming){seen.add(incoming.id);banner.textContent=incoming.inviter_name+' invited you: '+catalog[incoming.kind].title;banner.hidden=false;banner.onclick=()=>{banner.hidden=true;open()};}
   if(!active()||active().status!=='pending')banner.hidden=true;
   if(dialog.open)render();
- }catch(e){if(dialog.open)note(e.message)}finally{polling=false}
+ }catch(e){if(dialog.open)note(e.message);return false}finally{polling=false}
 }
 function poll(){if(pending)return pending;const task=pollInternal();pending=task;task.finally(()=>{if(pending===task)pending=null});return task}
 async function open(id=null,name='',kind=null){await window.ChinaLifeCloud?.ready;note('');await poll();peer=id;peerName=name;preferred=kind;peerGender=null;if(id)try{const r=await window.ChinaLifeAuth.request('/chinalife/profile.php?peer='+encodeURIComponent(id),'GET');peerGender=(r.data||r).profile?.gender}catch{}render();if(!dialog.open)dialog.showModal()}
@@ -51,6 +51,9 @@ async function act(action,data={}){
   }
  }catch(e){note(e.message)}finally{busy=false}
 }
-$('closeShared').onclick=()=>dialog.close();setInterval(poll,3000);
+$('closeShared').onclick=()=>dialog.close();
+// Batch 1: every 3 s while an invitation or activity is in progress or this window is open (gameplay stays live),
+// otherwise every 30 s plus at once when the heartbeat reports an activity change. Legacy: every 3 s.
+if(window.ChinaLifePoll)window.ChinaLifePoll.loop('activities',poll,{every:()=>active()||dialog.open?3000:30000,legacyEvery:3000});else setInterval(poll,3000);
 window.addEventListener('chinalife:cloudready',()=>{generation++;account='';sessions=[];relationships=[];preferred=null;peer=null;seen=new Set();banner.hidden=true;if(dialog.open)render();poll()});
 window.ChinaLifeShared={open,poll,ready:null};window.ChinaLifeShared.ready=poll();

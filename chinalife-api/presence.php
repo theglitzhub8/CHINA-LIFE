@@ -40,4 +40,4 @@ foreach ($rows as &$row) {$row['id']=(string)$row['id'];$row['xp']=(int)$row['xp
 // Quick phrases sent in this room during the last few seconds (blocked players are left out).
 $gestures=$roomPlace===''?[]:cl_rows('SELECT g.id,g.sender_id sender,g.target_id target,g.phrase FROM chinalife_gestures g WHERE g.city=? AND g.place=? AND g.created_at>=DATE_SUB(NOW(),INTERVAL 15 SECOND) AND NOT EXISTS(SELECT 1 FROM chinalife_blocks b WHERE (b.owner_id=? AND b.peer_id=g.sender_id) OR (b.owner_id=g.sender_id AND b.peer_id=?)) ORDER BY g.id DESC LIMIT 30','ssii',[$city,$roomPlace,$uid,$uid]);
 foreach($gestures as &$g){$g['id']=(string)$g['id'];$g['sender']=(string)$g['sender'];$g['target']=$g['target']===null?null:(string)$g['target'];}unset($g);
-json_response('success',['id'=>(string)$uid,'players'=>$rows,'gestures'=>$gestures]);
+json_response('success',['id'=>(string)$uid,'players'=>$rows,'gestures'=>$gestures]+(!empty($input['inbox'])?['inbox'=>cl_inbox($uid,$city,$roomPlace)]:[]));

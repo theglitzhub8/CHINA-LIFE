@@ -739,3 +739,65 @@ test('AI characters act in the game with tools (checked against real places, scr
   reply=[{type:'text',text:'Hello from the café'}];r=await call(11,'ai.php','POST',{agent:'barista',message:'Hi',context:ctx});assert.equal(r.httpStatus,200);assert.match(seen.at(-1).system,/You are Coco/);
  }finally{mock.close();fs.unlinkSync(cfg)}
 });
+test('Batch 1: presence carries correctly scoped change counters; old clients get the same response as before',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (3,4,5); DELETE FROM chinalife_friends WHERE first_id IN (3,4,5) OR second_id IN (3,4,5); DELETE FROM chinalife_blocks WHERE owner_id IN (3,4,5) OR peer_id IN (3,4,5)');
+ for(const [id,place] of [[3,'cafe'],[4,'cafe'],[5,'gym']])await call(id,'presence.php','POST',presence('Shenyang',place));
+ const box=async id=>(await call(id,'presence.php','POST',{...presence('Shenyang',id===5?'gym':'cafe'),inbox:1})).data.inbox;
+ assert.equal((await call(3,'presence.php','POST',presence('Shenyang','cafe'))).data.inbox,undefined,'no inbox unless asked: unchanged for old clients');
+ const a0=await box(3),b0=await box(4),c0=await box(5);assert.equal(a0.mode,'adaptive');assert.equal(typeof a0.revision,'number');
+ // Venue message: the room id moves for players in that venue only.
+ await call(3,'messages.php','POST',{city:'Shenyang',place:'cafe',text:'Hello cafe'});
+ assert.notEqual((await box(4)).room,b0.room,'same venue sees a new room message');assert.equal((await box(5)).room,c0.room,'another venue does not');
+ // Private message: only the recipient's message counter moves.
+ await call(3,'friends.php','POST',{peer:'4',action:'request'});await call(4,'friends.php','POST',{peer:'3',action:'accept'});
+ const b1=await box(4),a1=await box(3);await call(3,'messages.php','POST',{peer:'4',text:'Private hi'});
+ assert.equal((await box(4)).messages,b1.messages+1,'recipient');assert.equal((await box(3)).messages,a1.messages,'sender unchanged');assert.equal((await box(5)).messages,c0.messages,'others unchanged');
+ // Shared activity: both participants, nobody else.
+ const b2=await box(4),a2=await box(3);const inv=await call(3,'activities.php','POST',{action:'invite',peer:'4',kind:'meal'});assert.equal(inv.httpStatus,200,JSON.stringify(inv));
+ assert.equal((await box(4)).activities,b2.activities+1);assert.equal((await box(3)).activities,a2.activities+1);assert.equal((await box(5)).activities,c0.activities);
+ await call(4,'activities.php','POST',{action:'decline',id:Number(inv.data.id)});assert.equal((await box(3)).activities,a2.activities+2,'declining notifies the inviter');
+ // Money received bumps the save revision the player sees.
+ const r0=(await box(4)).revision;await call(3,'transfers.php','POST',{peer:'4',amount:1,request_id:'batch1-transfer-0001'});assert.equal((await box(4)).revision,r0+1);
+ // Rollback switch.
+ // Deployed before the migration: no counters, clients told to keep the old polling, and messages still send.
+ sql('USE chinalife_test; RENAME TABLE chinalife_inbox TO chinalife_inbox_off');
+ try{assert.deepEqual((await box(3)),{mode:'legacy'});const sent=await call(3,'messages.php','POST',{city:'Shenyang',place:'plaza',text:'no inbox yet',peer:'4'});assert.equal(sent.httpStatus,200,JSON.stringify(sent))}
+ finally{sql('USE chinalife_test; RENAME TABLE chinalife_inbox_off TO chinalife_inbox')}
+ const cfg=path.join(tmp,'web/api/v4/chinalife/polling-config.php'),orig=fs.readFileSync(cfg,'utf8');fs.writeFileSync(cfg,`<?php return ['mode'=>'legacy'];`);const later=new Date(Date.now()+5000);fs.utimesSync(cfg,later,later);let mode='';for(let i=0;i<30&&mode!=='legacy';i++){await new Promise(r=>setTimeout(r,200));mode=(await box(3)).mode}try{assert.equal(mode,'legacy','the switch takes effect within seconds (PHP may cache the file briefly)')}finally{fs.writeFileSync(cfg,orig);const t2=new Date(Date.now()+10000);fs.utimesSync(cfg,t2,t2);for(let i=0;i<30&&(await box(3)).mode!=='adaptive';i++)await new Promise(r=>setTimeout(r,200))}
+});
+test('Batch 1 end to end: one presence request per heartbeat, messages wake the right checks, fast when together, legacy rollback',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (6,7); DELETE FROM chinalife_saves WHERE user_id IN (6,7); DELETE FROM chinalife_presence WHERE user_id IN (6,7)');
+ async function client(id){const t=harness(null),c=t.context,stored=new Map(),log=[];c.localStorage={getItem:k=>stored.get(k)||null,setItem:(k,v)=>stored.set(k,v)};c.HafrikSession={token:'test-'+id,user:{id,name:'User '+id}};c.URLSearchParams=URLSearchParams;
+  c.fetch=(url,options)=>{const u=new URL(url);log.push((options?.method||'GET')+' '+u.pathname.split('/').pop());return fetch(base+u.pathname+u.search,options)};
+  vm.runInContext(fs.readFileSync('public/poller.js','utf8'),c);
+  await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);t.game.loadSave({...game(),name:'Player '+id,place:'plaza'});await c.ChinaLifeCloud.upload();await c.ChinaLifeCloud.refresh();
+  await vm.runInContext('(async()=>{'+fs.readFileSync('public/notifications.js','utf8')+'})()',c);await vm.runInContext('(async()=>{'+fs.readFileSync('public/shared-activities.js','utf8')+'})()',c);return {...t,P:c.ChinaLifePoll,log}}
+ for(let i=0;i<30;i++){const m=(await call(6,'presence.php','POST',{...presence(),inbox:1})).data?.inbox?.mode;if(m==='adaptive')break;await new Promise(r=>setTimeout(r,200))}sql('USE chinalife_test; DELETE FROM chinalife_presence WHERE user_id=6; DELETE FROM chinalife_rate_limits WHERE user_id IN (6,7)');
+ const a=await client(6),b=await client(7);await a.P.run('presence');
+ b.log.length=0;await b.P.run('presence');assert.deepEqual(b.log,['POST presence.php'],'one request per heartbeat (no separate GET)');
+ assert.ok(b.context.ChinaLifeCloud.players.some(p=>p.id==='6'),'still sees the other player');
+ assert.equal(b.P.stats().find(s=>s.name==='presence').interval,2500,'fast while another player is in the venue');
+ await b.P.run('notifications');
+ // A venue message: the next heartbeat wakes B's message check, which delivers it.
+ const before=b.P.stats().find(s=>s.name==='notifications').next;assert.ok(before>5000,'message check is idle (safety interval) before anything happens');
+ await call(6,'messages.php','POST',{city:'Shenyang',place:'plaza',text:'Batch one hello'});await b.P.run('presence');
+ assert.ok(b.P.stats().find(s=>s.name==='notifications').next<1000,'heartbeat woke the message check');b.log.length=0;await b.P.run('notifications');
+ assert.deepEqual(b.log,['GET notifications.php']);assert.match(b.document.getElementById('messageNotification').textContent,/Batch one hello/);
+ // A shared-activity invitation wakes B's activity check, shows the invite, and keeps that check fast while it is open.
+ sql('USE chinalife_test; DELETE FROM chinalife_friends WHERE first_id IN (6,7) OR second_id IN (6,7); DELETE FROM chinalife_shared_activities WHERE inviter_id IN (6,7) OR invitee_id IN (6,7)');
+ await call(6,'friends.php','POST',{peer:'7',action:'request'});await call(7,'friends.php','POST',{peer:'6',action:'accept'});
+ await b.P.run('activities');assert.equal(b.P.stats().find(s=>s.name==='activities').interval,30000,'idle activity check is slow');
+ await call(6,'presence.php','POST',presence('Shenyang','plaza'));const inv=await call(6,'activities.php','POST',{action:'invite',peer:'7',kind:'meal'});assert.equal(inv.httpStatus,200,JSON.stringify(inv));
+ await b.P.run('presence');assert.ok(b.P.stats().find(s=>s.name==='activities').next<1000,'heartbeat woke the activity check');await b.P.run('activities');
+ assert.match(b.document.getElementById('sharedInvite')?.textContent||b.document.body.textContent,/invited you/);assert.equal(b.P.stats().find(s=>s.name==='activities').interval,3000,'fast while the invitation is open');
+ await call(6,'activities.php','POST',{action:'cancel',id:Number(inv.data.id)});
+ // Alone: slower heartbeat.
+ sql('USE chinalife_test; DELETE FROM chinalife_presence WHERE user_id<>7');await b.P.run('presence');assert.equal(b.P.stats().find(s=>s.name==='presence').interval,10000,'10 s when nobody is with you');
+ // Rollback: the server switches every game back to the old two-request heartbeat.
+ const cfg=path.join(tmp,'web/api/v4/chinalife/polling-config.php'),orig=fs.readFileSync(cfg,'utf8');fs.writeFileSync(cfg,`<?php return ['mode'=>'legacy'];`);const later=new Date(Date.now()+5000);fs.utimesSync(cfg,later,later);
+ try{for(let i=0;i<30&&b.P.mode!=='legacy';i++){await new Promise(r=>setTimeout(r,200));await b.P.run('presence')}assert.equal(b.P.mode,'legacy');b.log.length=0;await b.P.run('presence');assert.deepEqual(b.log,['POST presence.php','GET presence.php'],'legacy heartbeat as before');assert.equal(b.P.stats().find(s=>s.name==='notifications').interval,1000)}
+ finally{fs.writeFileSync(cfg,orig);const t2=new Date(Date.now()+15000);fs.utimesSync(cfg,t2,t2)}
+ // Switching the server back reaches devices already in legacy mode without a reload.
+ for(let i=0;i<30&&b.P.mode!=='adaptive';i++){await new Promise(r=>setTimeout(r,200));await b.P.run('presence')}
+ assert.equal(b.P.mode,'adaptive');b.log.length=0;await b.P.run('presence');assert.deepEqual(b.log,['POST presence.php'],'back to one request per heartbeat');
+});

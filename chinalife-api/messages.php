@@ -19,7 +19,7 @@ if ($method==='POST') {
     if (!is_string($text)||trim($text)===''||mb_strlen($text)>400) cl_fail('Write a message between 1 and 400 characters');
     cl_rate('messages',5,10);
     $statement=cl_query('INSERT INTO chinalife_messages(sender_id,recipient_id,city,place,body,created_at) VALUES(?,?,?,?,?,NOW())','iisss',[$uid,$peer,$city,$place,trim($text)]);
-    $id=(string)$statement->insert_id;$statement->close();
+    $id=(string)$statement->insert_id;$statement->close();if ($peer) cl_bump([$peer],'messages');
     cl_run('DELETE FROM chinalife_messages WHERE created_at<DATE_SUB(NOW(),INTERVAL 7 DAY)');
     json_response('success',['id'=>$id]);
 }

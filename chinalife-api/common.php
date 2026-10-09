@@ -85,6 +85,22 @@ function cl_peer(mixed $value): int {
 }
 // Quick phrases players can send each other (see gestures.php); the text for each lives in social.js.
 function cl_gesture_phrases(): array {return ['hello','mic','how','friends','dance','drink','thanks','where','nice','bye'];}
+// Change counters per player (performance Batch 1): bumped whenever something that player must see changes, so
+// the game asks for details only when a counter moves. $what: messages | activities | visits.
+function cl_bump(array $users, string $what): void {
+    if (!in_array($what,['messages','activities','visits'],true)) return;
+    // A counter is only a wake-up hint: it must never fail the message, invite or visit that caused it.
+    try {foreach (array_unique(array_map('intval',$users)) as $u) if ($u>0) cl_run("INSERT INTO chinalife_inbox(user_id,$what,updated_at) VALUES(?,1,NOW()) ON DUPLICATE KEY UPDATE $what=$what+1,updated_at=NOW()",'i',[$u]);} catch (Throwable $e) {}
+}
+function cl_polling_mode(): string {$c=is_file(__DIR__.'/polling-config.php')?(require __DIR__.'/polling-config.php'):[];return ($c['mode']??'adaptive')==='legacy'?'legacy':'adaptive';}
+// Everything the game needs to decide what to fetch: my counters, my save revision, the newest message in my room.
+function cl_inbox(int $uid, string $city, string $roomPlace): array {
+    // Without the inbox table (migration not run yet) the counters cannot be trusted, so clients are told to keep the old fast polling.
+    try {$box=cl_one('SELECT messages,activities,visits FROM chinalife_inbox WHERE user_id=?','i',[$uid])?:['messages'=>0,'activities'=>0,'visits'=>0];} catch (Throwable $e) {return ['mode'=>'legacy'];}
+    $rev=cl_one('SELECT revision FROM chinalife_saves WHERE user_id=?','i',[$uid]);
+    $room=$roomPlace===''?null:cl_one('SELECT MAX(id) id FROM chinalife_messages WHERE city=? AND place=? AND recipient_id IS NULL AND created_at>=DATE_SUB(NOW(),INTERVAL 1 DAY)','ss',[$city,$roomPlace]);
+    return ['messages'=>(int)$box['messages'],'activities'=>(int)$box['activities'],'visits'=>(int)$box['visits'],'revision'=>(int)($rev['revision']??0),'room'=>(string)($room['id']??'0'),'mode'=>cl_polling_mode()];
+}
 function cl_blocked(int $a, int $b): bool {
     return cl_one('SELECT owner_id FROM chinalife_blocks WHERE (owner_id=? AND peer_id=?) OR (owner_id=? AND peer_id=?)', 'iiii', [$a,$b,$b,$a]) !== null;
 }

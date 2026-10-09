@@ -9,6 +9,8 @@ let songs=[],songsKey='';
 // Paid ads on venue walls; images come from the public ad-image endpoint.
 let ads=[],adsKey='';const adImage=a=>HAFRIK_API+'/chinalife/ad-image.php?id='+encodeURIComponent(a.id)+'&v='+a.version;
 async function gesture(to,phrase){if(!account||!presence)throw Error('Join the shared city first.');const s=game.state,r=await api('/chinalife/gestures.php','POST',{city:s.city,place:s.place,to:to==null?null:String(to),phrase});const id=String((r.data||r).id||'');if(id)seenGestures.add(id);return true}
+const POLL = window.ChinaLifePoll, adaptive = () => !!POLL && POLL.mode !== 'legacy';
+let presenceRoom = '', lastWalk = 0, lastInbox = null;
 let presenceCheck={lastSuccess:null,error:null,serverId:null};
 let message = 'Sign in with Hafrik to save across devices.', liveToken = storage.getItem(TOKEN_KEY) || '';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -193,12 +195,19 @@ async function refreshPresence() {
   const generation = epoch, state = game.state, city = state.city, place = state.place, world = window.ChinaLifeWorld, position = world?.roomPosition ?? (world?.view==='venue'?world.position:null);
   polling = true;
   try {
-    await api('/chinalife/presence.php', 'POST', {city,place,name:state.name,color:state.color,skin:state.appearance?.skin || '#8b5c43',hair:state.appearance?.hair || 'cropped',x:position?.x || 0,z:position?.z || 0,activity:activityNow()});
-    const result = await api('/chinalife/presence.php', 'GET', {city});
+    // Adaptive (Batch 1): the POST already answers with everyone in the city plus my change counters, so one request
+    // replaces the old POST + GET pair. Legacy keeps the previous two requests.
+    const mine={city,place,name:state.name,color:state.color,skin:state.appearance?.skin || '#8b5c43',hair:state.appearance?.hair || 'cropped',x:position?.x || 0,z:position?.z || 0,activity:activityNow()};
+    // The inbox is asked for in both modes so a device in legacy mode still hears when the server switches back.
+    const posted = await api('/chinalife/presence.php', 'POST', POLL ? {...mine,inbox:1} : mine);
+    const result = adaptive() ? posted : await api('/chinalife/presence.php', 'GET', {city});
+    presenceRoom = city + ':' + place;
     if (generation !== epoch || !presence || game.state.city !== city || game.state.place !== place) return false;
     const data = result.data || result, ownId = data.id ?? account.user_id ?? account.id;
     presenceCheck={lastSuccess:new Date().toISOString(),error:null,serverId:String(ownId)};
     players = (data.players || []).filter(p => !p.own && String(p.user_id ?? p.id) !== String(ownId)).map(p => ({...p,id:String(p.id),city:p.city || city,name:p.name || p.sim_name,x:Number(p.x) || 0,z:Number(p.z) || 0})); updateFeed(city); publish();
+    const inbox = (posted.data || posted).inbox;
+    if (inbox) handleInbox(inbox);
     // Quick phrases: pass on each one once.
     const fresh=(data.gestures||[]).filter(g=>!seenGestures.has(String(g.id))).reverse();fresh.forEach(g=>seenGestures.add(String(g.id)));if(seenGestures.size>300)seenGestures.clear(),(data.gestures||[]).forEach(g=>seenGestures.add(String(g.id)));if(fresh.length)window.dispatchEvent(new CustomEvent('chinalife:gestures',{detail:{me:String(ownId),gestures:fresh}}));
     return true;
@@ -251,16 +260,45 @@ $('cloudDialog').addEventListener('cancel', e => {if (!account) e.preventDefault
 $('cloudDialog').addEventListener('close', () => {if (!account) setTimeout(() => {if (!account) show()}, 0)});
 setInterval(() => {if (!account && !$('cloudDialog').open && window.ChinaLifeCloud?.ready) show()}, 1000);
 window.addEventListener('chinalife:save', () => {if (auto && !loading) scheduleSave()});
-window.addEventListener('chinalife:update', () => {if (!loading && account && game.state.created) {if (!presence) join(); else refreshPresence()}});
+// Renders happen on every action; in adaptive mode presence is only re-sent on them when the venue or city changed.
+window.addEventListener('chinalife:update', () => {if (!loading && account && game.state.created) {if (!presence) join(); else if (!adaptive() || presenceRoom !== game.state.city + ':' + game.state.place) refreshPresence()}});
 window.addEventListener('hafrik:session', event => {if (event.detail?.token) connect(event.detail,{source:'app'})});
-document.addEventListener('visibilitychange', () => {if (!document.hidden && account && game.state.created) {if (presence) refreshPresence(); else join()}});
+document.addEventListener('visibilitychange', () => {if (!document.hidden && account && game.state.created) {if (!presence) join(); else if (!adaptive()) refreshPresence()}});
 // A failed first join must not disable all later heartbeats.
 async function presenceHeartbeat() {
   if (loading || !auto || !account || !game.state.created || document.hidden) return false;
   return presence ? refreshPresence() : join();
 }
-setInterval(presenceHeartbeat, 2500);
-setInterval(syncTransfers,5000);
+// ---- Request scheduling (performance Batch 1; poller.js). Without poller.js, or in legacy mode, the old timers run. ----
+// Fast while you are with other players, moving, talking or chatting; slower when nobody is with you.
+function together() {
+  const w = window.ChinaLifeWorld; if (w?.walking) lastWalk = Date.now();
+  return (window.ChinaLifeCloud?.players || []).length > 0 || Date.now() - lastWalk < 15000 || !!window.ChinaLifeVoice?.active || !!$('socialDialog')?.open || !!$('sharedDialog')?.open;
+}
+// Change counters from the heartbeat: wake only the checks whose data changed. Each check also keeps its own slow
+// safety interval, so nothing depends on the heartbeat alone.
+function handleInbox(box) {
+  POLL?.setMode(box.mode);
+  // No counters (inbox table missing): rely on the fixed timers until they come back.
+  if (typeof box.messages !== 'number') { lastInbox = null; return; }
+  const prev = lastInbox; lastInbox = box;
+  if (prev) {
+    const changed = {messages: box.messages !== prev.messages, room: box.room !== prev.room, activities: box.activities !== prev.activities, visits: box.visits !== prev.visits};
+    if (changed.messages || changed.room) POLL?.kick('notifications');
+    if (changed.activities) POLL?.kick('activities');
+    if (changed.visits) POLL?.kick('visits');
+    window.dispatchEvent(new CustomEvent('chinalife:inbox', {detail: {inbox: box, changed}}));
+  }
+  // Money received or shared rewards: the server's save is newer than ours.
+  if (box.revision > (remote.revision ?? 0)) POLL?.kick('transfers');
+}
+if (POLL) {
+  POLL.loop('presence', presenceHeartbeat, {every: () => together() ? 2500 : 10000, legacyEvery: 2500});
+  POLL.loop('transfers', syncTransfers, {every: 60000, legacyEvery: 5000});
+  // Someone arriving, starting to walk, or opening a chat speeds presence up at once.
+  window.addEventListener('chinalife:players', () => POLL.refresh('presence'));
+  window.addEventListener('chinalife:cloudready', () => POLL.kick('presence'));
+} else {setInterval(presenceHeartbeat, 2500); setInterval(syncTransfers, 5000)}
 // Players online per city and in total, for the top bar, travel and rank screens.
 let online=null;
 async function refreshOnline(){if(!account||document.hidden)return;try{const result=await api('/chinalife/online.php'),data=result.data||result;online={online:data.online||0,cities:data.cities||{},players:data.players||0};window.dispatchEvent(new CustomEvent('chinalife:online',{detail:online}))}catch{}}

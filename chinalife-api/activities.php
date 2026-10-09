@@ -43,7 +43,7 @@ if($action==='invite') {
   if(!empty($catalog[$kind]['proposal'])&&cl_one('SELECT id FROM chinalife_shared_activities WHERE kind IN ("girlfriend","boyfriend") AND status="completed" AND (inviter_id IN (?,?) OR invitee_id IN (?,?)) LIMIT 1','iiii',[$uid,$peer,$uid,$peer]))cl_fail('End your existing relationship before starting another',409);
   [$first,$second]=cl_pair($uid,$peer);
   if(cl_one('SELECT id FROM chinalife_shared_activities WHERE LEAST(inviter_id,invitee_id)=? AND GREATEST(inviter_id,invitee_id)=? AND kind=? AND status="completed" AND completed_at>=CURDATE()','iis',[$first,$second,$kind]))cl_fail('You already completed this activity together today',409);
-  $s=cl_query('INSERT INTO chinalife_shared_activities(inviter_id,invitee_id,kind,city,place,created_at,expires_at) VALUES(?,?,?,"Shenyang",?,NOW(),DATE_ADD(NOW(),INTERVAL 5 MINUTE))','iiss',[$uid,$peer,$kind,$catalog[$kind]['place']]);$id=(string)$s->insert_id;$s->close();$db->commit();json_response('success',['id'=>$id]);
+  $s=cl_query('INSERT INTO chinalife_shared_activities(inviter_id,invitee_id,kind,city,place,created_at,expires_at) VALUES(?,?,?,"Shenyang",?,NOW(),DATE_ADD(NOW(),INTERVAL 5 MINUTE))','iiss',[$uid,$peer,$kind,$catalog[$kind]['place']]);$id=(string)$s->insert_id;$s->close();cl_bump([$uid,$peer],'activities');$db->commit();json_response('success',['id'=>$id]);
  }catch(Throwable $e){$db->rollback();throw $e;}
 }
 $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);if(!$id)cl_fail('Choose an invitation');
@@ -53,7 +53,7 @@ try{
  if(!$row||!in_array($uid,[(int)$row['inviter_id'],(int)$row['invitee_id']],true))cl_fail('Invitation unavailable',404);
  if($action==='end-relationship'){
   if($row['status']!=='completed'||empty($catalog[$row['kind']]['proposal']))cl_fail('Relationship unavailable',409);
-  cl_run('UPDATE chinalife_shared_activities SET status="cancelled" WHERE id=?','i',[$id]);$db->commit();json_response('success',['ok'=>true]);
+  cl_run('UPDATE chinalife_shared_activities SET status="cancelled" WHERE id=?','i',[$id]);cl_bump([(int)$row['inviter_id'],(int)$row['invitee_id']],'activities');$db->commit();json_response('success',['ok'=>true]);
  }
  if($row['status']==='completed'&&$action==='finish'){$db->commit();json_response('success',['completed'=>true,'duplicate'=>true]);}
  if(!$row['fresh']||in_array($row['status'],['cancelled','declined','completed'],true))cl_fail('This activity has ended',409);
@@ -87,5 +87,5 @@ try{
    cl_run('UPDATE chinalife_shared_activities SET status="completed",completed_at=NOW() WHERE id=?','i',[$id]);
   }else cl_fail('Choose a valid activity action');
  }
- $db->commit();json_response('success',['ok'=>true]);
+ cl_bump([(int)$row['inviter_id'],(int)$row['invitee_id']],'activities');$db->commit();json_response('success',['ok'=>true]);
 }catch(Throwable $e){$db->rollback();throw $e;}

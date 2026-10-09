@@ -40,7 +40,26 @@ const record=(name,ms,status)=>{const s=stats[name]||(stats[name]={n:0,times:[],
 async function call(id,file,method='GET',data,name){const t=performance.now();let status=0;try{const r=await fetch(base+'/api/v4/chinalife/'+file,{method,headers:{Authorization:'Bearer test-'+id,...(data?{'content-type':'application/json'}:{})},body:data?JSON.stringify(data):undefined});status=r.status;await r.arrayBuffer()}catch{status=599}record(name||file.split('?')[0]+(method==='GET'?'':' '+method),performance.now()-t,status);return status}
 const PLACES=['plaza','cafe','market','night','gym','mall','park','station'];
 // Per-player request loops. Every loop waits for its own request (like the game's "polling" guards).
-function schedules(i){const place=i<=Math.ceil(PLAYERS*CLUB_SHARE)?'night':PLACES[i%PLACES.length],room={city:'Shenyang',place},inVoice=i%Math.round(1/VOICE_SHARE)===0;
+// Batch 1 model: one presence POST with change counters (2.5 s when others share the venue, 10 s alone); the counters
+// wake the message check (else every 30 s); activities 30 s, transfers 60 s, home visits 60 s (safety intervals).
+// Each player also posts a venue message about every 2 minutes. Voice, music and saves are unchanged (later batches).
+const placeOf=i=>i<=Math.ceil(PLAYERS*CLUB_SHARE)?'night':PLACES[i%PLACES.length];
+function batch1(i){const place=placeOf(i),room={city:'Shenyang',place},inVoice=i%Math.round(1/VOICE_SHARE)===0,session='bench-session-'+i,others=[...Array(PLAYERS)].some((_,k)=>k+1!==i&&placeOf(k+1)===place);
+ const presence={...room,name:'p',color:'#246fa7',skin:'#8b5c43',hair:'cap',x:1,z:2,activity:'idle',inbox:1};let last=null,cursor='0';
+ const notify=()=>call(i,'notifications.php?city=Shenyang&place='+place+'&after='+cursor);
+ return [
+  [others?2500:10000,async()=>{const t=performance.now();const r=await fetch(base+'/api/v4/chinalife/presence.php',{method:'POST',headers:{Authorization:'Bearer test-'+i,'content-type':'application/json'},body:JSON.stringify(presence)});const j=await r.json().catch(()=>null);record('presence.php POST (+inbox)',performance.now()-t,r.status);
+   const box=j?.data?.inbox;if(box&&last&&(box.room!==last.room||box.messages!==last.messages))await notify();last=box||last}],
+  [30000,notify],
+  [30000,()=>call(i,'activities.php')],
+  [60000,()=>call(i,'save.php',undefined,undefined,'save.php (transfer check)')],
+  [30000,async()=>{const s=await fetch(base+'/api/v4/chinalife/save.php',{headers:{Authorization:'Bearer test-'+i}}).then(r=>r.json()).catch(()=>null);if(s?.data)await call(i,'save.php','POST',{revision:s.data.revision,save:s.data.save},'save.php POST')}],
+  [60000,()=>call(i,'home-visits.php')],
+  [45000,()=>call(i,'events.php?city=Shenyang')],
+  [120000,()=>call(i,'messages.php','POST',{...room,text:'hello from '+i},'messages.php POST (simulated chat)')],
+  ...(place==='night'?[[2500,()=>call(i,'music.php?city=Shenyang&place=night')]]:[]),
+  ...(inVoice?[[1800,async()=>{await call(i,'voice.php','POST',{...room,session,muted:true,after:0,action:'pulse'});await call(i,'voice-signal.php?city=Shenyang&place='+place+'&session='+session+'&after=0')}]]:[])];}
+function schedules(i){if(SCHEDULE==='batch1')return batch1(i);const place=i<=Math.ceil(PLAYERS*CLUB_SHARE)?'night':PLACES[i%PLACES.length],room={city:'Shenyang',place},inVoice=i%Math.round(1/VOICE_SHARE)===0;
  const presence={...room,name:'p',color:'#246fa7',skin:'#8b5c43',hair:'cap',x:1,z:2,activity:'idle'};const session='bench-session-'+i;let rev=1;
  const cur=SCHEDULE==='current';
  return [
@@ -48,6 +67,7 @@ function schedules(i){const place=i<=Math.ceil(PLAYERS*CLUB_SHARE)?'night':PLACE
   [cur?2500:20000,async()=>{await call(i,'presence.php','POST',presence);await call(i,'presence.php?city=Shenyang')}],
   [cur?3000:30000,()=>call(i,'activities.php')],
   [cur?5000:60000,()=>call(i,'save.php',undefined,undefined,'save.php (transfer check)')],
+  ...(cur?[[120000,()=>call(i,'messages.php','POST',{...room,text:'hello from '+i},'messages.php POST (simulated chat)')]]:[]),
   [30000,async()=>{if(cur||Math.random()<.3){const s=await fetch(base+'/api/v4/chinalife/save.php',{headers:{Authorization:'Bearer test-'+i}}).then(r=>r.json()).catch(()=>null);if(s?.data){rev=s.data.revision;await call(i,'save.php','POST',{revision:rev,save:s.data.save},'save.php POST')}}}],
   [cur?10000:60000,()=>call(i,'home-visits.php')],
   [cur?45000:45000,()=>call(i,'events.php?city=Shenyang')],
