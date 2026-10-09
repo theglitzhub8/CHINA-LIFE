@@ -333,3 +333,9 @@ Validation: the focused gameplay/world checks rebuild successfully; the existing
 The Gist Center now fetches approved posts directly when See Latest Gist opens, with loading, empty and error states. Its original activities open the feed or submission form rather than a generic activity reward. A clickable wall sign opens the feed. Players can submit a title, message and optional HTTPS link; submissions remain hidden until an admin approves them from Admin → Gist. Approval publishes for seven days. Existing posts can be ended. Submission rate is limited to three per hour.
 
 Deploy with update-server.sh and run the PHP 8.4 migrate.php command. The migration creates chinalife_gist_posts automatically; no manual CREATE TABLE is needed. Then reload clients. Validation: 248 tests passed, including PHP submission, hidden-before-approval, non-admin rejection, publication and removal; PHP syntax checks passed. Live server verification remains outstanding.
+
+## City Gist activity timeline
+
+See Latest Gist combines approved community/admin news, current city events and the existing Nearby presence activity feed. All, Players, Events and News filters narrow the timeline; incoming presence updates refresh an open screen. Add your gist retains admin review. News errors remain visible while cached player activity/events remain usable. Presence activity is observed on the current device, capped at 30 entries, and is not a persistent city history. Meetings, transactions and elections are not added by this increment.
+
+Deploy with the standard update script and reload. No additional migration is required if the Gist table migration has already run. Validation: 263 tests passed, including combined timeline, filters and incoming activity updates; gist.php syntax passed. Live browser/mobile verification remains outstanding.

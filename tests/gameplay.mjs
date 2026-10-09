@@ -252,3 +252,10 @@ test('approved partners: restaurants are in food delivery, shops and services in
  t.querySelector('[data-guide-item="0"]').onclick();t=h.document.getElementById('activityContent');assert.match(t.textContent,/Products/);assert.match(t.textContent,/Garri 1kg/);assert.ok(t.querySelector('a[href^="https://wa.me/8618900000000"]'));
  h.click('partnerBack');assert.match(h.document.getElementById('activityContent').textContent,/City guide/);
 });
+
+test('Gist combines approved news events and live player activity with working filters',async()=>{
+ const t=harness();t.context.ChinaLifeCloud={events:[{title:'Campus welcome',body:'Join us',place:'campus'}],feed:[{name:'Neighbour',text:'came online',kind:'online',at:Date.now()}]};t.context.ChinaLifeAuth={request:async()=>({data:{posts:[{title:'City news',body:'Welcome students',at:Date.now(),link:'https://hafrik.com'}]}})};
+ await t.game.gist();let body=t.document.getElementById('gistPosts');assert.match(body.textContent,/City news/);assert.match(body.textContent,/Campus welcome/);assert.match(body.textContent,/Neighbour/);
+ t.document.querySelector('[data-gist-filter="players"]').onclick();assert.match(body.textContent,/Neighbour/);assert.doesNotMatch(body.textContent,/City news|Campus welcome/);
+ t.context.ChinaLifeCloud.feed.push({name:'Visitor',text:'arrived at 007 Club',kind:'moved',at:Date.now()});t.context.dispatchEvent(new t.context.CustomEvent('chinalife:cityfeed'));assert.match(body.textContent,/Visitor/);
+});
