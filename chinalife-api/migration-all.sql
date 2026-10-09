@@ -160,3 +160,7 @@ CREATE TABLE IF NOT EXISTS chinalife_songs (
  CONSTRAINT fk_chinalife_songs_user FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS chinalife_politics_candidates (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,city VARCHAR(40) NOT NULL,office VARCHAR(40) NOT NULL,candidate_id INT UNSIGNED NOT NULL,statement VARCHAR(600) NOT NULL,status VARCHAR(12) NOT NULL DEFAULT 'pending',created_at DATETIME NOT NULL,reviewed_at DATETIME NULL,UNIQUE KEY one_candidate(city,office,candidate_id),INDEX(city,office,status),FOREIGN KEY(candidate_id) REFERENCES users(user_id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_ai_messages (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,user_id INT UNSIGNED NOT NULL,agent VARCHAR(16) NOT NULL,role VARCHAR(10) NOT NULL,content TEXT NOT NULL,created_at DATETIME NOT NULL,
+ INDEX(user_id,agent,id),INDEX(user_id,created_at),CONSTRAINT fk_chinalife_ai_user FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

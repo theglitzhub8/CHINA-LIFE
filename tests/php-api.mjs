@@ -696,3 +696,27 @@ test('admins edit any partner listing and it changes in the game at once, or del
  assert.equal((await call(1,'admin.php','POST',{action:'partner_update',id:Number(ad.data.id),fields:{city:'Harbin',title:'New ad',place:'mall',days:14,contact:'me',photos:[banner]}})).httpStatus,200);
  const hb=(await call(11,'events.php?city=Harbin')).data.ads.find(a=>a.title==='New ad');assert.ok(hb);assert.equal(hb.place,'mall');assert.ok(!(await call(11,'events.php?city=Shenyang')).data.ads.some(a=>a.title==='Old ad'||a.title==='New ad'));
 });
+test('AI city characters: off without a key, then answer with real listings in context, keep history and a daily limit',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (11); DELETE FROM chinalife_ai_messages');
+ const cfg=path.join(tmp,'web/api/v4/chinalife/ai-config.php');try{fs.unlinkSync(cfg)}catch{}
+ let r=await call(11,'ai.php?agent=guide');assert.equal(r.httpStatus,200);assert.equal(r.data.enabled,false);
+ assert.equal((await call(11,'ai.php','POST',{agent:'guide',message:'Hi'})).httpStatus,503,'not switched on without a key');
+ // A stand-in for the Anthropic Messages API that records what it was sent.
+ const seen=[];let fail=false;const mock=http.createServer((req,res)=>{let body='';req.on('data',d=>body+=d);req.on('end',()=>{seen.push({headers:req.headers,body:JSON.parse(body)});if(fail){res.writeHead(529,{'content-type':'application/json'});return res.end('{"type":"error"}')}res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({content:[{type:'text',text:'Try the jollof at Mama Put! [[go:market]]'}]}))})});
+ await new Promise(ok=>mock.listen(0,'127.0.0.1',ok));const port=mock.address().port;
+ fs.writeFileSync(cfg,`<?php return ['api_key'=>'test-key','model'=>'claude-sonnet-5-5','daily_limit'=>3,'endpoint'=>'http://127.0.0.1:${port}/v1/messages'];`);
+ try{
+  assert.equal((await call(11,'ai.php','POST',{agent:'stranger',message:'Hi'})).httpStatus,400,'only known characters');
+  r=await call(11,'ai.php','POST',{agent:'guide',message:'Where can I eat African food?',context:{city:'Shenyang',place:'Hafrik Square',name:'Player',money:5000,places:[['market','Taiyuan Street Market'],['../etc','bad']]}});
+  assert.equal(r.httpStatus,200,JSON.stringify(r));assert.match(r.data.reply,/jollof/);assert.equal(r.data.remaining,2);
+  const sent=seen.at(-1);assert.equal(sent.headers['x-api-key'],'test-key');assert.equal(sent.headers['anthropic-version'],'2023-06-01');assert.equal(sent.body.model,'claude-sonnet-5-5');
+  assert.match(sent.body.system,/You are Mei/);assert.match(sent.body.system,/No sexual or romantic/);assert.match(sent.body.system,/market=Taiyuan Street Market/);assert.doesNotMatch(sent.body.system,/\.\.\/etc/,'only safe place ids');
+  assert.deepEqual(sent.body.messages,[{role:'user',content:'Where can I eat African food?'}]);
+  r=await call(11,'ai.php','POST',{agent:'guide',message:'Thanks!',context:{city:'Shenyang'}});assert.equal(seen.at(-1).body.messages.length,3,'remembers the conversation');
+  assert.equal((await call(11,'ai.php?agent=tutor')).data.messages.length,0,'each character has its own conversation');
+  const h=await call(11,'ai.php?agent=guide');assert.equal(h.data.messages.length,4);assert.equal(h.data.messages[1].role,'assistant');assert.equal(h.data.remaining,1);
+  fail=true;assert.equal((await call(11,'ai.php','POST',{agent:'guide',message:'Again'})).httpStatus,502,'API trouble shows a friendly error');fail=false;
+  await call(11,'ai.php','POST',{agent:'food',message:'Third'});assert.equal((await call(11,'ai.php','POST',{agent:'food',message:'Fourth'})).httpStatus,429,'daily limit');
+  assert.equal((await call(11,'ai.php?agent=guide','DELETE')).httpStatus,200);assert.equal((await call(11,'ai.php?agent=guide')).data.messages.length,0,'conversation cleared');
+ }finally{mock.close();fs.unlinkSync(cfg)}
+});
