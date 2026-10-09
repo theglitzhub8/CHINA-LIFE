@@ -483,3 +483,16 @@ test('admins add partner restaurants with menus and order links, and players in 
  await call(1,'admin.php','POST',{action:'save_restaurant',...r,id:Number(saved.data.id),active:false});assert.ok(!(await call(11,'events.php?city=Shenyang')).data.restaurants.some(x=>x.id===saved.data.id),'hidden restaurants are not shown');
  assert.equal((await call(1,'admin.php','POST',{action:'delete_restaurant',id:Number(saved.data.id)})).httpStatus,200);
 });
+test('quick phrases reach players in the same venue only, from a fixed list, and blocked players never see them',async()=>{
+ for(const id of [1,2,3])assert.equal((await call(id,'presence.php','POST',presence('Shenyang','cafe'))).httpStatus,200);
+ {const x=await call(1,'gestures.php','POST',{city:'Shenyang',place:'cafe',to:'2',phrase:'free text'});assert.equal(x.httpStatus,400,JSON.stringify(x))}
+ assert.equal((await call(1,'gestures.php','POST',{city:'Shenyang',place:'cafe',to:'1',phrase:'hello'})).httpStatus,404);
+ const sent=await call(1,'gestures.php','POST',{city:'Shenyang',place:'cafe',to:'2',phrase:'hello'});assert.equal(sent.httpStatus,200,JSON.stringify(sent));
+ let r=await call(2,'presence.php?city=Shenyang');const g=r.data.gestures.find(x=>x.id===sent.data.id);assert.ok(g);assert.equal(g.sender,'1');assert.equal(g.target,'2');assert.equal(g.phrase,'hello');
+ r=await call(3,'presence.php?city=Shenyang');assert.ok(r.data.gestures.some(x=>x.id===sent.data.id),'everyone in the room sees the bubble');
+ await call(3,'presence.php','POST',presence('Shenyang','gym'));r=await call(3,'presence.php?city=Shenyang');assert.equal(r.data.gestures.some(x=>x.id===sent.data.id),false);
+ assert.equal((await call(1,'gestures.php','POST',{city:'Shenyang',place:'cafe',to:'3',phrase:'hello'})).httpStatus,404);
+ sql("USE chinalife_test; INSERT INTO chinalife_blocks(owner_id,peer_id) VALUES(2,1)");r=await call(2,'presence.php?city=Shenyang');assert.equal(r.data.gestures.some(x=>x.sender==='1'),false);
+ assert.equal((await call(1,'gestures.php','POST',{city:'Shenyang',place:'cafe',to:'2',phrase:'mic'})).httpStatus,403);
+ sql("USE chinalife_test; DELETE FROM chinalife_blocks WHERE owner_id=2 AND peer_id=1");
+});

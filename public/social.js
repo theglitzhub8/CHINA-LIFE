@@ -85,7 +85,21 @@ async function act(action,id){if(loading)return;loading=true;try{
  }catch(e){note(e.message)}finally{loading=false}}
 $('chatForm').onsubmit=async e=>{e.preventDefault();if(sending)return;const input=$('chatInput'),text=input.value.trim();if(!text)return;sending=true;$('chatSend').disabled=true;const captured=channel();try{await api('/api/messages','POST',{...captured,text});if(input.value.trim()===text)input.value='';note('');await refresh()}catch(e){note(e.message)}finally{sending=false;$('chatSend').disabled=false}};
 $('closeSocial').onclick=()=>{dialog.close();epoch++};$('venueChatButton').onclick=()=>open('venue');
-window.ChinaLifeSocial={open,player,openDirect:async id=>{await open('messages');await direct(id)}};
+// ---- Quick phrases: tap a player in the world, pick something to say; they see a bubble and hear it. ----
+const PHRASES={hello:['👋','Hello!'],mic:['🎙','Unmute your mic'],how:['🙂','How are you?'],friends:['🤝','Can we be friends?'],dance:['💃','Let’s dance!'],drink:['🥤','Want a drink?'],thanks:['🙏','Thank you!'],where:['📍','Where are you from?'],nice:['✨','Nice outfit!'],bye:['👋','See you later!']};
+const phraseText=k=>PHRASES[k]?PHRASES[k][0]+' '+PHRASES[k][1]:'';
+let sheet=null;
+function closeGesture(){if(sheet){sheet.classList.remove('open');const old=sheet;sheet=null;setTimeout(()=>old.remove(),220)}}
+function gesture(id){id=String(id);const p=nearby().find(x=>x.id===id)||{id,name:'Player'};closeGesture();sheet=document.createElement('section');sheet.className='gesture-sheet';sheet.setAttribute('role','dialog');sheet.setAttribute('aria-label','Say something to '+p.name);
+ sheet.innerHTML='<header>'+avatar({...p,online:true})+'<div><b>'+esc(p.name)+'</b><small>Online here · tap a phrase to say it</small></div><button class="gesture-close" aria-label="Close">✕</button></header><div class="gesture-grid">'+Object.entries(PHRASES).map(([k,[i,t]])=>'<button data-phrase="'+k+'"><span>'+i+'</span>'+esc(t)+'</button>').join('')+'</div><footer><button data-g="profile">👤 Profile</button><button data-g="message">💬 Message</button></footer>';
+ document.body.append(sheet);requestAnimationFrame(()=>sheet?.classList.add('open'));
+ sheet.querySelector('.gesture-close').onclick=closeGesture;
+ sheet.querySelector('[data-g="profile"]').onclick=()=>{closeGesture();player(id)};
+ sheet.querySelector('[data-g="message"]').onclick=async()=>{closeGesture();await open('messages');await direct(id)};
+ sheet.querySelectorAll('[data-phrase]').forEach(b=>b.onclick=async()=>{const k=b.dataset.phrase;b.disabled=true;try{await window.ChinaLifeCloud.gesture(id,k);window.ChinaLifeWorld?.say?.('me',phraseText(k));window.ChinaLifeSound?.play('pop');closeGesture()}catch(e){b.disabled=false;game.toast?.(e.message||'Could not send that. Try again.')}})}
+function speak(text){try{if(window.ChinaLifeSound&&!window.ChinaLifeSound.enabled)return;if(!window.speechSynthesis||typeof SpeechSynthesisUtterance!=='function')return;const u=new SpeechSynthesisUtterance(text);u.rate=1;u.volume=Math.min(1,(window.ChinaLifeSound?.volume??.8)+.3);speechSynthesis.cancel();speechSynthesis.speak(u)}catch{}}
+window.addEventListener('chinalife:gestures',e=>{const {me,gestures}=e.detail||{};for(const g of gestures||[]){if(!PHRASES[g.phrase]||g.sender===me)continue;const who=nearby().find(p=>p.id===g.sender)?.name||'A player';window.ChinaLifeWorld?.say?.(g.sender,phraseText(g.phrase));if(g.target===me){window.ChinaLifeSound?.play('message');speak(PHRASES[g.phrase][1]);game.toast?.(who+': '+phraseText(g.phrase)+(g.phrase==='mic'?' · tap 🎙 to talk':''))}}});
+window.ChinaLifeSocial={open,player,gesture,openDirect:async id=>{await open('messages');await direct(id)}};
 window.addEventListener('chinalife:players',()=>{$('venueOnline').textContent=joined()?nearby().length+' players nearby':'Join shared city';if(dialog.open&&['people','profile'].includes(view))render()});
 let lastRoom=roomKey();window.addEventListener('chinalife:update',()=>{const room=roomKey();if(room===lastRoom)return;lastRoom=room;if(dialog.open){epoch++;if(view==='venue'||view==='people'){messages=[];render();refresh()}}});
 setInterval(refresh,3000);

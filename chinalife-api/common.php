@@ -83,6 +83,8 @@ function cl_peer(mixed $value): int {
     if ($peer === $GLOBALS['uid'] || !cl_one('SELECT user_id FROM users WHERE user_id=?', 'i', [$peer])) cl_fail('Player unavailable', 404);
     return $peer;
 }
+// Quick phrases players can send each other (see gestures.php); the text for each lives in social.js.
+function cl_gesture_phrases(): array {return ['hello','mic','how','friends','dance','drink','thanks','where','nice','bye'];}
 function cl_blocked(int $a, int $b): bool {
     return cl_one('SELECT owner_id FROM chinalife_blocks WHERE (owner_id=? AND peer_id=?) OR (owner_id=? AND peer_id=?)', 'iiii', [$a,$b,$b,$a]) !== null;
 }

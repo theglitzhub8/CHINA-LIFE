@@ -358,3 +358,16 @@ dialog{border-radius:22px}
 .home-view:not(.dock-open) .venue-heading::after{content:'⌃';margin-left:auto;padding:0 6px;color:#5f7882;font-size:18px}
 .home-view.dock-open .venue-heading::after{content:'⌄';margin-left:auto;padding:0 6px;color:#5f7882;font-size:18px}
 .home-view.dock-open .venue-card{animation:sheetIn .22s ease-out}
+/* Quick-phrase speech bubbles over players */
+.scene-label.say-bubble{transform:translate(-50%,calc(-100% - 34px));background:#fff;color:#152c38;border:0;border-radius:16px;padding:8px 13px;font-size:14px;font-weight:800;max-width:220px;white-space:normal;text-align:center;line-height:1.25;overflow:visible;text-overflow:clip;pointer-events:none;z-index:6;box-shadow:0 6px 20px #10304030;animation:sayPop .28s cubic-bezier(.2,1.4,.4,1)}
+.scene-label.say-bubble::after{content:"";position:absolute;left:50%;bottom:-6px;width:12px;height:12px;background:#fff;transform:translateX(-50%) rotate(45deg);border-radius:2px}
+@keyframes sayPop{from{opacity:0;transform:translate(-50%,calc(-100% - 20px)) scale(.7)}to{opacity:1;transform:translate(-50%,calc(-100% - 34px)) scale(1)}}
+/* Quick-phrase sheet when tapping a player */
+.gesture-sheet{position:fixed;left:50%;bottom:max(12px,env(safe-area-inset-bottom));width:min(440px,calc(100% - 24px));transform:translate(-50%,120%);transition:transform .22s cubic-bezier(.2,.9,.3,1);z-index:60;background:#fff;color:#152c38;border-radius:24px;box-shadow:0 18px 50px #0b2a3a45;padding:14px 14px 12px;font-family:Manrope,system-ui,sans-serif}
+.gesture-sheet.open{transform:translate(-50%,0)}
+.gesture-sheet header{display:flex;align-items:center;gap:11px;margin-bottom:12px}.gesture-sheet header div{flex:1;min-width:0}.gesture-sheet header b{display:block;font-size:16px}.gesture-sheet header small{color:#5f7480;font-size:12px}
+.gesture-close{border:0;background:#eef3f6;border-radius:50%;width:34px;height:34px;font-size:15px;color:#33505e}
+.gesture-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.gesture-grid button{display:flex;align-items:center;gap:8px;border:1px solid #e1eaef;background:#f6fafc;border-radius:16px;padding:10px 11px;font:700 13px Manrope,system-ui,sans-serif;color:#17384a;text-align:left;min-height:46px}
+.gesture-grid button span{font-size:19px}.gesture-grid button:active{transform:scale(.97);background:#e5f4ef}.gesture-grid button:disabled{opacity:.5}
+.gesture-sheet footer{display:flex;gap:8px;margin-top:10px}.gesture-sheet footer button{flex:1;border:0;border-radius:14px;padding:11px;background:#e8f1fb;color:#1a5a9a;font:800 13px Manrope,system-ui,sans-serif}

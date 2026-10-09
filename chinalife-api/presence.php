@@ -29,4 +29,7 @@ if($private){$base=explode('@',$roomPlace)[0];$owner=explode('@',$roomPlace)[1]?
 
 // What each player wears comes from their saved character, so outfits cannot be faked by the client.
 foreach ($rows as &$row) {$row['id']=(string)$row['id'];$row['xp']=(int)$row['xp'];$row['x']=(float)$row['x'];$row['z']=(float)$row['z'];$w=json_decode((string)($row['wearing']??''),true);$c=json_decode((string)($row['wear_colors']??''),true);$row['wearing']=is_array($w)?['top'=>is_string($w['top']??null)?$w['top']:null,'bottom'=>is_string($w['bottom']??null)?$w['bottom']:null,'shoes'=>is_string($w['shoes']??null)?$w['shoes']:null,'acc'=>array_values(array_filter(array_slice((array)($w['acc']??[]),0,4),'is_string'))]:null;$row['colors']=is_array($c)?array_filter($c,fn($v,$k)=>is_string($k)&&is_string($v)&&preg_match('/^#[0-9a-fA-F]{6}$/',$v),ARRAY_FILTER_USE_BOTH):(object)[];unset($row['wear_colors']);} unset($row);
-json_response('success',['id'=>(string)$uid,'players'=>$rows]);
+// Quick phrases sent in this room during the last few seconds (blocked players are left out).
+$gestures=$roomPlace===''?[]:cl_rows('SELECT g.id,g.sender_id sender,g.target_id target,g.phrase FROM chinalife_gestures g WHERE g.city=? AND g.place=? AND g.created_at>=DATE_SUB(NOW(),INTERVAL 15 SECOND) AND NOT EXISTS(SELECT 1 FROM chinalife_blocks b WHERE (b.owner_id=? AND b.peer_id=g.sender_id) OR (b.owner_id=g.sender_id AND b.peer_id=?)) ORDER BY g.id DESC LIMIT 30','ssii',[$city,$roomPlace,$uid,$uid]);
+foreach($gestures as &$g){$g['id']=(string)$g['id'];$g['sender']=(string)$g['sender'];$g['target']=$g['target']===null?null:(string)$g['target'];}unset($g);
+json_response('success',['id'=>(string)$uid,'players'=>$rows,'gestures'=>$gestures]);
