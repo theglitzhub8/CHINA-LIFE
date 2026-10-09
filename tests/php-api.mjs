@@ -623,3 +623,14 @@ test('music artists apply with music links and no price list, and go live as art
  assert.equal((await call(1,'admin.php','POST',{action:'review_partner',id:Number(sub.data.id),decision:'approve'})).httpStatus,200);
  const a=(await call(11,'events.php?city=Shenyang')).data.restaurants.find(r=>r.name==='Kola Beats');assert.equal(a.kind,'artist');assert.equal(a.icon,'🎤');assert.deepEqual(a.links,['https://music.163.com/artist?id=1']);assert.equal(a.district,'Afrobeats');
 });
+
+test('player gist waits for admin approval and is scoped to its city',async()=>{
+ const submitted=await call(11,'gist.php','POST',{city:'Shenyang',title:'Community gist test',body:'Meet at the center.',link:'https://hafrik.com'});assert.equal(submitted.httpStatus,200,submitted.message);
+ assert.ok(!(await call(11,'gist.php?city=Shenyang')).data.posts.some(p=>p.title==='Community gist test'));
+ const list=await call(1,'admin.php','POST',{action:'gist'}),post=list.data.posts.find(p=>p.title==='Community gist test');assert.ok(post);
+ assert.equal((await call(11,'admin.php','POST',{action:'approve_gist',id:Number(post.id)})).httpStatus,403);
+ assert.equal((await call(1,'admin.php','POST',{action:'approve_gist',id:Number(post.id)})).httpStatus,200);
+ assert.ok((await call(11,'gist.php?city=Shenyang')).data.posts.some(p=>p.title==='Community gist test'));
+ await call(1,'admin.php','POST',{action:'end_gist',id:Number(post.id)});
+ assert.ok(!(await call(11,'gist.php?city=Shenyang')).data.posts.some(p=>p.title==='Community gist test'));
+});

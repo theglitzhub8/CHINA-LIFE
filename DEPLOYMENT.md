@@ -327,3 +327,9 @@ Pending food orders now render a named delivery driver inside the player's priva
 Private homes now include **Watch Netflix**, which advances two game hours and restores fun. **Invite girlfriend or the boys** opens the consent-based home invitation flow; only accepted friends can enter, and the existing expiry/revoke rules protect the private residence.
 
 Validation: the focused gameplay/world checks rebuild successfully; the existing legacy delivery assertion still expects hunger to apply at checkout and therefore needs to be updated for the requested receive-first flow. Deploy using the standard update script and reload the client.
+
+## Gist loading, wall notice and community submissions
+
+The Gist Center now fetches approved posts directly when See Latest Gist opens, with loading, empty and error states. Its original activities open the feed or submission form rather than a generic activity reward. A clickable wall sign opens the feed. Players can submit a title, message and optional HTTPS link; submissions remain hidden until an admin approves them from Admin → Gist. Approval publishes for seven days. Existing posts can be ended. Submission rate is limited to three per hour.
+
+Deploy with update-server.sh and run the PHP 8.4 migrate.php command. The migration creates chinalife_gist_posts automatically; no manual CREATE TABLE is needed. Then reload clients. Validation: 248 tests passed, including PHP submission, hidden-before-approval, non-admin rejection, publication and removal; PHP syntax checks passed. Live server verification remains outstanding.
