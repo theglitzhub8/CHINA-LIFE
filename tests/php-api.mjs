@@ -835,9 +835,19 @@ test('Batch 1 money: every incoming transfer moves the recipient revision once, 
  await P.run('presence');assert.ok(next()<1000,'money wakes the transfer check');await P.run('transfers');assert.equal(t.game.state.money,m0+7,'received money shows in the game');
 });
 
-test('perf monitor reads the access log, database status and presence ages without changing anything',()=>{
- const log=path.join(tmp,'access_log');fs.writeFileSync(log,'');
- const child=execFileSync('bash',['-c',`(sleep 0.5; printf '%s\n' '1.2.3.4 - - [x] "POST /api/v4/chinalife/presence.php HTTP/1.1" 200 10' '1.2.3.4 - - [x] "GET /api/v4/chinalife/notifications.php?city=Shenyang HTTP/1.1" 429 5' '1.2.3.4 - - [x] "GET /other.php HTTP/1.1" 500 5' >> "$1") & php scripts/perf-monitor.php --hafrik="$2" --log="$1" --interval=1 --samples=1 --csv="$3"`,'_',log,path.join(tmp,'web'),path.join(tmp,'perf.csv')],{env,encoding:'utf8'});
- assert.match(child,/api 2 req\/s|api 1\.\d+ req\/s|api 2\.\d+ req\/s/);assert.match(child,/429 1, 5xx 0/,'only ChinaLife API lines are counted');assert.match(child,/db [\d.]+ q\/s/);assert.match(child,/online \d+/);
+test('perf monitor reads /proc, the access log, database status and presence ages without changing anything',()=>{
+ // A fake /proc: two PHP 8.4 workers (one busy), a PHP-FPM master (left out), Apache, memory and load.
+ const proc=path.join(tmp,'fakeproc'),log=path.join(tmp,'access_log');fs.rmSync(proc,{recursive:true,force:true});fs.writeFileSync(log,'');
+ const pidStat=(pid,name,ticks)=>`${pid} (${name}) S 1 1 1 0 -1 0 0 0 0 0 ${ticks} 0 0 0 20 0 1 0`;
+ const write=busyTicks=>{fs.mkdirSync(proc,{recursive:true});fs.writeFileSync(path.join(proc,'stat'),`cpu ${1000+busyTicks} 0 100 ${9000} 0 0 0 0 0 0\n`);fs.writeFileSync(path.join(proc,'meminfo'),'MemTotal: 16384000 kB\nMemAvailable: 8192000 kB\nSwapTotal: 2048000 kB\nSwapFree: 1024000 kB\n');fs.writeFileSync(path.join(proc,'loadavg'),'1.25 1.10 0.90 2/300 1234\n');
+  for(const [pid,name,ticks,cmd] of [[101,'php-fpm',500,'php-fpm: master process (/www/server/php/84/etc/php-fpm.conf)'],[102,'php-fpm',100+busyTicks,'php-fpm: pool www'],[103,'php-fpm',50,'php-fpm: pool www'],[200,'httpd',300+busyTicks,'/usr/sbin/httpd']]){const d=path.join(proc,String(pid));fs.mkdirSync(d,{recursive:true});fs.writeFileSync(path.join(d,'stat'),pidStat(pid,name,ticks));fs.writeFileSync(path.join(d,'cmdline'),cmd);try{fs.symlinkSync('/www/server/php/84/sbin/php-fpm',path.join(d,'exe'))}catch{}}};
+ write(0);
+ const out=execFileSync('bash',['-c',`(sleep 0.5; printf '%s\n' '1.2.3.4 - - [x] "POST /api/v4/chinalife/presence.php HTTP/1.1" 200 10' '1.2.3.4 - - [x] "GET /api/v4/chinalife/notifications.php?city=Shenyang HTTP/1.1" 429 5' '1.2.3.4 - - [x] "GET /api/v4/chinalife/presence.php?city=Shenyang HTTP/1.1" 503 5' '1.2.3.4 - - [x] "GET /other.php HTTP/1.1" 500 5' >> "$1"; node -e "$5" ) & php scripts/perf-monitor.php --hafrik="$2" --log="$1" --interval=1 --samples=1 --csv="$3" --endpoints-csv="$4" --proc="$6"`,'_',log,path.join(tmp,'web'),path.join(tmp,'perf.csv'),path.join(tmp,'perf-endpoints.csv'),
+  `const fs=require('fs'),p=require('path'),d='${proc}';fs.writeFileSync(p.join(d,'stat'),'cpu 1050 0 100 9050 0 0 0 0 0 0\\n');fs.writeFileSync(p.join(d,'102','stat'),'102 (php-fpm) S 1 1 1 0 -1 0 0 0 0 0 150 0 0 0 20 0 1 0');fs.writeFileSync(p.join(d,'200','stat'),'200 (httpd) S 1 1 1 0 -1 0 0 0 0 0 310 0 0 0 20 0 1 0')`,proc],{env,encoding:'utf8'});
+ assert.match(out,/api 3(\.\d+)? req\/s|api 2\.\d+ req\/s/,out);assert.match(out,/4xx 0, 429 1, 5xx 1/,'only ChinaLife API lines are counted');
+ assert.match(out,/php84 cpu [\d.]+% workers 2 busy 1/,'workers per PHP version, master left out, busy worker found');assert.match(out,/mem avail 8000 MB swap 1000 MB/);assert.match(out,/load 1\.25/);assert.match(out,/cpu 50(\.0)?%/,'machine CPU from /proc/stat');
+ assert.match(out,/db [\d.]+ q\/s/);assert.match(out,/online \d+/);
+ assert.match(out,/=== Summary/);assert.match(out,/presence\.php\s+2\s/);assert.match(out,/php84\s+cpu avg/);
  const csv=fs.readFileSync(path.join(tmp,'perf.csv'),'utf8').trim().split('\n');assert.equal(csv.length,2);assert.match(csv[0],/^time,api_rps/);
+ assert.match(fs.readFileSync(path.join(tmp,'perf-endpoints.csv'),'utf8'),/presence\.php,2,[\d.]+,0,0,1,50/);
 });

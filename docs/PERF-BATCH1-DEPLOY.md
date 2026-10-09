@@ -32,23 +32,35 @@ queries.
 
 ## Step 0: baseline (read-only, before anything changes)
 
-Run for at least one hour at a normal busy time. Note the time of day so the comparison after deploy is fair.
+Run it for 30 minutes at a normal busy time (evening, Beijing time), and note the time so the comparison after deploy
+is fair. The monitor only reads `/proc`, the access log, `SHOW GLOBAL STATUS` and the presence table. It changes no
+game behaviour, data or server settings. It is copied to `/root`, not into the website.
 
 ```bash
 cd /www/chinalife-source && git fetch origin perf/batch-1
 git show origin/perf/batch-1:scripts/perf-monitor.php > /root/perf-monitor.php
+ls -l /www/wwwlogs/ | grep -i hafrik                 # confirm the access-log name
 nohup /www/server/php/84/bin/php /root/perf-monitor.php --hafrik=/www/wwwroot/hafrik.com \
-  --log=/www/wwwlogs/hafrik.com-access_log --interval=60 --csv=/root/perf-baseline.csv > /root/perf-baseline.log 2>&1 &
-tail -f /root/perf-baseline.log        # Ctrl+C stops viewing; the monitor keeps running
-pkill -f perf-monitor.php              # stop it after the hour
+  --log=/www/wwwlogs/hafrik.com-access_log --interval=60 --samples=30 \
+  --csv=/root/perf-baseline.csv --endpoints-csv=/root/perf-baseline-endpoints.csv > /root/perf-baseline.log 2>&1 &
+tail -f /root/perf-baseline.log      # Ctrl+C stops viewing only; the run ends by itself after 30 minutes
+# Afterwards, also a one-off snapshot of the PHP-FPM pool settings and OPcache (read-only):
+grep -E '^(pm|pm\.max_children|pm\.start_servers|pm\.min_spare_servers|pm\.max_spare_servers|pm\.max_requests)\s*=' /www/server/php/84/etc/php-fpm.conf
+/www/server/php/84/bin/php -i | grep -E 'opcache\.(enable|validate_timestamps|revalidate_freq|memory_consumption) '
+nproc; free -m; uptime
+cat /root/perf-baseline.log
 ```
 
-Each line shows:
-- ChinaLife API requests/s, and 4xx / 429 / 5xx counts;
-- PHP-FPM CPU per PHP version and Apache CPU (% of one core), whole-machine CPU and load;
-- MariaDB queries/s for the whole server (reads, writes, running threads, new slow queries);
+Each minute the monitor prints one line with:
+- machine CPU, load and available memory;
+- PHP-FPM per PHP version: CPU, workers, and workers busy that minute; Apache CPU;
+- ChinaLife API requests/s and 4xx / 429 / 5xx counts;
+- MariaDB queries/s for the whole server;
 - players online, and how old each player's last position is (p50/p95, together vs alone). Another player sees you
   at most that old plus their own heartbeat.
+
+At the end it prints a summary: requests and error rate per endpoint, plus the average and peak of every measurement.
+The same figures are saved to the two CSV files.
 
 ## Step 1: backups
 
@@ -114,7 +126,8 @@ In the game (browser console, or the Hafrik app): `ChinaLifePoll.mode` must be `
 ```bash
 echo '{"mode":"testers","testers":["hafrik","TESTER2","TESTER3"],"percent":0}' > $API/polling-config.json
 nohup /www/server/php/84/bin/php /root/perf-monitor.php --hafrik=/www/wwwroot/hafrik.com \
-  --log=/www/wwwlogs/hafrik.com-access_log --interval=60 --csv=/root/perf-rollout.csv > /root/perf-rollout.log 2>&1 &
+  --log=/www/wwwlogs/hafrik.com-access_log --interval=60 --samples=60 \
+  --csv=/root/perf-rollout.csv --endpoints-csv=/root/perf-rollout-endpoints.csv > /root/perf-rollout.log 2>&1 &
 ```
 
 Testers switch within one heartbeat, and `ChinaLifePoll.mode` shows `'adaptive'`. Checklist with two tester phones side
