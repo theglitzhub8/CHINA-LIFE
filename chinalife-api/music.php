@@ -20,7 +20,8 @@ if ($method==='POST') {
     cl_one('SELECT user_id FROM users WHERE user_id=? FOR UPDATE','i',[$uid]);
     $count=cl_one('SELECT COUNT(*) n FROM chinalife_music_requests WHERE user_id=?','i',[$uid]);
     $queued=cl_one('SELECT COUNT(*) n FROM chinalife_music_requests WHERE city=?','s',[$room]);
-    if ((int)$count['n']>=2||(int)$queued['n']>=20) {$db->rollback();cl_fail('The DJ queue is full. Wait for a track to play',429);}
+    if ((int)$count['n']>=10) {$db->rollback();cl_fail('You have 10 tracks in the queue. Wait for one to play',429);}
+    if ((int)$queued['n']>=50) {$db->rollback();cl_fail('The DJ queue is full. Wait for a track to play',429);}
     cl_run('INSERT INTO chinalife_music_requests(user_id,city,track,created_at) VALUES(?,?,?,NOW())','iss',[$uid,$room,$track]);
 }
 // Loops change every minute; an artist's song plays to the end.
@@ -31,5 +32,5 @@ if ($now-(int)$state['started_at']>=$length) {
     cl_run('UPDATE chinalife_music SET track=?,started_at=? WHERE city=?','sis',[$state['track'],$now,$room]);
     if ($next) cl_run('DELETE FROM chinalife_music_requests WHERE id=?','i',[(int)$next['id']]);
 }
-$queue=cl_rows('SELECT r.id,r.track,u.user_name name FROM chinalife_music_requests r JOIN users u ON u.user_id=r.user_id LEFT JOIN chinalife_presence p ON p.user_id=r.user_id WHERE r.city=? ORDER BY r.created_at,r.id LIMIT 20','s',[$room]);
+$queue=cl_rows('SELECT r.id,r.track,u.user_name name FROM chinalife_music_requests r JOIN users u ON u.user_id=r.user_id LEFT JOIN chinalife_presence p ON p.user_id=r.user_id WHERE r.city=? ORDER BY r.created_at,r.id LIMIT 50','s',[$room]);
 $db->commit();json_response('success',['track'=>$state['track'],'startedAt'=>(int)$state['started_at'],'serverTime'=>$now,'queue'=>$queue]);

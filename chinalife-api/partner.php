@@ -12,7 +12,7 @@ if ($method==='GET') json_response('success',['submissions'=>$mine(),'username'=
 // Songs arrive as the raw file (not JSON), up to 100 MB: ?action=upload_song&title=…&duration=…
 if ($method==='POST'&&($_GET['action']??'')==='upload_song') {
     cl_rate('partner_song',20,3600);
-    if ((int)cl_one('SELECT COUNT(*) n FROM chinalife_songs WHERE user_id=?','i',[$uid])['n']>=30) cl_fail('You have uploaded 30 songs. Remove some from your applications first',409);
+    if ((int)cl_one('SELECT COUNT(*) n FROM chinalife_songs WHERE user_id=?','i',[$uid])['n']>=60) cl_fail('You have uploaded 60 songs. Remove some from your applications first',409);
     $title=trim((string)($_GET['title']??''));$duration=filter_var($_GET['duration']??null,FILTER_VALIDATE_INT);
     if ($title===''||mb_strlen($title)>80) cl_fail('Give the song a title (up to 80 characters)');
     if ($duration===false||$duration<15||$duration>1200) cl_fail('Songs must be between 15 seconds and 20 minutes');

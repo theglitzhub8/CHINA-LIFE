@@ -224,7 +224,7 @@ function cl_partner_data(string $kind, array $in, int $owner): array {
             $photo=$media(($it['photo']??'')===''?[]:[$it['photo']],1);$d['items'][]=['name'=>$name,'price'=>round((float)$price,2),'description'=>$desc,'photo'=>$photo[0]??''];}
         $links=$in['links']??[];if (!is_array($links)||count($links)>6) cl_fail('Add up to 6 social links');$d['links']=[];foreach ($links as $l){$l=trim((string)$l);if ($l==='') continue;if (!preg_match('#^https://[^\s<>"]{3,290}$#',$l)) cl_fail('Social links must start with https://');$d['links'][]=$l;}
         // Artists' own uploaded songs (up to 5) for ChinaLife Radio and club DJ booths; only their own uploads.
-        $d['songs']=[];if ($kind==='artist') {$songs=$in['songs']??[];if (!is_array($songs)||count($songs)>5) cl_fail('Add up to 5 songs');
+        $d['songs']=[];if ($kind==='artist') {$songs=$in['songs']??[];if (!is_array($songs)||count($songs)>10) cl_fail('Add up to 10 songs');
             foreach ($songs as $sg){$sid=(string)($sg['id']??'');$st=trim((string)($sg['title']??''));if (!preg_match('/^[a-f0-9]{16}$/',$sid)||!cl_one('SELECT id FROM chinalife_songs WHERE id=? AND user_id=?','si',[$sid,$owner])) cl_fail('A song is missing. Upload it again');
                 if ($st===''||mb_strlen($st)>80) cl_fail('Give every song a title (up to 80 characters)');$d['songs'][]=['id'=>$sid,'title'=>$st];}}
         if ($personal&&!$d['links']&&!$d['songs']&&$wechat===''&&$whatsapp==='') cl_fail('Add a song, a music or social link, or a way to contact you');

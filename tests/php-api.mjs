@@ -87,11 +87,11 @@ test('voice capacity, session types, same-room signaling and stale sessions',asy
 });
 test('music uses Hafrik presence and queue limits',async()=>{
  await call(8,'presence.php','POST',presence('Shenyang','night'));
- for(let i=0;i<2;i++)assert.equal((await call(8,'music.php','POST',{city:'Shenyang',track:'neon'})).httpStatus,200);
+ for(let i=0;i<10;i++)assert.equal((await call(8,'music.php','POST',{city:'Shenyang',track:'neon'})).httpStatus,200,'request '+(i+1));
  assert.equal((await call(8,'music.php','POST',{city:'Shenyang',track:'neon'})).httpStatus,429);
  assert.equal((await call(1,'music.php?city=Shenyang')).httpStatus,403);
  sql("USE chinalife_test; UPDATE chinalife_music SET started_at=0 WHERE city='Shenyang'");
- const r=await call(8,'music.php?city=Shenyang');assert.equal(r.data.track,'neon');assert.equal(r.data.queue.length,1);
+ const r=await call(8,'music.php?city=Shenyang');assert.equal(r.data.track,'neon');assert.equal(r.data.queue.length,9);
 });
 test('two actual game clients restore, join, chat, friend and privately message through PHP',async()=>{
  async function client(id){
