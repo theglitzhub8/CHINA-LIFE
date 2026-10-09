@@ -43,6 +43,8 @@ if ($action==='gist') { json_response('success',['posts'=>cl_rows('SELECT id,tit
 if ($action==='create_gist') { $title=trim((string)($input['title']??''));$body=trim((string)($input['body']??''));$city=trim((string)($input['city']??'Shenyang'));$link=trim((string)($input['link']??''));$hours=$input['hours']??168;if($title===''||mb_strlen($title)>100||$body===''||mb_strlen($body)>600||!in_array($city,['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'],true)||!is_int($hours)||$hours<1||$hours>2160)cl_fail('Check the gist fields');if($link!==''&&!preg_match('#^https://[^\s<>"]{3,290}$#',$link))cl_fail('Links must start with https://');cl_run('INSERT INTO chinalife_gist_posts(city,title,body,link,starts_at,ends_at,created_by,created_at) VALUES(?,?,?,?,NOW(),DATE_ADD(NOW(),INTERVAL ? HOUR),?,NOW())','ssssii',[$city,$title,$body,$link,$hours,$uid]);admin_log('create_gist',null,null,$city.' · '.$title);json_response('success',['id'=>(string)$db->insert_id]);}
 if ($action==='approve_gist') { $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);if(!$id)cl_fail('Choose a post');cl_run('UPDATE chinalife_gist_posts SET active=1,starts_at=NOW(),ends_at=DATE_ADD(NOW(),INTERVAL 7 DAY) WHERE id=? AND active=0','i',[$id]);admin_log('approve_gist',null,null,(string)$id);json_response('success',['approved'=>true]);}
 if ($action==='end_gist') { $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);if(!$id)cl_fail('Choose a post');cl_run('UPDATE chinalife_gist_posts SET active=0,ends_at=NOW() WHERE id=?','i',[$id]);admin_log('end_gist',null,null,(string)$id);json_response('success',['ended'=>true]);}
+if ($action==='politics') { json_response('success',['candidates'=>cl_rows('SELECT c.id,c.city,c.office,c.statement,c.status,c.created_at,u.user_name name FROM chinalife_politics_candidates c JOIN users u ON u.user_id=c.candidate_id ORDER BY c.id DESC LIMIT 100')]); }
+if ($action==='politics_review') { $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);$decision=$input['decision']??'';if(!$id||!in_array($decision,['approved','rejected'],true))cl_fail('Choose a candidate and decision');cl_run('UPDATE chinalife_politics_candidates SET status=?,reviewed_at=NOW() WHERE id=?','si',[$decision,$id]);admin_log('politics_'.$decision,null,null,(string)$id);json_response('success',['updated'=>true]);}
 if ($action==='events') {
     json_response('success',['events'=>cl_rows('SELECT id,title,body,city,place,reward,billboard,link,starts_at,ends_at,(starts_at<=NOW() AND ends_at>NOW()) active,(SELECT COUNT(*) FROM chinalife_event_claims c WHERE c.event_id=e.id) joined FROM chinalife_events e ORDER BY id DESC LIMIT 30')]);
 }
@@ -159,7 +161,10 @@ if ($action==='delete_restaurant') {
 if ($action==='partners') {
     $status=(string)($input['status']??'pending');if (!in_array($status,['pending','changes','approved','rejected','all'],true)) cl_fail('Choose a status');
     $rows=cl_rows('SELECT s.id,s.user_id,u.user_name username,s.kind,s.city,s.title,s.data,s.status,s.admin_note,s.listing,s.created_at,s.updated_at FROM chinalife_submissions s LEFT JOIN users u ON u.user_id=s.user_id'.($status==='all'?'':' WHERE s.status=?').' ORDER BY s.updated_at DESC LIMIT 100',$status==='all'?'':'s',$status==='all'?[]:[$status]);
-    foreach ($rows as &$r){$r['id']=(string)$r['id'];$r['user_id']=(string)$r['user_id'];$r['data']=json_decode($r['data'],true)?:[];}unset($r);
+    [,$musicUrl]=cl_music_storage();
+    foreach ($rows as &$r){$r['id']=(string)$r['id'];$r['user_id']=(string)$r['user_id'];$r['data']=json_decode($r['data'],true)?:[];
+        // Admins listen to an artist's songs before approving.
+        foreach ($r['data']['songs']??[] as $k=>$sg){$f=cl_one('SELECT file,duration FROM chinalife_songs WHERE id=?','s',[$sg['id']]);$r['data']['songs'][$k]['url']=$f?$musicUrl.$f['file']:'';$r['data']['songs'][$k]['duration']=(int)($f['duration']??0);}}unset($r);
     $counts=[];foreach (cl_rows('SELECT status,COUNT(*) n FROM chinalife_submissions GROUP BY status') as $c) $counts[$c['status']]=(int)$c['n'];
     json_response('success',['submissions'=>$rows,'counts'=>$counts]);
 }
@@ -187,6 +192,8 @@ if ($action==='review_partner') {
             $q=cl_query('INSERT INTO chinalife_restaurants(city,name,icon,district,description,menu,order_link,wechat_id,whatsapp,active,kind,photos,links,owner_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,1,?,?,?,?,NOW(),NOW())','ssssssssssssi',
                 [$s['city'],$s['title'],$d['icon']??'🍽',$d['district']??'',mb_substr($d['description']??'',0,300),$menu,$d['order_link']??'',$d['wechat_id']??'',$d['whatsapp']??'',$kind,json_encode($d['photos']??[]),json_encode($d['links']??[]),(int)$s['user_id']]);
             $rid=$q->insert_id;$q->close();if (($d['near']??'')!=='') cl_run('INSERT INTO chinalife_restaurant_places(restaurant_id,near) VALUES(?,?)','is',[$rid,$d['near']]);$listing='listing:'.$rid;
+            // An artist's songs go live with them, under the titles they gave.
+            foreach ($d['songs']??[] as $sg) cl_run('UPDATE chinalife_songs SET listing_id=?,active=1,title=? WHERE id=? AND user_id=?','issi',[$rid,$sg['title'],$sg['id'],(int)$s['user_id']]);
         } elseif ($kind==='event') {
             cl_run('INSERT INTO chinalife_events(title,body,city,place,reward,billboard,link,starts_at,ends_at,created_by,created_at) VALUES(?,?,?,?,0,1,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,NOW())','sssssiii',[$s['title'],mb_substr($d['description']??'',0,300),$s['city'],$d['place']??'',$d['link']??'',(int)$d['starts'],(int)$d['ends'],$uid]);
             $listing='event:'.$db->insert_id;
@@ -199,6 +206,12 @@ if ($action==='review_partner') {
     }
     cl_run('UPDATE chinalife_submissions SET status=?,admin_note=?,listing=?,city=?,reviewed_by=?,reviewed_at=NOW(),updated_at=NOW() WHERE id=?','ssssii',[$decision==='approve'?'approved':($decision==='changes'?'changes':'rejected'),$note,$listing,$s['city'],$uid,$id]);
     $db->commit();admin_log('review_partner',(int)$s['user_id'],null,$decision.' · '.$s['kind'].' · '.$s['title']);json_response('success',['status'=>$decision,'listing'=>$listing]);
+}
+// ChinaLife Radio: every approved song, with take down / put back.
+if ($action==='songs') json_response('success',['songs'=>cl_songs('',true)]);
+if ($action==='song_active') {
+    $id=(string)($input['id']??'');if (!preg_match('/^[a-f0-9]{16}$/',$id)||!cl_one('SELECT id FROM chinalife_songs WHERE id=? AND listing_id IS NOT NULL','s',[$id])) cl_fail('Song not found',404);
+    $on=!empty($input['active'])?1:0;cl_run('UPDATE chinalife_songs SET active=? WHERE id=?','is',[$on,$id]);admin_log($on?'song_on':'song_off',null,null,$id);json_response('success',['active'=>(bool)$on]);
 }
 if ($action==='ads') json_response('success',['ads'=>cl_ads('',true)]);
 if ($action==='save_ad') {
