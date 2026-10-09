@@ -609,3 +609,10 @@ test('partner applications: players apply with photos, admins approve and it goe
  assert.equal((await call(1,'admin.php','POST',{action:'review_partner',id:Number(sub.data.id),decision:'approve'})).httpStatus,409,'approves once');
  assert.equal((await call(12,'partner.php')).data.submissions.find(s=>s.id===sub.data.id).status,'approved');
 });
+test('clubs can apply too and appear as a club listing after approval',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (1,12)');
+ const club={city:'Shenyang',name:'Vibes Lounge',district:'Heping',wechat_id:'vibes_lounge',items:[{name:'Hennessy bottle',price:1200},{name:'VIP table',price:3000}]};
+ const sub=await call(12,'partner.php','POST',{action:'submit',kind:'club',fields:club});assert.equal(sub.httpStatus,200,JSON.stringify(sub));
+ assert.equal((await call(1,'admin.php','POST',{action:'review_partner',id:Number(sub.data.id),decision:'approve'})).httpStatus,200);
+ const listed=(await call(11,'events.php?city=Shenyang')).data.restaurants.find(r=>r.name==='Vibes Lounge');assert.equal(listed.kind,'club');assert.equal(listed.icon,'🎶');assert.equal(listed.menu.length,2);
+});

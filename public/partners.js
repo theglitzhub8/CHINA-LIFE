@@ -13,6 +13,7 @@ const KINDS={
  restaurant:{icon:'🍽',title:'Restaurant',sub:'Your menu with prices and photos. Players order through your WeChat, WhatsApp or link.',list:'Menu',item:'Dish',where:'Food delivery, the City guide and a food stall on the map'},
  shop:{icon:'🛒',title:'Shop or supermarket',sub:'Products and prices, so players know what you sell.',list:'Products',item:'Product',where:'The City guide and a stall on the map'},
  service:{icon:'🧰',title:'Service provider',sub:'Visa help, tutoring, hair and beauty, moving, phone repair, photography…',list:'Services',item:'Service',where:'The City guide and a stall on the map'},
+ club:{icon:'🎶',title:'Club, bar or lounge',sub:'Drinks, bottle service, table bookings and your nights.',list:'Drinks & tables',item:'Item',where:'The City guide and a spot in the nightlife area of the map'},
  creator:{icon:'🎬',title:'Content creator',sub:'Your channels and what brands can book you for.',list:'What you offer (optional)',item:'Offer',where:'The City guide'},
  event:{icon:'🎉',title:'Event',sub:'Parties, meetups, shows and festivals.',where:'The venue, the map and billboards while it runs'},
  ad:{icon:'📣',title:'Advertise',sub:'Your banner on club walls, rooftops and city billboards.',where:'Venue walls, rooftops and street billboards'}};
@@ -45,7 +46,7 @@ function home(){kind=null;editing=null;draft={};
  scrollTo({top:0,behavior:'smooth'})}
 
 const photoTile=(id,attr)=>'<div class="photo"><img src="'+esc(media(id))+'" alt=""><button type="button" '+attr+' aria-label="Remove photo">✕</button></div>';
-function form(k,data={}){kind=k;draft={city:'Shenyang',items:[],links:[],photos:[],...data};const K=KINDS[k],listing=['restaurant','shop','service','creator'].includes(k),d=draft;
+function form(k,data={}){kind=k;draft={city:'Shenyang',items:[],links:[],photos:[],...data};const K=KINDS[k],listing=['restaurant','shop','service','creator','club'].includes(k),d=draft;
  if(listing&&!d.items.length&&k!=='creator')d.items=[{name:'',price:'',description:'',photo:''}];
  const start=new Date(Date.now()+8*3600e3+86400e3);start.setUTCHours(20,0,0,0);const iso=t=>new Date(t*1000+8*3600e3).toISOString().slice(0,16),defStart=start.toISOString().slice(0,16),defEnd=new Date(start.getTime()+4*3600e3).toISOString().slice(0,16);
  let h='<form id="pf" class="card"><button type="button" class="back" id="back">← Back</button><h2>'+K.icon+' '+(editing?'Edit · ':'')+K.title+'</h2><p class="muted">Shows in: '+esc(K.where)+'.</p>';

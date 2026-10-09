@@ -186,7 +186,7 @@ function cl_image(mixed $dataUrl, int $maxBytes=2097152, int $minW=200, int $min
     return [$bytes,$mime,(int)$info[0],(int)$info[1]];
 }
 const CL_CITIES=['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];
-const CL_PARTNER_KINDS=['restaurant','shop','service','creator','event','ad'];
+const CL_PARTNER_KINDS=['restaurant','shop','service','creator','club','event','ad'];
 // Partner applications from partners.html. Every field is checked here; what is stored is exactly what goes into the game
 // on approval. Photos must be images this account uploaded. Returns [city, title, data].
 function cl_partner_data(string $kind, array $in, int $owner): array {
@@ -199,8 +199,8 @@ function cl_partner_data(string $kind, array $in, int $owner): array {
     $wechat=trim((string)($in['wechat_id']??''));if ($wechat!==''&&!preg_match('/^[A-Za-z][-_A-Za-z0-9]{5,39}$/',$wechat)) cl_fail('Enter a valid WeChat ID (6 to 40 letters, numbers, - or _)');
     $whatsapp=preg_replace('/[^0-9]/','',(string)($in['whatsapp']??''));if ($whatsapp!==''&&(strlen($whatsapp)<8||strlen($whatsapp)>15)) cl_fail('Enter the WhatsApp number with country code, e.g. 8618940147438');
     $contact=$text('contact',120);
-    $d=['icon'=>$text('icon',8)?:['restaurant'=>'🍽','shop'=>'🛒','service'=>'🧰','creator'=>'🎬','event'=>'🎉','ad'=>'📣'][$kind],'description'=>$text('description',600),'wechat_id'=>$wechat,'whatsapp'=>$whatsapp,'contact'=>$contact];
-    if (in_array($kind,['restaurant','shop','service','creator'],true)) {
+    $d=['icon'=>$text('icon',8)?:['restaurant'=>'🍽','shop'=>'🛒','service'=>'🧰','creator'=>'🎬','club'=>'🎶','event'=>'🎉','ad'=>'📣'][$kind],'description'=>$text('description',600),'wechat_id'=>$wechat,'whatsapp'=>$whatsapp,'contact'=>$contact];
+    if (in_array($kind,['restaurant','shop','service','creator','club'],true)) {
         $title=$text('name',80,true,'a name');$d['district']=$text('district',80);$d['order_link']=$link('order_link');$d['near']=$venue('near');$d['photos']=$media($in['photos']??[],6);
         $items=$in['items']??[];$need=$kind==='creator'?0:1;if (!is_array($items)||count($items)<$need||count($items)>80) cl_fail($kind==='creator'?'Add up to 80 offers':'Add 1 to 80 items with prices');
         $d['items']=[];foreach ($items as $it){$name=trim((string)($it['name']??''));$price=$it['price']??null;$desc=trim((string)($it['description']??''));
