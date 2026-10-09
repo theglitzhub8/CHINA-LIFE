@@ -720,3 +720,22 @@ test('AI city characters: off without a key, then answer with real listings in c
   assert.equal((await call(11,'ai.php?agent=guide','DELETE')).httpStatus,200);assert.equal((await call(11,'ai.php?agent=guide')).data.messages.length,0,'conversation cleared');
  }finally{mock.close();fs.unlinkSync(cfg)}
 });
+test('AI characters act in the game with tools (checked against real places, screens, businesses), and every venue has a host',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (11); DELETE FROM chinalife_ai_messages');
+ const cfg=path.join(tmp,'web/api/v4/chinalife/ai-config.php');let reply=null,seen=[];
+ const mock=http.createServer((req,res)=>{let b='';req.on('data',d=>b+=d);req.on('end',()=>{seen.push(JSON.parse(b));res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({stop_reason:'tool_use',content:reply}))})});
+ await new Promise(ok=>mock.listen(0,'127.0.0.1',ok));fs.writeFileSync(cfg,`<?php return ['api_key'=>'test-key','daily_limit'=>50,'endpoint'=>'http://127.0.0.1:${mock.address().port}/v1/messages'];`);
+ try{
+  const ctx={city:'Shenyang',place:'Hafrik Square',places:[['market','Taiyuan Street Market'],['cafe','Heping Café']]};
+  reply=[{type:'text',text:'Let me open your wallet.'},{type:'tool_use',id:'t1',name:'open_screen',input:{screen:'wallet',now:true}},{type:'tool_use',id:'t2',name:'go_to_place',input:{place_id:'market'}},{type:'tool_use',id:'t3',name:'go_to_place',input:{place_id:'moon'}},{type:'tool_use',id:'t4',name:'open_screen',input:{screen:'hack_admin'}},{type:'tool_use',id:'t5',name:'show_business',input:{name:'No Such Place'}}];
+  let r=await call(11,'ai.php','POST',{agent:'guide',message:'Open my wallet',context:ctx});assert.equal(r.httpStatus,200,JSON.stringify(r));
+  assert.match(r.data.reply,/\[\[open:wallet\]\]/);assert.match(r.data.reply,/\[\[go:market\]\]/);assert.doesNotMatch(r.data.reply,/moon|hack_admin|No Such/,'only real places, screens and businesses');assert.equal(r.data.auto,'[[open:wallet]]','asked directly, so it runs now');
+  const tools=seen.at(-1).tools;assert.deepEqual(tools.map(t=>t.name),['go_to_place','open_screen','show_business','play_song','claim_daily_reward']);assert.deepEqual(tools[0].input_schema.properties.place_id.enum,['market','cafe']);
+  reply=[{type:'tool_use',id:'t6',name:'claim_daily_reward',input:{}}];r=await call(11,'ai.php','POST',{agent:'guide',message:'Get my reward',context:ctx});assert.equal(r.data.reply,'On it! 👇\n[[daily]]');assert.equal(r.data.auto,null);
+  // A host for any public venue, with its own conversation.
+  reply=[{type:'text',text:'Welcome to the gym!'}];r=await call(11,'ai.php','POST',{agent:'host',place:'gym',message:'Hi',context:{...ctx,place:'Heping Gym'}});assert.equal(r.httpStatus,200,JSON.stringify(r));assert.match(seen.at(-1).system,/the friendly host of Heping Gym/);
+  assert.equal((await call(11,'ai.php?agent=host&place=gym')).data.messages.length,2);assert.equal((await call(11,'ai.php?agent=host&place=cafe')).data.messages.length,0);
+  assert.equal((await call(11,'ai.php','POST',{agent:'host',place:'home',message:'Hi',context:ctx})).httpStatus,400,'no hosts in private homes');
+  reply=[{type:'text',text:'Hello from the café'}];r=await call(11,'ai.php','POST',{agent:'barista',message:'Hi',context:ctx});assert.equal(r.httpStatus,200);assert.match(seen.at(-1).system,/You are Coco/);
+ }finally{mock.close();fs.unlinkSync(cfg)}
+});
