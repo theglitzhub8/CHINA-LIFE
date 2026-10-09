@@ -544,3 +544,14 @@ test('admins upload a paid banner for 007 Club; players in the city get it and t
  assert.equal((await call(1,'admin.php','POST',{action:'ads'})).data.ads.find(a=>a.id===saved.data.id).active,false);
  assert.equal((await call(1,'admin.php','POST',{action:'delete_ad',id:Number(saved.data.id)})).httpStatus,200);
 });
+test('game sign-up runs Hafrik\'s own register.php with CORS for the game origin and no login needed',async()=>{
+ const auth=path.join(tmp,'web/api/v4/auth');fs.mkdirSync(auth,{recursive:true});
+ // Stand-in for Hafrik's register.php: relative include like Hafrik's own scripts, echoes what it received, no CORS.
+ fs.writeFileSync(path.join(auth,'register.php'),`<?php require_once '../db.php'; header('Content-Type: application/json'); $in=json_decode(file_get_contents('php://input'),true); echo json_encode(['status'=>'success','message'=>'Account created','data'=>['user_id'=>7,'username'=>$in['username']??null]]);`);
+ const url=base+'/api/v4/chinalife/register.php',origin='https://china-life.hafrik.com';
+ const pre=await fetch(url,{method:'OPTIONS',headers:{Origin:origin,'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'content-type'}});assert.equal(pre.status,204);assert.equal(pre.headers.get('access-control-allow-origin'),origin);assert.match(pre.headers.get('access-control-allow-headers'),/Content-Type/);
+ const r=await fetch(url,{method:'POST',headers:{Origin:origin,'content-type':'application/json'},body:JSON.stringify({username:'ama_m',email:'ama@example.com',password:'test-only-password'})});
+ assert.equal(r.status,200);assert.equal(r.headers.get('access-control-allow-origin'),origin);const j=await r.json();assert.equal(j.status,'success');assert.equal(j.data.username,'ama_m');
+ assert.equal((await fetch(url,{method:'POST',headers:{Origin:'https://evil.example','content-type':'application/json'},body:'{}'})).headers.get('access-control-allow-origin'),null,'other sites get no CORS access');
+ assert.equal((await fetch(url)).status,405);
+});

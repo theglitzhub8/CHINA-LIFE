@@ -13,7 +13,7 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;',
 async function api(path, method = 'GET', data) {
   const visit=window.ChinaLifeHomeVisits?.current;if(visit&&/\/chinalife\/(presence|messages|notifications|voice|voice-signal|gestures)\.php/.test(path)&&visit.city===game.state.city&&visit.place===game.state.place){if(method==='GET'){path+=(path.includes('?')?'&':'?')+'homeOwner='+encodeURIComponent(visit.owner)}else if(data)data={...data,homeOwner:visit.owner}}
   const query = method === 'GET' && data ? new URLSearchParams(data).toString() : '';
-  const passwordLogin=path==='/auth/login.php'||path==='/auth/register.php';
+  const passwordLogin=path==='/auth/login.php'||path==='/chinalife/register.php';
   const response = await fetch(HAFRIK_API + path + (query ? (path.includes('?') ? '&' : '?') + query : ''), {
     method, credentials:passwordLogin || liveToken ? 'omit' : 'include', headers:{...(liveToken && !passwordLogin ? {Authorization:'Bearer ' + liveToken} : {}), ...(data && method !== 'GET' ? {'content-type':'application/json'} : {})},
     body:data && method !== 'GET' ? JSON.stringify(data) : undefined,
@@ -115,7 +115,8 @@ async function login(event) {
   } catch (error) {feedback.textContent = error.message}
   finally {button.disabled=false}
 }
-// Sign-up through Hafrik's own register endpoint, so the account works on hafrik.com and in the app too.
+// Sign-up through Hafrik's own register endpoint (via chinalife/register.php, which adds the CORS headers Hafrik's
+// register.php lacks), so the account works on hafrik.com and in the app too.
 // If Hafrik returns a session we use it; otherwise we log in with the new details. Hafrik's messages are shown as-is.
 async function register(event) {
   event.preventDefault();const feedback=$('hafrikRegisterFeedback'),button=$('hafrikRegisterForm').querySelector('button[type="submit"]');if(button.disabled)return;
@@ -123,7 +124,7 @@ async function register(event) {
   if(!/^[A-Za-z0-9_.]{3,30}$/.test(username)){feedback.textContent='Usernames are 3–30 letters, numbers, _ or .';return}if(password.length<6){feedback.textContent='Use at least 6 characters for your password.';return}if(!$('regTerms').checked){feedback.textContent='Please agree to the Terms to continue.';return}
   button.disabled=true;feedback.textContent='Creating your Hafrik account…';
   try{
-    const created=await api('/auth/register.php','POST',details);let session=created.data?.token?created.data:null;
+    const created=await api('/chinalife/register.php','POST',details);let session=created.data?.token?created.data:null;
     if(!session){try{const r=await api('/auth/login.php','POST',{login:username,password});session=r.data?.token?r.data:null}catch(error){feedback.textContent=(created.message&&!/success/i.test(created.message)?created.message+' ':'')+'Your account was created. Check your email if Hafrik asked you to confirm it, then log in.';return}}
     storage.setItem(TOKEN_KEY,session.token);registering=false;
     if(!await connect({...session,token:session.session_token||session.token},{source:'password'})){if(account)show();else feedback.textContent=message}

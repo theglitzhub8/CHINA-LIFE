@@ -191,7 +191,7 @@ test('separate home clients never render neighbours from legacy flat presence re
 test('creating an account registers on Hafrik, then signs in and starts character setup',async()=>{
  const api=server();const t=await client(api,'unused',{native:false});let registered=null,logins=0;
  t.context.fetch=async (url,request)=>{const path=new URL(url).pathname;
-  if(path.endsWith('/auth/register.php')){registered={body:JSON.parse(request.body),credentials:request.credentials,auth:request.headers.Authorization};return Response.json({status:'success',message:'Account created',data:{user_id:'newbie'}})}
+  if(path.endsWith('/chinalife/register.php')){registered={body:JSON.parse(request.body),credentials:request.credentials,auth:request.headers.Authorization};return Response.json({status:'success',message:'Account created',data:{user_id:'newbie'}})}
   if(path.endsWith('/auth/login.php')){logins++;return Response.json({status:'success',data:{token:'newbie',user:{id:'newbie'}}})}
   return api.fetch(url,request)};
  t.context.ChinaLifeCloud.open();assert.match(t.document.getElementById('cloudContent').textContent,/Create your account/);t.document.getElementById('authToRegister').onclick();
