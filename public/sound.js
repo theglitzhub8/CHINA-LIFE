@@ -32,7 +32,7 @@
  // ---- Continuous layers: outdoor ambience and the engine while driving. ----
  function loopNoise(filterType,freq,gain,q=.7){const src=ctx.createBufferSource(),f=ctx.createBiquadFilter(),g=ctx.createGain();src.buffer=noise();src.loop=true;f.type=filterType;f.frequency.value=freq;f.Q.value=q;g.gain.value=0;src.connect(f);f.connect(g);g.connect(master);src.start();return {src,g,f,target:gain}}
  function fade(layer,to,t=1.2){if(layer)layer.g.gain.setTargetAtTime(to,ctx.currentTime,t/3)}
- function ambient(){if(!ctx||!enabled)return;const W=window.ChinaLifeWorld,game=window.ChinaLife,outside=!!W?.outdoors,state=game?.state||{},hour=Math.floor((state.hour||0)/60)%24,night=hour<6||hour>=20,wx=W?.weatherFor?.(state.city||'Shenyang',state.day||1)||'clear';
+ function ambient(){if(!ctx||!enabled)return;const W=window.ChinaLifeWorld,game=window.ChinaLife,outside=!!W?.outdoors,state=game?.state||{},hour=Math.floor(W?.skyHour?W.skyHour():(state.hour||0)/60)%24,night=hour<6||hour>=20,wx=W?.weatherFor?.(state.city||'Shenyang',state.day||1)||'clear';
   if(!ambience)ambience={city:loopNoise('lowpass',380,.05),rain:loopNoise('bandpass',2400,.07,.5),wind:loopNoise('bandpass',500,.05,.4)};
   const hidden=document.hidden||document.querySelector('dialog[open]:not(#activityDialog)');
   fade(ambience.city,outside&&!hidden?(night?.025:.05):0);fade(ambience.rain,outside&&!hidden&&wx==='rain'?.08:0);fade(ambience.wind,outside&&!hidden&&wx==='snow'?.06:0);

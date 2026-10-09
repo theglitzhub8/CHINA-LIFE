@@ -135,12 +135,14 @@ test('the Shenyang City Centre prototype replaces the generic block only in Shen
  const gz=t.context.cityLayout('Guangzhou',t.game.contentFor('Guangzhou'));assert.deepEqual([...gz.positions.hotel],[-6,10],'Guangzhou is unchanged');
  t.game.setOpenCities(['Guangzhou']);t.world.browse('Guangzhou');assert.match(t.document.getElementById('worldVenueTitle').textContent,/Guangzhou/);assert.ok(t.context.ChinaLifeWorld.stats().meshes<700)});
 
-test('outdoor light follows the game clock, each city has daily weather, and interiors keep their own lighting',()=>{const t=setup(),W=t.context.ChinaLifeWorld;t.game.state.place='plaza';
+test('the city sky runs a fast shared day and night cycle, each city has daily weather, and interiors keep their own lighting',()=>{const t=setup(),W=t.context.ChinaLifeWorld;t.game.state.place='plaza';
  const dayOf=want=>{for(let d=1;d<400;d++)if(W.weatherFor('Shenyang',d)===want)return d};t.game.state.day=dayOf('clear');
- t.game.state.hour=13*60;t.world.map();const noon=W.lighting().sun;t.game.state.hour=23*60;t.world.map();const night=W.lighting().sun;assert.ok(noon>2.5&&night<1,'noon '+noon+' night '+night);
+ // The sky runs a 2-hour day: move real time until the sky reaches the wanted hour (5 real minutes per sky hour).
+ const sky=h=>t.passMinutes(Math.round(((h-W.skyHour())%24+24)%24*5));
+ const clear=dayOf('clear');sky(13);t.game.state.day=clear;t.world.map();const noon=W.lighting().sun;sky(23);t.game.state.day=clear;t.world.map();const night=W.lighting().sun;assert.ok(noon>2.5&&night<1,'noon '+noon+' night '+night);assert.ok(Math.abs(W.skyHour()-23)<.2);
  assert.equal(W.weatherFor('Shenyang',5),W.weatherFor('Shenyang',5),'weather is stable for the day');assert.ok(['clear','cloudy','rain','snow'].includes(W.weatherFor('Guangzhou',3)));
  for(let d=1;d<200;d++)assert.notEqual(W.weatherFor('Guangzhou',d),'snow','no snow in Guangzhou');
- t.game.state.day=dayOf('snow');t.game.state.hour=13*60;t.world.map();assert.equal(W.lighting().weather,'snow');
+ t.game.state.day=dayOf('snow');sky(13);t.game.state.day=dayOf('snow');t.world.map();assert.equal(W.lighting().weather,'snow');
  t.game.state.place='gym';t.world.venue('gym');assert.equal(W.lighting().outdoor,false);assert.equal(W.lighting().weather,'clear','no snow indoors');assert.equal(W.lighting().sun,3)});
 
 test('every neighbourhood is built in its map-data style, cached per city, and browsing shows the browsed city names',()=>{const t=setup(),W=t.context.ChinaLifeWorld;
