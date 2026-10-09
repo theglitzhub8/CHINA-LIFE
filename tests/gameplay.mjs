@@ -37,9 +37,9 @@ test('Learn lists every skill with places that teach it, and courses raise new s
 test('ranks pay once per rank-up and the daily streak grows on consecutive days',()=>{
  const h=harness({...fixture(),xp:150,rankClaimed:0,money:1000});h.game.state.xp=250;h.internal.render();assert.equal(h.game.state.rankClaimed,1);assert.equal(h.game.state.money,1500);h.internal.render();assert.equal(h.game.state.money,1500);
  h.game.state.xp=4000;h.internal.render();assert.equal(h.game.state.rankClaimed,4);assert.equal(h.game.state.money,1500+1000+1500+2000);
- const yesterday=new Date(Date.now()-864e5).toISOString().slice(0,10),d=harness({...fixture(),lastVisit:yesterday,streak:3,money:0,rankClaimed:6});
+ const yesterday=new Date(Date.now()+8*3600e3-864e5).toISOString().slice(0,10),d=harness({...fixture(),lastVisit:yesterday,streak:3,money:0,rankClaimed:6});
  d.game.claimDaily();assert.equal(d.game.state.streak,4);assert.equal(d.game.state.money,200);d.game.claimDaily();assert.equal(d.game.state.money,200);
- const restored=harness(JSON.parse(JSON.stringify(d.game.state)));assert.equal(restored.game.state.streak,4);assert.equal(restored.game.state.lastVisit,new Date().toISOString().slice(0,10));
+ const restored=harness(JSON.parse(JSON.stringify(d.game.state)));assert.equal(restored.game.state.streak,4);assert.equal(restored.game.state.lastVisit,new Date(Date.now()+8*3600e3).toISOString().slice(0,10),'the Beijing date');
  const old=harness({...fixture(),xp:5000});assert.equal(old.game.state.rankClaimed,4);
 });
 
