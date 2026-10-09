@@ -501,3 +501,21 @@ test('quick phrases reach players in the same venue only, from a fixed list, and
  assert.equal((await call(1,'gestures.php','POST',{city:'Shenyang',place:'cafe',to:'2',phrase:'mic'})).httpStatus,403);
  sql("USE chinalife_test; DELETE FROM chinalife_blocks WHERE owner_id=2 AND peer_id=1");
 });
+test('presence shares what each player is doing from a fixed list and how long they have been at their venue',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (7,8)');
+ assert.equal((await call(7,'presence.php','POST',{...presence('Shenyang','night'),activity:'dance'})).httpStatus,200);
+ assert.equal((await call(8,'presence.php','POST',{...presence('Shenyang','cafe'),activity:'<script>'})).httpStatus,200);
+ let r=await call(8,'presence.php?city=Shenyang');const seven=r.data.players.find(p=>p.id==='7');assert.equal(seven.activity,'dance');assert.ok(Math.abs(seven.since-Date.now())<120000);
+ r=await call(7,'presence.php?city=Shenyang');assert.equal(r.data.players.find(p=>p.id==='8').activity,'idle','unknown activities are never passed on');
+ sql("USE chinalife_test; UPDATE chinalife_presence SET arrived_at=DATE_SUB(NOW(),INTERVAL 10 MINUTE) WHERE user_id=7");
+ await call(7,'presence.php','POST',{...presence('Shenyang','night'),activity:'eat'});r=await call(8,'presence.php?city=Shenyang');assert.ok(Date.now()-r.data.players.find(p=>p.id==='7').since>500000,'staying keeps the arrival time');
+ await call(7,'presence.php','POST',{...presence('Shenyang','gym'),activity:'sport'});r=await call(8,'presence.php?city=Shenyang');assert.ok(Date.now()-r.data.players.find(p=>p.id==='7').since<120000,'moving resets it');
+});
+test('the chats list gets the latest private message with each friend for previews',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (9,10); DELETE FROM chinalife_blocks WHERE owner_id IN (9,10) OR peer_id IN (9,10); DELETE FROM chinalife_friends WHERE first_id IN (9,10) OR second_id IN (9,10); DELETE FROM chinalife_messages WHERE sender_id IN (9,10) AND recipient_id IN (9,10)');
+ await call(9,'friends.php','POST',{peer:'10',action:'request'});await call(10,'friends.php','POST',{peer:'9',action:'accept'});
+ let f=(await call(9,'social.php')).data.friends.find(x=>x.id==='10');assert.equal(f.last,null);
+ await call(9,'messages.php','POST',{peer:'10',text:'Hi there'});await call(10,'messages.php','POST',{peer:'9',text:'Hello! Where are you?'});
+ f=(await call(9,'social.php')).data.friends.find(x=>x.id==='10');assert.equal(f.last.body,'Hello! Where are you?');assert.equal(f.last.own,false);assert.ok(f.last.at>0);
+ assert.equal((await call(10,'social.php')).data.friends.find(x=>x.id==='9').last.own,true);
+});

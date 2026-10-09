@@ -151,17 +151,28 @@ async function transfer(peer,amount,requestId){
   await api('/chinalife/transfers.php','POST',{peer,amount,request_id:requestId});
   await syncTransfers();
 }
+// City live feed: who came online, who arrived where, who left — worked out from presence changes on this device.
+let feed=[],feedCity='',lastSeen=null;
+function updateFeed(city){const now=Date.now(),current=new Map(players.filter(p=>p.city===city).map(p=>[p.id,p]));
+ if(feedCity!==city||!lastSeen){feedCity=city;feed=[];lastSeen=current;return}
+ const add=(p,kind,text)=>{feed.unshift({id:p.id,name:p.name,color:p.color,kind,text,at:now});feed=feed.slice(0,30)};
+ for(const [id,p] of current){const old=lastSeen.get(id);if(!old)add(p,'online','came online');else if(old.place!==p.place)add(p,'moved',p.place==='private-home'?'went home':'arrived at '+(game.cityData?.[city]?.names?.[p.place]||p.place))}
+ for(const [id,p] of lastSeen)if(!current.has(id))add(p,'left','went offline');
+ lastSeen=current;if(feed[0]?.at===now)window.dispatchEvent(new CustomEvent('chinalife:cityfeed'))}
+// What you are doing, shared with players in your city (People shows "💃 Dancing at 007 Club").
+const ACTIVITY={basketball:'sport',exercise:'sport',browse:'shop',cook:'cook',dance:'dance',eat:'eat',perform:'music',phone:'chat',talk:'chat',pray:'pray',serve:'work',type:'work',sit:'relax',sleep:'sleep',study:'study',medical:'health'};
+function activityNow(){const w=window.ChinaLifeWorld;if(w?.travelMode)return 'travel';const k=w?.actionKind;if(k&&ACTIVITY[k])return ACTIVITY[k];return w?.walking?'walk':'idle'}
 async function refreshPresence() {
   if (!account || !presence || !game.state.created || document.hidden || polling) return false;
   const generation = epoch, state = game.state, city = state.city, place = state.place, world = window.ChinaLifeWorld, position = world?.roomPosition ?? (world?.view==='venue'?world.position:null);
   polling = true;
   try {
-    await api('/chinalife/presence.php', 'POST', {city,place,name:state.name,color:state.color,skin:state.appearance?.skin || '#8b5c43',hair:state.appearance?.hair || 'cropped',x:position?.x || 0,z:position?.z || 0});
+    await api('/chinalife/presence.php', 'POST', {city,place,name:state.name,color:state.color,skin:state.appearance?.skin || '#8b5c43',hair:state.appearance?.hair || 'cropped',x:position?.x || 0,z:position?.z || 0,activity:activityNow()});
     const result = await api('/chinalife/presence.php', 'GET', {city});
     if (generation !== epoch || !presence || game.state.city !== city || game.state.place !== place) return false;
     const data = result.data || result, ownId = data.id ?? account.user_id ?? account.id;
     presenceCheck={lastSuccess:new Date().toISOString(),error:null,serverId:String(ownId)};
-    players = (data.players || []).filter(p => !p.own && String(p.user_id ?? p.id) !== String(ownId)).map(p => ({...p,id:String(p.id),city:p.city || city,name:p.name || p.sim_name,x:Number(p.x) || 0,z:Number(p.z) || 0})); publish();
+    players = (data.players || []).filter(p => !p.own && String(p.user_id ?? p.id) !== String(ownId)).map(p => ({...p,id:String(p.id),city:p.city || city,name:p.name || p.sim_name,x:Number(p.x) || 0,z:Number(p.z) || 0})); updateFeed(city); publish();
     // Quick phrases: pass on each one once.
     const fresh=(data.gestures||[]).filter(g=>!seenGestures.has(String(g.id))).reverse();fresh.forEach(g=>seenGestures.add(String(g.id)));if(seenGestures.size>300)seenGestures.clear(),(data.gestures||[]).forEach(g=>seenGestures.add(String(g.id)));if(fresh.length)window.dispatchEvent(new CustomEvent('chinalife:gestures',{detail:{me:String(ownId),gestures:fresh}}));
     return true;
@@ -206,7 +217,7 @@ async function initialize() {
   return connected;
 }
 window.ChinaLifeAuth = {base:HAFRIK_API,get token(){return liveToken},request:api,connect};
-window.ChinaLifeCloud = {open:show,ready:null,get playerId(){return String(account?.user_id ?? account?.id ?? '')},get signedIn(){return !!account},get joined(){return presence},get players(){if(game.state.place==='home'||game.state.place.startsWith('home-'))return players.filter(p=>p.place===game.state.place&&String(p.homeOwner)===String(window.ChinaLifeHomeVisits?.current?.owner||account?.user_id||account?.id));return players.filter(p => p.city === game.state.city && p.place === game.state.place)},get online(){return online},get events(){return events},enablePush,get golden(){return golden},claimGolden,get isAdmin(){return admin},joinEvent,admin:adminRequest,refreshEvents,get cityPlayers(){return players.filter(p => p.city === game.state.city)},refresh:refreshPresence,gesture,join,leave,upload,transfer,syncTransfers};
+window.ChinaLifeCloud = {open:show,ready:null,get playerId(){return String(account?.user_id ?? account?.id ?? '')},get signedIn(){return !!account},get joined(){return presence},get players(){if(game.state.place==='home'||game.state.place.startsWith('home-'))return players.filter(p=>p.place===game.state.place&&String(p.homeOwner)===String(window.ChinaLifeHomeVisits?.current?.owner||account?.user_id||account?.id));return players.filter(p => p.city === game.state.city && p.place === game.state.place)},get online(){return online},get events(){return events},enablePush,get golden(){return golden},claimGolden,get isAdmin(){return admin},joinEvent,admin:adminRequest,refreshEvents,get cityPlayers(){return players.filter(p => p.city === game.state.city)},refresh:refreshPresence,gesture,get feed(){return feed},join,leave,upload,transfer,syncTransfers};
 $('cloudButton').onclick = show; $('closeCloud').onclick = () => {if (account) $('cloudDialog').close()};
 // The login window cannot be dismissed (× or Escape) until the player is signed in.
 $('cloudDialog').addEventListener('cancel', e => {if (!account) e.preventDefault()});

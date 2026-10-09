@@ -409,3 +409,31 @@ dialog{border-radius:22px}
 .word-list>div{display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"han pin stars" "han en stars";column-gap:12px;align-items:center;background:#f6f9f9;border-radius:12px;padding:8px 12px}
 .word-list b{grid-area:han;font-size:24px}.word-list span{grid-area:pin;font-size:13px}.word-list small{grid-area:en;color:#5d7477}.word-list i{grid-area:stars;color:#f59e0b;font-style:normal;font-size:12px}
 .word-list .say-btn{background:#e3ecec}
+/* Chats list, unread, quick replies and the live city feed */
+.social-tabs button{position:relative}
+.tab-badge{position:absolute;top:2px;right:calc(50% - 22px);min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#e5484d;color:#fff;font:800 10px/17px Manrope,system-ui;font-style:normal}
+.online-strip{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 12px;scrollbar-width:none}
+.online-strip button{display:grid;justify-items:center;gap:4px;border:0;background:none;width:58px;flex:none;font-size:11px;font-weight:700;color:#284556}
+.online-strip button span{max-width:58px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.online-strip .player-avatar{width:50px;height:50px;box-shadow:0 0 0 3px #22c38e}
+.chat-row{margin-bottom:8px}.chat-list .chat-row{margin-bottom:6px}
+.chat-row small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-row em{font-style:normal;font-size:11px;color:#8a9ca8;display:grid;justify-items:end;gap:5px;white-space:nowrap}
+.chat-row.unread b{color:#0b1f2c}.chat-row.unread small{color:#10283a;font-weight:700}
+.unread-dot{width:10px;height:10px;border-radius:50%;background:#e5484d;display:block}
+.venue-row{background:#eef6ff}.venue-avatar{background:#2563eb;font-size:18px}
+.quick-replies{display:flex;gap:8px;flex-wrap:wrap;padding:6px 2px 10px}
+.quick-replies button{border:1px solid #cfe0ea;background:#fff;border-radius:999px;padding:8px 13px;font:700 13px Manrope,system-ui;color:#1b4a6e}
+.chat-message.cont{margin-top:-6px}.chat-message.cont .bubble{border-top-left-radius:8px}.chat-message.own.cont .bubble{border-top-right-radius:8px}
+.avatar-gap{width:30px;flex:none}
+.live-feed{display:grid;gap:4px;margin-bottom:10px}
+.live-feed button{display:flex;align-items:center;gap:10px;border:0;background:#fff;border-radius:14px;padding:8px 10px;text-align:left;font-size:13px;color:#284556}
+.live-feed button span{flex:1;min-width:0}.live-feed button small{color:#8a9ca8;font-size:11px;white-space:nowrap}
+.live-feed .player-avatar{width:30px;height:30px;font-size:12px}.live-feed .feed-left{opacity:.65}
+/* Phone: badges and the Today card */
+.phone-app b{position:relative}
+.app-badge{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:#e5484d;color:#fff;font:800 11px/19px Manrope,system-ui;font-style:normal;box-shadow:0 0 0 2px #f6f1ea}
+.cl-today{background:#fff;border-radius:20px;padding:10px 12px;margin:0 0 12px;box-shadow:0 1px 3px #0000000d}
+.cl-today h4{margin:2px 4px 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8a7a6c}
+.cl-today button{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:9px 4px;border-top:1px solid #f0e9e0;text-align:left;font:700 14px Manrope,system-ui;color:#2b241f;cursor:pointer}
+.cl-today button:first-of-type{border-top:0}.cl-today button span{width:24px;text-align:center}.cl-today em{margin-left:auto;font-style:normal;color:#b5a796}
