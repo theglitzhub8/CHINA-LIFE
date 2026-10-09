@@ -31,7 +31,7 @@ function requestAppSession() {
   clearTimeout(appWait); appWaiting = true; appWait = setTimeout(() => {appWaiting = false; if (!account && $('cloudDialog').open) show()}, 8000);
 }
 function show() {
-  const name=esc(account?.username || account?.user_name || 'Hafrik user'), head='<div class="auth-brand"><span>H</span><b>HAFRIK</b><small>CHINALIFE</small></div>';
+  const name=esc(account?.username || account?.user_name || 'Hafrik user'), head='<div class="auth-brand"><img class="hafrik-logo" src="https://s3.ap-northeast-1.wasabisys.com/hafriksocial/uploads/photos/2025/07/sngine_1c76aafda2234d9e92ff37897edbd4be.png" alt="Hafrik"><small>CHINALIFE</small></div>';
   const passwordForm='<form id="hafrikLoginForm" class="cloud-login"><label>Email or username<input id="hafrikLogin" autocomplete="username" placeholder="Your email or username" required></label><label>Password<div class="auth-password"><input id="hafrikPassword" type="password" autocomplete="current-password" placeholder="Your password" required><button id="showHafrikPassword" type="button" aria-label="Show password">Show</button></div></label><button type="submit" class="primary-btn">Log in</button><p id="hafrikLoginFeedback" role="status"></p></form>';
   const conflict=!!account&&!auto&&!loading&&!restoreFailed;
   let html;

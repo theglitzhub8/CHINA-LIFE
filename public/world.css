@@ -384,7 +384,10 @@ dialog{border-radius:22px}
  #phoneDialog .phone-frame{border-radius:26px 26px 0 0;height:min(94dvh,900px);padding:6px 14px calc(14px + env(safe-area-inset-bottom))}
  #phoneDialog .phone-frame::before{content:"";position:absolute;left:50%;top:7px;width:40px;height:5px;border-radius:3px;background:#d6cfc6;transform:translateX(-50%)}
  #phoneDialog .phone-status{padding:14px 52px 10px 4px;font:800 15px Manrope,system-ui;color:#1f1a17}
- #phoneDialog .phone-status #phoneTime::before{content:"ChinaLife · ";font-weight:800}
+ #phoneDialog .phone-status #phoneTime::before{content:"";display:inline-block;width:58px;height:20px;margin-right:8px;vertical-align:-4px;background:url("https://s3.ap-northeast-1.wasabisys.com/hafriksocial/uploads/photos/2025/07/sngine_1c76aafda2234d9e92ff37897edbd4be.png") left center/contain no-repeat}
  #phoneDialog .phone-island,#phoneDialog .phone-signal{display:none}
  #phoneDialog .close-x{top:12px;right:12px;width:36px;height:36px;background:#ebe4da;color:#2b241f;box-shadow:none;z-index:6}
 }
+.scene-label.partner-label{border:2px solid #f2b632}
+.auth-brand .hafrik-logo{height:30px;width:auto;object-fit:contain;display:block}.auth-brand{align-items:center}
+.hafrik-logo.mini{height:12px;width:auto;vertical-align:-2px}

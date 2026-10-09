@@ -162,7 +162,7 @@ function cl_ranks(): array {
 }
 // Partner restaurants are added by admins per city. Ordering opens their own WeChat, WhatsApp or order link.
 function cl_restaurants(string $city, bool $all=false): array {
-    $rows=cl_rows('SELECT id,city,name,icon,district,description,menu,order_link,wechat_id,whatsapp,active FROM chinalife_restaurants WHERE city=?'.($all?'':' AND active=1').' ORDER BY name LIMIT 200','s',[$city]);
+    $rows=cl_rows('SELECT r.id,r.city,r.name,r.icon,r.district,r.description,r.menu,r.order_link,r.wechat_id,r.whatsapp,r.active,COALESCE(p.near,\'\') near FROM chinalife_restaurants r LEFT JOIN chinalife_restaurant_places p ON p.restaurant_id=r.id WHERE r.city=?'.($all?'':' AND r.active=1').' ORDER BY r.name LIMIT 200','s',[$city]);
     foreach ($rows as &$r) {$r['id']=(string)$r['id'];$r['menu']=json_decode($r['menu'],true)?:[];$r['active']=(bool)$r['active'];}unset($r);
     return $rows;
 }

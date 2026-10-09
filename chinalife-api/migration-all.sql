@@ -133,3 +133,7 @@ CREATE TABLE IF NOT EXISTS chinalife_gestures (
  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,sender_id INT UNSIGNED NOT NULL,target_id INT UNSIGNED NULL,city VARCHAR(80) NOT NULL,place VARCHAR(80) NOT NULL,phrase VARCHAR(20) NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
  INDEX idx_chinalife_gestures_room(city,place,created_at),CONSTRAINT fk_chinalife_gestures_sender FOREIGN KEY(sender_id) REFERENCES users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_restaurant_places (
+ restaurant_id INT UNSIGNED NOT NULL PRIMARY KEY,near VARCHAR(40) NOT NULL,
+ CONSTRAINT fk_chinalife_restaurant_places FOREIGN KEY(restaurant_id) REFERENCES chinalife_restaurants(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

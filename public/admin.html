@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex" />
+<title>ChinaLife Admin · Hafrik</title>
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" />
+<link rel="stylesheet" href="admin.css" />
+</head>
+<body>
+<div id="adminApp" class="admin-app" hidden>
+ <aside class="admin-side" id="adminSide">
+  <div class="admin-brand"><img src="https://s3.ap-northeast-1.wasabisys.com/hafriksocial/uploads/photos/2025/07/sngine_1c76aafda2234d9e92ff37897edbd4be.png" alt="Hafrik" /><div><b>ChinaLife</b><small>Admin</small></div></div>
+  <nav id="adminNav"></nav>
+  <div class="admin-side-foot"><span id="adminWho"></span><a href="./" class="admin-link">← Back to the game</a><button id="adminSignOut" class="admin-link" type="button">Sign out of admin</button></div>
+ </aside>
+ <main class="admin-main">
+  <header class="admin-top"><button id="adminMenu" class="admin-menu" aria-label="Menu">☰</button><div><h1 id="adminTitle">Overview</h1><p id="adminSub"></p></div><button id="adminRefresh" class="btn ghost" type="button">↻ Refresh</button></header>
+  <section id="adminBody" class="admin-body"></section>
+ </main>
+</div>
+<div id="adminLogin" class="admin-login" hidden>
+ <form id="loginForm" class="login-card">
+  <img src="https://s3.ap-northeast-1.wasabisys.com/hafriksocial/uploads/photos/2025/07/sngine_1c76aafda2234d9e92ff37897edbd4be.png" alt="Hafrik" class="login-logo" />
+  <h1>ChinaLife Admin</h1>
+  <p>Sign in with the Hafrik account that runs ChinaLife.</p>
+  <label>Email or username<input id="loginName" autocomplete="username" required /></label>
+  <label>Password<input id="loginPass" type="password" autocomplete="current-password" required /></label>
+  <button class="btn primary" type="submit">Sign in</button>
+  <p id="loginError" class="error" role="alert"></p>
+  <a href="./" class="admin-link">← Back to the game</a>
+ </form>
+</div>
+<div id="toast" class="toast" role="status" hidden></div>
+<script src="cities.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

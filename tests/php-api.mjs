@@ -481,6 +481,11 @@ test('admins add partner restaurants with menus and order links, and players in 
  const got=(await call(11,'events.php?city=Shenyang')).data.restaurants.find(x=>x.id===saved.data.id);assert.equal(got.whatsapp,'8618940147438');assert.deepEqual(got.menu.map(m=>m[0]),['Beef noodles','Dumplings']);
  assert.ok(!(await call(11,'events.php?city=Guangzhou')).data.restaurants.some(x=>x.id===saved.data.id),'only in its own city');
  await call(1,'admin.php','POST',{action:'save_restaurant',...r,id:Number(saved.data.id),active:false});assert.ok(!(await call(11,'events.php?city=Shenyang')).data.restaurants.some(x=>x.id===saved.data.id),'hidden restaurants are not shown');
+ assert.equal((await call(1,'admin.php','POST',{action:'save_restaurant',...r,id:Number(saved.data.id),near:'home'})).httpStatus,400,'never inside a private home');
+ assert.equal((await call(1,'admin.php','POST',{action:'save_restaurant',...r,id:Number(saved.data.id),near:'not-a-place'})).httpStatus,400);
+ assert.equal((await call(1,'admin.php','POST',{action:'save_restaurant',...r,id:Number(saved.data.id),active:true,near:'market'})).httpStatus,200);
+ assert.equal((await call(11,'events.php?city=Shenyang')).data.restaurants.find(x=>x.id===saved.data.id).near,'market','shown on the map next to the chosen place');
+ await call(1,'admin.php','POST',{action:'save_restaurant',...r,id:Number(saved.data.id)});assert.equal((await call(1,'admin.php','POST',{action:'restaurants',city:'Shenyang'})).data.restaurants.find(x=>x.id===saved.data.id).near,'market','kept when the form does not send it');
  assert.equal((await call(1,'admin.php','POST',{action:'delete_restaurant',id:Number(saved.data.id)})).httpStatus,200);
 });
 test('quick phrases reach players in the same venue only, from a fixed list, and blocked players never see them',async()=>{

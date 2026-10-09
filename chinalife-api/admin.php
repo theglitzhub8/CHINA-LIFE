@@ -139,6 +139,11 @@ if ($action==='save_restaurant') {
         cl_run('UPDATE chinalife_restaurants SET city=?,name=?,icon=?,district=?,description=?,menu=?,order_link=?,wechat_id=?,whatsapp=?,active=?,updated_at=NOW() WHERE id=?','sssssssssii',[...array_values($r),$id]);}
     else {if ((int)cl_one('SELECT COUNT(*) n FROM chinalife_restaurants WHERE city=?','s',[$r['city']])['n']>=200) cl_fail('A city can have up to 200 partner restaurants',409);
         $q=cl_query('INSERT INTO chinalife_restaurants(city,name,icon,district,description,menu,order_link,wechat_id,whatsapp,active,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,NOW(),NOW())','sssssssssi',array_values($r));$id=$q->insert_id;$q->close();}
+    // Where the restaurant appears on the city map: next to a chosen public venue, or nowhere.
+    // Only changed when the form sends it, so older admin screens keep the placement.
+    $near=array_key_exists('near',$input)?trim((string)$input['near']):null;
+    if ($near==='') cl_run('DELETE FROM chinalife_restaurant_places WHERE restaurant_id=?','i',[$id]);
+    elseif ($near!==null) {[,$near]=cl_room(['city'=>$r['city'],'place'=>$near]);if (cl_private_place($near)) cl_fail('Choose a public place');cl_run('INSERT INTO chinalife_restaurant_places(restaurant_id,near) VALUES(?,?) ON DUPLICATE KEY UPDATE near=VALUES(near)','is',[$id,$near]);}
     admin_log('save_restaurant',null,null,$r['city'].' · '.$r['name']);json_response('success',['id'=>(string)$id]);
 }
 if ($action==='delete_restaurant') {
