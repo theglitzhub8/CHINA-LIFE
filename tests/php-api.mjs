@@ -22,7 +22,7 @@ before(async()=>{
  const log=fs.openSync(path.join(tmp,'mysql.log'),'a');mysql=spawn('mysqld',['--no-defaults','--datadir='+path.join(tmp,'data'),'--socket='+socket,'--skip-networking','--mysqlx=0','--pid-file='+path.join(tmp,'mysql.pid')],{stdio:['ignore',log,log]});
  await waitFor(()=>sql('SELECT 1').trim()==='1');
  sql('CREATE DATABASE chinalife_test; USE chinalife_test; CREATE TABLE users(user_id INT UNSIGNED PRIMARY KEY,user_name VARCHAR(100)); INSERT INTO users VALUES '+Array.from({length:12},(_,i)=>`(${i+1},'user${i+1}')`).join(','));
- const root=path.join(tmp,'web/api/v4');fs.mkdirSync(root,{recursive:true});fs.cpSync('chinalife-api',path.join(root,'chinalife'),{recursive:true});fs.writeFileSync(path.join(root,'chinalife/admin-config.php'),`<?php return ['usernames'=>['user1']];`);
+ const root=path.join(tmp,'web/api/v4');fs.mkdirSync(root,{recursive:true});fs.cpSync('chinalife-api',path.join(root,'chinalife'),{recursive:true});fs.writeFileSync(path.join(root,'chinalife/admin-config.php'),`<?php return ['usernames'=>['user1']];`);fs.writeFileSync(path.join(root,'chinalife/polling-config.json'),'{"mode":"adaptive"}');
  fs.writeFileSync(path.join(root,'db.php'),`<?php mysqli_report(MYSQLI_REPORT_ERROR|MYSQLI_REPORT_STRICT);`);
  fs.writeFileSync(path.join(root,'helpers.php'),`<?php function get_db_connection(){$db=new mysqli('localhost','root','','chinalife_test',0,getenv('CHINALIFE_TEST_SOCKET'));$db->set_charset('utf8mb4');return $db;} if(($_SERVER['REQUEST_METHOD']??'')==='OPTIONS'){http_response_code(204);exit;} function json_response($status,$data=null,$message=''){header('Content-Type: application/json');echo json_encode(compact('status','data','message'));exit;} function auth_user($db){$token=$_SERVER['HTTP_AUTHORIZATION']??'';if(!preg_match('/^Bearer test-([1-9][0-9]*)$/',$token,$m)){http_response_code(401);json_response('error',null,'Unauthorized');}$s=$db->prepare('SELECT * FROM users WHERE user_id=?');$id=(int)$m[1];$s->bind_param('i',$id);$s->execute();return $s->get_result()->fetch_assoc()?:[];}`);
  // Upgrade the schema already uploaded to the Hafrik server, twice, preserving its rows.
@@ -763,7 +763,15 @@ test('Batch 1: presence carries correctly scoped change counters; old clients ge
  sql('USE chinalife_test; RENAME TABLE chinalife_inbox TO chinalife_inbox_off');
  try{assert.deepEqual((await box(3)),{mode:'legacy'});const sent=await call(3,'messages.php','POST',{city:'Shenyang',place:'plaza',text:'no inbox yet',peer:'4'});assert.equal(sent.httpStatus,200,JSON.stringify(sent))}
  finally{sql('USE chinalife_test; RENAME TABLE chinalife_inbox_off TO chinalife_inbox')}
- const cfg=path.join(tmp,'web/api/v4/chinalife/polling-config.php'),orig=fs.readFileSync(cfg,'utf8');fs.writeFileSync(cfg,`<?php return ['mode'=>'legacy'];`);const later=new Date(Date.now()+5000);fs.utimesSync(cfg,later,later);let mode='';for(let i=0;i<30&&mode!=='legacy';i++){await new Promise(r=>setTimeout(r,200));mode=(await box(3)).mode}try{assert.equal(mode,'legacy','the switch takes effect within seconds (PHP may cache the file briefly)')}finally{fs.writeFileSync(cfg,orig);const t2=new Date(Date.now()+10000);fs.utimesSync(cfg,t2,t2);for(let i=0;i<30&&(await box(3)).mode!=='adaptive';i++)await new Promise(r=>setTimeout(r,200))}
+ // Rollout switch (server-only JSON, read on every request so it applies at once). Legacy answers carry no counters.
+ const cfg=path.join(tmp,'web/api/v4/chinalife/polling-config.json'),orig=fs.readFileSync(cfg,'utf8'),mode=async id=>(await box(id)).mode;
+ try{
+  fs.writeFileSync(cfg,'{"mode":"legacy"}');assert.deepEqual(await box(3),{mode:'legacy'},'kill switch: immediate, and no extra queries');
+  fs.rmSync(cfg);assert.equal(await mode(3),'legacy','missing file means legacy');fs.writeFileSync(cfg,'not json');assert.equal(await mode(3),'legacy','broken file means legacy');
+  fs.writeFileSync(cfg,'{"mode":"testers","testers":["USER3","4"]}');assert.equal(await mode(3),'adaptive','tester by username');assert.equal(await mode(4),'adaptive','tester by user id');assert.deepEqual(await box(5),{mode:'legacy'},'everyone else stays on the old polling');
+  fs.writeFileSync(cfg,'{"mode":"testers","testers":[],"percent":100}');assert.equal(await mode(5),'adaptive','percent rollout');
+  fs.writeFileSync(cfg,'{"mode":"legacy","testers":["user3"]}');assert.equal(await mode(3),'legacy','legacy overrides the tester list');
+ }finally{fs.writeFileSync(cfg,orig)}
 });
 test('Batch 1 end to end: one presence request per heartbeat, messages wake the right checks, fast when together, legacy rollback',async()=>{
  sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (6,7); DELETE FROM chinalife_saves WHERE user_id IN (6,7); DELETE FROM chinalife_presence WHERE user_id IN (6,7)');
@@ -773,7 +781,7 @@ test('Batch 1 end to end: one presence request per heartbeat, messages wake the 
   await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);t.game.loadSave({...game(),name:'Player '+id,place:'plaza'});await c.ChinaLifeCloud.upload();await c.ChinaLifeCloud.refresh();
   await vm.runInContext('(async()=>{'+fs.readFileSync('public/notifications.js','utf8')+'})()',c);await vm.runInContext('(async()=>{'+fs.readFileSync('public/shared-activities.js','utf8')+'})()',c);return {...t,P:c.ChinaLifePoll,log}}
  for(let i=0;i<30;i++){const m=(await call(6,'presence.php','POST',{...presence(),inbox:1})).data?.inbox?.mode;if(m==='adaptive')break;await new Promise(r=>setTimeout(r,200))}sql('USE chinalife_test; DELETE FROM chinalife_presence WHERE user_id=6; DELETE FROM chinalife_rate_limits WHERE user_id IN (6,7)');
- const a=await client(6),b=await client(7);await a.P.run('presence');
+ const a=await client(6),b=await client(7);await a.P.run('presence');assert.equal(b.P.mode,'adaptive','switched on by the server after the first heartbeat');
  b.log.length=0;await b.P.run('presence');assert.deepEqual(b.log,['POST presence.php'],'one request per heartbeat (no separate GET)');
  assert.ok(b.context.ChinaLifeCloud.players.some(p=>p.id==='6'),'still sees the other player');
  assert.equal(b.P.stats().find(s=>s.name==='presence').interval,2500,'fast while another player is in the venue');
@@ -794,10 +802,42 @@ test('Batch 1 end to end: one presence request per heartbeat, messages wake the 
  // Alone: slower heartbeat.
  sql('USE chinalife_test; DELETE FROM chinalife_presence WHERE user_id<>7');await b.P.run('presence');assert.equal(b.P.stats().find(s=>s.name==='presence').interval,10000,'10 s when nobody is with you');
  // Rollback: the server switches every game back to the old two-request heartbeat.
- const cfg=path.join(tmp,'web/api/v4/chinalife/polling-config.php'),orig=fs.readFileSync(cfg,'utf8');fs.writeFileSync(cfg,`<?php return ['mode'=>'legacy'];`);const later=new Date(Date.now()+5000);fs.utimesSync(cfg,later,later);
- try{for(let i=0;i<30&&b.P.mode!=='legacy';i++){await new Promise(r=>setTimeout(r,200));await b.P.run('presence')}assert.equal(b.P.mode,'legacy');b.log.length=0;await b.P.run('presence');assert.deepEqual(b.log,['POST presence.php','GET presence.php'],'legacy heartbeat as before');assert.equal(b.P.stats().find(s=>s.name==='notifications').interval,1000)}
- finally{fs.writeFileSync(cfg,orig);const t2=new Date(Date.now()+15000);fs.utimesSync(cfg,t2,t2)}
+ const cfg=path.join(tmp,'web/api/v4/chinalife/polling-config.json'),orig=fs.readFileSync(cfg,'utf8');fs.writeFileSync(cfg,'{"mode":"legacy"}');
+ try{await b.P.run('presence');assert.equal(b.P.mode,'legacy');b.log.length=0;await b.P.run('presence');assert.deepEqual(b.log,['POST presence.php','GET presence.php'],'legacy heartbeat as before');assert.equal(b.P.stats().find(s=>s.name==='notifications').interval,1000)}
+ finally{fs.writeFileSync(cfg,orig)}
  // Switching the server back reaches devices already in legacy mode without a reload.
- for(let i=0;i<30&&b.P.mode!=='adaptive';i++){await new Promise(r=>setTimeout(r,200));await b.P.run('presence')}
- assert.equal(b.P.mode,'adaptive');b.log.length=0;await b.P.run('presence');assert.deepEqual(b.log,['POST presence.php'],'back to one request per heartbeat');
+ await b.P.run('presence');assert.equal(b.P.mode,'adaptive');b.log.length=0;await b.P.run('presence');assert.deepEqual(b.log,['POST presence.php'],'back to one request per heartbeat');
+});
+
+test('Batch 1 money: every incoming transfer moves the recipient revision once, under concurrency and retries, and an open game picks it up',async()=>{
+ const ids=[8,9,10,11];sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (8,9,10,11); DELETE FROM chinalife_transfers WHERE sender_id IN (8,9,10,11) OR recipient_id IN (8,9,10,11); DELETE FROM chinalife_saves WHERE user_id IN (8,9,10,11)');
+ for(const id of ids)assert.equal((await call(id,'save.php','POST',{revision:0,save:{character:{name:'P'+id},game:{...game(),name:'P'+id,money:1000,transferTotal:0}}})).httpStatus,200);
+ const start=await call(11,'save.php'),inbox=async()=>(await call(11,'presence.php','POST',{...presence(),inbox:1})).data.inbox;
+ // Three senders, two transfers each, all at once, and every request sent twice (a retry racing the original).
+ const sends=[8,9,10].flatMap(from=>[1,2].map(n=>({from,amount:from*10+n,request_id:'batch1-money-'+from+'-'+n+'-xxxxxxxx'})));
+ const results=await Promise.all(sends.flatMap(t=>[t,t]).map(t=>call(t.from,'transfers.php','POST',{peer:'11',amount:t.amount,request_id:t.request_id})));
+ assert.ok(results.every(r=>r.httpStatus===200),JSON.stringify(results.filter(r=>r.httpStatus!==200)));
+ assert.equal(results.filter(r=>r.data.duplicate).length,6,'each retry is recognised, never paid twice');
+ const end=await call(11,'save.php'),total=sends.reduce((a,t)=>a+t.amount,0);
+ assert.equal(end.data.revision,start.data.revision+6,'one revision step per transfer');
+ assert.equal(end.data.save.game.money,1000+total);assert.equal(end.data.save.game.transferTotal,total);
+ assert.equal((await inbox()).revision,end.data.revision,'the heartbeat reports the new revision');
+ for(const from of [8,9,10])assert.equal((await call(from,'save.php')).data.save.game.money,1000-(from*10+1)-(from*10+2));
+ // An open game (adaptive) picks up money even after another device saved without money in between.
+ const t=harness(null),c=t.context,stored=new Map();c.localStorage={getItem:k=>stored.get(k)||null,setItem:(k,v)=>stored.set(k,v)};c.HafrikSession={token:'test-11',user:{id:11,name:'User 11'}};c.URLSearchParams=URLSearchParams;
+ c.fetch=(url,options)=>{const u=new URL(url);return fetch(base+u.pathname+u.search,options)};vm.runInContext(fs.readFileSync('public/poller.js','utf8'),c);
+ await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);await c.ChinaLifeCloud.ready;const P=c.ChinaLifePoll,next=()=>P.stats().find(s=>s.name==='transfers').next;
+ await P.run('presence');await P.run('presence');await P.run('transfers');const m0=t.game.state.money;
+ sql('USE chinalife_test; UPDATE chinalife_saves SET revision=revision+1 WHERE user_id=11');
+ await P.run('presence');assert.ok(next()<1000,'newer save noticed');await P.run('transfers');assert.equal(t.game.state.money,m0,'no money in that save');
+ await P.run('presence');assert.ok(next()>5000,'the same revision is not downloaded again on every heartbeat');
+ await call(8,'transfers.php','POST',{peer:'11',amount:7,request_id:'batch1-money-late-xxxxxxxxx'});
+ await P.run('presence');assert.ok(next()<1000,'money wakes the transfer check');await P.run('transfers');assert.equal(t.game.state.money,m0+7,'received money shows in the game');
+});
+
+test('perf monitor reads the access log, database status and presence ages without changing anything',()=>{
+ const log=path.join(tmp,'access_log');fs.writeFileSync(log,'');
+ const child=execFileSync('bash',['-c',`(sleep 0.5; printf '%s\n' '1.2.3.4 - - [x] "POST /api/v4/chinalife/presence.php HTTP/1.1" 200 10' '1.2.3.4 - - [x] "GET /api/v4/chinalife/notifications.php?city=Shenyang HTTP/1.1" 429 5' '1.2.3.4 - - [x] "GET /other.php HTTP/1.1" 500 5' >> "$1") & php scripts/perf-monitor.php --hafrik="$2" --log="$1" --interval=1 --samples=1 --csv="$3"`,'_',log,path.join(tmp,'web'),path.join(tmp,'perf.csv')],{env,encoding:'utf8'});
+ assert.match(child,/api 2 req\/s|api 1\.\d+ req\/s|api 2\.\d+ req\/s/);assert.match(child,/429 1, 5xx 0/,'only ChinaLife API lines are counted');assert.match(child,/db [\d.]+ q\/s/);assert.match(child,/online \d+/);
+ const csv=fs.readFileSync(path.join(tmp,'perf.csv'),'utf8').trim().split('\n');assert.equal(csv.length,2);assert.match(csv[0],/^time,api_rps/);
 });

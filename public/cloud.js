@@ -169,7 +169,10 @@ function reconcileTransfers(saved) {
   game.save();game.refresh?.();game.toast(sharedXP>0?'Shared activity complete · +'+sharedXP+' XP · +¥'+delta:delta>0?'You received ¥'+delta+'.':'Money sent.');
   return true;
 }
-async function syncTransfers(){if(!account||!auto||busy||loading||!game.state.created||document.hidden)return;const generation=authEpoch,revision=remote.revision;try{const saved=await loadRemote();if(generation===authEpoch&&!busy&&revision===remote.revision)reconcileTransfers(saved)}catch{}}
+// checkedRevision: the newest server revision already compared, so a save from another device (no money in it) does not
+// make every heartbeat download the save again. Money is never skipped: saving an older revision is refused and merged.
+let checkedRevision=0;
+async function syncTransfers(){if(!account||!auto||busy||loading||!game.state.created||document.hidden)return;const generation=authEpoch,revision=remote.revision;try{const saved=await loadRemote();if(generation===authEpoch&&!busy&&revision===remote.revision){reconcileTransfers(saved);checkedRevision=Math.max(checkedRevision,saved.revision||0)}}catch{return false}}
 async function transfer(peer,amount,requestId){
   const generation=authEpoch;
   // A save may be in flight, or received money may need merging first: wait for it and retry a few times.
@@ -290,7 +293,7 @@ function handleInbox(box) {
     window.dispatchEvent(new CustomEvent('chinalife:inbox', {detail: {inbox: box, changed}}));
   }
   // Money received or shared rewards: the server's save is newer than ours.
-  if (box.revision > (remote.revision ?? 0)) POLL?.kick('transfers');
+  if (box.revision > Math.max(remote.revision ?? 0, checkedRevision)) POLL?.kick('transfers');
 }
 if (POLL) {
   POLL.loop('presence', presenceHeartbeat, {every: () => together() ? 2500 : 10000, legacyEvery: 2500});

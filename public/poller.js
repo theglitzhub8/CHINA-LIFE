@@ -2,11 +2,12 @@
 // Every repeating server check runs through one loop per name, so a check can never be started twice and never
 // overlaps itself. Intervals get ±15% jitter so phones do not hit the server in step; failures back off
 // exponentially (with jitter, up to 60 s) and recover by themselves; coming back to the game re-checks at once.
-// Mode 'adaptive' uses each loop's adaptive interval; 'legacy' uses the previous fixed timers (rollback). The
-// server sets the mode (polling-config.php); localStorage 'chinalife-polling' can force one on a device.
+// Mode 'adaptive' uses each loop's adaptive interval; 'legacy' uses the previous fixed timers (rollback). Every game
+// starts in legacy and switches only when the server says so (polling-config.json, per player); localStorage
+// 'chinalife-polling' = 'legacy' keeps one device on the old timers. Nothing on a device can override the server's legacy.
 (()=>{
  const loops=new Map();
- let mode=(()=>{try{const v=localStorage.getItem('chinalife-polling');return v==='legacy'||v==='adaptive'?v:'adaptive'}catch{return 'adaptive'}})(),forced=(()=>{try{return !!localStorage.getItem('chinalife-polling')}catch{return false}})();
+ const forced=(()=>{try{return localStorage.getItem('chinalife-polling')==='legacy'}catch{return false}})();let mode='legacy';
  const jitter=ms=>Math.round(ms*(.85+Math.random()*.3));
  function loop(name,fn,{every,legacyEvery,maxBackoff=60000}={}){
   if(loops.has(name))return loops.get(name);

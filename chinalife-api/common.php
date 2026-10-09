@@ -92,14 +92,30 @@ function cl_bump(array $users, string $what): void {
     // A counter is only a wake-up hint: it must never fail the message, invite or visit that caused it.
     try {foreach (array_unique(array_map('intval',$users)) as $u) if ($u>0) cl_run("INSERT INTO chinalife_inbox(user_id,$what,updated_at) VALUES(?,1,NOW()) ON DUPLICATE KEY UPDATE $what=$what+1,updated_at=NOW()",'i',[$u]);} catch (Throwable $e) {}
 }
-function cl_polling_mode(): string {$c=is_file(__DIR__.'/polling-config.php')?(require __DIR__.'/polling-config.php'):[];return ($c['mode']??'adaptive')==='legacy'?'legacy':'adaptive';}
+// Batch 1 rollout switch: polling-config.json lives only on the server (deploys never overwrite it) and is read on every
+// request, so a change applies at once. Missing or invalid file means legacy for everyone.
+// {"mode":"legacy"} everyone on the old polling (kill switch) · {"mode":"adaptive"} everyone on the new polling
+// {"mode":"testers","testers":["hafrik","123"],"percent":0} listed usernames or user ids, plus that share of other players.
+function cl_polling_mode(int $uid, string $username = ''): string {
+    $c=json_decode((string)@file_get_contents(__DIR__.'/polling-config.json'),true);
+    $mode=is_array($c)?($c['mode']??'legacy'):'legacy';
+    if ($mode==='adaptive') return 'adaptive';
+    if ($mode!=='testers') return 'legacy';
+    $testers=array_map(fn($t)=>strtolower(trim((string)$t)),is_array($c['testers']??null)?$c['testers']:[]);
+    if (in_array((string)$uid,$testers,true) || ($username!=='' && in_array(strtolower($username),$testers,true))) return 'adaptive';
+    $percent=max(0,min(100,(int)($c['percent']??0)));
+    return $percent>0 && crc32('chinalife-poll:'.$uid)%100<$percent ? 'adaptive' : 'legacy';
+}
 // Everything the game needs to decide what to fetch: my counters, my save revision, the newest message in my room.
 function cl_inbox(int $uid, string $city, string $roomPlace): array {
+    global $auth;
+    // Legacy players get only the mode: no extra queries, exactly the old cost.
+    $mode=cl_polling_mode($uid,(string)($auth['user_name']??''));if ($mode==='legacy') return ['mode'=>'legacy'];
     // Without the inbox table (migration not run yet) the counters cannot be trusted, so clients are told to keep the old fast polling.
     try {$box=cl_one('SELECT messages,activities,visits FROM chinalife_inbox WHERE user_id=?','i',[$uid])?:['messages'=>0,'activities'=>0,'visits'=>0];} catch (Throwable $e) {return ['mode'=>'legacy'];}
     $rev=cl_one('SELECT revision FROM chinalife_saves WHERE user_id=?','i',[$uid]);
     $room=$roomPlace===''?null:cl_one('SELECT MAX(id) id FROM chinalife_messages WHERE city=? AND place=? AND recipient_id IS NULL AND created_at>=DATE_SUB(NOW(),INTERVAL 1 DAY)','ss',[$city,$roomPlace]);
-    return ['messages'=>(int)$box['messages'],'activities'=>(int)$box['activities'],'visits'=>(int)$box['visits'],'revision'=>(int)($rev['revision']??0),'room'=>(string)($room['id']??'0'),'mode'=>cl_polling_mode()];
+    return ['messages'=>(int)$box['messages'],'activities'=>(int)$box['activities'],'visits'=>(int)$box['visits'],'revision'=>(int)($rev['revision']??0),'room'=>(string)($room['id']??'0'),'mode'=>$mode];
 }
 function cl_blocked(int $a, int $b): bool {
     return cl_one('SELECT owner_id FROM chinalife_blocks WHERE (owner_id=? AND peer_id=?) OR (owner_id=? AND peer_id=?)', 'iiii', [$a,$b,$b,$a]) !== null;
