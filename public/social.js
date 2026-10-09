@@ -5,7 +5,8 @@ const nearby=()=>window.ChinaLifeCloud?.players||[];
 const cityNearby=()=>window.ChinaLifeCloud?.cityPlayers||nearby();
 const joined=()=>!!window.ChinaLifeCloud?.joined;
 const connection=id=>friends.find(f=>f.id===id);
-const profile=id=>nearby().find(p=>p.id===id)||connection(id)||blocks.find(p=>p.id===id)||(()=>{const m=messages.find(m=>m.player_id===id);return m?{id:m.player_id,name:m.name,color:m.color}:null})();
+// Anyone you can open: here, elsewhere in the city, a friend, blocked, in a chat, or loaded from their public profile.
+const profile=id=>nearby().find(p=>p.id===id)||cityNearby().find(p=>p.id===id)||connection(id)||(publicProfile?.id===id?{id,name:publicProfile.name,color:'#0c3f44'}:null)||blocks.find(p=>p.id===id)||(()=>{const m=messages.find(m=>m.player_id===id);return m?{id:m.player_id,name:m.name,color:m.color}:null})();
 function note(text){feedback=text;$('socialFeedback').textContent=text}
 async function api(path,method='GET',data){
  if(path.startsWith('/api/account'))return {signedIn:!!window.ChinaLifeCloud?.signedIn};

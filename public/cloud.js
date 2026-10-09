@@ -168,7 +168,9 @@ function reconcileTransfers(saved) {
 async function syncTransfers(){if(!account||!auto||busy||loading||!game.state.created||document.hidden)return;const generation=authEpoch,revision=remote.revision;try{const saved=await loadRemote();if(generation===authEpoch&&!busy&&revision===remote.revision)reconcileTransfers(saved)}catch{}}
 async function transfer(peer,amount,requestId){
   const generation=authEpoch;
-  if(!await upload())throw Error('Wait for your account save to finish, then try again.');
+  // A save may be in flight, or received money may need merging first: wait for it and retry a few times.
+  let saved=false;for(let i=0;i<4&&!saved;i++){for(let w=0;busy&&w<40;w++)await new Promise(r=>setTimeout(r,125));saved=await upload()}
+  if(!saved)throw Error('Your account is still saving. Try again in a moment.');
   if(generation!==authEpoch)throw Error('Your account changed. Open the player again.');
   await api('/chinalife/transfers.php','POST',{peer,amount,request_id:requestId});
   await syncTransfers();

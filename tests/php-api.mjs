@@ -555,3 +555,28 @@ test('game sign-up runs Hafrik\'s own register.php with CORS for the game origin
  assert.equal((await fetch(url,{method:'POST',headers:{Origin:'https://evil.example','content-type':'application/json'},body:'{}'})).headers.get('access-control-allow-origin'),null,'other sites get no CORS access');
  assert.equal((await fetch(url)).status,405);
 });
+test('sending money from a player profile works end to end with two real game clients',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (5,6); DELETE FROM chinalife_saves WHERE user_id IN (5,6)');
+ async function client(id){const t=harness(null),c=t.context,stored=new Map();c.localStorage={getItem:k=>stored.get(k)||null,setItem:(k,v)=>stored.set(k,v)};c.HafrikSession={token:'test-'+id,user:{id,name:'User '+id}};c.URLSearchParams=URLSearchParams;c.fetch=(url,options)=>fetch(base+new URL(url).pathname+new URL(url).search,options);
+  await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);t.game.loadSave({...game(),name:'Player '+id,place:'plaza',money:5000});await c.ChinaLifeCloud.upload();
+  await vm.runInContext('(async()=>{'+fs.readFileSync('public/social.js','utf8')+'})()',c);return t}
+ const a=await client(5),b=await client(6);await a.context.ChinaLifeCloud.refresh();
+ await a.context.ChinaLifeSocial.player('6');a.document.querySelector('[data-social="transfer"]').onclick();await new Promise(r=>setTimeout(r,50));
+ assert.ok(a.document.getElementById('transferForm'),'the send money form opens');a.document.getElementById('transferAmount').value='1200';await a.document.getElementById('transferForm').onsubmit({preventDefault(){}});
+ for(let i=0;i<20&&a.game.state.money!==3800;i++)await new Promise(r=>setTimeout(r,50));
+ assert.equal(a.game.state.money,3800,'sender: '+a.document.getElementById('socialFeedback').textContent);
+ assert.equal(JSON.parse(sql("USE chinalife_test; SELECT JSON_EXTRACT(game_state,'$.money') FROM chinalife_saves WHERE user_id=6").trim().split('\n').pop()),6200);
+ await b.context.ChinaLifeCloud.syncTransfers();assert.equal(b.game.state.money,6200,'the recipient sees it');
+});
+test('money can be sent to a player elsewhere in the city who is not a friend',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (7,8); DELETE FROM chinalife_saves WHERE user_id IN (7,8)');
+ async function client(id,place){const t=harness(null),c=t.context,stored=new Map();c.localStorage={getItem:k=>stored.get(k)||null,setItem:(k,v)=>stored.set(k,v)};c.HafrikSession={token:'test-'+id,user:{id,name:'User '+id}};c.URLSearchParams=URLSearchParams;c.fetch=(url,options)=>fetch(base+new URL(url).pathname+new URL(url).search,options);
+  await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);t.game.loadSave({...game(),name:'Player '+id,place,money:5000});await c.ChinaLifeCloud.upload();
+  await vm.runInContext('(async()=>{'+fs.readFileSync('public/social.js','utf8')+'})()',c);return t}
+ const a=await client(7,'plaza'),b=await client(8,'cafe');await b.context.ChinaLifeCloud.refresh();await a.context.ChinaLifeCloud.refresh();
+ assert.ok(a.context.ChinaLifeCloud.cityPlayers.some(p=>p.id==='8'));assert.ok(!a.context.ChinaLifeCloud.players.some(p=>p.id==='8'),'not in the same venue');
+ await a.context.ChinaLifeSocial.player('8');assert.ok(a.document.querySelector('[data-social="transfer"]'),'Send money is on their profile');a.document.querySelector('[data-social="transfer"]').onclick();await new Promise(r=>setTimeout(r,50));
+ a.document.getElementById('transferAmount').value='700';await a.document.getElementById('transferForm').onsubmit({preventDefault(){}});
+ for(let i=0;i<20&&a.game.state.money!==4300;i++)await new Promise(r=>setTimeout(r,50));assert.equal(a.game.state.money,4300,a.document.getElementById('socialFeedback').textContent);
+ await b.context.ChinaLifeCloud.syncTransfers();assert.equal(b.game.state.money,5700);
+});
