@@ -465,3 +465,4 @@ dialog{border-radius:22px}
 .guide-row{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center;width:100%;text-align:left;border:0;background:#fff;border-radius:16px;padding:8px 10px;margin-bottom:8px;box-shadow:0 1px 3px #10283a12;cursor:pointer}
 .guide-row img,.guide-row .partner-noimg{width:56px;height:56px;border-radius:12px;object-fit:cover}.guide-row b{display:block}.guide-row small{display:block;color:#62798a;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.guide-row i{font-style:normal;color:#9aaab4;font-size:22px}
 .guide-cta{display:grid;gap:6px;margin-top:16px;padding:16px;border-radius:18px;background:linear-gradient(135deg,#0f766e,#0e5a8a);color:#fff}.guide-cta span{opacity:.85;font-size:14px}.guide-cta .primary-btn{background:#fff;color:#0f5f58;text-align:center}
+.scene-label.artist-label{background:#2b2140;color:#fff;border:2px solid #b794f6}

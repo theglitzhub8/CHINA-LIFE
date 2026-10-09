@@ -616,3 +616,10 @@ test('clubs can apply too and appear as a club listing after approval',async()=>
  assert.equal((await call(1,'admin.php','POST',{action:'review_partner',id:Number(sub.data.id),decision:'approve'})).httpStatus,200);
  const listed=(await call(11,'events.php?city=Shenyang')).data.restaurants.find(r=>r.name==='Vibes Lounge');assert.equal(listed.kind,'club');assert.equal(listed.icon,'🎶');assert.equal(listed.menu.length,2);
 });
+test('music artists apply with music links and no price list, and go live as artists',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (1,12); DELETE FROM chinalife_submissions WHERE user_id=12 AND status IN ("pending","changes")');
+ assert.equal((await call(12,'partner.php','POST',{action:'submit',kind:'artist',fields:{city:'Shenyang',name:'Kola Beats'}})).httpStatus,400,'needs music links or a contact');
+ const sub=await call(12,'partner.php','POST',{action:'submit',kind:'artist',fields:{city:'Shenyang',name:'Kola Beats',district:'Afrobeats',description:'Afrobeats from Lagos to Shenyang',links:['https://music.163.com/artist?id=1'],items:[{name:'Club show (45 min)',price:5000}]}});assert.equal(sub.httpStatus,200,JSON.stringify(sub));
+ assert.equal((await call(1,'admin.php','POST',{action:'review_partner',id:Number(sub.data.id),decision:'approve'})).httpStatus,200);
+ const a=(await call(11,'events.php?city=Shenyang')).data.restaurants.find(r=>r.name==='Kola Beats');assert.equal(a.kind,'artist');assert.equal(a.icon,'🎤');assert.deepEqual(a.links,['https://music.163.com/artist?id=1']);assert.equal(a.district,'Afrobeats');
+});

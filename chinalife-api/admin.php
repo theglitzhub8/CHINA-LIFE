@@ -173,7 +173,7 @@ if ($action==='review_partner') {
     $listing='';
     if ($decision==='approve') {
         $d=json_decode($s['data'],true)?:[];$kind=$s['kind'];
-        if (in_array($kind,['restaurant','shop','service','creator','club'],true)) {
+        if (in_array($kind,['restaurant','shop','service','creator','club','artist'],true)) {
             if ((int)cl_one('SELECT COUNT(*) n FROM chinalife_restaurants WHERE city=?','s',[$s['city']])['n']>=200){$db->rollback();cl_fail('This city already has 200 partner listings',409);}
             $menu=json_encode(array_map(fn($i)=>[$i['name'],$i['price'],$i['photo']??'',$i['description']??''],$d['items']??[]),JSON_UNESCAPED_UNICODE);
             $q=cl_query('INSERT INTO chinalife_restaurants(city,name,icon,district,description,menu,order_link,wechat_id,whatsapp,active,kind,photos,links,owner_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,1,?,?,?,?,NOW(),NOW())','ssssssssssssi',

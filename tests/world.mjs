@@ -162,3 +162,6 @@ test('map search finds real businesses by name or by what they sell and flies to
  t.world.search('jollof');let r=[...t.document.querySelectorAll('#mapSearchResults [data-partner]')];assert.equal(r.length,1);assert.match(r[0].textContent,/Mama Put Kitchen/);r[0].onclick();assert.equal(opened,'7');
  t.world.search('club');r=[...t.document.querySelectorAll('#mapSearchResults [data-partner]')];assert.ok(r.some(b=>/Vibes Lounge/.test(b.textContent)),'clubs match the word club');
  assert.equal([...t.document.querySelectorAll('.partner-label')].length,2,'both have stalls');});
+test('music artists appear on the city map on their own stage and are found by searching music words',()=>{const t=setup();Object.defineProperty(t.game,'partnerRestaurants',{configurable:true,get:()=>[{id:'21',kind:'artist',name:'Kola Beats',icon:'🎤',district:'Afrobeats',near:'',menu:[],links:['https://music.163.com/artist?id=1']}]});let opened=null;t.game.partner=r=>{opened=r.id};t.world.map();
+ const tag=t.document.querySelector('.partner-label.artist-label');assert.ok(tag,'artist stage label on the map');assert.match(tag.textContent,/Kola Beats/);
+ t.world.search('singer');const r=[...t.document.querySelectorAll('#mapSearchResults [data-partner]')];assert.equal(r.length,1);r[0].onclick();assert.equal(opened,'21')});
