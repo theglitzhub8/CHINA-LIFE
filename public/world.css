@@ -350,3 +350,11 @@ dialog{border-radius:22px}
 .cl-phone .phone-app span{font-size:11px;font-weight:700;color:#3a2f28;text-align:center;line-height:1.15}
 .cl-phone .phone-dock .phone-app span{display:block;color:#fff;font-size:11px}
 .social-tabs[hidden],.social-back[hidden],.social-head-avatar[hidden]{display:none}
+
+/* Homes use the same slim bottom bar as the map: tap it to slide the full panel up. */
+.home-view:not(.dock-open) .venue-card .venue-say,.home-view:not(.dock-open) .venue-card .world-activities,.home-view:not(.dock-open) .venue-card .venue-social-controls{display:none}
+.home-view:not(.dock-open) .venue-card{padding:8px 12px;border-radius:18px}
+.home-view .venue-heading{cursor:pointer}
+.home-view:not(.dock-open) .venue-heading::after{content:'⌃';margin-left:auto;padding:0 6px;color:#5f7882;font-size:18px}
+.home-view.dock-open .venue-heading::after{content:'⌄';margin-left:auto;padding:0 6px;color:#5f7882;font-size:18px}
+.home-view.dock-open .venue-card{animation:sheetIn .22s ease-out}
