@@ -20,4 +20,4 @@ async function pollMessages(){
  }catch(error){console.debug('Message notification check:',error.message)}finally{polling=false}
 }
 window.addEventListener('chinalife:cloudready',()=>{generation++;cursor=null;accountId='';banner.hidden=true;pollMessages()});
-setInterval(pollMessages,3000);window.ChinaLifeNotifications={poll:pollMessages};pollMessages();
+setInterval(pollMessages,1000);window.ChinaLifeNotifications={poll:pollMessages};pollMessages();
