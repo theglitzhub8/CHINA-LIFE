@@ -205,7 +205,7 @@ test('food delivery lists every city restaurant, a rider takes time to arrive an
  g.delivery();for(const id of ['black-sheep','tank','african','market','cafe'])assert.ok(h.document.getElementById('shop-'+id),id+' delivers');
  h.click('shop-tank');const [,price,dish]=g.menus.tank[0];h.click('deliver-0');assert.equal(g.state.money,500-price-8);assert.equal(g.state.needs.hunger,20,'nothing to eat until the rider arrives');
  const order=g.pendingDeliveries()[0];assert.equal(order.from,'tank');assert.equal(order.arrived,false);g.collectFood(order.id);assert.equal(g.state.foodOrders[0].received,false);
- g.state.foodOrders[0].eta=Date.now()-1;g.state.place='plaza';g.collectFood(order.id);assert.equal(g.state.foodOrders[0].received,false,'collect it at home');
+ g.state.foodOrders[0].eta=h.context.Date.now()-1;g.state.place='plaza';g.collectFood(order.id);assert.equal(g.state.foodOrders[0].received,false,'collect it at home');
  g.state.place='home';g.collectFood(order.id);assert.equal(g.state.foodOrders[0].received,true);assert.ok(g.state.needs.hunger>=20+dish-2);
  g.home();for(const id of ['homeRest','homeNap','homeShower','homeToilet','homeOrder','homeNoodles','homeNetflix','homeShop'])assert.ok(h.document.getElementById(id),id);
  const saved=harness(JSON.parse(JSON.stringify(g.state)));assert.equal(saved.game.state.foodOrders[0].from,'tank');

@@ -650,3 +650,24 @@ test('admins choose the city and venue a partner ad or event runs in when approv
  await call(1,'admin.php','POST',{action:'review_partner',id:Number(ev.data.id),decision:'approve',city:'Shenzhen',place:''});
  assert.ok((await call(11,'events.php?city=Shenzhen')).data.events.some(e=>e.title==='Moved event'&&e.place===''));
 });
+test('artists upload their own songs; on approval they reach ChinaLife Radio and club DJ booths, and admins can take them down',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (1,11,12); DELETE FROM chinalife_submissions WHERE user_id=12 AND status IN ("pending","changes")');
+ const up=(body,q='title=Lagos%20Nights&duration=185')=>fetch(base+'/api/v4/chinalife/partner.php?action=upload_song&'+q,{method:'POST',headers:{Authorization:'Bearer test-12','content-type':'audio/mpeg'},body}).then(async r=>({...await r.json(),httpStatus:r.status}));
+ assert.equal((await up(Buffer.from('<?php echo 1; ?> not music'))).httpStatus,400,'only real MP3 or M4A');
+ assert.equal((await up(Buffer.concat([Buffer.from('ID3'),crypto.randomBytes(4000)]),'title=X&duration=5')).httpStatus,400,'sensible length');
+ const mp3=Buffer.concat([Buffer.from('ID3'),crypto.randomBytes(20000)]);const song=await up(mp3);assert.equal(song.httpStatus,200,JSON.stringify(song));assert.match(song.data.id,/^[a-f0-9]{16}$/);
+ const file=await fetch(song.data.url);assert.equal(file.status,200,'the song file is served');assert.equal(Buffer.from(await file.arrayBuffer()).length,mp3.length);
+ const m4a=await up(Buffer.concat([Buffer.from([0,0,0,0x20]),Buffer.from('ftypM4A '),crypto.randomBytes(5000)]),'title=Second&duration=200');assert.equal(m4a.httpStatus,200,JSON.stringify(m4a));
+ assert.equal((await call(11,'events.php?city=Shenyang')).data.songs.some(s=>s.id===song.data.id),false,'nothing plays before approval');
+ assert.equal((await call(12,'partner.php','POST',{action:'submit',kind:'artist',fields:{city:'Shenyang',name:'Radio Artist',songs:[{id:'ffffffffffffffff',title:'Fake'}]}})).httpStatus,400,'only their own uploads');
+ const sub=await call(12,'partner.php','POST',{action:'submit',kind:'artist',fields:{city:'Shenyang',name:'Radio Artist',district:'Afrobeats',songs:[{id:song.data.id,title:'Lagos Nights (Radio Edit)'},{id:m4a.data.id,title:'Second'}]}});assert.equal(sub.httpStatus,200,JSON.stringify(sub));
+ assert.equal((await call(1,'admin.php','POST',{action:'review_partner',id:Number(sub.data.id),decision:'approve'})).httpStatus,200);
+ let songs=(await call(11,'events.php?city=Shenyang')).data.songs;const live=songs.find(s=>s.id===song.data.id);assert.ok(live,'on the radio');assert.equal(live.title,'Lagos Nights (Radio Edit)');assert.equal(live.artist,'Radio Artist');assert.equal(live.duration,185);assert.match(live.url,/chinalife-music\/[a-f0-9]{16}\.mp3$/);
+ assert.ok((await call(11,'events.php?city=Harbin')).data.songs.some(s=>s.id===song.data.id),'the radio plays artists from every city');
+ await call(11,'presence.php','POST',presence('Shenyang','night'));
+ assert.equal((await call(11,'music.php','POST',{city:'Shenyang',place:'night',track:'song:'+song.data.id})).httpStatus,200,'request an artist song in the club');
+ assert.equal((await call(11,'music.php','POST',{city:'Shenyang',place:'night',track:'song:0000000000000000'})).httpStatus,400);
+ assert.equal((await call(1,'admin.php','POST',{action:'songs'})).data.songs.find(s=>s.id===song.data.id).active,true);
+ assert.equal((await call(1,'admin.php','POST',{action:'song_active',id:song.data.id,active:false})).httpStatus,200);
+ assert.equal((await call(11,'events.php?city=Shenyang')).data.songs.some(s=>s.id===song.data.id),false,'taken down');
+});

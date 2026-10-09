@@ -171,6 +171,22 @@ function cl_restaurants(string $city, bool $all=false): array {
     return $rows;
 }
 // Paid ads shown on venue walls: live ads for one city (or all cities). Images are served by ad-image.php.
+// Artists' songs are files on this server: by default <hafrik root>/chinalife-music, served directly by the web
+// server at /chinalife-music/ (so phones can stream and seek). music-config.php can return ['dir'=>…,'url'=>…].
+function cl_music_storage(): array {
+    $cfg=is_file(__DIR__.'/music-config.php')?(require __DIR__.'/music-config.php'):[];
+    $dir=rtrim((string)($cfg['dir']??(dirname(__DIR__,3).'/chinalife-music')),'/');
+    $https=(($_SERVER['HTTPS']??'')!==''&&($_SERVER['HTTPS']??'')!=='off')||($_SERVER['HTTP_X_FORWARDED_PROTO']??'')==='https';
+    $url=rtrim((string)($cfg['url']??(($https?'https':'http').'://'.($_SERVER['HTTP_HOST']??'hafrik.com').'/chinalife-music')),'/').'/';
+    return [$dir,$url];
+}
+// Approved songs for ChinaLife Radio and club DJ booths: this city's artists first, then everyone else's.
+function cl_songs(string $city, bool $all=false): array {
+    [,$url]=cl_music_storage();
+    $rows=cl_rows('SELECT s.id,s.title,s.file,s.duration,s.active,s.user_id,s.created_at,r.id listing,r.name artist,r.city,r.photos,u.user_name username FROM chinalife_songs s LEFT JOIN chinalife_restaurants r ON r.id=s.listing_id LEFT JOIN users u ON u.user_id=s.user_id WHERE '.($all?'s.listing_id IS NOT NULL':'s.active=1 AND r.active=1').' ORDER BY (r.city=?) DESC,s.created_at DESC LIMIT 300','s',[$city]);
+    foreach ($rows as &$r){$photos=json_decode((string)($r['photos']??''),true)?:[];$r=['id'=>$r['id'],'title'=>$r['title'],'artist'=>(string)($r['artist']??''),'listing'=>(string)($r['listing']??''),'city'=>(string)($r['city']??''),'cover'=>$photos[0]??'','duration'=>(int)$r['duration'],'url'=>$url.$r['file'],'active'=>(bool)$r['active'],'username'=>$r['username'],'created_at'=>$r['created_at']];}unset($r);
+    return $rows;
+}
 function cl_ads(string $city, bool $all=false): array {
     $rows=cl_rows('SELECT id,title,sponsor,city,place,link,width,height,active,UNIX_TIMESTAMP(starts_at)*1000 starts_at,UNIX_TIMESTAMP(ends_at)*1000 ends_at,UNIX_TIMESTAMP(updated_at) version FROM chinalife_ads WHERE '.($all?'1=1':'active=1 AND starts_at<=NOW() AND ends_at>NOW() AND (city=\'\' OR city=?)').' ORDER BY id DESC LIMIT 50',$all?'':'s',$all?[]:[$city]);
     foreach ($rows as &$r) {foreach (['width','height','starts_at','ends_at','version'] as $k) $r[$k]=(int)$r[$k];$r['id']=(string)$r['id'];$r['active']=(bool)$r['active'];}unset($r);
@@ -207,7 +223,11 @@ function cl_partner_data(string $kind, array $in, int $owner): array {
             if ($name===''||mb_strlen($name)>60||!is_numeric($price)||$price<0||$price>1000000||mb_strlen($desc)>120) cl_fail('Each item needs a name (up to 60 characters) and a price from 0 to 1,000,000');
             $photo=$media(($it['photo']??'')===''?[]:[$it['photo']],1);$d['items'][]=['name'=>$name,'price'=>round((float)$price,2),'description'=>$desc,'photo'=>$photo[0]??''];}
         $links=$in['links']??[];if (!is_array($links)||count($links)>6) cl_fail('Add up to 6 social links');$d['links']=[];foreach ($links as $l){$l=trim((string)$l);if ($l==='') continue;if (!preg_match('#^https://[^\s<>"]{3,290}$#',$l)) cl_fail('Social links must start with https://');$d['links'][]=$l;}
-        if ($personal&&!$d['links']&&$wechat===''&&$whatsapp==='') cl_fail('Add a music or social link or a way to contact you');
+        // Artists' own uploaded songs (up to 5) for ChinaLife Radio and club DJ booths; only their own uploads.
+        $d['songs']=[];if ($kind==='artist') {$songs=$in['songs']??[];if (!is_array($songs)||count($songs)>5) cl_fail('Add up to 5 songs');
+            foreach ($songs as $sg){$sid=(string)($sg['id']??'');$st=trim((string)($sg['title']??''));if (!preg_match('/^[a-f0-9]{16}$/',$sid)||!cl_one('SELECT id FROM chinalife_songs WHERE id=? AND user_id=?','si',[$sid,$owner])) cl_fail('A song is missing. Upload it again');
+                if ($st===''||mb_strlen($st)>80) cl_fail('Give every song a title (up to 80 characters)');$d['songs'][]=['id'=>$sid,'title'=>$st];}}
+        if ($personal&&!$d['links']&&!$d['songs']&&$wechat===''&&$whatsapp==='') cl_fail('Add a song, a music or social link, or a way to contact you');
         if (!$personal&&$d['order_link']===''&&$wechat===''&&$whatsapp==='') cl_fail('Add at least one way for players to reach you: a link, a WeChat ID or a WhatsApp number');
     } elseif ($kind==='event') {
         $title=$text('title',80,true,'an event title');$d['place']=$venue('place');$d['link']=$link('link','https://');$d['photos']=$media($in['photos']??[],1);
