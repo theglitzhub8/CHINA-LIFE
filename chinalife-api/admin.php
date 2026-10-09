@@ -174,6 +174,13 @@ if ($action==='review_partner') {
     $listing='';
     if ($decision==='approve') {
         $d=json_decode($s['data'],true)?:[];$kind=$s['kind'];
+        // For ads and events the admin decides where it runs: city ('' = every city, ads only) and venue.
+        if (in_array($kind,['event','ad'],true)&&array_key_exists('city',$input)) {$oc=(string)$input['city'];
+            if ($oc===''){if ($kind==='event'){$db->rollback();cl_fail('Choose a city for the event');}$d['all_cities']=true;}
+            else {if (!in_array($oc,CL_CITIES,true)){$db->rollback();cl_fail('Choose a city');}$s['city']=$oc;$d['all_cities']=false;}}
+        if (in_array($kind,['event','ad'],true)&&array_key_exists('place',$input)) {$op=(string)$input['place'];
+            if ($op===''){if ($kind==='ad'){$db->rollback();cl_fail('Choose a venue for the ad');}$d['place']='';}
+            else {[,$op]=cl_room(['city'=>'Shenyang','place'=>$op]);if (cl_private_place($op)){$db->rollback();cl_fail('Choose a public venue');}$d['place']=$op;}}
         if (in_array($kind,['restaurant','shop','service','creator','club','artist'],true)) {
             if ((int)cl_one('SELECT COUNT(*) n FROM chinalife_restaurants WHERE city=?','s',[$s['city']])['n']>=200){$db->rollback();cl_fail('This city already has 200 partner listings',409);}
             $menu=json_encode(array_map(fn($i)=>[$i['name'],$i['price'],$i['photo']??'',$i['description']??''],$d['items']??[]),JSON_UNESCAPED_UNICODE);
@@ -190,7 +197,7 @@ if ($action==='review_partner') {
             $listing='ad:'.$q->insert_id;$q->close();
         }
     }
-    cl_run('UPDATE chinalife_submissions SET status=?,admin_note=?,listing=?,reviewed_by=?,reviewed_at=NOW(),updated_at=NOW() WHERE id=?','sssii',[$decision==='approve'?'approved':($decision==='changes'?'changes':'rejected'),$note,$listing,$uid,$id]);
+    cl_run('UPDATE chinalife_submissions SET status=?,admin_note=?,listing=?,city=?,reviewed_by=?,reviewed_at=NOW(),updated_at=NOW() WHERE id=?','ssssii',[$decision==='approve'?'approved':($decision==='changes'?'changes':'rejected'),$note,$listing,$s['city'],$uid,$id]);
     $db->commit();admin_log('review_partner',(int)$s['user_id'],null,$decision.' · '.$s['kind'].' · '.$s['title']);json_response('success',['status'=>$decision,'listing'=>$listing]);
 }
 if ($action==='ads') json_response('success',['ads'=>cl_ads('',true)]);

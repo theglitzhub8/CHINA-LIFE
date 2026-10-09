@@ -634,3 +634,19 @@ test('player gist waits for admin approval and is scoped to its city',async()=>{
  await call(1,'admin.php','POST',{action:'end_gist',id:Number(post.id)});
  assert.ok(!(await call(11,'gist.php?city=Shenyang')).data.posts.some(p=>p.title==='Community gist test'));
 });
+test('admins choose the city and venue a partner ad or event runs in when approving',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (1,12); DELETE FROM chinalife_submissions WHERE user_id=12 AND status IN ("pending","changes")');
+ const banner=(await call(12,'partner.php','POST',{action:'upload',image:png(800,400)})).data.id;
+ const ad=await call(12,'partner.php','POST',{action:'submit',kind:'ad',fields:{city:'Shenyang',title:'City pick ad',place:'night',days:7,contact:'wechat me',photos:[banner]}});assert.equal(ad.httpStatus,200,JSON.stringify(ad));
+ assert.equal((await call(1,'admin.php','POST',{action:'review_partner',id:Number(ad.data.id),decision:'approve',city:'Atlantis',place:'night'})).httpStatus,400);
+ assert.equal((await call(1,'admin.php','POST',{action:'review_partner',id:Number(ad.data.id),decision:'approve',city:'Guangzhou',place:'mall'})).httpStatus,200);
+ const gz=(await call(11,'events.php?city=Guangzhou')).data.ads.find(a=>a.title==='City pick ad');assert.ok(gz,'runs in the city the admin chose');assert.equal(gz.place,'mall');
+ assert.ok(!(await call(11,'events.php?city=Shenyang')).data.ads.some(a=>a.title==='City pick ad'),'not in the city the applicant asked for');
+ const every=await call(12,'partner.php','POST',{action:'submit',kind:'ad',fields:{city:'Shenyang',title:'Everywhere ad',place:'night',days:7,contact:'wechat me',photos:[banner]}});
+ await call(1,'admin.php','POST',{action:'review_partner',id:Number(every.data.id),decision:'approve',city:'',place:'night'});
+ for(const c of ['Shenyang','Harbin'])assert.ok((await call(11,'events.php?city='+c)).data.ads.some(a=>a.title==='Everywhere ad'),'every city: '+c);
+ const t=s=>new Date(Date.now()+8*3600e3+s).toISOString().slice(0,16);
+ const ev=await call(12,'partner.php','POST',{action:'submit',kind:'event',fields:{city:'Shenyang',title:'Moved event',place:'night',starts:t(-60000),ends:t(86400e3)}});
+ await call(1,'admin.php','POST',{action:'review_partner',id:Number(ev.data.id),decision:'approve',city:'Shenzhen',place:''});
+ assert.ok((await call(11,'events.php?city=Shenzhen')).data.events.some(e=>e.title==='Moved event'&&e.place===''));
+});
