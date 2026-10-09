@@ -521,9 +521,9 @@ test('the chats list gets the latest private message with each friend for previe
  assert.equal((await call(10,'social.php')).data.friends.find(x=>x.id==='9').last.own,true);
 });
 // A real PNG of the given size (solid colour) for banner uploads.
-function png(w,h){const crcTable=[...Array(256)].map((_,n)=>{let c=n;for(let k=0;k<8;k++)c=c&1?0xedb88320^(c>>>1):c>>>1;return c>>>0});const crc=b=>{let c=0xffffffff;for(const x of b)c=crcTable[(c^x)&255]^(c>>>8);return (c^0xffffffff)>>>0};
+function png(w,h,noise=false){const crcTable=[...Array(256)].map((_,n)=>{let c=n;for(let k=0;k<8;k++)c=c&1?0xedb88320^(c>>>1):c>>>1;return c>>>0});const crc=b=>{let c=0xffffffff;for(const x of b)c=crcTable[(c^x)&255]^(c>>>8);return (c^0xffffffff)>>>0};
  const chunk=(type,data)=>{const len=Buffer.alloc(4);len.writeUInt32BE(data.length);const td=Buffer.concat([Buffer.from(type),data]);const c=Buffer.alloc(4);c.writeUInt32BE(crc(td));return Buffer.concat([len,td,c])};
- const ihdr=Buffer.alloc(13);ihdr.writeUInt32BE(w,0);ihdr.writeUInt32BE(h,4);ihdr[8]=8;ihdr[9]=2;const row=Buffer.alloc(1+w*3,0xcc);row[0]=0;const raw=Buffer.concat(Array(h).fill(row));
+ const ihdr=Buffer.alloc(13);ihdr.writeUInt32BE(w,0);ihdr.writeUInt32BE(h,4);ihdr[8]=8;ihdr[9]=2;const raw=Buffer.concat(Array.from({length:h},()=>{const row=noise?crypto.randomBytes(1+w*3):Buffer.alloc(1+w*3,0xcc);row[0]=0;return row}));
  return 'data:image/png;base64,'+Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',ihdr),chunk('IDAT',zlib.deflateSync(raw)),chunk('IEND',Buffer.alloc(0))]).toString('base64')}
 test('admins upload a paid banner for 007 Club; players in the city get it and the image is served publicly',async()=>{
  sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (1,5,11)');
@@ -536,6 +536,7 @@ test('admins upload a paid banner for 007 Club; players in the city get it and t
  const saved=await call(1,'admin.php','POST',ad);assert.equal(saved.httpStatus,200,JSON.stringify(saved));
  let got=(await call(11,'events.php?city=Shenyang')).data.ads.find(a=>a.id===saved.data.id);assert.equal(got.place,'night');assert.equal(got.width,640);assert.equal(got.height,320);assert.equal(got.image,undefined,'the list never carries image bytes');
  assert.equal((await call(11,'events.php?city=Guangzhou')).data.ads.some(a=>a.id===saved.data.id),false,'only its city');
+ const big=png(900,500,true);assert.ok(big.length>1000000,'a realistic banner is well over 100 KB');const bigSaved=await call(1,'admin.php','POST',{...ad,id:Number(saved.data.id),image:big});assert.equal(bigSaved.httpStatus,200,JSON.stringify(bigSaved));assert.equal((await call(11,'events.php?city=Shenyang')).data.ads.find(a=>a.id===saved.data.id).width,900);
  const img=await fetch(base+'/api/v4/chinalife/ad-image.php?id='+saved.data.id);assert.equal(img.status,200);assert.equal(img.headers.get('content-type'),'image/png');assert.equal((await img.arrayBuffer()).byteLength>50,true);
  await call(1,'admin.php','POST',{...ad,id:Number(saved.data.id),image:undefined,active:false});
  assert.equal((await call(11,'events.php?city=Shenyang')).data.ads.some(a=>a.id===saved.data.id),false,'paused ads disappear');

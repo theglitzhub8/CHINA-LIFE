@@ -2,7 +2,8 @@
 declare(strict_types=1);
 require_once __DIR__.'/common.php';
 cl_methods(['POST']);cl_admin();cl_rate('admin',60,60);
-$input=cl_body();$action=$input['action']??'';
+// Admins can send a banner image (up to 2 MB, about 2.8 MB as base64), so their requests may be larger.
+$input=cl_body(3000000);$action=$input['action']??'';
 function admin_log(string $action,?int $target,?int $amount,string $note): void {
     global $uid;cl_run('INSERT INTO chinalife_admin_log(admin_id,action,target_id,amount,note,created_at) VALUES(?,?,?,?,?,NOW())','isiis',[$uid,$action,$target,$amount,mb_substr($note,0,300)]);
 }
