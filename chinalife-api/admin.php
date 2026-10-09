@@ -151,6 +151,44 @@ if ($action==='delete_restaurant') {
     $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);$row=$id?cl_one('SELECT city,name FROM chinalife_restaurants WHERE id=?','i',[$id]):null;if (!$row) cl_fail('Restaurant not found',404);
     cl_run('DELETE FROM chinalife_restaurants WHERE id=?','i',[$id]);admin_log('delete_restaurant',null,null,$row['city'].' · '.$row['name']);json_response('success',['deleted'=>true]);
 }
+// Partner applications from partners.html: list, then approve (goes straight into the game), ask for changes, or reject.
+if ($action==='partners') {
+    $status=(string)($input['status']??'pending');if (!in_array($status,['pending','changes','approved','rejected','all'],true)) cl_fail('Choose a status');
+    $rows=cl_rows('SELECT s.id,s.user_id,u.user_name username,s.kind,s.city,s.title,s.data,s.status,s.admin_note,s.listing,s.created_at,s.updated_at FROM chinalife_submissions s LEFT JOIN users u ON u.user_id=s.user_id'.($status==='all'?'':' WHERE s.status=?').' ORDER BY s.updated_at DESC LIMIT 100',$status==='all'?'':'s',$status==='all'?[]:[$status]);
+    foreach ($rows as &$r){$r['id']=(string)$r['id'];$r['user_id']=(string)$r['user_id'];$r['data']=json_decode($r['data'],true)?:[];}unset($r);
+    $counts=[];foreach (cl_rows('SELECT status,COUNT(*) n FROM chinalife_submissions GROUP BY status') as $c) $counts[$c['status']]=(int)$c['n'];
+    json_response('success',['submissions'=>$rows,'counts'=>$counts]);
+}
+if ($action==='review_partner') {
+    $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);$decision=(string)($input['decision']??'');$note=mb_substr(trim((string)($input['note']??'')),0,300);
+    if (!in_array($decision,['approve','changes','reject'],true)) cl_fail('Choose approve, changes or reject');
+    if (($decision!=='approve')&&$note==='') cl_fail('Tell the applicant what to change or why it was rejected');
+    $db->begin_transaction();
+    $s=$id?cl_one('SELECT * FROM chinalife_submissions WHERE id=? FOR UPDATE','i',[$id]):null;
+    if (!$s){$db->rollback();cl_fail('Application not found',404);}
+    if ($s['status']==='approved'){$db->rollback();cl_fail('Already approved',409);}
+    $listing='';
+    if ($decision==='approve') {
+        $d=json_decode($s['data'],true)?:[];$kind=$s['kind'];
+        if (in_array($kind,['restaurant','shop','service','creator'],true)) {
+            if ((int)cl_one('SELECT COUNT(*) n FROM chinalife_restaurants WHERE city=?','s',[$s['city']])['n']>=200){$db->rollback();cl_fail('This city already has 200 partner listings',409);}
+            $menu=json_encode(array_map(fn($i)=>[$i['name'],$i['price'],$i['photo']??'',$i['description']??''],$d['items']??[]),JSON_UNESCAPED_UNICODE);
+            $q=cl_query('INSERT INTO chinalife_restaurants(city,name,icon,district,description,menu,order_link,wechat_id,whatsapp,active,kind,photos,links,owner_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,1,?,?,?,?,NOW(),NOW())','ssssssssssssi',
+                [$s['city'],$s['title'],$d['icon']??'🍽',$d['district']??'',mb_substr($d['description']??'',0,300),$menu,$d['order_link']??'',$d['wechat_id']??'',$d['whatsapp']??'',$kind,json_encode($d['photos']??[]),json_encode($d['links']??[]),(int)$s['user_id']]);
+            $rid=$q->insert_id;$q->close();if (($d['near']??'')!=='') cl_run('INSERT INTO chinalife_restaurant_places(restaurant_id,near) VALUES(?,?)','is',[$rid,$d['near']]);$listing='listing:'.$rid;
+        } elseif ($kind==='event') {
+            cl_run('INSERT INTO chinalife_events(title,body,city,place,reward,billboard,link,starts_at,ends_at,created_by,created_at) VALUES(?,?,?,?,0,1,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,NOW())','sssssiii',[$s['title'],mb_substr($d['description']??'',0,300),$s['city'],$d['place']??'',$d['link']??'',(int)$d['starts'],(int)$d['ends'],$uid]);
+            $listing='event:'.$db->insert_id;
+        } else {
+            $m=cl_one('SELECT bytes,mime,width,height FROM chinalife_media WHERE id=?','s',[$d['photos'][0]??'']);if (!$m){$db->rollback();cl_fail('The banner image is missing',409);}
+            $q=cl_query('INSERT INTO chinalife_ads(title,sponsor,city,place,link,image,mime,width,height,active,starts_at,ends_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,1,NOW(),DATE_ADD(NOW(),INTERVAL ? DAY),NOW(),NOW())','sssssssiii',
+                [$s['title'],(string)(cl_one('SELECT user_name FROM users WHERE user_id=?','i',[(int)$s['user_id']])['user_name']??''),!empty($d['all_cities'])?'':$s['city'],$d['place']??'night',$d['link']??'',$m['bytes'],$m['mime'],(int)$m['width'],(int)$m['height'],(int)($d['days']??30)]);
+            $listing='ad:'.$q->insert_id;$q->close();
+        }
+    }
+    cl_run('UPDATE chinalife_submissions SET status=?,admin_note=?,listing=?,reviewed_by=?,reviewed_at=NOW(),updated_at=NOW() WHERE id=?','sssii',[$decision==='approve'?'approved':($decision==='changes'?'changes':'rejected'),$note,$listing,$uid,$id]);
+    $db->commit();admin_log('review_partner',(int)$s['user_id'],null,$decision.' · '.$s['kind'].' · '.$s['title']);json_response('success',['status'=>$decision,'listing'=>$listing]);
+}
 if ($action==='ads') json_response('success',['ads'=>cl_ads('',true)]);
 if ($action==='save_ad') {
     $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);$title=trim((string)($input['title']??''));$sponsor=trim((string)($input['sponsor']??''));$link=trim((string)($input['link']??''));

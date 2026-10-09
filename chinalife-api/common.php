@@ -166,8 +166,8 @@ function cl_ranks(): array {
 }
 // Partner restaurants are added by admins per city. Ordering opens their own WeChat, WhatsApp or order link.
 function cl_restaurants(string $city, bool $all=false): array {
-    $rows=cl_rows('SELECT r.id,r.city,r.name,r.icon,r.district,r.description,r.menu,r.order_link,r.wechat_id,r.whatsapp,r.active,COALESCE(p.near,\'\') near FROM chinalife_restaurants r LEFT JOIN chinalife_restaurant_places p ON p.restaurant_id=r.id WHERE r.city=?'.($all?'':' AND r.active=1').' ORDER BY r.name LIMIT 200','s',[$city]);
-    foreach ($rows as &$r) {$r['id']=(string)$r['id'];$r['menu']=json_decode($r['menu'],true)?:[];$r['active']=(bool)$r['active'];}unset($r);
+    $rows=cl_rows('SELECT r.id,r.city,r.name,r.icon,r.district,r.description,r.menu,r.order_link,r.wechat_id,r.whatsapp,r.active,r.kind,r.photos,r.links,COALESCE(p.near,\'\') near FROM chinalife_restaurants r LEFT JOIN chinalife_restaurant_places p ON p.restaurant_id=r.id WHERE r.city=?'.($all?'':' AND r.active=1').' ORDER BY r.name LIMIT 200','s',[$city]);
+    foreach ($rows as &$r) {$r['id']=(string)$r['id'];$r['kind']=$r['kind']?:'restaurant';$r['photos']=json_decode((string)($r['photos']??''),true)?:[];$r['links']=json_decode((string)($r['links']??''),true)?:[];$r['menu']=json_decode($r['menu'],true)?:[];$r['active']=(bool)$r['active'];}unset($r);
     return $rows;
 }
 // Paid ads shown on venue walls: live ads for one city (or all cities). Images are served by ad-image.php.
@@ -175,6 +175,52 @@ function cl_ads(string $city, bool $all=false): array {
     $rows=cl_rows('SELECT id,title,sponsor,city,place,link,width,height,active,UNIX_TIMESTAMP(starts_at)*1000 starts_at,UNIX_TIMESTAMP(ends_at)*1000 ends_at,UNIX_TIMESTAMP(updated_at) version FROM chinalife_ads WHERE '.($all?'1=1':'active=1 AND starts_at<=NOW() AND ends_at>NOW() AND (city=\'\' OR city=?)').' ORDER BY id DESC LIMIT 50',$all?'':'s',$all?[]:[$city]);
     foreach ($rows as &$r) {foreach (['width','height','starts_at','ends_at','version'] as $k) $r[$k]=(int)$r[$k];$r['id']=(string)$r['id'];$r['active']=(bool)$r['active'];}unset($r);
     return $rows;
+}
+// An uploaded image as a data URL: only real PNG, JPEG or WebP within the size and pixel limits. Returns [bytes,mime,w,h].
+function cl_image(mixed $dataUrl, int $maxBytes=2097152, int $minW=200, int $minH=100): array {
+    if (!is_string($dataUrl)||!preg_match('#^data:image/(png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$#',$dataUrl,$m)) cl_fail('Upload a PNG, JPG or WebP image');
+    $bytes=base64_decode($m[2],true);if ($bytes===false||strlen($bytes)>$maxBytes) cl_fail('Images must be '.round($maxBytes/1048576,1).' MB or smaller');
+    $info=@getimagesizefromstring($bytes);$mime=$info['mime']??'';
+    if (!$info||!in_array($mime,['image/png','image/jpeg','image/webp'],true)) cl_fail('That file is not a valid image');
+    if ($info[0]<$minW||$info[1]<$minH||$info[0]>4096||$info[1]>4096) cl_fail('Use an image between '.$minW.'×'.$minH.' and 4096×4096 pixels');
+    return [$bytes,$mime,(int)$info[0],(int)$info[1]];
+}
+const CL_CITIES=['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];
+const CL_PARTNER_KINDS=['restaurant','shop','service','creator','event','ad'];
+// Partner applications from partners.html. Every field is checked here; what is stored is exactly what goes into the game
+// on approval. Photos must be images this account uploaded. Returns [city, title, data].
+function cl_partner_data(string $kind, array $in, int $owner): array {
+    if (!in_array($kind,CL_PARTNER_KINDS,true)) cl_fail('Choose what you want to list');
+    $city=$in['city']??'';if (!in_array($city,CL_CITIES,true)) cl_fail('Choose a city');
+    $text=function(string $key,int $max,bool $required=false,string $label='') use ($in){$v=trim((string)($in[$key]??''));if ($required&&$v==='') cl_fail('Add '.($label?:$key));if (mb_strlen($v)>$max) cl_fail(ucfirst($label?:$key).' is too long (up to '.$max.' characters)');return $v;};
+    $media=function(mixed $list,int $max) use ($owner){if ($list===null||$list==='') return [];if (!is_array($list)||count($list)>$max) cl_fail('Add up to '.$max.' photos');$ids=[];foreach ($list as $id){if (!is_string($id)||!preg_match('/^[a-f0-9]{24}$/',$id)||!cl_one('SELECT id FROM chinalife_media WHERE id=? AND user_id=?','si',[$id,$owner])) cl_fail('A photo is missing. Upload it again');$ids[]=$id;}return array_values(array_unique($ids));};
+    $venue=function(string $key,bool $allowEmpty=true) use ($in,$city){$v=(string)($in[$key]??'');if ($v===''&&$allowEmpty) return '';[,$v]=cl_room(['city'=>$city,'place'=>$v]);if (cl_private_place($v)) cl_fail('Choose a public place');return $v;};
+    $link=function(string $key,string $schemes='https://|weixin://') use ($in){$v=trim((string)($in[$key]??''));if ($v!==''&&!preg_match('#^('.$schemes.')[^\s<>"]{3,290}$#',$v)) cl_fail('Links must start with '.str_replace('|',' or ',$schemes));return $v;};
+    $wechat=trim((string)($in['wechat_id']??''));if ($wechat!==''&&!preg_match('/^[A-Za-z][-_A-Za-z0-9]{5,39}$/',$wechat)) cl_fail('Enter a valid WeChat ID (6 to 40 letters, numbers, - or _)');
+    $whatsapp=preg_replace('/[^0-9]/','',(string)($in['whatsapp']??''));if ($whatsapp!==''&&(strlen($whatsapp)<8||strlen($whatsapp)>15)) cl_fail('Enter the WhatsApp number with country code, e.g. 8618940147438');
+    $contact=$text('contact',120);
+    $d=['icon'=>$text('icon',8)?:['restaurant'=>'🍽','shop'=>'🛒','service'=>'🧰','creator'=>'🎬','event'=>'🎉','ad'=>'📣'][$kind],'description'=>$text('description',600),'wechat_id'=>$wechat,'whatsapp'=>$whatsapp,'contact'=>$contact];
+    if (in_array($kind,['restaurant','shop','service','creator'],true)) {
+        $title=$text('name',80,true,'a name');$d['district']=$text('district',80);$d['order_link']=$link('order_link');$d['near']=$venue('near');$d['photos']=$media($in['photos']??[],6);
+        $items=$in['items']??[];$need=$kind==='creator'?0:1;if (!is_array($items)||count($items)<$need||count($items)>80) cl_fail($kind==='creator'?'Add up to 80 offers':'Add 1 to 80 items with prices');
+        $d['items']=[];foreach ($items as $it){$name=trim((string)($it['name']??''));$price=$it['price']??null;$desc=trim((string)($it['description']??''));
+            if ($name===''||mb_strlen($name)>60||!is_numeric($price)||$price<0||$price>1000000||mb_strlen($desc)>120) cl_fail('Each item needs a name (up to 60 characters) and a price from 0 to 1,000,000');
+            $photo=$media(($it['photo']??'')===''?[]:[$it['photo']],1);$d['items'][]=['name'=>$name,'price'=>round((float)$price,2),'description'=>$desc,'photo'=>$photo[0]??''];}
+        $links=$in['links']??[];if (!is_array($links)||count($links)>6) cl_fail('Add up to 6 social links');$d['links']=[];foreach ($links as $l){$l=trim((string)$l);if ($l==='') continue;if (!preg_match('#^https://[^\s<>"]{3,290}$#',$l)) cl_fail('Social links must start with https://');$d['links'][]=$l;}
+        if ($kind==='creator'&&!$d['links']&&$wechat===''&&$whatsapp==='') cl_fail('Add a social link or a way to contact you');
+        if ($kind!=='creator'&&$d['order_link']===''&&$wechat===''&&$whatsapp==='') cl_fail('Add at least one way for players to reach you: a link, a WeChat ID or a WhatsApp number');
+    } elseif ($kind==='event') {
+        $title=$text('title',80,true,'an event title');$d['place']=$venue('place');$d['link']=$link('link','https://');$d['photos']=$media($in['photos']??[],1);
+        $tz=new DateTimeZone('Asia/Shanghai');$parse=function(string $key,string $label) use ($in,$tz){$v=(string)($in[$key]??'');$t=DateTime::createFromFormat('!Y-m-d\TH:i',$v,$tz);if (!$t) cl_fail('Choose the '.$label.' date and time');return $t->getTimestamp();};
+        $start=$parse('starts','start');$end=$parse('ends','end');
+        if ($start<time()-3600||$start>time()+180*86400) cl_fail('The event must start within the next 6 months');if ($end<=$start||$end-$start>30*86400) cl_fail('The event must end after it starts, within 30 days');
+        $d['starts']=$start;$d['ends']=$end;
+    } else {
+        $title=$text('title',80,true,'an ad title');$d['link']=$link('link');$d['place']=$venue('place',false);$d['photos']=$media($in['photos']??[],1);if (!$d['photos']) cl_fail('Upload the banner image');
+        $days=$in['days']??30;if (!in_array($days,[7,14,30,60,90],true)) cl_fail('Choose how long the ad runs');$d['days']=$days;$d['all_cities']=!empty($in['all_cities']);
+        if ($wechat===''&&$whatsapp===''&&$contact==='') cl_fail('Add a way for our team to reach you about the ad');
+    }
+    return [$city,$title,$d];
 }
 function cl_valid_restaurant(array $input): array {
     $name=trim((string)($input['name']??''));$icon=trim((string)($input['icon']??''))?:'🍽';$district=trim((string)($input['district']??''));$description=trim((string)($input['description']??''));

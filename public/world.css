@@ -457,3 +457,11 @@ dialog{border-radius:22px}
 .auth-check{display:flex!important;align-items:flex-start;gap:8px;font-weight:600;font-size:13px;line-height:1.35}.auth-check input{width:auto;margin-top:2px}
 .auth-switch{border:0;background:none;color:#22685a;font:800 14px Manrope,system-ui;padding:6px;cursor:pointer}
 .auth-check input{flex:none;width:18px!important;height:18px;padding:0}.auth-check span{flex:1}.auth-check a{color:#22685a}
+/* Partner listings and the City guide */
+.partner-photos{display:flex;gap:8px;overflow-x:auto;margin:4px 0 12px;scrollbar-width:none}.partner-photos img{height:150px;width:auto;max-width:85%;border-radius:14px;object-fit:cover;flex:none}
+.partner-items{display:grid;gap:8px;margin-bottom:12px}.partner-items>div{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center;background:#f6f9f9;border-radius:14px;padding:8px}
+.partner-items img,.partner-noimg{width:52px;height:52px;border-radius:10px;object-fit:cover;display:grid;place-items:center;background:#e7eff0;font-size:22px}
+.partner-items b{display:block}.partner-items small{color:#5d7477;font-size:12.5px}.partner-items em{font-style:normal;font-weight:800}
+.guide-row{display:grid;grid-template-columns:56px 1fr auto;gap:12px;align-items:center;width:100%;text-align:left;border:0;background:#fff;border-radius:16px;padding:8px 10px;margin-bottom:8px;box-shadow:0 1px 3px #10283a12;cursor:pointer}
+.guide-row img,.guide-row .partner-noimg{width:56px;height:56px;border-radius:12px;object-fit:cover}.guide-row b{display:block}.guide-row small{display:block;color:#62798a;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.guide-row i{font-style:normal;color:#9aaab4;font-size:22px}
+.guide-cta{display:grid;gap:6px;margin-top:16px;padding:16px;border-radius:18px;background:linear-gradient(135deg,#0f766e,#0e5a8a);color:#fff}.guide-cta span{opacity:.85;font-size:14px}.guide-cta .primary-btn{background:#fff;color:#0f5f58;text-align:center}

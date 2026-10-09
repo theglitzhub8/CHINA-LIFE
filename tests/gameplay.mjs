@@ -228,7 +228,7 @@ test('Hafrik HQ is a venue in every city and partner restaurants open their real
  g.state.city='Shenyang';g.setPartnerRestaurants([{id:'1',name:'Lanzhou Noodle House',icon:'🍜',district:'Heping',menu:[['Beef noodles',28]],order_link:'https://u.wechat.com/abc',wechat_id:'noodle_house88',whatsapp:'8618940147438'}]);
  g.delivery();assert.match(h.document.getElementById('activityContent').textContent,/Order for real/);h.click('partner-0');
  const links=[...h.document.querySelectorAll('#activityContent a.external-app')].map(a=>a.getAttribute('href'));assert.ok(links.includes('https://u.wechat.com/abc'));assert.ok(links.some(u=>u.startsWith('https://wa.me/8618940147438')));
- assert.match(h.document.getElementById('activityContent').textContent,/Beef noodles · ¥28/);assert.ok(h.document.getElementById('partnerWechat'));assert.equal(g.state.money,500,'real orders never touch game money');
+ assert.match(h.document.getElementById('activityContent').textContent,/Beef noodles¥28/);assert.ok(h.document.getElementById('partnerWechat'));assert.equal(g.state.money,500,'real orders never touch game money');
 });
 
 test('the store sells clothes you wear, cars you drive, and saves only real catalogue items',()=>{
@@ -243,4 +243,12 @@ test('the store sells clothes you wear, cars you drive, and saves only real cata
  const saved=harness({...JSON.parse(JSON.stringify(g.state)),wardrobe:{owned:['hoodie','fake-item'],wearing:{top:'fake-item'}},garage:{owned:['spaceship','scooter'],active:'spaceship'}});
  assert.ok(!saved.game.state.wardrobe.owned.includes('fake-item'));assert.equal(saved.game.state.wardrobe.wearing.top,'tee-basic');assert.deepEqual([...saved.game.state.garage.owned],['scooter']);assert.equal(saved.game.state.garage.active,'scooter');
  const old=harness({...fixture(),driving:{lessons:3,licensed:true,car:'sedan'}});assert.ok(old.game.state.garage.owned.includes('sedan'),'an old sedan moves into the garage');
+});
+test('approved partners: restaurants are in food delivery, shops and services in the City guide with their photos and prices',()=>{const h=harness({...fixture(),place:'home'});h.context.ChinaLifeAuth={base:'https://hafrik.com/api/v4'};
+ h.game.setPartnerRestaurants([{id:'1',kind:'restaurant',name:'Mama Put Kitchen',icon:'🍲',menu:[['Jollof rice',35,'aaaaaaaaaaaaaaaaaaaaaaaa','Party style']],photos:[],wechat_id:'mamaput_sy'},{id:'2',kind:'shop',name:'Africa Mart',icon:'🛒',district:'Sanhao',menu:[['Garri 1kg',25,'','']],photos:['bbbbbbbbbbbbbbbbbbbbbbbb'],whatsapp:'8618900000000'},{id:'3',kind:'service',name:'Visa Helper',icon:'🧰',menu:[['Visa extension help',300,'','']],photos:[]}]);
+ h.game.delivery();const food=h.document.getElementById('activityContent').textContent;assert.match(food,/Mama Put Kitchen/);assert.doesNotMatch(food,/Africa Mart|Visa Helper/,'only restaurants in delivery');
+ h.game.cityGuide();let t=h.document.getElementById('activityContent');assert.match(t.textContent,/Mama Put Kitchen/);assert.match(t.textContent,/Become a partner/);
+ t.querySelector('[data-guide="shop"]').onclick();t=h.document.getElementById('activityContent');assert.match(t.textContent,/Africa Mart/);assert.doesNotMatch(t.textContent,/Mama Put/);assert.ok(t.querySelector('img[src*="media.php?id=bbbbbbbbbbbbbbbbbbbbbbbb"]'));
+ t.querySelector('[data-guide-item="0"]').onclick();t=h.document.getElementById('activityContent');assert.match(t.textContent,/Products/);assert.match(t.textContent,/Garri 1kg/);assert.ok(t.querySelector('a[href^="https://wa.me/8618900000000"]'));
+ h.click('partnerBack');assert.match(h.document.getElementById('activityContent').textContent,/City guide/);
 });
