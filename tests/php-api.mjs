@@ -376,7 +376,7 @@ test('two owners have separate starter and purchased home presence, chat and voi
  sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (11,12)');
  for(const place of ['home','home-campus','home-nanhu','home-hunnan','home-river','home-mansion']){
   for(const id of [11,12])assert.equal((await call(id,'presence.php','POST',presence('Shenyang',place))).httpStatus,200);
-  for(const id of [11,12]){const r=await call(id,'presence.php?city=Shenyang&place='+place);assert.equal(r.httpStatus,200);assert.ok(!r.data.players.some(p=>p.id===String(id===11?12:11)));}
+  for(const id of [11,12]){const r=await call(id,'presence.php?city=Shenyang&place='+place);assert.equal(r.httpStatus,200);assert.ok(!r.data.players.some(p=>p.id===String(id===11?12:11)&&p.place!=='private-home'));const other=r.data.players.find(p=>p.id===String(id===11?12:11));assert.equal(other?.place,'private-home','others at home show as online without their home');assert.equal(other.x,0);}
  }
  const room={city:'Shenyang',place:'home-mansion'};
  assert.equal((await call(11,'messages.php','POST',{...room,text:'Private mansion message'})).httpStatus,200);
@@ -393,7 +393,7 @@ test('two owners have separate starter and purchased home presence, chat and voi
  const saved=await call(11,'save.php');saved.data.save.game.place='home-mansion';assert.equal((await call(11,'save.php','POST',{revision:saved.data.revision,save:saved.data.save})).httpStatus,200);
  const reconnected=await call(11,'save.php');assert.equal(reconnected.data.save.game.place,'home-mansion');assert.equal(reconnected.data.save.game.activeHome,'home-mansion');
  assert.equal((await call(11,'presence.php','POST',presence('Shenyang',reconnected.data.save.game.place))).httpStatus,200);
- assert.ok(!(await call(12,'presence.php?city=Shenyang&place=plaza')).data.players.some(p=>p.id==='11'));
+ assert.equal((await call(12,'presence.php?city=Shenyang&place=plaza')).data.players.find(p=>p.id==='11')?.place,'private-home');
 });
 
 test('private home invitations require mutual friendship, acceptance and owner permission',async()=>{
