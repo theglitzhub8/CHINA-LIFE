@@ -72,9 +72,12 @@ test('friends, private messages, reports and blocks enforce account permissions'
  assert.equal((await call(2,'messages.php?peer=1')).httpStatus,403);await call(1,'block.php','POST',{peer:'2',blocked:false});
 });
 test('voice capacity, session types, same-room signaling and stale sessions',async()=>{
- for(let id=3;id<=7;id++)await call(id,'presence.php','POST',presence());
- for(let id=3;id<=6;id++){const r=await call(id,'voice.php','POST',{...presence(),session:'session-'+id,muted:true,after:0,action:'join'});assert.equal(r.httpStatus,200);assert.equal(typeof r.data.id,'string');assert.equal(typeof r.data.members[0].id,'string');assert.equal(typeof r.data.members[0].muted,'boolean')}
- assert.equal((await call(7,'voice.php','POST',{...presence(),session:'session-7',muted:true,after:0,action:'join'})).httpStatus,409);
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits; DELETE FROM chinalife_voice_members');for(let id=3;id<=11;id++)await call(id,'presence.php','POST',presence());
+ for(let id=3;id<=10;id++){const r=await call(id,'voice.php','POST',{...presence(),session:'session-'+id,muted:true,after:0,action:'join'});assert.equal(r.httpStatus,200);assert.equal(typeof r.data.id,'string');assert.equal(typeof r.data.members[0].id,'string');assert.equal(typeof r.data.members[0].muted,'boolean')}
+ {const full=await call(11,'voice.php','POST',{...presence(),session:'session-11',muted:true,after:0,action:'join'});assert.equal(full.httpStatus,409,'eight people fill a room');assert.match(full.message,/full/)}
+ // Same account, second device: it takes voice over and the first device is told, so it stops instead of fighting back.
+ assert.equal((await call(10,'voice.php','POST',{...presence(),session:'session-10b',muted:true,after:0,action:'join'})).httpStatus,200);
+ {const moved=await call(10,'voice.php','POST',{...presence(),session:'session-10',muted:true,after:0,action:'pulse'});assert.equal(moved.httpStatus,409);assert.match(moved.message,/other device/)}
  assert.equal((await call(3,'voice-signal.php','POST',{...presence(),session:'session-3',peer:'4',peerSession:'wrong-session',payload:{type:'offer',sdp:'test'}})).httpStatus,403);
  assert.equal((await call(3,'voice-signal.php','POST',{...presence(),session:'session-3',peer:'4',peerSession:'session-4',payload:{type:'offer',sdp:'test'}})).httpStatus,200);
  let r=await call(4,'voice-signal.php?city=Shenyang&place=plaza&session=session-4&after=0');assert.equal(r.data.signals[0].sender,'3');assert.equal(r.data.signals[0].session,'session-3');

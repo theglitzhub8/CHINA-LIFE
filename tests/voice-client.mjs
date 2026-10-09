@@ -27,3 +27,8 @@ test('a dropped voice request does not reset voice, three in a row disconnect, a
  fail=true;for(let i=0;i<3;i++)await a.context.ChinaLifeVoice.pulse();assert.equal(a.context.ChinaLifeVoice.active,false,'three failures in a row disconnect');
  let events=[];a.context.addEventListener('chinalife:voice',e=>events.push(e.detail.active));fail=false;await a.context.ChinaLifeVoice.join(true);assert.equal(a.context.ChinaLifeVoice.active,true);assert.ok(!events.includes(true),'listening only never ducks the club music');
 });
+test('an expired voice session reconnects by itself, and voice taken by another device stops here instead of fighting',async()=>{const server=backend(),a=await setup(server,'alice');await a.context.ChinaLifeVoice.join(true);assert.equal(a.context.ChinaLifeVoice.active,true);
+ const real=a.context.fetch;let reply=null;a.context.fetch=(path,options)=>reply&&/\/voice/.test(path)&&!/signal/.test(path)&&JSON.parse(options.body||'{}').action==='pulse'?Promise.resolve(Response.json({status:'error',message:reply[1]},{status:reply[0]})):real(path,options);
+ reply=[403,'Voice session expired. Join again'];const pulse=a.context.ChinaLifeVoice.pulse();reply=null;await pulse;await new Promise(r=>setTimeout(r,20));assert.equal(a.context.ChinaLifeVoice.active,true,'reconnected');assert.equal(a.context.ChinaLifeVoice.listening,true,'still listen-only, no microphone');
+ reply=[409,'Voice moved to your other device'];await a.context.ChinaLifeVoice.pulse();assert.equal(a.context.ChinaLifeVoice.active,false);assert.match(a.document.getElementById('venueVoiceStatus')?.textContent||'',/Off/);
+});

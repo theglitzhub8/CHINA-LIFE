@@ -95,9 +95,13 @@ function cl_friends(int $a, int $b): bool {
 function cl_session(mixed $value): string {
     if (!is_string($value) || !preg_match('/^[a-zA-Z0-9-]{8,80}$/', $value)) cl_fail('Invalid voice session'); return $value;
 }
-function cl_voice(int $id, string $session, string $city, string $place): void {
+function cl_voice(int $id, string $session, string $city, string $place, bool $self=true): void {
     cl_presence($id,$city,$place);
-    if (!cl_one('SELECT user_id FROM chinalife_voice_members WHERE user_id=? AND session=? AND city=? AND place=? AND seen_at>=DATE_SUB(NOW(),INTERVAL 15 SECOND)', 'isss', [$id,$session,$city,$place])) cl_fail('Voice session expired. Join again', 403);
+    if (!cl_one('SELECT user_id FROM chinalife_voice_members WHERE user_id=? AND session=? AND city=? AND place=? AND seen_at>=DATE_SUB(NOW(),INTERVAL 30 SECOND)', 'isss', [$id,$session,$city,$place])) {
+        // One voice connection per account: if another device or tab took it, say so, so this one stops instead of fighting back.
+        if ($self&&cl_one('SELECT user_id FROM chinalife_voice_members WHERE user_id=? AND session<>? AND seen_at>=DATE_SUB(NOW(),INTERVAL 30 SECOND)', 'is', [$id,$session])) cl_fail('Voice moved to your other device', 409);
+        cl_fail('Voice session expired. Join again', 403);
+    }
 }
 // Atomic per-account limits serialize concurrent requests without relying on client timers.
 function cl_rate(string $kind, int $limit, int $seconds): void {
