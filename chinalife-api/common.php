@@ -205,11 +205,12 @@ const CL_CITIES=['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu
 const CL_PARTNER_KINDS=['restaurant','shop','service','creator','club','artist','event','ad'];
 // Partner applications from partners.html. Every field is checked here; what is stored is exactly what goes into the game
 // on approval. Photos must be images this account uploaded. Returns [city, title, data].
-function cl_partner_data(string $kind, array $in, int $owner): array {
+// $admin: an admin is editing, so photos the admin uploaded are allowed and running events may keep their start time.
+function cl_partner_data(string $kind, array $in, int $owner, bool $admin=false): array {
     if (!in_array($kind,CL_PARTNER_KINDS,true)) cl_fail('Choose what you want to list');
     $city=$in['city']??'';if (!in_array($city,CL_CITIES,true)) cl_fail('Choose a city');
     $text=function(string $key,int $max,bool $required=false,string $label='') use ($in){$v=trim((string)($in[$key]??''));if ($required&&$v==='') cl_fail('Add '.($label?:$key));if (mb_strlen($v)>$max) cl_fail(ucfirst($label?:$key).' is too long (up to '.$max.' characters)');return $v;};
-    $media=function(mixed $list,int $max) use ($owner){if ($list===null||$list==='') return [];if (!is_array($list)||count($list)>$max) cl_fail('Add up to '.$max.' photos');$ids=[];foreach ($list as $id){if (!is_string($id)||!preg_match('/^[a-f0-9]{24}$/',$id)||!cl_one('SELECT id FROM chinalife_media WHERE id=? AND user_id=?','si',[$id,$owner])) cl_fail('A photo is missing. Upload it again');$ids[]=$id;}return array_values(array_unique($ids));};
+    $media=function(mixed $list,int $max) use ($owner,$admin){if ($list===null||$list==='') return [];if (!is_array($list)||count($list)>$max) cl_fail('Add up to '.$max.' photos');$ids=[];foreach ($list as $id){if (!is_string($id)||!preg_match('/^[a-f0-9]{24}$/',$id)||!($admin?cl_one('SELECT id FROM chinalife_media WHERE id=?','s',[$id]):cl_one('SELECT id FROM chinalife_media WHERE id=? AND user_id=?','si',[$id,$owner]))) cl_fail('A photo is missing. Upload it again');$ids[]=$id;}return array_values(array_unique($ids));};
     $venue=function(string $key,bool $allowEmpty=true) use ($in,$city){$v=(string)($in[$key]??'');if ($v===''&&$allowEmpty) return '';[,$v]=cl_room(['city'=>$city,'place'=>$v]);if (cl_private_place($v)) cl_fail('Choose a public place');return $v;};
     $link=function(string $key,string $schemes='https://|weixin://') use ($in){$v=trim((string)($in[$key]??''));if ($v!==''&&!preg_match('#^('.$schemes.')[^\s<>"]{3,290}$#',$v)) cl_fail('Links must start with '.str_replace('|',' or ',$schemes));return $v;};
     $wechat=trim((string)($in['wechat_id']??''));if ($wechat!==''&&!preg_match('/^[A-Za-z][-_A-Za-z0-9]{5,39}$/',$wechat)) cl_fail('Enter a valid WeChat ID (6 to 40 letters, numbers, - or _)');
@@ -233,7 +234,7 @@ function cl_partner_data(string $kind, array $in, int $owner): array {
         $title=$text('title',80,true,'an event title');$d['place']=$venue('place');$d['link']=$link('link','https://');$d['photos']=$media($in['photos']??[],1);
         $tz=new DateTimeZone('Asia/Shanghai');$parse=function(string $key,string $label) use ($in,$tz){$v=(string)($in[$key]??'');$t=DateTime::createFromFormat('!Y-m-d\TH:i',$v,$tz);if (!$t) cl_fail('Choose the '.$label.' date and time');return $t->getTimestamp();};
         $start=$parse('starts','start');$end=$parse('ends','end');
-        if ($start<time()-3600||$start>time()+180*86400) cl_fail('The event must start within the next 6 months');if ($end<=$start||$end-$start>30*86400) cl_fail('The event must end after it starts, within 30 days');
+        if ((!$admin&&$start<time()-3600)||$start>time()+180*86400) cl_fail('The event must start within the next 6 months');if ($end<=$start||$end-$start>30*86400) cl_fail('The event must end after it starts, within 30 days');
         $d['starts']=$start;$d['ends']=$end;
     } else {
         $title=$text('title',80,true,'an ad title');$d['link']=$link('link');$d['place']=$venue('place',false);$d['photos']=$media($in['photos']??[],1);if (!$d['photos']) cl_fail('Upload the banner image');

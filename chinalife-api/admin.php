@@ -207,6 +207,47 @@ if ($action==='review_partner') {
     cl_run('UPDATE chinalife_submissions SET status=?,admin_note=?,listing=?,city=?,reviewed_by=?,reviewed_at=NOW(),updated_at=NOW() WHERE id=?','ssssii',[$decision==='approve'?'approved':($decision==='changes'?'changes':'rejected'),$note,$listing,$s['city'],$uid,$id]);
     $db->commit();admin_log('review_partner',(int)$s['user_id'],null,$decision.' · '.$s['kind'].' · '.$s['title']);json_response('success',['status'=>$decision,'listing'=>$listing]);
 }
+// Admins edit any partner application; if it is live, the game updates at once. Admins may add photos too.
+if ($action==='partner_upload') {
+    [$bytes,$mime,$w,$h]=cl_image($input['image']??null,2097152,120,120);$mid=bin2hex(random_bytes(12));
+    cl_run('INSERT INTO chinalife_media(id,user_id,mime,width,height,bytes,created_at) VALUES(?,?,?,?,?,?,NOW())','sisiis',[$mid,$uid,$mime,$w,$h,$bytes]);json_response('success',['id'=>$mid]);
+}
+if ($action==='partner_update') {
+    $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);$s=$id?cl_one('SELECT * FROM chinalife_submissions WHERE id=?','i',[$id]):null;if (!$s) cl_fail('Application not found',404);
+    [$city,$title,$d]=cl_partner_data($s['kind'],is_array($input['fields']??null)?$input['fields']:[],(int)$s['user_id'],true);
+    $db->begin_transaction();
+    [$type,$lid]=array_pad(explode(':',$s['listing'],2),2,'');$lid=(int)$lid;
+    if ($s['status']==='approved'&&$lid) {
+        if ($type==='listing') {
+            $menu=json_encode(array_map(fn($i)=>[$i['name'],$i['price'],$i['photo']??'',$i['description']??''],$d['items']??[]),JSON_UNESCAPED_UNICODE);
+            cl_run('UPDATE chinalife_restaurants SET city=?,name=?,icon=?,district=?,description=?,menu=?,order_link=?,wechat_id=?,whatsapp=?,photos=?,links=?,updated_at=NOW() WHERE id=?','sssssssssssi',[$city,$title,$d['icon'],$d['district']??'',mb_substr($d['description']??'',0,300),$menu,$d['order_link']??'',$d['wechat_id']??'',$d['whatsapp']??'',json_encode($d['photos']??[]),json_encode($d['links']??[]),$lid]);
+            cl_run('DELETE FROM chinalife_restaurant_places WHERE restaurant_id=?','i',[$lid]);if (($d['near']??'')!=='') cl_run('INSERT INTO chinalife_restaurant_places(restaurant_id,near) VALUES(?,?)','is',[$lid,$d['near']]);
+            $keep=array_column($d['songs']??[],'id');foreach (cl_rows('SELECT id FROM chinalife_songs WHERE listing_id=?','i',[$lid]) as $old) if (!in_array($old['id'],$keep,true)) cl_run('UPDATE chinalife_songs SET active=0,listing_id=NULL WHERE id=?','s',[$old['id']]);
+            foreach ($d['songs']??[] as $sg) cl_run('UPDATE chinalife_songs SET listing_id=?,active=1,title=? WHERE id=?','iss',[$lid,$sg['title'],$sg['id']]);
+        } elseif ($type==='event') {
+            cl_run('UPDATE chinalife_events SET title=?,body=?,city=?,place=?,link=?,starts_at=FROM_UNIXTIME(?),ends_at=FROM_UNIXTIME(?) WHERE id=?','sssssiii',[$title,mb_substr($d['description']??'',0,300),$city,$d['place']??'',$d['link']??'',(int)$d['starts'],(int)$d['ends'],$lid]);
+        } elseif ($type==='ad') {
+            cl_run('UPDATE chinalife_ads SET title=?,city=?,place=?,link=?,ends_at=DATE_ADD(starts_at,INTERVAL ? DAY),updated_at=NOW() WHERE id=?','ssssii',[$title,!empty($d['all_cities'])?'':$city,$d['place']??'night',$d['link']??'',(int)($d['days']??30),$lid]);
+            $m=cl_one('SELECT bytes,mime,width,height FROM chinalife_media WHERE id=?','s',[$d['photos'][0]??'']);if ($m) cl_run('UPDATE chinalife_ads SET image=?,mime=?,width=?,height=? WHERE id=?','ssiii',[$m['bytes'],$m['mime'],(int)$m['width'],(int)$m['height'],$lid]);
+        }
+    }
+    cl_run('UPDATE chinalife_submissions SET city=?,title=?,data=?,updated_at=NOW() WHERE id=?','sssi',[$city,$title,json_encode($d,JSON_UNESCAPED_UNICODE),$id]);
+    $db->commit();admin_log('edit_partner',(int)$s['user_id'],null,$s['kind'].' · '.$title);json_response('success',['updated'=>true]);
+}
+// Deleting removes the application and everything it put into the game (listing, map spot, songs and their files, event, ad).
+if ($action==='partner_delete') {
+    $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);$s=$id?cl_one('SELECT * FROM chinalife_submissions WHERE id=?','i',[$id]):null;if (!$s) cl_fail('Application not found',404);
+    $d=json_decode($s['data'],true)?:[];[$type,$lid]=array_pad(explode(':',$s['listing'],2),2,'');$lid=(int)$lid;[$dir]=cl_music_storage();
+    $db->begin_transaction();
+    $songIds=array_column($d['songs']??[],'id');if ($type==='listing'&&$lid) foreach (cl_rows('SELECT id FROM chinalife_songs WHERE listing_id=?','i',[$lid]) as $r) $songIds[]=$r['id'];
+    $files=[];foreach (array_unique($songIds) as $sid){$f=cl_one('SELECT file FROM chinalife_songs WHERE id=?','s',[$sid]);if ($f){$files[]=$f['file'];cl_run('DELETE FROM chinalife_songs WHERE id=?','s',[$sid]);}}
+    if ($type==='listing'&&$lid) cl_run('DELETE FROM chinalife_restaurants WHERE id=?','i',[$lid]);
+    if ($type==='event'&&$lid) cl_run('DELETE FROM chinalife_events WHERE id=?','i',[$lid]);
+    if ($type==='ad'&&$lid) cl_run('DELETE FROM chinalife_ads WHERE id=?','i',[$lid]);
+    cl_run('DELETE FROM chinalife_submissions WHERE id=?','i',[$id]);$db->commit();
+    foreach ($files as $f) if (preg_match('/^[a-f0-9]{16}\.(mp3|m4a|wav)$/',$f)) @unlink($dir.'/'.$f);
+    admin_log('delete_partner',(int)$s['user_id'],null,$s['kind'].' · '.$s['title']);json_response('success',['deleted'=>true]);
+}
 // ChinaLife Radio: every approved song, with take down / put back.
 if ($action==='songs') json_response('success',['songs'=>cl_songs('',true)]);
 if ($action==='song_active') {

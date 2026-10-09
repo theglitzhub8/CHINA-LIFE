@@ -673,3 +673,26 @@ test('artists upload their own songs; on approval they reach ChinaLife Radio and
  assert.equal((await call(1,'admin.php','POST',{action:'song_active',id:song.data.id,active:false})).httpStatus,200);
  assert.equal((await call(11,'events.php?city=Shenyang')).data.songs.some(s=>s.id===song.data.id),false,'taken down');
 });
+test('admins edit any partner listing and it changes in the game at once, or delete it with everything it created',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (1,11,12); DELETE FROM chinalife_submissions WHERE user_id=12 AND status IN ("pending","changes")');
+ const shop={city:'Shenyang',name:'Edit Me Mart',district:'Heping',wechat_id:'editmemart',items:[{name:'Garri',price:20}]};
+ const sub=await call(12,'partner.php','POST',{action:'submit',kind:'shop',fields:shop});assert.equal(sub.httpStatus,200,JSON.stringify(sub));await call(1,'admin.php','POST',{action:'review_partner',id:Number(sub.data.id),decision:'approve'});
+ const pic=await call(1,'admin.php','POST',{action:'partner_upload',image:png(300,300)});assert.equal(pic.httpStatus,200,JSON.stringify(pic));
+ assert.equal((await call(5,'admin.php','POST',{action:'partner_update',id:Number(sub.data.id),fields:shop})).httpStatus,403,'admins only');
+ const upd=await call(1,'admin.php','POST',{action:'partner_update',id:Number(sub.data.id),fields:{...shop,name:'Edited Mart',near:'mall',photos:[pic.data.id],items:[{name:'Garri 2kg',price:38,photo:pic.data.id},{name:'Palm oil',price:45}]}});assert.equal(upd.httpStatus,200,JSON.stringify(upd));
+ let live=(await call(11,'events.php?city=Shenyang')).data.restaurants.find(r=>r.name==='Edited Mart');assert.ok(live,'renamed in the game');assert.equal(live.menu.length,2);assert.equal(live.menu[0][2],pic.data.id);assert.equal(live.near,'mall');assert.deepEqual(live.photos,[pic.data.id]);
+ assert.ok(!(await call(11,'events.php?city=Shenyang')).data.restaurants.some(r=>r.name==='Edit Me Mart'));
+ // An artist with songs: delete removes the listing, the songs and their files.
+ const up=(body,q)=>fetch(base+'/api/v4/chinalife/partner.php?action=upload_song&'+q,{method:'POST',headers:{Authorization:'Bearer test-12','content-type':'audio/mpeg'},body}).then(r=>r.json());
+ const song=(await up(Buffer.concat([Buffer.from('ID3'),crypto.randomBytes(3000)]),'title=Gone&duration=120')).data;
+ const art=await call(12,'partner.php','POST',{action:'submit',kind:'artist',fields:{city:'Shenyang',name:'Delete Me Band',songs:[{id:song.id,title:'Gone'}]}});await call(1,'admin.php','POST',{action:'review_partner',id:Number(art.data.id),decision:'approve'});
+ assert.ok((await call(11,'events.php?city=Shenyang')).data.songs.some(s=>s.id===song.id));assert.equal((await fetch(song.url)).status,200);
+ assert.equal((await call(1,'admin.php','POST',{action:'partner_delete',id:Number(art.data.id)})).httpStatus,200);
+ const after=(await call(11,'events.php?city=Shenyang')).data;assert.ok(!after.restaurants.some(r=>r.name==='Delete Me Band'),'listing gone');assert.ok(!after.songs.some(s=>s.id===song.id),'songs gone');assert.equal((await fetch(song.url)).status,404,'song file removed');
+ assert.ok(!(await call(1,'admin.php','POST',{action:'partners',status:'all'})).data.submissions.some(s=>s.id===art.data.id),'application gone');
+ // A live ad: title, venue and city change in place.
+ const banner=(await call(12,'partner.php','POST',{action:'upload',image:png(800,400)})).data.id;
+ const ad=await call(12,'partner.php','POST',{action:'submit',kind:'ad',fields:{city:'Shenyang',title:'Old ad',place:'night',days:7,contact:'me',photos:[banner]}});await call(1,'admin.php','POST',{action:'review_partner',id:Number(ad.data.id),decision:'approve'});
+ assert.equal((await call(1,'admin.php','POST',{action:'partner_update',id:Number(ad.data.id),fields:{city:'Harbin',title:'New ad',place:'mall',days:14,contact:'me',photos:[banner]}})).httpStatus,200);
+ const hb=(await call(11,'events.php?city=Harbin')).data.ads.find(a=>a.title==='New ad');assert.ok(hb);assert.equal(hb.place,'mall');assert.ok(!(await call(11,'events.php?city=Shenyang')).data.ads.some(a=>a.title==='Old ad'||a.title==='New ad'));
+});
