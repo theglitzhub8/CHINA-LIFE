@@ -76,13 +76,30 @@ test('food menus charge and feed at the venue, clubs keep night hours, and skill
 });
 test('studio launch and expansion explain blocked actions inside the open panel',()=>{const t=harness();t.game.business();t.click('businessLaunch');assert.match(t.document.getElementById('businessStatus').textContent,/Network and Digital/);assert.equal(t.game.state.business,null);t.game.state.skills.Network=2;t.game.state.skills.Digital=2;t.game.state.money=100;t.click('businessLaunch');assert.match(t.document.getElementById('businessStatus').textContent,/¥900/);t.game.state.money=3200;t.click('businessLaunch');assert.equal(t.game.state.business.level,1);assert.match(t.document.getElementById('businessStatus').textContent,/studio is open/);assert.ok(t.document.getElementById('businessOrder'));t.click('businessExpand');assert.match(t.document.getElementById('businessStatus').textContent,/3 orders/);t.click('businessOrder');assert.match(t.document.getElementById('businessStatus').textContent,/Go to/)});
 
-test('Chinese class shows the lesson, scores a three-question quiz and tracks attendance once a day',()=>{
+// Answers whichever course question is on screen (right=false picks a wrong option).
+function answerCourse(h,right=true){const C=h.context.ChinaLifeChinese,doc=h.document,lead=doc.querySelector('#activityContent .lead').textContent;
+ if(doc.getElementById('sentenceCheck')){const unit=C.units.find(u=>lead.includes(u.sentence[2]));for(const t of right?unit.sentence[3]:[...unit.sentence[3]].reverse())[...doc.querySelectorAll('[data-token]')].find(b=>b.textContent===t&&!b.disabled).onclick();doc.getElementById('sentenceCheck').onclick();return}
+ const w=C.allWords.find(w=>lead.includes('What does '+w.han+' (')||lead.includes('“'+w.en+'”')||lead==='How do you say '+w.han+'?'),answer=lead.startsWith('What does')?w.en:lead.startsWith('How do you write')?w.han:w.pin;
+ const opts=[...doc.querySelectorAll('[id^="quizOpt"]')],btn=opts.find(b=>(b.textContent.trim()===answer)===right);btn.onclick()}
+test('Chinese class teaches five words and a sentence, quizzes them in different ways and moves to the next unit',()=>{
  const h=harness({...fixture(),place:'campus',secrets:['night-owl','foodie','scholar','jet-setter','treasure-hunter','big-spender'],rankClaimed:6});
- assert.ok(h.game.isClassroom('campus'));h.game.classroom();assert.match(h.document.getElementById('activityContent').textContent,/你好/);
- const xp=h.game.state.xp;h.click('quizStart');for(let q=0;q<3;q++){const answer=h.game.currentLesson()[1][q][2];const btn=[...h.document.querySelectorAll('[id^="quizOpt"]')].find(b=>b.textContent.trim().startsWith(answer));assert.ok(btn,'option '+answer);btn.onclick()}
+ assert.ok(h.game.isClassroom('campus'));h.game.classroom();const text=h.document.getElementById('activityContent').textContent;assert.match(text,/你好/);assert.match(text,/对不起/);assert.match(text,/Hello, thank you!/);
+ const xp=h.game.state.xp;h.click('quizStart');for(let q=0;q<5;q++)answerCourse(h);
  assert.equal(h.game.state.classCount,1);assert.equal(h.game.state.classStreak,1);assert.equal(h.game.state.xp,xp+5+15+10);assert.equal(h.game.state.skillXP.Chinese,30);
- h.game.classroom();assert.match(h.document.getElementById('activityContent').textContent,/already attended/);assert.equal(h.document.getElementById('quizStart'),null);
- assert.equal(h.game.currentLesson()[0],'Numbers');const saved=harness(JSON.parse(JSON.stringify(h.game.state)));assert.equal(saved.game.state.classCount,1);
+ assert.equal(Object.keys(h.game.state.chinese.words).length,5,'all five words are in the review schedule');
+ h.game.classroom();assert.match(h.document.getElementById('activityContent').textContent,/already had class/);assert.equal(h.document.getElementById('quizStart'),null);
+ assert.equal(h.game.currentLesson()[0],'About me');const saved=harness(JSON.parse(JSON.stringify(h.game.state)));assert.equal(saved.game.state.classCount,1);assert.equal(saved.game.state.chinese.unit,1);
+});
+test('failing a Chinese class repeats the unit tomorrow, and missed words come back for review',()=>{
+ const h=harness({...fixture(),place:'campus'});h.game.classroom();h.click('quizStart');for(let q=0;q<5;q++)answerCourse(h,false);
+ const c=h.game.state.chinese;assert.equal(c.unit,0,'same unit again');assert.ok(Object.values(c.words).every(e=>e[1]<=h.game.state.day+1));
+ h.game.state.day+=1;const C=h.context.ChinaLifeChinese;assert.ok(C.due(c,h.game.state.day).length>=4,'missed words are due tomorrow');
+ h.game.practiceChinese();h.click('pStart');const before=h.game.state.xp;for(let q=0;q<6&&h.document.querySelector('[id^="quizOpt"],#sentenceCheck');q++)answerCourse(h);assert.ok(h.game.state.xp>before,'practice gives a little XP');
+});
+test('Chinese course saves are validated and every unit has five words and a sentence made of its tokens',()=>{
+ const h=harness({...fixture(),chinese:{unit:3,lessons:4,words:{'你好':[2,9,3,1],'fake':[1,1,1,1],'谢谢':[99,-4,1,1]}}});const c=h.game.state.chinese;assert.equal(c.unit,3);assert.deepEqual(Object.keys(c.words).sort(),['你好','谢谢'].sort());assert.equal(c.words['谢谢'][0],5);assert.equal(c.words['谢谢'][1],0);
+ const C=h.context.ChinaLifeChinese;assert.equal(C.units.length,30);for(const u of C.units){assert.equal(u.words.length,5,u.title);assert.equal(u.sentence[3].join(''),u.sentence[0].replace(/[，。！？,.!?]/g,''),u.title)}
+ assert.equal(new Set(C.allWords.map(w=>w.han)).size,C.allWords.length,'no word is taught twice');
 });
 
 test('settings has separate music and voice volume sliders',()=>{

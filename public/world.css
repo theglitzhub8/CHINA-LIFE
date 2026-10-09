@@ -391,3 +391,21 @@ dialog{border-radius:22px}
 .scene-label.partner-label{border:2px solid #f2b632}
 .auth-brand .hafrik-logo{height:30px;width:auto;object-fit:contain;display:block}.auth-brand{align-items:center}
 .hafrik-logo.mini{height:12px;width:auto;vertical-align:-2px}
+/* Chinese course */
+.lesson-board{grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:10px}
+.lesson-board small{font-size:12px;opacity:.8}
+.say-btn{border:0;background:#ffffff26;color:inherit;border-radius:50%;width:26px;height:26px;font-size:13px;padding:0;vertical-align:middle;cursor:pointer}
+.lesson-sentence{display:grid;gap:3px;padding:14px 16px;border-radius:16px;background:#fff6e6;border:1px solid #f3dfb8;color:#4a3410;margin:0 0 12px}
+.lesson-sentence b{font-size:22px}.lesson-sentence .say-btn{background:#f3dfb8}.lesson-sentence small{color:#7a5c2b}
+.say-big{width:100%;margin:6px 0 10px}
+.sentence-answer{min-height:58px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px;border-radius:16px;border:2px dashed #b9cfd0;margin:8px 0 12px}
+.sentence-answer span{background:#24554c;color:#fff;border-radius:10px;padding:8px 12px;font-size:20px}.sentence-answer em{color:#7b9093;font-style:normal}
+.sentence-tokens{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.sentence-tokens button{border:1px solid #cfdfe0;background:#fff;border-radius:12px;padding:10px 14px;font-size:20px;cursor:pointer}.sentence-tokens button:disabled{opacity:.3}
+.course-progress{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 10px}
+.course-progress div{background:#f3f7f7;border-radius:14px;padding:10px 6px;text-align:center}.course-progress b{display:block;font-size:22px}.course-progress small{font-size:11px;color:#5d7477}
+.course-bar{height:8px;border-radius:5px;background:#e3ecec;overflow:hidden;margin-bottom:14px}.course-bar i{display:block;height:100%;background:linear-gradient(90deg,#dc2626,#f59e0b)}
+.word-list{display:grid;gap:6px;margin-bottom:12px}
+.word-list>div{display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"han pin stars" "han en stars";column-gap:12px;align-items:center;background:#f6f9f9;border-radius:12px;padding:8px 12px}
+.word-list b{grid-area:han;font-size:24px}.word-list span{grid-area:pin;font-size:13px}.word-list small{grid-area:en;color:#5d7477}.word-list i{grid-area:stars;color:#f59e0b;font-style:normal;font-size:12px}
+.word-list .say-btn{background:#e3ecec}
