@@ -254,3 +254,22 @@ dialog{border-radius:22px}
 .map-view .venue-card{transition:padding .2s ease}
 .map-view.dock-open .venue-card{animation:sheetIn .22s ease-out}
 @media(max-width:600px){.map-view:not(.dock-open) .venue-heading h1{font-size:15px}.map-view:not(.dock-open) .venue-heading p{font-size:11px}}
+
+/* ---- ChinaLife Store ---- */
+.store-cats{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:2px 0 10px}.store-cats::-webkit-scrollbar{display:none}
+.store-cats button{flex:none;border:1px solid #e1e8ec;background:#fff;border-radius:999px;padding:7px 12px;font-size:13px;font-weight:700;color:#3c5a66}
+.store-cats button.active{background:#10283a;color:#fff;border-color:#10283a}
+.store-stage{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:10px;align-items:center;background:linear-gradient(160deg,#f4f7f9,#e8eef2);border-radius:18px;padding:10px;margin-bottom:12px}
+.store-stage #productPreview{min-height:180px;display:grid;place-items:center;overflow:hidden;border-radius:14px}
+.store-stage #productPreview canvas{width:100%!important;height:auto!important;max-height:220px;border-radius:14px}
+.store-detail h3{margin:0 0 4px;font-size:17px;color:#10283a}.store-detail p{margin:0 0 8px;color:#5f7882;font-size:12px}
+.store-detail .primary-btn,.store-detail .soft-btn{width:100%}
+.store-colors{display:flex;gap:8px;margin:6px 0 10px;flex-wrap:wrap}
+.store-colors button{width:26px;height:26px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #c9d3d8}
+.store-colors button.active{box-shadow:0 0 0 2px #10283a}
+.store-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.store-card{display:grid;justify-items:center;gap:3px;padding:10px 6px;border-radius:16px;background:#fff;border:1px solid #e6ecef;text-align:center}
+.store-card.active{border-color:#10283a;box-shadow:0 0 0 1px #10283a}
+.store-card b{font-size:12px;line-height:1.2;color:#10283a}.store-card small{font-size:11px;color:#5f7882;font-weight:700}
+.store-thumb{width:54px;height:54px;border-radius:14px;display:grid;place-items:center;font-size:28px}
+@media(max-width:600px){.store-stage{grid-template-columns:1fr}.store-stage #productPreview{min-height:150px}}

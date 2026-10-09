@@ -213,3 +213,17 @@ test('Hafrik HQ is a venue in every city and partner restaurants open their real
  const links=[...h.document.querySelectorAll('#activityContent a.external-app')].map(a=>a.getAttribute('href'));assert.ok(links.includes('https://u.wechat.com/abc'));assert.ok(links.some(u=>u.startsWith('https://wa.me/8618940147438')));
  assert.match(h.document.getElementById('activityContent').textContent,/Beef noodles · ¥28/);assert.ok(h.document.getElementById('partnerWechat'));assert.equal(g.state.money,500,'real orders never touch game money');
 });
+
+test('the store sells clothes you wear, cars you drive, and saves only real catalogue items',()=>{
+ const h=harness({...fixture(),money:2000000,place:'plaza'}),g=h.game;
+ assert.equal(g.state.wardrobe.wearing.top,'tee-basic','everyone starts with a basic outfit');
+ g.store('clothes','hoodie');h.click('storeBuy');assert.equal(g.state.money,2000000-320);assert.equal(g.state.wardrobe.wearing.top,'hoodie');assert.equal(g.playerLook().top.s,'hoodie');
+ g.store('accessories','sunglasses');h.click('storeBuy');assert.deepEqual([...g.playerLook().acc],['sunglasses']);h.click('storeRemove');assert.equal(g.playerLook().acc.length,0);
+ g.store('clothes','tee-basic');h.click('storeWear');assert.equal(g.state.wardrobe.wearing.top,'tee-basic');
+ g.store('cars','scooter');h.click('storeBuy');assert.equal(g.activeCar().id,'scooter','scooters need no licence');
+ g.store('cars','sports');h.click('storeBuy');assert.ok(g.state.garage.owned.includes('sports'));assert.equal(g.activeCar().id,'scooter','a licence is needed before the sports car can be driven');
+ g.travel('market');assert.ok(h.document.getElementById('carTravel'),'your vehicle is a travel option');
+ const saved=harness({...JSON.parse(JSON.stringify(g.state)),wardrobe:{owned:['hoodie','fake-item'],wearing:{top:'fake-item'}},garage:{owned:['spaceship','scooter'],active:'spaceship'}});
+ assert.ok(!saved.game.state.wardrobe.owned.includes('fake-item'));assert.equal(saved.game.state.wardrobe.wearing.top,'tee-basic');assert.deepEqual([...saved.game.state.garage.owned],['scooter']);assert.equal(saved.game.state.garage.active,'scooter');
+ const old=harness({...fixture(),driving:{lessons:3,licensed:true,car:'sedan'}});assert.ok(old.game.state.garage.owned.includes('sedan'),'an old sedan moves into the garage');
+});

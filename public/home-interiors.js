@@ -1,6 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 import {mat,solid,glow,box,cyl,slab,facade,roof} from './city-kit.js';
 import {furnitureModel} from './models.js';
+import {carModel} from './garage.js';
 // Homes that feel like what they cost. Each tier has its own size, materials, rooms and furniture: a compact
 // rental studio, a city apartment, a townhouse with a patio, a villa with a pool deck, a skyline penthouse with a
 // terrace pool, and a marble garden mansion. Back (-z) and left (-x) walls only, so the map camera sees inside.
@@ -103,8 +104,10 @@ const DECOR={rental:[[-6,-3.9],[3.4,1.6],[-2.6,3.6],[.5,3.7],[-6,2.4],[4,3.6],[-
  villa:[[-3.6,-5.4],[1.6,-5.4],[-7.6,-.8],[-4,2.8],[-1,3.4],[1.6,3.6],[-6.4,4.4],[-8.6,1.8],[-3,5],[.4,5.2],[3,4.8],[-6.4,2.2],[6.6,6.6],[-8.8,7.4]],
  penthouse:[[-3.2,-5.8],[3.4,-5.8],[-8.2,-.2],[-6.8,4.6],[-2,3.6],[0,5.4],[-4.2,1.8],[-8.6,2.2],[-4.4,5.2],[-1.6,5.4],[5.6,5],[7.4,1.4],[-2.4,7.2],[7,7.2]],
  mansion:[[-5.2,-6.6],[4.6,-6.6],[-3.2,5.8],[3,5.8],[-12,-1.6],[5,4.8],[9,-4.2],[-6,.4],[2.6,3.2],[-6.8,6.2],[7.4,5.8],[-12,5.6],[3.6,-.2],[-2.2,1.4],[9.4,2.4]]};
-export function buildHome(type,{colors={},finish='#a4b4b8',owned=[]}={}){const g=new THREE.Group();g.userData.kind='home-'+type;REG={};const recipe=HOMES[type]||HOMES.rental,info=recipe(g,{colors,finish}),items={};
+export function buildHome(type,{colors={},finish='#a4b4b8',owned=[],car=null}={}){const g=new THREE.Group();g.userData.kind='home-'+type;REG={};const recipe=HOMES[type]||HOMES.rental,info=recipe(g,{colors,finish}),items={};
  const slots=[...(DECOR[type]||DECOR.rental)];for(const id of owned){if(REG[id]){items[id]=REG[id];continue}const at=slots.shift();if(!at)continue;const a=furnitureModel(id,colors[id]||finish);a.position.set(at[0],0,at[1]);g.add(a);items[id]=a;info.colliders.push([at[0],at[1],1.1,1.1])}REG=null;
+ // Your active car waits on the drive at villas and mansions.
+ const park={villa:[8.2,9.2],mansion:[0,13]}[type];if(car&&park){const v=carModel(car.style,car.color);v.position.set(park[0],.12,park[1]);v.rotation.y=Math.PI/2;g.add(v);info.colliders.push([park[0],park[1],1.6,3.2])}
  return {group:g,items,...info,colliders:info.colliders.map(([x,z,w,d])=>({x,z,w,d})),spots:Object.fromEntries(Object.entries(info.spots).map(([k,[x,z]])=>[k,{x,z}]))}}
 
 // ---- Exteriors on the city map: each tier looks like its price. ----
