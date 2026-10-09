@@ -150,4 +150,37 @@ if ($action==='delete_restaurant') {
     $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);$row=$id?cl_one('SELECT city,name FROM chinalife_restaurants WHERE id=?','i',[$id]):null;if (!$row) cl_fail('Restaurant not found',404);
     cl_run('DELETE FROM chinalife_restaurants WHERE id=?','i',[$id]);admin_log('delete_restaurant',null,null,$row['city'].' · '.$row['name']);json_response('success',['deleted'=>true]);
 }
+if ($action==='ads') json_response('success',['ads'=>cl_ads('',true)]);
+if ($action==='save_ad') {
+    $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);$title=trim((string)($input['title']??''));$sponsor=trim((string)($input['sponsor']??''));$link=trim((string)($input['link']??''));
+    $city=(string)($input['city']??'');$place=(string)($input['place']??'night');$days=$input['days']??30;$active=!empty($input['active'])?1:0;
+    if ($title===''||mb_strlen($title)>80||mb_strlen($sponsor)>80) cl_fail('Give the ad a title (up to 80 characters)');
+    if ($city!==''&&!in_array($city,['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'],true)) cl_fail('Choose a city');
+    cl_room(['city'=>'Shenyang','place'=>$place]);if (cl_private_place($place)) cl_fail('Choose a public venue');
+    if ($link!==''&&!preg_match('#^(https://|weixin://)[^\s<>"]{3,290}$#',$link)) cl_fail('Links must start with https:// or weixin://');
+    if (!is_int($days)||$days<1||$days>365) cl_fail('Run the ad for 1 to 365 days');
+    // The banner arrives as a data URL; only real PNG, JPEG or WebP images up to 2 MB are kept.
+    $image=null;
+    if (is_string($input['image']??null)&&$input['image']!=='') {
+        if (!preg_match('#^data:image/(png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$#',$input['image'],$m)) cl_fail('Upload a PNG, JPG or WebP image');
+        $bytes=base64_decode($m[2],true);if ($bytes===false||strlen($bytes)>2*1024*1024) cl_fail('The banner must be 2 MB or smaller');
+        $info=@getimagesizefromstring($bytes);$mime=$info['mime']??'';
+        if (!$info||!in_array($mime,['image/png','image/jpeg','image/webp'],true)) cl_fail('That file is not a valid image');
+        if ($info[0]<200||$info[1]<100||$info[0]>4096||$info[1]>4096) cl_fail('Use an image between 200×100 and 4096×4096 pixels');
+        $image=[$bytes,$mime,(int)$info[0],(int)$info[1]];
+    }
+    if ($id) {
+        if (!cl_one('SELECT id FROM chinalife_ads WHERE id=?','i',[$id])) cl_fail('Ad not found',404);
+        cl_run('UPDATE chinalife_ads SET title=?,sponsor=?,city=?,place=?,link=?,active=?,ends_at=DATE_ADD(starts_at,INTERVAL ? DAY),updated_at=NOW() WHERE id=?','sssssiii',[$title,$sponsor,$city,$place,$link,$active,$days,$id]);
+        if ($image) cl_run('UPDATE chinalife_ads SET image=?,mime=?,width=?,height=?,updated_at=NOW() WHERE id=?','ssiii',[$image[0],$image[1],$image[2],$image[3],$id]);
+    } else {
+        if (!$image) cl_fail('Upload the banner image');
+        $q=cl_query('INSERT INTO chinalife_ads(title,sponsor,city,place,link,image,mime,width,height,active,starts_at,ends_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,NOW(),DATE_ADD(NOW(),INTERVAL ? DAY),NOW(),NOW())','sssssssiiii',[$title,$sponsor,$city,$place,$link,$image[0],$image[1],$image[2],$image[3],$active,$days]);$id=$q->insert_id;$q->close();
+    }
+    admin_log('save_ad',null,null,$title.' · '.$place);json_response('success',['id'=>(string)$id]);
+}
+if ($action==='delete_ad') {
+    $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);$row=$id?cl_one('SELECT title FROM chinalife_ads WHERE id=?','i',[$id]):null;if (!$row) cl_fail('Ad not found',404);
+    cl_run('DELETE FROM chinalife_ads WHERE id=?','i',[$id]);admin_log('delete_ad',null,null,$row['title']);json_response('success',['deleted'=>true]);
+}
 cl_fail('Unknown admin action');

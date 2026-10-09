@@ -448,3 +448,6 @@ dialog{border-radius:22px}
 /* The phone screen scrolls (it had no scroll area, so apps below the fold were unreachable on phones) */
 #phoneContent{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
 #phoneContent .cl-group .phone-apps{overflow:visible;flex:none}
+/* Paid ads */
+.scene-label.paid-ad-label{background:#ff2d95;color:#fff;border:2px solid #ffd23f;font-weight:900;box-shadow:0 0 18px #ff2d95aa}
+.ad-full{display:block;width:100%;border-radius:16px;margin:4px 0 12px;box-shadow:0 8px 24px #0002}

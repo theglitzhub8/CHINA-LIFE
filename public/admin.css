@@ -74,3 +74,5 @@ label.inline{display:flex;align-items:center;gap:8px;font-weight:700}label.inlin
  .stats{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}
  th:nth-child(4),td:nth-child(4){display:none}
 }
+.ad-thumb{width:120px;height:60px;object-fit:cover;border-radius:8px;background:#e9eff2;display:block}
+.ad-preview{width:100%;max-height:220px;object-fit:contain;border-radius:12px;background:#0f1d26}

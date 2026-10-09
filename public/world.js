@@ -141,7 +141,22 @@ const field=airfield(layout);root.add(field.group);skyPlanes=field.planes;skyPla
  for(const m of moving)m?.traverse?.(o=>{o.castShadow=false});renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;
  if(selectedPlace&&mapPlaces().some(p=>p[0]===selectedPlace)){const pos=mapPosition(selectedPlace),ring=new THREE.Mesh(new THREE.TorusGeometry(3,.25,8,40),new THREE.MeshBasicMaterial({color:0xf2b632}));ring.rotation.x=-Math.PI/2;ring.position.set(pos.x,.35,pos.z);navMarker=new THREE.Group();navMarker.add(ring);navMarker.userData.ring=ring;root.add(navMarker)}
  renderCityTabs();outdoorView=true;applyLighting(true);updateCamera();$('sceneGuide').textContent='Drag to explore · tap a place · zoom for street detail';syncHUD()}
-function room(id){buildRoom(id);populate(id);hideTreasure(id);hideGolden(id);lessonBoard(id);mergeStatic([player,...actors]);outdoorView=['park','market','station','plaza','skylight','palace','zhongjie','cantontower'].includes(venueModelId(id));applyLighting(true)}
+// Paid ads on venue walls (admin uploads). In 007 Club: a big glowing banner on the back wall left of the stage (in view
+// on phones), another on the side wall and a third right of the stage.
+// Banners are unlit so they stay bright in dark clubs; the "Sponsored" tag opens the ad and its link.
+const adSpots=id=>id==='night'?[{x:-4.6,y:2.05,z:-6.8,ry:0,w:4.6,h:2.5},{x:-9.3,y:2,z:.5,ry:Math.PI/2,w:7.2,h:2.9},{x:6.1,y:2,z:-6.86,ry:0,w:5.8,h:2.7}]:id==='hq'?[{x:-9.3,y:2,z:0,ry:Math.PI/2,w:6,h:2.6}]:[{x:-6.86,y:1.9,z:0,ry:Math.PI/2,w:5,h:2.3}];
+let adGroup=null;
+function adWalls(id){if(adGroup){root?.remove(adGroup);adGroup.traverse(o=>{o.geometry?.dispose();o.material?.map?.dispose();o.material?.dispose()});labels.filter(l=>l.ad).forEach(l=>l.el.remove());labels=labels.filter(l=>!l.ad);adGroup=null}
+ const list=(window.ChinaLifeCloud?.ads||[]).filter(a=>a.place===id);if(view!=='venue'||!list.length||!root)return;const group=adGroup=new THREE.Group();group.userData.cache=false;root.add(group);
+ adSpots(id).forEach((s,i)=>{const ad=list[i%list.length],ratio=ad.width/ad.height,w=Math.min(s.w,s.h*ratio),h=w/ratio,holder=new THREE.Group();holder.position.set(s.x,s.y,s.z);holder.rotation.y=s.ry;group.add(holder);
+  const frame=new THREE.Mesh(new THREE.BoxGeometry(w+.32,h+.32,.06),new THREE.MeshBasicMaterial({color:0xffd23f,toneMapped:false}));frame.position.z=-.04;holder.add(frame);
+  const glow=new THREE.Mesh(new THREE.PlaneGeometry(w+.9,h+.9),new THREE.MeshBasicMaterial({color:0xff2d95,transparent:true,opacity:.35,toneMapped:false}));glow.position.z=-.08;glow.userData.adGlow=true;holder.add(glow);
+  const screen=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:0x111111,toneMapped:false}));holder.add(screen);
+  const img=document.createElement('img');img.crossOrigin='anonymous';img.onload=()=>{if(adGroup!==group)return;const tex=new THREE.Texture(img);tex.colorSpace=THREE.SRGBColorSpace;tex.anisotropy=4;tex.needsUpdate=true;screen.material.map=tex;screen.material.color.set(0xffffff);screen.material.needsUpdate=true};img.src=window.ChinaLifeCloud.adImage(ad);
+  const p=new THREE.Vector3(0,h/2+.45,.05).applyMatrix4(new THREE.Matrix4().makeRotationY(s.ry)).add(new THREE.Vector3(s.x,s.y,s.z)),l=label('📣 Sponsored · '+ad.title,p.x,p.y,p.z,'interactive paid-ad-label',()=>game.ad?.(ad));l.ad=true});
+ group.traverse(o=>{if(o.material)o.userData.privateMaterial=true})}
+window.addEventListener('chinalife:ads',()=>{if(view==='venue'&&place)adWalls(place)});
+function room(id){buildRoom(id);populate(id);hideTreasure(id);hideGolden(id);lessonBoard(id);mergeStatic([player,...actors]);adWalls(id);outdoorView=['park','market','station','plaza','skylight','palace','zhongjie','cantontower'].includes(venueModelId(id));applyLighting(true)}
 // Classroom boards show today's Chinese lesson.
 function lessonBoard(id){if(!game.isClassroom?.(id))return;const [title,words]=game.currentLesson();sign(title+' · '+words.map(w=>w[0]).join('  '),0,2.15,-4.68)}
 // The weekly golden envelope: bigger, gold and shining, until someone finds it.
@@ -335,7 +350,7 @@ if(inertia&&view==='map'&&!mapDragging){mapFocus.x+=inertia.x*dt;mapFocus.z+=ine
 // Adaptive resolution: drop the pixel ratio when the frame rate stays under ~40 FPS, restore it when there is headroom.
 if(raw>0&&animate.fps){if(animate.fps<40){fpsHigh=0;if(++fpsLow>90&&pixelRatio>1){pixelRatio=Math.max(1,+(pixelRatio-.25).toFixed(2));fpsLow=0;updateCamera()}}else if(animate.fps>57){fpsLow=0;if(++fpsHigh>240&&pixelRatio<Math.min(window.devicePixelRatio||1,1.7)){pixelRatio=Math.min(Math.min(window.devicePixelRatio||1,1.7),+(pixelRatio+.25).toFixed(2));fpsHigh=0;updateCamera()}}else{fpsLow=0;fpsHigh=0}}
 if(view==='map'){const moving=!motionReduced();traffic.forEach(v=>moveVehicle(v,dt,moving));deliveryRiders.forEach(placeRider);if(moving)skyPlanes.forEach(p=>p.update(time*.001))}
-if(actionRun?.kind==='flight')flightFrame(dt);if(weatherFx)weatherFrame(dt);if(navMarker?.userData.ring){const s=1+Math.sin(time*.005)*.12;navMarker.userData.ring.scale.set(s,s,1)}
+if(actionRun?.kind==='flight')flightFrame(dt);if(weatherFx)weatherFrame(dt);if(adGroup)adGroup.traverse(o=>{if(o.userData.adGlow)o.material.opacity=.25+Math.sin(time*.004)*.18});if(navMarker?.userData.ring){const s=1+Math.sin(time*.005)*.12;navMarker.userData.ring.scale.set(s,s,1)}
 // Labels: fixed labels move only when the camera changed; labels following moving things update every frame.
 {const W=viewport.clientWidth,H=viewport.clientHeight,full=labelsDirty;labelsDirty=false;for(const l of labels){if(!full&&!l.follow)continue;const pos=l.follow?l.follow.position.clone().add(new THREE.Vector3(0,2.15,0)):l.pos.clone();pos.project(camera);l.x=(pos.x*.5+.5)*W;l.y=(-pos.y*.5+.5)*H;l.el.style.left=l.x+'px';l.el.style.top=l.y+'px';l.off=pos.z>1||pos.z< -1||Math.abs(pos.x)>1.1||Math.abs(pos.y)>1.05||!!(l.follow&&!l.follow.visible);if(!l.place){const hide=l.off||(l.el.classList.contains('district-label')&&(scale>65||labelMode==='hidden'));if(l.el.hidden!==hide)l.el.hidden=hide}}if(full&&view==='map')declutter()}
 renderer.render(scene,camera)}

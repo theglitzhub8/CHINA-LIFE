@@ -166,6 +166,12 @@ function cl_restaurants(string $city, bool $all=false): array {
     foreach ($rows as &$r) {$r['id']=(string)$r['id'];$r['menu']=json_decode($r['menu'],true)?:[];$r['active']=(bool)$r['active'];}unset($r);
     return $rows;
 }
+// Paid ads shown on venue walls: live ads for one city (or all cities). Images are served by ad-image.php.
+function cl_ads(string $city, bool $all=false): array {
+    $rows=cl_rows('SELECT id,title,sponsor,city,place,link,width,height,active,UNIX_TIMESTAMP(starts_at)*1000 starts_at,UNIX_TIMESTAMP(ends_at)*1000 ends_at,UNIX_TIMESTAMP(updated_at) version FROM chinalife_ads WHERE '.($all?'1=1':'active=1 AND starts_at<=NOW() AND ends_at>NOW() AND (city=\'\' OR city=?)').' ORDER BY id DESC LIMIT 50',$all?'':'s',$all?[]:[$city]);
+    foreach ($rows as &$r) {foreach (['width','height','starts_at','ends_at','version'] as $k) $r[$k]=(int)$r[$k];$r['id']=(string)$r['id'];$r['active']=(bool)$r['active'];}unset($r);
+    return $rows;
+}
 function cl_valid_restaurant(array $input): array {
     $name=trim((string)($input['name']??''));$icon=trim((string)($input['icon']??''))?:'🍽';$district=trim((string)($input['district']??''));$description=trim((string)($input['description']??''));
     $link=trim((string)($input['order_link']??''));$wechat=trim((string)($input['wechat_id']??''));$whatsapp=preg_replace('/[^0-9]/','',(string)($input['whatsapp']??''));
