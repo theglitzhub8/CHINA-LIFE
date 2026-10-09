@@ -2,7 +2,7 @@ const game = window.ChinaLife, $ = id => document.getElementById(id);
 const HAFRIK_API = 'https://hafrik.com/api/v4', TOKEN_KEY = 'chinalife-hafrik-token', PROFILE_KEY = 'chinalife-hafrik-profile';
 const storage = {getItem(key) {try {return localStorage.getItem(key)} catch {return null}}, setItem(key, value) {try {localStorage.setItem(key, value)} catch {}}};
 let account = null, remote = {state:null}, auto = false, busy = false, loading = true, timer, presence = false, players = [], epoch = 0, authEpoch = 0, polling = false;
-let joining=null,sessionSource='browser',restoreFailed=false,appWaiting=false,appWait;
+let registering=false,joining=null,sessionSource='browser',restoreFailed=false,appWaiting=false,appWait;
 const seenGestures=new Set();
 // Paid ads on venue walls; images come from the public ad-image endpoint.
 let ads=[],adsKey='';const adImage=a=>HAFRIK_API+'/chinalife/ad-image.php?id='+encodeURIComponent(a.id)+'&v='+a.version;
@@ -13,7 +13,7 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;',
 async function api(path, method = 'GET', data) {
   const visit=window.ChinaLifeHomeVisits?.current;if(visit&&/\/chinalife\/(presence|messages|notifications|voice|voice-signal|gestures)\.php/.test(path)&&visit.city===game.state.city&&visit.place===game.state.place){if(method==='GET'){path+=(path.includes('?')?'&':'?')+'homeOwner='+encodeURIComponent(visit.owner)}else if(data)data={...data,homeOwner:visit.owner}}
   const query = method === 'GET' && data ? new URLSearchParams(data).toString() : '';
-  const passwordLogin=path==='/auth/login.php';
+  const passwordLogin=path==='/auth/login.php'||path==='/auth/register.php';
   const response = await fetch(HAFRIK_API + path + (query ? (path.includes('?') ? '&' : '?') + query : ''), {
     method, credentials:passwordLogin || liveToken ? 'omit' : 'include', headers:{...(liveToken && !passwordLogin ? {Authorization:'Bearer ' + liveToken} : {}), ...(data && method !== 'GET' ? {'content-type':'application/json'} : {})},
     body:data && method !== 'GET' ? JSON.stringify(data) : undefined,
@@ -42,8 +42,12 @@ function show() {
   else if (account) html=head+'<h2>Connected to Hafrik</h2><p class="account-identity">Signed in as <b>'+name+'</b></p><p>Your character saves to your Hafrik account automatically.</p><button id="cloudUpload" class="primary-btn">Save now</button>'+accountDetails();
   // Inside the app the native session is the only login; never ask for a web password first.
   else if (inApp()) html=head+(appWaiting||loading?'<h2>Connecting your Hafrik account…</h2><p>Getting your login from the Hafrik app.</p>':'<h2>Couldn’t get your Hafrik login</h2><p>The Hafrik app didn’t share your account with the game. Close ChinaLife and open it again from Hafrik. If it keeps happening, update the Hafrik app.</p>'+(message&&!/^Sign in with Hafrik/.test(message)?'<p class="account-error" role="alert">'+esc(message)+'</p>':''))+'<button id="hafrikConnect" class="primary-btn"'+(appWaiting?' disabled':'')+'>Try again</button><details class="account-details"><summary>Sign in with email or username instead</summary>'+passwordForm+'</details>';
+  // Registering here creates a real Hafrik account (Hafrik's own sign-up), then signs straight in.
+  else if (registering) html=head+'<h2>Create your account</h2><p>One account for Hafrik and ChinaLife. You can use it on hafrik.com and in the Hafrik app too.</p><form id="hafrikRegisterForm" class="cloud-login"><div class="auth-two"><label>First name<input id="regFirst" autocomplete="given-name" maxlength="40" required></label><label>Last name<input id="regLast" autocomplete="family-name" maxlength="40" required></label></div><label>Username<input id="regUsername" autocomplete="username" maxlength="30" pattern="[A-Za-z0-9_.]{3,30}" title="3–30 letters, numbers, _ or ." required></label><label>Email<input id="regEmail" type="email" autocomplete="email" maxlength="100" required></label><label>Password<div class="auth-password"><input id="regPassword" type="password" autocomplete="new-password" minlength="6" required><button id="showRegPassword" type="button" aria-label="Show password">Show</button></div></label><label>Gender<select id="regGender" required><option value="">Choose</option><option value="male">Male</option><option value="female">Female</option></select></label><label class="auth-check"><input id="regTerms" type="checkbox" required><span>I agree to the Hafrik <a href="https://hafrik.com/static/terms" target="_blank" rel="noopener">Terms</a> and <a href="https://hafrik.com/static/privacy" target="_blank" rel="noopener">Privacy Policy</a></span></label><button type="submit" class="primary-btn">Create account</button><p id="hafrikRegisterFeedback" role="status"></p></form>';
   else html=head+'<h2>Your life continues here.</h2><p>One Hafrik account. Your character, friends and homes — wherever you play.</p><button id="hafrikConnect" class="primary-btn">Continue with Hafrik</button><p id="accountConnectFeedback" role="status"></p><div class="auth-divider">or sign in with your account</div>'+passwordForm;
-  $('cloudContent').innerHTML='<div class="auth-card">'+html+(!account?'<div class="auth-footer"><a href="https://hafrik.com/get" target="_blank" rel="noopener">New to Hafrik? Create an account ↗</a><a href="https://hafrik.com/how-to-play/" target="_blank" rel="noopener">📖 How to play</a></div>':'')+'</div>';if($('showHafrikPassword'))$('showHafrikPassword').onclick=()=>{const input=$('hafrikPassword'),visible=input.type==='password';input.type=visible?'text':'password';$('showHafrikPassword').textContent=visible?'Hide':'Show';$('showHafrikPassword').setAttribute('aria-label',visible?'Hide password':'Show password')};$('closeCloud').hidden=!account;
+  $('cloudContent').innerHTML='<div class="auth-card">'+html+(!account?'<div class="auth-footer">'+(inApp()?'':registering?'<button id="authToLogin" type="button" class="auth-switch">Already have an account? Log in</button>':'<button id="authToRegister" type="button" class="auth-switch">New here? Create your account</button>')+'<a href="https://hafrik.com/how-to-play/" target="_blank" rel="noopener">📖 How to play</a></div>':'')+'</div>';
+  if($('authToRegister'))$('authToRegister').onclick=()=>{registering=true;show()};if($('authToLogin'))$('authToLogin').onclick=()=>{registering=false;show()};
+  if($('hafrikRegisterForm')){$('hafrikRegisterForm').onsubmit=register;$('showRegPassword').onclick=()=>{const input=$('regPassword'),visible=input.type==='password';input.type=visible?'text':'password';$('showRegPassword').textContent=visible?'Hide':'Show'}}if($('showHafrikPassword'))$('showHafrikPassword').onclick=()=>{const input=$('hafrikPassword'),visible=input.type==='password';input.type=visible?'text':'password';$('showHafrikPassword').textContent=visible?'Hide':'Show';$('showHafrikPassword').setAttribute('aria-label',visible?'Hide password':'Show password')};$('closeCloud').hidden=!account;
   if (!$('cloudDialog').open) $('cloudDialog').showModal();
   if(account){
     $('hafrikLogout').onclick=logout;
@@ -55,7 +59,7 @@ function show() {
       $('cloudLoad').disabled=!remote.state;
       $('cloudLoad').onclick=()=>{if(!remote.state)return;loading=true;try{game.loadSave(remote.state);auto=true;status('Connected. Your character saves automatically.')}catch(error){restoreFailed=true;status(error.message)}finally{loading=false}if(auto)$('cloudDialog').close();else show()};
     }else $('cloudUpload').onclick=()=>upload(true);
-  }else{
+  }else if(!registering||inApp()){
     $('hafrikLoginForm').onsubmit=login;
     $('hafrikConnect').onclick=async()=>{
       if(window.ReactNativeWebView){requestAppSession();show()}
@@ -110,6 +114,21 @@ async function login(event) {
     if (!await connect({...result.data,token:result.data.session_token||result.data.token},{source:'password'})) {if(account)show();else feedback.textContent = message;}
   } catch (error) {feedback.textContent = error.message}
   finally {button.disabled=false}
+}
+// Sign-up through Hafrik's own register endpoint, so the account works on hafrik.com and in the app too.
+// If Hafrik returns a session we use it; otherwise we log in with the new details. Hafrik's messages are shown as-is.
+async function register(event) {
+  event.preventDefault();const feedback=$('hafrikRegisterFeedback'),button=$('hafrikRegisterForm').querySelector('button[type="submit"]');if(button.disabled)return;
+  const username=$('regUsername').value.trim(),password=$('regPassword').value,details={first_name:$('regFirst').value.trim(),last_name:$('regLast').value.trim(),username,email:$('regEmail').value.trim(),password,gender:$('regGender').value};
+  if(!/^[A-Za-z0-9_.]{3,30}$/.test(username)){feedback.textContent='Usernames are 3–30 letters, numbers, _ or .';return}if(password.length<6){feedback.textContent='Use at least 6 characters for your password.';return}if(!$('regTerms').checked){feedback.textContent='Please agree to the Terms to continue.';return}
+  button.disabled=true;feedback.textContent='Creating your Hafrik account…';
+  try{
+    const created=await api('/auth/register.php','POST',details);let session=created.data?.token?created.data:null;
+    if(!session){try{const r=await api('/auth/login.php','POST',{login:username,password});session=r.data?.token?r.data:null}catch(error){feedback.textContent=(created.message&&!/success/i.test(created.message)?created.message+' ':'')+'Your account was created. Check your email if Hafrik asked you to confirm it, then log in.';return}}
+    storage.setItem(TOKEN_KEY,session.token);registering=false;
+    if(!await connect({...session,token:session.session_token||session.token},{source:'password'})){if(account)show();else feedback.textContent=message}
+  }catch(error){feedback.textContent=error.message}
+  finally{button.disabled=false}
 }
 async function logout() {
   authEpoch++; await leave(); auto = false; clearTimeout(timer); liveToken = ''; storage.setItem(TOKEN_KEY, ''); storage.setItem(PROFILE_KEY, '');

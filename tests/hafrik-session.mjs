@@ -188,3 +188,22 @@ test('separate home clients never render neighbours from legacy flat presence re
  assert.equal(a.context.ChinaLifeCloud.players.length,0);assert.equal(b.context.ChinaLifeCloud.players.length,0);
  const restored=await client(api,'alice');assert.equal(restored.game.state.place,'home');assert.equal(restored.context.ChinaLifeCloud.players.length,0);
 });
+test('creating an account registers on Hafrik, then signs in and starts character setup',async()=>{
+ const api=server();const t=await client(api,'unused',{native:false});let registered=null,logins=0;
+ t.context.fetch=async (url,request)=>{const path=new URL(url).pathname;
+  if(path.endsWith('/auth/register.php')){registered={body:JSON.parse(request.body),credentials:request.credentials,auth:request.headers.Authorization};return Response.json({status:'success',message:'Account created',data:{user_id:'newbie'}})}
+  if(path.endsWith('/auth/login.php')){logins++;return Response.json({status:'success',data:{token:'newbie',user:{id:'newbie'}}})}
+  return api.fetch(url,request)};
+ t.context.ChinaLifeCloud.open();assert.match(t.document.getElementById('cloudContent').textContent,/Create your account/);t.document.getElementById('authToRegister').onclick();
+ const set=(id,v)=>{const el=t.document.getElementById(id);if(el.tagName==='SELECT')el.querySelector('option[value="'+v+'"]').setAttribute('selected','');else el.value=v};set('regFirst','Ama');set('regLast','Mensah');set('regUsername','ama_m');set('regEmail','ama@example.com');set('regPassword','short');set('regGender','female');
+ await t.document.getElementById('hafrikRegisterForm').onsubmit({preventDefault(){}});assert.match(t.document.getElementById('hafrikRegisterFeedback').textContent,/at least 6/);assert.equal(registered,null);
+ set('regPassword','test-only-password');await t.document.getElementById('hafrikRegisterForm').onsubmit({preventDefault(){}});assert.match(t.document.getElementById('hafrikRegisterFeedback').textContent,/agree to the Terms/);
+ t.document.getElementById('regTerms').checked=true;await t.document.getElementById('hafrikRegisterForm').onsubmit({preventDefault(){}});
+ assert.deepEqual(registered.body,{first_name:'Ama',last_name:'Mensah',username:'ama_m',email:'ama@example.com',password:'test-only-password',gender:'female'});assert.equal(registered.credentials,'omit');assert.equal(registered.auth,undefined);
+ assert.equal(logins,1,'signs in with the new details when sign-up returns no session');assert.equal(t.context.ChinaLifeCloud.signedIn,true);assert.equal(t.stored.get('chinalife-hafrik-token'),'newbie');assert.equal(t.document.getElementById('onboarding').open,true,'a new account goes to character setup');
+});
+test('Hafrik sign-up errors are shown as Hafrik sends them',async()=>{
+ const t=await client(server(),'unused',{native:false});t.context.fetch=async()=>Response.json({status:'error',message:'Username already taken'},{status:400});
+ t.context.ChinaLifeCloud.open();t.document.getElementById('authToRegister').onclick();for(const [id,v] of [['regFirst','A'],['regLast','B'],['regUsername','taken'],['regEmail','a@example.com'],['regPassword','test-only-password']])t.document.getElementById(id).value=v;t.document.querySelector('#regGender option[value="male"]').setAttribute('selected','');t.document.getElementById('regTerms').checked=true;
+ await t.document.getElementById('hafrikRegisterForm').onsubmit({preventDefault(){}});assert.equal(t.document.getElementById('hafrikRegisterFeedback').textContent,'Username already taken');assert.equal(t.context.ChinaLifeCloud.signedIn,false);assert.equal(t.document.querySelector('#hafrikRegisterForm button[type="submit"]').disabled,false);
+});

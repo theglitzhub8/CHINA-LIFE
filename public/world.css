@@ -451,3 +451,9 @@ dialog{border-radius:22px}
 /* Paid ads */
 .scene-label.paid-ad-label{background:#ff2d95;color:#fff;border:2px solid #ffd23f;font-weight:900;box-shadow:0 0 18px #ff2d95aa}
 .ad-full{display:block;width:100%;border-radius:16px;margin:4px 0 12px;box-shadow:0 8px 24px #0002}
+/* Sign-up */
+.auth-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cloud-login select{width:100%;border:1px solid #d5e2df;border-radius:14px;padding:12px;background:#fff;font:inherit}
+.auth-check{display:flex!important;align-items:flex-start;gap:8px;font-weight:600;font-size:13px;line-height:1.35}.auth-check input{width:auto;margin-top:2px}
+.auth-switch{border:0;background:none;color:#22685a;font:800 14px Manrope,system-ui;padding:6px;cursor:pointer}
+.auth-check input{flex:none;width:18px!important;height:18px;padding:0}.auth-check span{flex:1}.auth-check a{color:#22685a}
