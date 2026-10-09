@@ -166,3 +166,4 @@ CREATE TABLE IF NOT EXISTS chinalife_ai_messages (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS chinalife_politics_votes (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,city VARCHAR(40) NOT NULL,office VARCHAR(40) NOT NULL,voter_id INT UNSIGNED NOT NULL,candidate_id BIGINT UNSIGNED NOT NULL,created_at DATETIME NOT NULL,UNIQUE KEY one_vote(city,office,voter_id),INDEX(city,office),FOREIGN KEY(voter_id) REFERENCES users(user_id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_politics_elections (city VARCHAR(40) NOT NULL,office VARCHAR(40) NOT NULL,period VARCHAR(32) NOT NULL,opens_at DATETIME NOT NULL,closes_at DATETIME NOT NULL,PRIMARY KEY(city,office,period),INDEX(city,office,opens_at,closes_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
