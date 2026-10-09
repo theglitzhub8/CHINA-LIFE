@@ -445,3 +445,6 @@ dialog{border-radius:22px}
 .chat-row em{flex:none}
 .online-strip button>span:not(.player-avatar){max-width:58px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chat-list{min-width:0}.chat-list>.chat-row{min-width:0;max-width:100%;box-sizing:border-box}
+/* The phone screen scrolls (it had no scroll area, so apps below the fold were unreachable on phones) */
+#phoneContent{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
+#phoneContent .cl-group .phone-apps{overflow:visible;flex:none}
