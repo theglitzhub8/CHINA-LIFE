@@ -8,7 +8,7 @@ export const DISTRICTS=[
  {name:'Residential quarter',x:-50,z:-42,style:'residential'},{name:'Student quarter',x:-17,z:-42,style:'student'},{name:'University campus',x:17,z:-42,style:'campus'},{name:'Rail district',x:51,z:-42,style:'rail'},
  {name:'Food & community',x:-50,z:-9,style:'food'},{name:'City centre',x:-17,z:-9,style:'centre'},{name:'Business district',x:17,z:-9,style:'cbd'},{name:'Shopping district',x:51,z:-9,style:'shopping'},
  {name:'City gardens',x:-50,z:23,style:'gardens'},{name:'Nightlife district',x:-17,z:23,style:'nightlife'},{name:'Riverfront',x:17,z:23,style:'riverfront'},{name:'Airport district',x:51,z:23,style:'airport'}];
-export const BASE_POSITIONS={home:[-50,-32],church:[-50,-23],ef:[-17,-33],cafe:[-17,-23],campus:[17,-32],gym:[17,-23],university:[34,-32],liaoning:[51,-22],dongbei:[34,-10],station:[68,-32],market:[-50,0],african:[-40,3],plaza:[-17,0],skylight:[7,9],hotel:[-6,10],business:[17,0],mall:[51,0],academy:[40,9],park:[-50,32],palace:[-38,40],zhongjie:[-60,-8],night:[-17,32],blood:[-28,40],airport:[49,48],hq:[0,-74]};
+export const BASE_POSITIONS={home:[-50,-32],church:[-50,-23],ef:[-17,-33],cafe:[-17,-23],campus:[17,-32],gym:[17,-23],university:[34,-32],liaoning:[51,-22],dongbei:[34,-10],station:[68,-32],market:[-50,0],african:[-40,3],plaza:[-17,0],voting:[-5,0],skylight:[7,9],hotel:[-6,10],business:[17,0],mall:[51,0],academy:[40,9],park:[-50,32],palace:[-38,40],zhongjie:[-60,-8],night:[-17,32],blood:[-28,40],airport:[49,48],hq:[0,-74]};
 // Per city: climate flags, the welcome sign, upgraded prototype blocks, position overrides and district renames.
 export const CITY_MAPS={
  Shenyang:{north:true,welcome:'WELCOME TO SHENYANG',prototype:'centre',positions:{hotel:[-6,-9]}},
