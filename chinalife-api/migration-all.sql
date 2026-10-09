@@ -154,3 +154,9 @@ CREATE TABLE IF NOT EXISTS chinalife_submissions (
  status VARCHAR(12) NOT NULL DEFAULT 'pending',admin_note VARCHAR(300) NOT NULL DEFAULT '',listing VARCHAR(40) NOT NULL DEFAULT '',reviewed_by INT UNSIGNED NULL,reviewed_at DATETIME NULL,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,
  INDEX(status,created_at),INDEX(user_id),CONSTRAINT fk_chinalife_submissions_user FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_songs (
+ id CHAR(16) NOT NULL PRIMARY KEY,user_id INT UNSIGNED NOT NULL,title VARCHAR(80) NOT NULL,file VARCHAR(40) NOT NULL,mime VARCHAR(20) NOT NULL,bytes INT UNSIGNED NOT NULL,duration SMALLINT UNSIGNED NOT NULL,
+ listing_id INT UNSIGNED NULL,active TINYINT(1) NOT NULL DEFAULT 0,created_at DATETIME NOT NULL,INDEX(active,listing_id),INDEX(user_id),
+ CONSTRAINT fk_chinalife_songs_user FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_politics_candidates (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,city VARCHAR(40) NOT NULL,office VARCHAR(40) NOT NULL,candidate_id INT UNSIGNED NOT NULL,statement VARCHAR(600) NOT NULL,status VARCHAR(12) NOT NULL DEFAULT 'pending',created_at DATETIME NOT NULL,reviewed_at DATETIME NULL,UNIQUE KEY one_candidate(city,office,candidate_id),INDEX(city,office,status),FOREIGN KEY(candidate_id) REFERENCES users(user_id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

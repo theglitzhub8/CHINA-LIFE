@@ -1,0 +1,5 @@
+<?php
+declare(strict_types=1);require_once __DIR__.'/common.php';cl_methods(['GET','POST']);
+$offices=['governor','deputy-governor','city-councillor','student-representative'];
+if($method==='GET'){ $city=(string)($_GET['city']??'Shenyang');json_response('success',['city'=>$city,'offices'=>$offices,'candidates'=>cl_rows("SELECT c.id,c.office,c.statement,c.candidate_id,u.user_name name FROM chinalife_politics_candidates c JOIN users u ON u.user_id=c.candidate_id WHERE c.city=? AND c.status='approved' ORDER BY c.office,c.id",'s',[$city])]); }
+$in=cl_body();$city=trim((string)($in['city']??''));$office=(string)($in['office']??'');$statement=trim((string)($in['statement']??''));$candidate=(int)($in['candidate_id']??$uid);if(!in_array($office,$offices,true)||$city===''||mb_strlen($statement)>600||$candidate!==$uid)cl_fail('Invalid nomination');cl_run('INSERT INTO chinalife_politics_candidates(city,office,candidate_id,statement,created_at) VALUES(?,?,?,?,NOW())','ssis',[$city,$office,$uid,$statement]);json_response('success',['submitted'=>true]);
