@@ -7,9 +7,9 @@ function setup(place='home'){const t=harness({...fixture(),place}),c=t.context,p
  vm.runInContext('(()=>{'+fs.readFileSync('public/radio.js','utf8')+'})()',c);const sheet=t.document.getElementById('radioDialog');Object.defineProperty(sheet,'open',{get(){return this.hasAttribute('open')}});sheet.showModal=function(){this.setAttribute('open','')};sheet.close=function(){this.removeAttribute('open')};const radio=c.ChinaLifeRadio;return {...t,radio,audio:radio.audio}}
 test('ChinaLife Radio plays approved artists one after another, loops, and lets players pick a song',async()=>{const t=setup();
  const fab=t.document.getElementById('radioFab');assert.equal(fab.hidden,false,'the radio button shows when there are songs');
- await t.radio.play();assert.equal(t.audio.src,'https://hafrik.com/chinalife-music/a1.mp3');assert.equal(t.radio.playing,true);assert.match(fab.textContent,/Lagos Nights · Kola Beats/);
+ await t.radio.play();assert.equal(t.audio.src,'https://hafrik.com/chinalife-music/a1.mp3');assert.equal(t.radio.playing,true);assert.match(fab.textContent,/Lagos Nights/);assert.match(fab.textContent,/Kola Beats/);
  t.audio.fire('ended');await Promise.resolve();assert.equal(t.radio.current.title,'Harbin Snow','next song');t.audio.fire('ended');await Promise.resolve();assert.equal(t.radio.current.title,'Lagos Nights','loops round');
- fab.onclick();const sheet=t.document.getElementById('radioDialog');assert.match(sheet.textContent,/Playlist · 2 songs/);assert.match(sheet.textContent,/Harbin Snow/);
+ fab.onclick({target:fab});const sheet=t.document.getElementById('radioDialog');assert.match(sheet.textContent,/Up next/);assert.match(sheet.textContent,/Harbin Snow/,'up next shows the next song');sheet.querySelector('[data-tab="all"]').onclick();assert.match(sheet.textContent,/All songs · 2/);
  sheet.querySelector('[data-play="1"]').onclick();await Promise.resolve();assert.equal(t.radio.current.title,'Harbin Snow');
  t.radio.pause();assert.equal(t.radio.playing,false);
 });
@@ -19,5 +19,11 @@ test('the radio keeps playing in clubs and on the map, starts on the first tap, 
  t.game.state.place='night';t.context.dispatchEvent(new t.context.CustomEvent('chinalife:update'));assert.equal(t.audio.paused,false,'still playing in the club');
  t.game.state.place='plaza';t.context.dispatchEvent(new t.context.CustomEvent('chinalife:update'));assert.equal(t.audio.paused,false,'and outside');
  t.radio.pause();assert.equal(radioState,false,'club music comes back when the radio is paused');
+});
+test('the full player searches songs, filters by artist and shuffles',async()=>{const t=setup();await t.radio.play();const fab=t.document.getElementById('radioFab');fab.onclick({target:fab});const sheet=t.document.getElementById('radioDialog');
+ sheet.querySelector('[data-tab="artists"]').onclick();assert.equal(sheet.querySelectorAll('[data-artist]').length,2);sheet.querySelector('[data-artist="Ice Queen"]').onclick();assert.match(sheet.textContent,/Harbin Snow/);assert.doesNotMatch(sheet.querySelector('.radio-list').textContent,/Lagos Nights/);
+ sheet.querySelector('[data-clear]').onclick();const q=sheet.querySelector('.radio-search input');q.value='lagos';q.oninput({target:q});assert.match(sheet.querySelector('.radio-list').textContent,/Lagos Nights/);assert.doesNotMatch(sheet.querySelector('.radio-list').textContent,/Harbin/);
+ sheet.querySelector('[data-r="shuffle"]').onclick();assert.equal(sheet.querySelector('[data-r="shuffle"]').getAttribute('aria-pressed'),'true');sheet.querySelector('[data-r="next"]').onclick();await Promise.resolve();assert.equal(t.radio.current.title,'Harbin Snow','with two songs, shuffle still moves to the other one');
+ fab.querySelector('.radio-mini').onclick=null;fab.onclick({target:fab.querySelector('.radio-mini'),stopPropagation(){}});assert.equal(t.radio.playing,false,'the mini player pauses');
 });
 test('with no approved songs the radio button stays hidden',()=>{const t=setup();t.context.ChinaLifeCloud.songs=[];t.context.dispatchEvent(new t.context.CustomEvent('chinalife:songs'));assert.equal(t.document.getElementById('radioFab').hidden,true)});
