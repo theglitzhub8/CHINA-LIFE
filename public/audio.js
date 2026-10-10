@@ -27,7 +27,11 @@ let djTab='';const mins=n=>Math.floor(n/60)+':'+String(Math.floor(n%60)).padStar
 const songCover=s=>s?.cover&&window.ChinaLifeAuth?.base?window.ChinaLifeAuth.base+'/chinalife/media.php?id='+encodeURIComponent(s.cover):'';
 function djProgress(){if(!$('djProgress'))return;const length=track.song?track.song.duration:60,at=Math.max(0,(Date.now()+serverOffset-startedAt)/1000);$('djProgress').style.width=Math.min(100,at/length*100)+'%';if($('djTime'))$('djTime').textContent=track.song?mins(Math.min(at,length))+' / '+mins(length):'Club loop'}
 setInterval(djProgress,1000);
-function renderStatus(){if($('djTrack'))$('djTrack').textContent=track.song?track.song.title:track.name;if($('djArtist'))$('djArtist').textContent=track.song?track.song.artist:track.style||'Club beat';
+const clubButton=document.createElement('button');clubButton.id='clubMusicToggle';clubButton.className='club-music-fab';clubButton.type='button';clubButton.hidden=true;(document.getElementById('worldUI')||document.body).append(clubButton);
+function nowPlaying(){const radio=radioOn?window.ChinaLifeRadio?.current:null;return radio?{title:radio.title,artist:radio.artist,cover:songCover(radio),playing:true,source:'ChinaLife Radio'}:{title:track.song?.title||track.name,artist:track.song?.artist||track.style||'Club beat',cover:songCover(track.song),playing,source:'Club DJ'}}
+async function toggleClub(){if(playing&&!radioOn)return stop();window.ChinaLifeRadio?.pause();await start()}
+clubButton.onclick=toggleClub;
+function renderStatus(){const inClub=game.clubs.includes(game.state.place);clubButton.hidden=!inClub;clubButton.textContent=playing&&!radioOn?'⏸':'▶';clubButton.setAttribute('aria-label',playing&&!radioOn?'Pause club music':'Play club music');if(inClub)window.ChinaLifeWorld?.updateClubMusic?.(nowPlaying());if($('djTrack'))$('djTrack').textContent=track.song?track.song.title:track.name;if($('djArtist'))$('djArtist').textContent=track.song?track.song.artist:track.style||'Club beat';
  if($('djArt')){const c=songCover(track.song);$('djArt').style.backgroundImage=c?'url("'+c.replace(/"/g,'')+'")':'';$('djArt').textContent=c?'':track.song?'🎤':'🎧'}
  if($('djToggle'))$('djToggle').textContent=playing?'⏸ Pause club music':'▶ Play club music';
  const me=game.state.name,mine=queue.filter(q=>q.name===me).length;
@@ -44,14 +48,16 @@ function open(){if(!game.clubs.includes(game.state.place))return game.toast('Vis
   +'<div class="dj-panel" '+(djTab==='beats'?'':'hidden')+'><div class="dj-tracks">'+tracks.map(t=>'<button data-track="'+t.id+'"><b>'+t.name+'</b><span>'+t.style+'</span></button>').join('')+'</div><p class="map-note">Original instrumental loops made for ChinaLife. A loop plays for a minute; an artist’s song plays to the end.</p></div>'
   +'<div class="dj-panel" '+(djTab==='queue'?'':'hidden')+'><p class="dj-count">Shared queue · <span id="djQueueCount"></span></p><ol id="djQueue" class="dj-queue"></ol></div>'
   +'<p id="djFeedback" role="status"></p>';
- if(!$('audioDialog').open)$('audioDialog').showModal();$('djToggle').onclick=()=>playing?stop():start();$('djVolume').oninput=e=>setVolume(+e.target.value/100);
+ if(!$('audioDialog').open)$('audioDialog').showModal();$('djToggle').onclick=toggleClub;$('djVolume').oninput=e=>setVolume(+e.target.value/100);
  $('audioContent').querySelectorAll('[data-djtab]').forEach(b=>b.onclick=()=>{djTab=b.dataset.djtab;open()});
  $('audioContent').querySelectorAll('[data-track]').forEach(b=>b.onclick=async()=>{try{if(!window.ChinaLifeCloud?.joined){if(!await window.ChinaLifeCloud?.join()){note('Sign in and join this club to request shared music.');return}}await api('POST',{city:game.state.city,track:b.dataset.track});note('✅ Requested. It plays from the shared queue.');await sync()}catch(error){note(error.message)}});renderStatus();sync()}
-$('closeAudio').onclick=()=>$('audioDialog').close();setInterval(tick,40);setInterval(sync,2500);
+$('closeAudio').setAttribute('aria-label','Minimize club player');$('closeAudio').textContent='⌄';$('closeAudio').onclick=()=>$('audioDialog').close();setInterval(tick,40);setInterval(sync,2500);
 window.addEventListener('chinalife:update',()=>{if(lastClub!==game.state.place){lastClub=game.state.place;track=venueTrack();startedAt=Date.now();queue=[];align();sync()}if(!game.clubs.includes(game.state.place)){stop(false);if($('audioDialog').open)$('audioDialog').close()}else if(enabled&&unlocked&&!playing&&!document.hidden)start()});
 window.addEventListener('chinalife:voice',e=>{duck=e.detail.active;gain()});
-window.addEventListener('chinalife:radio',e=>{radioOn=!!e.detail?.playing;gain();songCheck=0;songTick()});
-window.ChinaLifeAudio={open,start,stop,setVolume,get volume(){return volume},get nearness(){return nearness()},get playing(){return playing},get track(){return track.id}};
+window.addEventListener('chinalife:radio',e=>{radioOn=!!e.detail?.playing;gain();songCheck=0;songTick();renderStatus()});
+window.ChinaLifeAudio={open,start,stop,toggle:toggleClub,get nowPlaying(){return nowPlaying()},setVolume,get volume(){return volume},get nearness(){return nearness()},get playing(){return playing},get track(){return track.id}};
 
-document.addEventListener('pointerdown',event=>{if(event.target?.closest?.('#djToggle'))return;if(game.clubs.includes(game.state.place)&&enabled&&!playing&&!document.hidden)start()},{capture:true});
+document.addEventListener('pointerdown',event=>{if(event.target?.closest?.('#djToggle,#clubMusicToggle'))return;if(game.clubs.includes(game.state.place)&&enabled&&!playing&&!document.hidden)start()},{capture:true});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stop(false);else if(game.clubs.includes(game.state.place)&&enabled&&unlocked)start()});
+
+renderStatus();

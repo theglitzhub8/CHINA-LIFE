@@ -174,3 +174,9 @@ test('music artists appear on the city map on their own stage and are found by s
 test('AI characters stand at their venue with an AI tag, and tapping one opens the chat',()=>{const t=setup();let opened=null;t.context.ChinaLifeAI={agentsAt:id=>id==='plaza'?[{id:'guide',name:'Mei',role:'City guide',color:0xd94f70,spot:[-2.6,-1.6]}]:[],open:id=>{opened=id}};
  t.game.state.place='plaza';t.world.venue('plaza');const tag=t.document.querySelector('.ai-label');assert.ok(tag,'Mei is in Hafrik Square');assert.match(tag.textContent,/Mei · City guide/);tag.onclick({stopPropagation(){}});assert.equal(opened,'guide');
  t.world.venue('gym');assert.equal(t.document.querySelector('.ai-label'),null,'only at her venue')});
+
+test('club wall screen follows the active track and is removed when returning to the city map',()=>{
+ const t=setup(),W=t.context.ChinaLifeWorld;t.game.state.place='night';W.venue('night');W.updateClubMusic({title:'Our song',artist:'City artist',cover:'',playing:true,source:'Club DJ'});assert.ok(W.signs.includes('Our song · City artist'));
+ W.updateClubMusic({title:'Radio song',artist:'Radio artist',cover:'',playing:true,source:'ChinaLife Radio'});assert.ok(W.signs.includes('Radio song · Radio artist'));assert.ok(!W.signs.includes('Our song · City artist'));
+ W.map();W.updateClubMusic({title:'Old callback',artist:'Nobody',playing:true});assert.ok(!W.signs.some(s=>s.includes('Radio song')||s.includes('Old callback')));
+});

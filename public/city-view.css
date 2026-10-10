@@ -302,3 +302,72 @@ dialog .activity-panel :is(.quest-card,.dream-card,.gist-card) { margin: 8px 0; 
 #cantaballFrame { flex: 1; min-height: 0; }
 #cantaballFrame iframe { height: 100%; min-height: 0; }
 @media (max-height: 500px) { #activityDialog.cantaball-screen #activityContent { height: calc(100dvh - 24px); } }
+/* Gist composer: readable fields, optional link and a safe preview. */
+.gist-compose { display: grid; gap: 10px; }
+.gist-compose-note { display: grid; gap: 4px; padding: 12px; background: #edf5f2; border-radius: 14px; }
+.gist-compose-note > span { font-weight: 800; font-size: 13px; }
+.gist-compose-note small { font-size: 11px; color: #627b76; }
+.gist-compose > label { display: flex; justify-content: space-between; margin: 4px 0 -4px; font-size: 13px; font-weight: 800; }
+.gist-compose label small { font-weight: 500; font-size: 11px; color: #74847f; }
+.gist-compose :is(input,textarea) { width: 100%; min-width: 0; border: 1px solid #dce5e1; border-radius: 12px; padding: 12px; background: #fbfcfb; color: #163631; font: 16px/1.5 Manrope,system-ui,sans-serif; }
+.gist-compose textarea { resize: vertical; min-height: 130px; max-height: 240px; }
+.gist-compose :is(input,textarea):focus { outline: 2px solid #258b79; outline-offset: 2px; }
+.gist-link { border: 1px solid #e2e9e5; padding: 12px; border-radius: 12px; }
+.gist-link summary { cursor: pointer; font-weight: 700; font-size: 13px; }
+.gist-link summary small { color: #74847f; font-weight: 400; }
+.gist-link label { display: block; margin: 10px 0 6px; font-size: 12px; }
+.gist-link > small { display: block; margin-top: 6px; color: #74847f; font-size: 11px; }
+#gistPreview[hidden] { display: none; }
+#gistPreview p { white-space: pre-wrap; overflow-wrap: anywhere; }
+#gistUserStatus:empty { display: none; }
+#gistUserStatus { padding: 10px; border-radius: 12px; background: #edf5f2; }
+.gist-compose-footer { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 0; }
+.gist-compose-footer button { flex: 1; }
+/* Minimized music always uses the idle button footprint, even with a song. */
+#worldUI .radio-fab, #worldUI .radio-fab.has-song { width: 44px; min-width: 44px; height: 44px; padding: 2px; grid-template-columns: 1fr; border-radius: 50%; box-sizing: border-box; transition: box-shadow .18s ease; }
+#worldUI .radio-fab .radio-cover { width: 36px; height: 36px; }
+#worldUI .radio-fab :is(.radio-now,.radio-mini,.radio-line) { display: none; }
+#worldUI .radio-fab.playing { box-shadow: 0 0 0 3px #79ceb866,0 4px 14px #10233333; }
+.club-music-fab { position: absolute; left: var(--view-edge); bottom: calc(var(--view-bottom) + var(--dock-height) + 10px); width: 44px; height: 44px; z-index: 10; border-radius: 50%; background: #ffffffef; color: #163c37; font-size: 18px; box-shadow: 0 4px 14px #10233333; }
+.club-music-fab[hidden], #worldUI.map-view .club-music-fab { display: none; }
+#worldUI.action-running .club-music-fab { bottom: calc(var(--view-bottom) + var(--dock-height) + 100px); }
+#radioDialog, #audioDialog { width: min(420px,calc(100% - 24px)); max-width: calc(100% - 24px); max-height: min(660px,72dvh); border-radius: 24px; padding: 0; background: #f8faf8; }
+#radioDialog { overflow-y: auto; }
+#audioContent { max-height: min(660px,72dvh); }
+#radioDialog[open], #audioDialog[open] { animation: music-player-in .18s ease-out; }
+@keyframes music-player-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+#radioDialog .radio-hero, #audioDialog .dj-hero { padding: 14px; background: linear-gradient(145deg,#103d39,#1d665b); }
+#radioDialog .radio-head { align-items: center; padding: 0; margin-bottom: 10px; }
+#radioDialog .radio-head b { font-size: 13px; }
+#radioDialog .radio-x { background: #ffffff20; color: white; font-size: 25px; }
+#radioDialog .radio-player { grid-template-columns: 72px minmax(0,1fr); gap: 12px; margin: 12px 0; }
+#radioDialog .radio-art, #audioDialog .dj-art { width: 72px; height: 72px; border-radius: 16px; }
+#radioDialog .radio-meta > b { font-size: 18px; line-height: 1.3; }
+#radioDialog .radio-controls { gap: 8px; }
+#radioDialog .radio-controls button { min-width: 44px; min-height: 44px; }
+#radioDialog .radio-main { width: 52px; height: 52px; font-size: 22px; }
+#radioDialog .radio-vol { min-width: 0; max-width: 90px; }
+#radioDialog :is(.radio-tabs,.radio-list,.radio-artists) { padding-left: 12px; padding-right: 12px; }
+#radioDialog .radio-tabs button, #audioDialog .dj-tabs button { min-height: 44px; font-size: 12px; padding: 8px 12px; }
+#radioDialog .radio-list button { padding: 8px; gap: 9px; }
+#radioDialog .radio-thumb, #audioDialog .dj-thumb { width: 40px; height: 40px; border-radius: 12px; }
+#radioDialog .radio-row b, #audioDialog .dj-q b { font-size: 13px; }
+#radioDialog .radio-row small, #audioDialog .dj-q small { font-size: 11px; }
+#radioDialog .radio-note { font-size: 11px; padding: 10px 12px; }
+#audioDialog .dj-hero > .eyebrow { display: block; padding-right: 40px; font-size: 10px; line-height: 1.5; }
+#audioDialog .dj-now { grid-template-columns: 72px minmax(0,1fr); gap: 12px; margin: 12px 0; }
+#audioDialog .dj-meta h3 { font-size: 18px; }
+#audioDialog .dj-actions { gap: 8px; }
+#audioDialog .dj-actions .volume-control { min-width: 100px; }
+#audioDialog .dj-tabs { padding: 8px 12px; }
+#audioDialog .dj-panel { padding: 8px 12px; }
+#audioDialog .dj-card { grid-template-columns: 40px minmax(0,1fr) auto; gap: 8px; }
+@media (max-height: 500px) { #radioDialog,#audioDialog,#audioContent { max-height: calc(100dvh - 24px); } }
+@media (prefers-reduced-motion: reduce) { #radioDialog[open],#audioDialog[open] { animation: none; } }
+#radioDialog .radio-controls { flex-wrap: wrap; justify-content: center; }
+#radioDialog .radio-vol { width: 100%; max-width: none; margin: 2px 0 0; justify-content: center; }
+#radioDialog .radio-vol input { width: min(160px,70%); }
+#radioDialog .radio-search { min-width: 0; }
+#radioDialog .radio-search input { min-width: 0; }
+#radioDialog .radio-artistname { overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) { .radio-eq i { animation: none; height: 8px; } }

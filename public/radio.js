@@ -29,7 +29,7 @@ let tab='next',query='',artistFilter='',shuffle=store.get('chinalife-radio-shuff
 const fab=document.createElement('div');fab.id='radioFab';fab.className='radio-fab';fab.hidden=true;fab.setAttribute('role','button');fab.setAttribute('aria-label','ChinaLife Radio');fab.tabIndex=0;
 fab.innerHTML='<span class="radio-cover"><span class="radio-icon">🎵</span></span><span class="radio-now"><b></b><small></small></span><button type="button" class="radio-mini" aria-label="Play">▶</button><i class="radio-line"></i>';
 (document.getElementById('worldUI')||document.body).append(fab);
-fab.onclick=e=>{if(e.target.closest('.radio-mini')){e.stopPropagation();return (!audio.paused&&wanted)?pause():play()}open()};fab.onkeydown=e=>{if(e.key==='Enter')open()};
+fab.onclick=e=>{if(e.target.closest('.radio-mini')){e.stopPropagation();return (!audio.paused&&wanted)?pause():play()}open()};fab.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open()}};
 const sheet=document.createElement('dialog');sheet.id='radioDialog';sheet.className='radio-sheet';document.body.append(sheet);
 const eq='<span class="radio-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>';
 function render(){const s=current(),on=!audio.paused&&wanted;fab.hidden=!list.length;fab.classList.toggle('playing',on);fab.classList.toggle('has-song',!!(s&&(on||audio.currentTime>0)));
@@ -44,7 +44,7 @@ function row(x,i,on){const art=cover(x);return '<li><button data-play="'+i+'" cl
 function draw(){const s=current(),on=!audio.paused&&wanted,art=cover(s),artists=[...new Map(list.map(x=>[x.artist,x])).values()];
  const shown=tab==='next'?list.map((x,i)=>[x,i]).filter(([,i])=>i!==index).sort((a,b)=>((a[1]-index+list.length)%list.length)-((b[1]-index+list.length)%list.length)).slice(0,12)
   :list.map((x,i)=>[x,i]).filter(([x])=>(!artistFilter||x.artist===artistFilter)&&(!query||(x.title+' '+x.artist).toLowerCase().includes(query.toLowerCase())));
- sheet.innerHTML='<div class="radio-hero"'+(art?' style="--art:url(&quot;'+esc(art)+'&quot;)"':'')+'><div class="radio-head"><b>🎵 ChinaLife Radio</b><button class="radio-x" aria-label="Close">✕</button></div>'
+ sheet.innerHTML='<div class="radio-hero"'+(art?' style="--art:url(&quot;'+esc(art)+'&quot;)"':'')+'><div class="radio-head"><b>🎵 ChinaLife Radio</b><button class="radio-x" aria-label="Minimize player" title="Keep playing and return to the city">⌄</button></div>'
   +(s?'<div class="radio-player"><span class="radio-art"'+(art?' style="background-image:url(&quot;'+esc(art)+'&quot;)"':'')+'>'+(art?'':'🎤')+'</span><div class="radio-meta"><span class="radio-live">'+(on?eq+' Now playing':'Paused')+'</span><b>'+esc(s.title)+'</b><button class="radio-artistname" data-r="artist">'+esc(s.artist)+(s.city?' · '+esc(s.city):'')+' ›</button></div></div>'
    +'<input class="radio-seek" type="range" min="0" max="1000" value="0" aria-label="Seek"><div class="radio-time"></div>'
    +'<div class="radio-controls"><button data-r="shuffle" class="'+(shuffle?'on':'')+'" aria-label="Shuffle" aria-pressed="'+shuffle+'">🔀</button><button data-r="prev" aria-label="Previous">⏮</button><button data-r="toggle" class="radio-main" aria-label="'+(on?'Pause':'Play')+'">'+(on?'⏸':'▶')+'</button><button data-r="next" aria-label="Next">⏭</button><label class="radio-vol" aria-label="Volume">🔊<input type="range" min="0" max="100" value="'+Math.round(volume*100)+'"></label></div>'
@@ -71,7 +71,7 @@ function refresh(){const id=current()?.id;list=songs();const i=list.findIndex(s=
 window.addEventListener('chinalife:songs',refresh);window.addEventListener('chinalife:cloudready',refresh);
 // Clubs have their own DJ: pause on the way in, resume on the way out.
 // Starts on the first tap anywhere (browsers need a tap before sound), unless the player paused it before.
-let started=false;const autoStart=()=>{if(started||wanted)return;if(store.get('chinalife-radio-on','on')==='off'){started=true;return}if(list.length){started=true;play()}};['pointerdown','keydown'].forEach(e=>document.addEventListener(e,autoStart,{capture:true}));
+let started=false;const autoStart=()=>{if(started||wanted||inClub())return;if(store.get('chinalife-radio-on','on')==='off'){started=true;return}if(list.length){started=true;play()}};['pointerdown','keydown'].forEach(e=>document.addEventListener(e,autoStart,{capture:true}));
 audio.addEventListener('pause',announce);audio.addEventListener('playing',announce);
 window.addEventListener('chinalife:voice',e=>{duck=!!e.detail?.active;applyVolume()});
 window.ChinaLifeRadio={open,play:id=>{const i=list.findIndex(s=>s.id===id);play(i>=0?i:undefined)},pause,next,prev,get playing(){return !audio.paused&&wanted},get current(){return current()},get songs(){return list},get audio(){return audio}};

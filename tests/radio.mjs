@@ -27,3 +27,8 @@ test('the full player searches songs, filters by artist and shuffles',async()=>{
  fab.querySelector('.radio-mini').onclick=null;fab.onclick({target:fab.querySelector('.radio-mini'),stopPropagation(){}});assert.equal(t.radio.playing,false,'the mini player pauses');
 });
 test('with no approved songs the radio button stays hidden',()=>{const t=setup();t.context.ChinaLifeCloud.songs=[];t.context.dispatchEvent(new t.context.CustomEvent('chinalife:songs'));assert.equal(t.document.getElementById('radioFab').hidden,true)});
+
+test('minimizing the player leaves music playing, and a club tap does not start competing radio audio',async()=>{
+ const t=setup();await t.radio.play();t.radio.open();const sheet=t.document.getElementById('radioDialog');sheet.querySelector('.radio-x').onclick();assert.equal(sheet.open,false);assert.equal(t.radio.playing,true);t.radio.open();assert.equal(sheet.open,true);
+ const club=setup('night');club.document.dispatchEvent(new club.context.Event('pointerdown'));await Promise.resolve();assert.equal(club.radio.playing,false,'club DJ gets the first gesture');await club.radio.play();assert.equal(club.radio.playing,true,'radio can still be chosen explicitly in a club');
+});

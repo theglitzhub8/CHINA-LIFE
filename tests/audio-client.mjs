@@ -23,3 +23,12 @@ test('club music is loudest at the DJ booth, fades by the door and on the map, a
  assert.equal(booth,1);assert.ok(door<booth&&door>=.35,'door '+door);assert.equal(map,.2);
  a.setVolume(.75);assert.equal(a.volume,.75);assert.equal(stored.get('chinalife-music-volume'),'0.75');a.setVolume(3);assert.equal(a.volume,1);
 });
+
+test('club quick play switches away from radio, minimizes without pausing, and hides after leaving',async()=>{
+ const t=await setup(),a=t.context.ChinaLifeAudio;let paused=0,wall;
+ t.context.ChinaLifeWorld={updateClubMusic:info=>wall=info};t.context.ChinaLifeRadio={current:{title:'Artist track',artist:'Singer',cover:'cover-id'},pause(){paused++;t.context.dispatchEvent(new t.context.CustomEvent('chinalife:radio',{detail:{playing:false}}))}};
+ t.context.dispatchEvent(new t.context.CustomEvent('chinalife:radio',{detail:{playing:true}}));assert.equal(wall.title,'Artist track');assert.match(wall.cover,/media.php/);
+ const button=t.document.getElementById('clubMusicToggle');assert.equal(button.hidden,false);await button.onclick();assert.equal(paused,1);assert.equal(a.playing,true);assert.equal(button.getAttribute('aria-label'),'Pause club music');assert.equal(wall.source,'Club DJ');
+ a.open();t.document.getElementById('closeAudio').onclick();assert.equal(a.playing,true,'minimize does not stop playback');await button.onclick();assert.equal(a.playing,false);
+ t.game.state.place='home';t.internal.render();assert.equal(button.hidden,true);
+});
