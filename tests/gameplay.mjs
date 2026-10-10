@@ -261,3 +261,15 @@ test('Gist combines approved news events and live player activity with working f
 });
 
 test('buying VIP automatically takes the player to their seat and never repeats the charge on seating',()=>{const t=harness();t.game.state.place='night';t.game.state.money=10000;let seats=0;t.context.ChinaLifeWorld={vipSeat(){seats++}};t.game.clubAccess('night');t.click('vipNight');assert.equal(seats,1);assert.equal(t.game.state.money,9500);t.game.clubAccess('night');t.click('vipSeat');assert.equal(seats,2);assert.equal(t.game.state.money,9500);});
+
+test('daily hunt grants a persistent starter home once, with clue travel controls',()=>{
+ const h=harness();h.game.hunt();assert.equal(h.document.querySelectorAll('[id^="hunt-go-"]').length,3);
+ const targets=[...h.document.querySelectorAll('[id^="hunt-go-"]')].map(b=>b.id.slice(8));
+ assert.equal(h.game.collectTreasure(targets[0]),false,'must be inside the venue');
+ for(const id of targets){h.game.state.place=id;assert.equal(h.game.collectTreasure(id),true);assert.equal(h.game.collectTreasure(id),false)}
+ assert.equal(h.game.state.ownedHomes.length,1);const home=h.game.state.ownedHomes[0];
+ const restored=harness(JSON.parse(JSON.stringify(h.game.state)));assert(restored.game.state.ownedHomes.includes(home));
+ h.passDays(1);h.game.hunt();for(const b of h.document.querySelectorAll('[id^="hunt-go-"]')){const id=b.id.slice(8);h.game.state.place=id;h.game.collectTreasure(id)}
+ assert.equal(h.game.state.ownedHomes.length,1,'later hunts cannot grant duplicate homes');
+ h.game.goals();assert.match(h.document.getElementById('activityContent').textContent,/Your milestones/);
+});
