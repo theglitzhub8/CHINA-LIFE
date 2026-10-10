@@ -175,7 +175,7 @@ async function manage(id){const box=$('pDrawer');let p;try{p=(await admin('playe
 
 function showLogin(text=''){$('adminApp').hidden=true;$('adminLogin').hidden=false;$('loginError').textContent=text}
 $('loginForm').onsubmit=async e=>{e.preventDefault();$('loginError').textContent='Signing in…';try{const r=await request('/auth/login.php','POST',{login:$('loginName').value.trim(),password:$('loginPass').value});if(!r.token)throw Error('Login failed');token=r.session_token||r.token;store.set(TOKEN_KEY,r.token);$('loginPass').value='';await start()}catch(err){$('loginError').textContent=err.message}};
-$('adminSignOut').onclick=()=>{token='';showLogin('Signed out of admin on this page. The game keeps its own sign-in.')};
+$('adminSignOut').onclick=()=>{token='';store.set(TOKEN_KEY,'');store.set('chinalife-hafrik-profile','');$('loginPass').value='';showLogin('Saved sign-in cleared on this device. Other open sessions may remain active.')};
 $('adminMenu').onclick=()=>document.body.classList.toggle('menu-open');$('adminRefresh').onclick=()=>render();
 async function start(){try{await admin('stats')}catch(e){if(e.status===401)return showLogin(token?'Your session ended. Sign in again.':'');if(e.status===403)return showLogin('This Hafrik account is not a ChinaLife admin.');return showLogin(e.message)}
  $('adminLogin').hidden=true;$('adminApp').hidden=false;try{const me=await request('/chinalife/save.php');$('adminWho').textContent='Signed in as @'+(me.account?.username||me.account?.user_name||me.account?.name||'admin')}catch{}render()}

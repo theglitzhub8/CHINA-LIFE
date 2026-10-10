@@ -13,3 +13,6 @@ china-life.hafrik.com/
 /chinalife-api/admin-config.php
 /chinalife-api/push-config.php
 /chinalife-api/ai-config.php
+
+/chinalife-api/music-config.php
+*.zip

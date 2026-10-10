@@ -339,3 +339,13 @@ Deploy with update-server.sh and run the PHP 8.4 migrate.php command. The migrat
 See Latest Gist combines approved community/admin news, current city events and the existing Nearby presence activity feed. All, Players, Events and News filters narrow the timeline; incoming presence updates refresh an open screen. Add your gist retains admin review. News errors remain visible while cached player activity/events remain usable. Presence activity is observed on the current device, capped at 30 entries, and is not a persistent city history. Meetings, transactions and elections are not added by this increment.
 
 Deploy with the standard update script and reload. No additional migration is required if the Gist table migration has already run. Validation: 263 tests passed, including combined timeline, filters and incoming activity updates; gist.php syntax passed. Live browser/mobile verification remains outstanding.
+
+## Security hardening (2026-10-10)
+
+Deploy the updated API `.htaccess`, PHP files and admin client with the standard script. No schema migration is required for these changes: AI daily usage uses the existing rate-limit table, resets at midnight Beijing time, and survives clearing/pruning conversations. Its counter starts fresh on first use after this update. Failed provider responses release the reserved quota; interrupted requests may conservatively consume a slot.
+
+Partner accounts have cumulative limits of 50 MB/100 photos and 500 MB/60 songs. Existing uploads are preserved; accounts already over quota cannot add uploads. Quota checks and inserts serialize on the account row. These limits do not replace server-wide disk quotas, request limits, media decoding or unused-file cleanup.
+
+Deployment excludes private `*-config.php` files and archives, while retaining the four public game catalog configuration files. Existing server credentials are preserved. Previously deployed archives are not deleted automatically: review and remove them on the host. Verify archive/config requests return 403 or 404 on the live server; Apache must honor `.htaccess`, and Nginx needs equivalent deny rules. Directory indexing is disabled.
+
+Admin sign-out clears saved device credentials but does not revoke Hafrik sessions or stop other already-open tabs. Shared registration and authentication are unchanged. Scoped ChinaLife sessions, database isolation and server-authoritative money/XP remain separate follow-up work.

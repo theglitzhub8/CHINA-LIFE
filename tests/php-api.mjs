@@ -717,7 +717,7 @@ test('AI city characters: off without a key, then answer with real listings in c
   const h=await call(11,'ai.php?agent=guide');assert.equal(h.data.messages.length,4);assert.equal(h.data.messages[1].role,'assistant');assert.equal(h.data.remaining,1);
   fail=true;assert.equal((await call(11,'ai.php','POST',{agent:'guide',message:'Again'})).httpStatus,502,'API trouble shows a friendly error');fail=false;
   await call(11,'ai.php','POST',{agent:'food',message:'Third'});assert.equal((await call(11,'ai.php','POST',{agent:'food',message:'Fourth'})).httpStatus,429,'daily limit');
-  assert.equal((await call(11,'ai.php?agent=guide','DELETE')).httpStatus,200);assert.equal((await call(11,'ai.php?agent=guide')).data.messages.length,0,'conversation cleared');
+  assert.equal((await call(11,'ai.php?agent=guide','DELETE')).httpStatus,200);assert.equal((await call(11,'ai.php?agent=guide')).data.messages.length,0,'conversation cleared');assert.equal((await call(11,'ai.php?agent=guide')).data.remaining,0,'clearing history does not reset usage');assert.equal((await call(11,'ai.php','POST',{agent:'tutor',message:'Bypass'})).httpStatus,429,'daily quota applies across characters after history deletion');
  }finally{mock.close();fs.unlinkSync(cfg)}
 });
 test('AI characters act in the game with tools (checked against real places, screens, businesses), and every venue has a host',async()=>{
@@ -738,4 +738,17 @@ test('AI characters act in the game with tools (checked against real places, scr
   assert.equal((await call(11,'ai.php','POST',{agent:'host',place:'home',message:'Hi',context:ctx})).httpStatus,400,'no hosts in private homes');
   reply=[{type:'text',text:'Hello from the café'}];r=await call(11,'ai.php','POST',{agent:'barista',message:'Hi',context:ctx});assert.equal(r.httpStatus,200);assert.match(seen.at(-1).system,/You are Coco/);
  }finally{mock.close();fs.unlinkSync(cfg)}
+});
+
+test('partner upload quotas reject storage exhaustion before adding photos or songs',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id=12');
+ const count=()=>Number(sql('USE chinalife_test; SELECT COUNT(*) FROM chinalife_media WHERE user_id=12').trim());
+ const before=count();
+ // Reach the file quota with small records, without allocating large files in tests.
+ for(let i=before;i<100;i++)sql(`USE chinalife_test; INSERT INTO chinalife_media(id,user_id,mime,width,height,bytes,created_at) VALUES('${crypto.randomBytes(12).toString('hex')}',12,'image/png',120,120,'x',NOW())`);
+ assert.equal((await call(12,'partner.php','POST',{action:'upload',image:png(120,120)})).httpStatus,409);
+ assert.equal(count(),100);
+ sql("USE chinalife_test; UPDATE chinalife_songs SET bytes=524288000 WHERE user_id=12 LIMIT 1");
+ const r=await fetch(base+'/api/v4/chinalife/partner.php?action=upload_song&title=Quota&duration=30',{method:'POST',headers:{Authorization:'Bearer test-12','content-type':'audio/mpeg'},body:Buffer.from('ID3testaudio')});
+ assert.equal(r.status,409);assert.match((await r.json()).message,/storage limit/);
 });

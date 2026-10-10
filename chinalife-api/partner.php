@@ -6,6 +6,17 @@ declare(strict_types=1);
 require_once __DIR__.'/common.php';
 cl_methods(['GET','POST']);
 if (!cl_one('SELECT user_id FROM chinalife_saves WHERE user_id=?','i',[$uid])) cl_fail('Create your ChinaLife character first, then come back to apply',403);
+// Serialize quota checks with the insert, across both photo and song uploads.
+function cl_upload_quota(int $newBytes, bool $song): void {
+    global $db,$uid;
+    $db->begin_transaction();
+    cl_one('SELECT user_id FROM users WHERE user_id=? FOR UPDATE','i',[$uid]);
+    $row=$song?cl_one('SELECT COUNT(*) n,COALESCE(SUM(bytes),0) bytes FROM chinalife_songs WHERE user_id=?','i',[$uid]):cl_one('SELECT COUNT(*) n,COALESCE(SUM(OCTET_LENGTH(bytes)),0) bytes FROM chinalife_media WHERE user_id=?','i',[$uid]);
+    $maxBytes=$song?524288000:52428800;$maxFiles=$song?60:100;
+    if ((int)$row['n']>=$maxFiles||(int)$row['bytes']+$newBytes>$maxBytes) {
+        $db->rollback();cl_fail($song?'Song storage limit reached (500 MB per account). Contact the team to remove unused uploads':'Photo storage limit reached (50 MB per account). Contact the team to remove unused uploads',409);
+    }
+}
 $mine=function() use ($uid){$rows=cl_rows('SELECT id,kind,city,title,data,status,admin_note,created_at,updated_at FROM chinalife_submissions WHERE user_id=? ORDER BY id DESC LIMIT 50','i',[$uid]);
     foreach ($rows as &$r){$r['id']=(string)$r['id'];$r['data']=json_decode($r['data'],true)?:[];}unset($r);return $rows;};
 if ($method==='GET') json_response('success',['submissions'=>$mine(),'username'=>$auth['user_name']??'']);
@@ -17,6 +28,7 @@ if ($method==='POST'&&($_GET['action']??'')==='upload_song') {
     if ($title===''||mb_strlen($title)>80) cl_fail('Give the song a title (up to 80 characters)');
     if ($duration===false||$duration<15||$duration>1200) cl_fail('Songs must be between 15 seconds and 20 minutes');
     // Up to 100 MB: the upload is streamed straight to disk (never held in memory), then checked.
+    cl_upload_quota(1,true);$db->rollback();
     $max=104857600;
     $in=fopen('php://input','rb');$head=$in?(string)fread($in,12):'';
     if ($head==='') cl_fail('The song did not arrive. The server upload limit may be too low (it needs at least 110 MB)');
@@ -31,8 +43,12 @@ if ($method==='POST'&&($_GET['action']??'')==='upload_song') {
     $out=@fopen($part,'xb');if (!$out) cl_fail('Song storage is not writable on the server. Ask the ChinaLife team',503);
     fwrite($out,$head);$size=strlen($head)+stream_copy_to_stream($in,$out,$max+1-strlen($head));fclose($out);fclose($in);
     if ($size>$max){@unlink($part);cl_fail('Songs must be 100 MB or smaller',413);}
-    if (!@rename($part,$dir.'/'.$file)){@unlink($part);cl_fail('Song storage is not writable on the server. Ask the ChinaLife team',503);}
-    cl_run('INSERT INTO chinalife_songs(id,user_id,title,file,mime,bytes,duration,active,created_at) VALUES(?,?,?,?,?,?,?,0,NOW())','sisssii',[$id,$uid,$title,$file,$mime,$size,$duration]);
+    // Check once more under lock: another upload may have completed while streaming.
+    // Remove the temporary file even when a rejected quota terminates the request.
+    register_shutdown_function(function() use ($part){if(is_file($part)) @unlink($part);});
+    cl_upload_quota($size,true);
+    if (!@rename($part,$dir.'/'.$file)){$db->rollback();@unlink($part);cl_fail('Song storage is not writable on the server. Ask the ChinaLife team',503);}
+    try {cl_run('INSERT INTO chinalife_songs(id,user_id,title,file,mime,bytes,duration,active,created_at) VALUES(?,?,?,?,?,?,?,0,NOW())','sisssii',[$id,$uid,$title,$file,$mime,$size,$duration]);$db->commit();}catch(Throwable $e){$db->rollback();@unlink($dir.'/'.$file);throw $e;}
     [,$url]=cl_music_storage();
     json_response('success',['id'=>$id,'title'=>$title,'duration'=>$duration,'url'=>$url.$file]);
 }
@@ -41,7 +57,8 @@ if ($action==='upload') {
     cl_rate('partner_upload',60,3600);
     [$bytes,$mime,$w,$h]=cl_image($input['image']??null,2097152,120,120);
     $id=bin2hex(random_bytes(12));
-    cl_run('INSERT INTO chinalife_media(id,user_id,mime,width,height,bytes,created_at) VALUES(?,?,?,?,?,?,NOW())','sisiis',[$id,$uid,$mime,$w,$h,$bytes]);
+    cl_upload_quota(strlen($bytes),false);
+    cl_run('INSERT INTO chinalife_media(id,user_id,mime,width,height,bytes,created_at) VALUES(?,?,?,?,?,?,NOW())','sisiis',[$id,$uid,$mime,$w,$h,$bytes]);$db->commit();
     json_response('success',['id'=>$id,'width'=>$w,'height'=>$h]);
 }
 if ($action==='submit') {

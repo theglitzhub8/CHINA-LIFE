@@ -51,7 +51,9 @@ if ($agent==='host') {[,$hostPlace]=cl_room(['city'=>'Shenyang','place'=>$hostPl
     $agent='h'.hash('crc32b',$hostPlace);
 } elseif (isset(CL_AI_AGENTS[$agent])) $agentDef=CL_AI_AGENTS[$agent];
 else cl_fail('Choose a character');
-$usedToday=fn()=>(int)cl_one("SELECT COUNT(*) n FROM chinalife_ai_messages WHERE user_id=? AND role='user' AND created_at>=CURDATE()",'i',[$uid])['n'];
+// Usage is independent of deletable/pruned history, with midnight in Beijing.
+$dailyBucket=intdiv(time()+8*3600,86400);
+$usedToday=fn()=>(int)(cl_one('SELECT hits FROM chinalife_rate_limits WHERE user_id=? AND kind="ai_daily" AND bucket=?','ii',[$uid,$dailyBucket])['hits']??0);
 $history=fn(int $n)=>array_reverse(cl_rows('SELECT role,content,UNIX_TIMESTAMP(created_at)*1000 at FROM chinalife_ai_messages WHERE user_id=? AND agent=? ORDER BY id DESC LIMIT '.$n,'is',[$uid,$agent]));
 if ($method==='GET') json_response('success',['enabled'=>$enabled,'messages'=>$enabled?$history(30):[],'remaining'=>max(0,$limit-$usedToday()),'limit'=>$limit]);
 if ($method==='DELETE') {cl_run('DELETE FROM chinalife_ai_messages WHERE user_id=? AND agent=?','is',[$uid,$agent]);json_response('success',['cleared'=>true]);}
@@ -59,7 +61,9 @@ if (!$enabled) cl_fail('The AI characters are not switched on yet',503);
 $input=cl_body_peek();
 cl_rate('ai',8,60);
 $message=trim((string)($input['message']??''));if ($message===''||mb_strlen($message)>500) cl_fail('Write a message up to 500 characters');
-if ($usedToday()>=$limit) cl_fail('You have used today’s '.$limit.' messages with the AI characters. Come back tomorrow',429);
+// Reserve one slot atomically before contacting the provider; concurrent calls cannot overspend.
+cl_run('INSERT IGNORE INTO chinalife_rate_limits(user_id,kind,bucket,hits) VALUES(?,"ai_daily",?,0)','ii',[$uid,$dailyBucket]);
+if (!cl_run('UPDATE chinalife_rate_limits SET hits=IF(bucket=?,hits+1,1),bucket=? WHERE user_id=? AND kind="ai_daily" AND (bucket<>? OR hits<?)','iiiii',[$dailyBucket,$dailyBucket,$uid,$dailyBucket,$limit])) cl_fail('You have used today’s '.$limit.' messages with the AI characters. Come back tomorrow',429);
 // What the player is doing (from the game; only shapes the conversation) and what is real (from the database).
 $c=is_array($input['context']??null)?$input['context']:[];$str=fn($k,$n)=>mb_substr(trim((string)($c[$k]??'')),0,$n);
 $city=in_array($c['city']??'',CL_CITIES,true)?$c['city']:'Shenyang';
@@ -90,7 +94,7 @@ $blocks=is_array($res['content']??null)?$res['content']:[];$reply=trim(implode('
 // Tool calls become action tags in the reply ([[go:market]], [[open:wallet]], …) that the game shows as buttons;
 // the first one marked now=true runs straight away. Everything is checked against what really exists.
 [$tags,$auto]=cl_ai_actions($blocks,$places,$city);if ($reply===''&&$tags) $reply='On it! 👇';if ($tags) $reply.="\n".implode(' ',$tags);
-if ($status!==200||$reply==='') {error_log('ChinaLife AI: HTTP '.$status.' '.$err.' '.mb_substr((string)$raw,0,300));cl_fail($name.' is busy right now. Try again in a moment',502);}
+if ($status!==200||$reply==='') {cl_run('UPDATE chinalife_rate_limits SET hits=GREATEST(0,hits-1) WHERE user_id=? AND kind="ai_daily" AND bucket=?','ii',[$uid,$dailyBucket]);error_log('ChinaLife AI: HTTP '.$status.' '.$err.' '.mb_substr((string)$raw,0,300));cl_fail($name.' is busy right now. Try again in a moment',502);}
 $reply=mb_substr($reply,0,4000);
 cl_run('INSERT INTO chinalife_ai_messages(user_id,agent,role,content,created_at) VALUES(?,?,"user",?,NOW()),(?,?,"assistant",?,NOW())','ississ',[$uid,$agent,$message,$uid,$agent,$reply]);
 cl_run('DELETE FROM chinalife_ai_messages WHERE user_id=? AND agent=? AND id NOT IN (SELECT id FROM (SELECT id FROM chinalife_ai_messages WHERE user_id=? AND agent=? ORDER BY id DESC LIMIT 60) keep)','isis',[$uid,$agent,$uid,$agent]);
