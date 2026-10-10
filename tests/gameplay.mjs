@@ -259,3 +259,5 @@ test('Gist combines approved news events and live player activity with working f
  t.document.querySelector('[data-gist-filter="players"]').onclick();assert.match(body.textContent,/Neighbour/);assert.doesNotMatch(body.textContent,/City news|Campus welcome/);
  t.context.ChinaLifeCloud.feed.push({name:'Visitor',text:'arrived at 007 Club',kind:'moved',at:Date.now()});t.context.dispatchEvent(new t.context.CustomEvent('chinalife:cityfeed'));assert.match(body.textContent,/Visitor/);
 });
+
+test('buying VIP automatically takes the player to their seat and never repeats the charge on seating',()=>{const t=harness();t.game.state.place='night';t.game.state.money=10000;let seats=0;t.context.ChinaLifeWorld={vipSeat(){seats++}};t.game.clubAccess('night');t.click('vipNight');assert.equal(seats,1);assert.equal(t.game.state.money,9500);t.game.clubAccess('night');t.click('vipSeat');assert.equal(seats,2);assert.equal(t.game.state.money,9500);});

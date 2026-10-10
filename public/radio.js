@@ -4,7 +4,7 @@
 const game=window.ChinaLife,$=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const store={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:v}catch{return d}},set(k,v){try{localStorage.setItem(k,String(v))}catch{}}};
-const audio=new Audio();audio.preload='none';
+const audio=new Audio();audio.preload='none';audio.setAttribute?.('playsinline','');audio.setAttribute?.('aria-hidden','true');audio.style&&(audio.style.display='none');if(audio.nodeType)document.body.append(audio);
 let list=[],index=Math.max(0,Number(store.get('chinalife-radio-index',0))||0),wanted=false,duck=false,volume=(v=>Number.isFinite(v)?Math.min(1,Math.max(0,v)):.6)(Number(store.get('chinalife-radio-volume',.6)));
 const songs=()=>(window.ChinaLifeCloud?.songs||[]).filter(s=>s.active!==false&&s.url);
 const current=()=>list[index]||null;
@@ -14,15 +14,15 @@ const time=t=>!Number.isFinite(t)?'0:00':Math.floor(t/60)+':'+String(Math.floor(
 function applyVolume(){audio.volume=volume*(duck?.25:1)}
 function load(i){if(!list.length)return;index=((i%list.length)+list.length)%list.length;store.set('chinalife-radio-index',index);const s=current();if(audio.dataset.id!==s.id){audio.src=s.url;audio.dataset.id=s.id}mediaSession();render()}
 // The radio tells the club music whether it is playing, so the two never play over each other.
-const announce=()=>window.dispatchEvent(new CustomEvent('chinalife:radio',{detail:{playing:!audio.paused&&wanted}}));
-async function play(i){if(!list.length)return;if(i!==undefined)load(i);else if(!audio.dataset.id)load(index);wanted=true;store.set('chinalife-radio-on','on');applyVolume();try{await audio.play()}catch{}render();announce()}
+const announce=()=>{try{if(navigator.mediaSession)navigator.mediaSession.playbackState=!audio.paused&&wanted?'playing':'paused'}catch{}window.dispatchEvent(new CustomEvent('chinalife:radio',{detail:{playing:!audio.paused&&wanted}}))};
+async function play(i){if(!list.length)return;if(i!==undefined)load(i);else if(!audio.dataset.id)load(index);wanted=true;try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch{}store.set('chinalife-radio-on','on');applyVolume();try{await audio.play()}catch{}render();announce()}
 function pause(){wanted=false;store.set('chinalife-radio-on','off');audio.pause();render();announce()}
 const next=()=>{load(nextIndex());if(wanted)play()},prev=()=>{if(audio.currentTime>5){audio.currentTime=0;return}load(index-1);if(wanted)play()};
 audio.addEventListener('ended',next);
 // A broken file never stops the radio: skip it after a moment (but not forever if everything fails).
 let failures=0;audio.addEventListener('error',()=>{if(!wanted)return;if(++failures>=Math.max(3,list.length)){pause();failures=0;return game.toast?.('ChinaLife Radio could not load songs right now.')}setTimeout(next,800)});
-audio.addEventListener('playing',()=>{failures=0;render()});audio.addEventListener('pause',render);audio.addEventListener('timeupdate',progress);
-function mediaSession(){const s=current();if(!s||typeof navigator==='undefined'||!('mediaSession' in navigator))return;try{navigator.mediaSession.metadata=new MediaMetadata({title:s.title,artist:s.artist,album:'ChinaLife Radio',artwork:cover(s)?[{src:cover(s),sizes:'512x512'}]:[]});navigator.mediaSession.setActionHandler('play',()=>play());navigator.mediaSession.setActionHandler('pause',pause);navigator.mediaSession.setActionHandler('nexttrack',next);navigator.mediaSession.setActionHandler('previoustrack',prev)}catch{}}
+audio.addEventListener('playing',()=>{failures=0;render();announce()});audio.addEventListener('pause',()=>{render();announce()});audio.addEventListener('timeupdate',progress);
+function mediaSession(){const s=current();if(!s||typeof navigator==='undefined'||!('mediaSession' in navigator))return;try{navigator.mediaSession.metadata=new MediaMetadata({title:s.title,artist:s.artist,album:'ChinaLife Radio',artwork:cover(s)?[{src:cover(s),sizes:'512x512'}]:[]});navigator.mediaSession.setActionHandler('play',()=>play());navigator.mediaSession.setActionHandler('pause',pause);navigator.mediaSession.setActionHandler('nexttrack',next);navigator.mediaSession.setActionHandler('previoustrack',prev);navigator.mediaSession.setActionHandler('seekto',e=>{if(Number.isFinite(e.seekTime))audio.currentTime=e.seekTime})}catch{}}
 
 // ---- Interface: a mini-player pill (cover, song, play/pause, progress) and a full player sheet. ----
 let tab='next',query='',artistFilter='',shuffle=store.get('chinalife-radio-shuffle','off')==='on';

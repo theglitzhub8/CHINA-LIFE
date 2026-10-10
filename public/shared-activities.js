@@ -17,10 +17,10 @@ function render(){
   else{const left=Math.max(0,Math.ceil((s.started_ms+spec.seconds*1000-Date.now()-offset)/1000));html+='<p>'+esc(spec.prompt)+'</p>'+(s['choice_'+(slot==='a'?'b':'a')]?'<p>Your teammate chose: <b>'+esc(spec.choices[s['choice_'+(slot==='a'?'b':'a')]])+'</b></p>':'')+Object.entries(spec.choices).map(([key,title])=>'<button class="soft-btn" data-shared="choose" data-choice="'+key+'" '+(s['choice_'+slot]===key?'disabled':'')+'>'+esc(title)+(s['choice_'+slot]===key?' ✓':'')+'</button>').join('')+'<p>'+ (left?'Spend '+left+' more seconds together.':'Ready to finish once you’ve both responded.')+'</p><button class="primary-btn" data-shared="finish" '+(left||!s.choice_a||!s.choice_b?'disabled':'')+'>Complete together</button>';}
   html+='<button class="soft-btn" data-shared="cancel">Cancel activity</button>';
  }else{
-  html+='<p>Invite someone in Shenyang. Both players accept, meet at the venue, and participate.</p>';
-  if(peer)html+='<p>With <b>'+esc(peerName||peer)+'</b></p>'+Object.entries(catalog).filter(([kind])=>allowed(kind)&&(!preferred||(preferred==='dinner'?kind.startsWith('dinner-'):preferred==='club'?kind.startsWith('club-'):kind===preferred))).map(([kind,spec])=>'<button class="choice-action" data-shared="invite" data-kind="'+kind+'"><b>'+esc(spec.title)+'</b><span>'+esc(game.locations.find(p=>p[0]===spec.place)?.[1]||spec.place)+(spec.proposal?' · optional relationship':' · '+spec.seconds+' seconds')+'</span></button>').join('');
+  html+='<p>Invite someone in your city. Both players accept, meet at the venue, and participate.</p>';
+  if(peer)html+='<p>With <b>'+esc(peerName||peer)+'</b></p>'+Object.entries(catalog).filter(([kind])=>allowed(kind)&&(!preferred||(preferred==='dinner'?kind.startsWith('dinner-'):preferred==='club'?kind==='club-'+game.state.place:preferred==='dice'?kind.startsWith('dice-'+game.state.place+'-'):kind===preferred))).map(([kind,spec])=>'<button class="choice-action" data-shared="invite" data-kind="'+kind+'"><b>'+esc(spec.title)+'</b><span>'+esc(game.locations.find(p=>p[0]===spec.place)?.[1]||spec.place)+(spec.stake?' · ¥'+spec.stake+' each · virtual coins':spec.proposal?' · optional relationship':' · '+spec.seconds+' seconds')+'</span></button>').join('');
   else html+='<button class="primary-btn" data-shared="people">Find a teammate</button>';
-  const completed=sessions.filter(s=>s.status==='completed');if(completed.length)html+='<h3>Your recent shared memories</h3>'+completed.map(s=>'<p>'+esc(catalog[s.kind]?.title||s.kind)+' · '+esc(s.inviter_id===mine()?s.invitee_name:s.inviter_name)+' · '+Number(s.memories)+' shared '+(Number(s.memories)===1?'memory':'memories')+'</p>').join('');
+  const completed=sessions.filter(s=>s.status==='completed');if(completed.length)html+='<h3>Your recent shared memories</h3>'+completed.map(s=>'<p>'+esc(catalog[s.kind]?.title||s.kind)+' · '+esc(s.inviter_id===mine()?s.invitee_name:s.inviter_name)+' · '+Number(s.memories)+(catalog[s.kind]?.stake?' · Rolls '+s.choice_a+' / '+s.choice_b+' · '+(s.choice_a===s.choice_b?'Tie':(Number(s.choice_a)>Number(s.choice_b)?s.inviter_name:s.invitee_name)+' wins'):'')+' shared '+(Number(s.memories)===1?'memory':'memories')+'</p>').join('');
  }
  if(relationships.length)html+='<h3>Your relationship</h3>'+relationships.map(r=>'<p>Partner: '+esc(r.inviter_id===mine()?r.invitee_name:r.inviter_name)+'</p><button class="soft-btn" data-shared="end-relationship" data-id="'+r.id+'">End relationship</button>').join('');
  $('sharedBody').innerHTML=html;$('sharedBody').querySelectorAll('[data-shared]').forEach(b=>b.onclick=()=>act(b.dataset.shared,b.dataset));
@@ -40,17 +40,17 @@ async function open(id=null,name='',kind=null){await window.ChinaLifeCloud?.read
 async function act(action,data={}){
  if(busy)return;busy=true;note('');try{
   if(action==='people'){dialog.close();await window.ChinaLifeSocial.open('people');return}
-  const s=active();if(action==='end-relationship'&&!confirm('End this relationship?'))return;if(action==='travel'){if(game.state.city!=='Shenyang')return note('Return to Shenyang to meet your teammate.');dialog.close();game.travel(s.place);return}
+  const s=active();if(action==='end-relationship'&&!confirm('End this relationship?'))return;if(action==='travel'){if(game.state.city!==s.city)return note('Travel to '+s.city+' to meet your teammate.');dialog.close();game.travel(s.place);return}
   if(!await window.ChinaLifeCloud.upload())return note('Save your character before joining. Check your Hafrik connection.');
   await window.ChinaLifeCloud.refresh();
   await api('POST',action==='invite'?{action,peer,kind:data.kind}:{action,id:action==='end-relationship'?data.id:s.id,...(action==='choose'?{choice:data.choice}:{})});
   await window.ChinaLifeCloud.syncTransfers();await poll();render();
   if(action==='choose'&&window.ChinaLifeWorld&&!window.ChinaLifeWorld.busy){
     const spec=catalog[s.kind],motions={study:{kind:'study',x:-1,z:2},basketball:{kind:'basketball',x:1,z:2},meal:{kind:'eat',x:2,z:3.2},spar:{kind:'box',x:-1,z:1.5}};
-    dialog.close();if(!window.ChinaLifeWorld.perform({...(motions[s.kind]||(s.kind.startsWith('club-')?{kind:data.choice==='lounge'?'talk':'dance',x:0,z:0}:s.kind==='date'?{kind:'talk',x:-3,z:2}:{kind:'eat',x:2,z:3.2})),duration:5,label:spec.title},()=>open()))open();
+    dialog.close();if(!window.ChinaLifeWorld.perform({...(motions[s.kind]||(s.kind.startsWith('club-')?{kind:data.choice==='lounge'?'talk':'dance',x:0,z:0}:s.kind.startsWith('dice-')?{kind:'talk',x:0,z:2}:s.kind==='date'?{kind:'talk',x:-3,z:2}:{kind:'eat',x:2,z:3.2})),duration:5,label:spec.title},()=>open()))open();
   }
  }catch(e){note(e.message)}finally{busy=false}
 }
-$('closeShared').onclick=()=>dialog.close();setInterval(poll,3000);
+$('closeShared').onclick=()=>dialog.close();setInterval(()=>{if(dialog.open||game.clubs.includes(game.state.place))poll()},6000);setInterval(poll,30000);
 window.addEventListener('chinalife:cloudready',()=>{generation++;account='';sessions=[];relationships=[];preferred=null;peer=null;seen=new Set();banner.hidden=true;if(dialog.open)render();poll()});
 window.ChinaLifeShared={open,poll,ready:null};window.ChinaLifeShared.ready=poll();

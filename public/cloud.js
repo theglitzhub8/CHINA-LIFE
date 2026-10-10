@@ -175,13 +175,13 @@ async function claimDaily(){
  game.state.lastVisit=saved.state.lastVisit;game.state.streak=saved.state.streak;
  reconcileTransfers(saved);remote=saved;game.save();game.refresh?.();return result.data||result;
 }
-async function transfer(peer,amount,requestId){
+async function transfer(peer,amount,requestId,effect){
   const generation=authEpoch;
   // A save may be in flight, or received money may need merging first: wait for it and retry a few times.
   let saved=false;for(let i=0;i<4&&!saved;i++){for(let w=0;busy&&w<40;w++)await new Promise(r=>setTimeout(r,125));saved=await upload()}
   if(!saved)throw Error('Your account is still saving. Try again in a moment.');
   if(generation!==authEpoch)throw Error('Your account changed. Open the player again.');
-  await api('/chinalife/transfers.php','POST',{peer,amount,request_id:requestId});
+  await api('/chinalife/transfers.php','POST',{peer,amount,request_id:requestId,...(effect==='spray'?{effect}: {})});
   await syncTransfers();
 }
 // City live feed: who came online, who arrived where, who left — worked out from presence changes on this device.

@@ -819,3 +819,39 @@ test('election totals, tied ranks and private Gist activity are scoped to the el
  assert.equal((await call(2,'politics.php?city=Shenyang')).data.my_votes,1);
  assert.equal(sql('USE chinalife_test; SELECT COUNT(*) FROM chinalife_politics_votes WHERE city="Shenyang"').trim(),'4','all historical votes preserved');
 });
+
+test('club dice require both players, roll on the server and settle virtual stakes exactly once',async()=>{
+ sql("USE chinalife_test; UPDATE chinalife_shared_activities SET status='cancelled' WHERE status IN ('pending','accepted','active'); UPDATE chinalife_saves SET game_state=JSON_SET(game_state,'$.money',5000,'$.city','Guangzhou') WHERE user_id IN (11,12)");
+ for(const uid of [11,12])await call(uid,'presence.php','POST',presence('Guangzhou','night'));
+ const beforeA=(await call(11,'save.php')).data.save.game.money,beforeB=(await call(12,'save.php')).data.save.game.money;
+ const invite=await call(11,'activities.php','POST',{action:'invite',kind:'dice-night-200',peer:'12'});assert.equal(invite.httpStatus,200);const id=invite.data.id;
+ assert.equal((await call(11,'activities.php','POST',{action:'accept',id})).httpStatus,403);
+ assert.equal((await call(12,'activities.php','POST',{action:'accept',id})).httpStatus,200);
+ for(const uid of [11,12])assert.equal((await call(uid,'activities.php','POST',{action:'ready',id})).httpStatus,200);
+ assert.equal((await call(11,'activities.php','POST',{action:'choose',id,choice:'12'})).httpStatus,409);
+ for(const uid of [11,12])assert.equal((await call(uid,'activities.php','POST',{action:'choose',id,choice:'roll'})).httpStatus,200);
+ sql(`USE chinalife_test; UPDATE chinalife_shared_activities SET started_at=DATE_SUB(NOW(),INTERVAL 10 SECOND) WHERE id=${Number(id)}`);
+ await call(12,'presence.php','POST',presence('Guangzhou','cafe'));assert.equal((await call(11,'activities.php','POST',{action:'finish',id})).httpStatus,409);
+ await call(12,'presence.php','POST',presence('Guangzhou','night'));
+ const results=await Promise.all([call(11,'activities.php','POST',{action:'finish',id}),call(12,'activities.php','POST',{action:'finish',id})]);assert.ok(results.every(r=>r.httpStatus===200));assert.equal(results.filter(r=>r.data.duplicate).length,1);
+ const session=(await call(11,'activities.php')).data.activities.find(s=>s.id===id);assert.equal(session.city,'Guangzhou');assert.ok(Number(session.choice_a)>=2&&Number(session.choice_a)<=12);assert.ok(Number(session.choice_b)>=2&&Number(session.choice_b)<=12);
+ const afterA=(await call(11,'save.php')).data.save.game.money,afterB=(await call(12,'save.php')).data.save.game.money;
+ assert.equal(afterA+afterB,beforeA+beforeB);assert.equal(afterA-beforeA,Math.sign(Number(session.choice_a)-Number(session.choice_b))*200);
+ assert.equal((await call(11,'activities.php','POST',{action:'finish',id})).data.duplicate,true);assert.equal((await call(11,'save.php')).data.save.game.money,afterA);
+});
+test('money spraying transfers coins once and requires both players in the same club',async()=>{
+ const amount=50,key='club-spray-test-0001';for(const uid of [11,12])await call(uid,'presence.php','POST',presence('Guangzhou','night'));
+ const before=(await call(11,'save.php')).data.save.game.money,other=(await call(12,'save.php')).data.save.game.money;
+ const gift={peer:'12',amount,request_id:key,effect:'spray'};assert.equal((await call(11,'transfers.php','POST',gift)).httpStatus,200);assert.equal((await call(11,'transfers.php','POST',gift)).data.duplicate,true);
+ assert.equal((await call(11,'save.php')).data.save.game.money,before-amount);assert.equal((await call(12,'save.php')).data.save.game.money,other+amount);
+ assert.equal((await call(12,'presence.php?city=Guangzhou')).data.gestures.filter(g=>g.phrase==='spray').length,1);
+ await call(12,'presence.php','POST',presence('Guangzhou','cafe'));assert.equal((await call(11,'transfers.php','POST',{...gift,request_id:'club-spray-test-0002'})).httpStatus,403);
+ assert.equal((await call(11,'save.php')).data.save.game.money,before-amount);
+});
+
+test('VIP badges come from saved passes, include the after-midnight club night, and ignore client badge claims',async()=>{
+ sql("USE chinalife_test; UPDATE chinalife_saves SET game_state=JSON_SET(game_state,'$.day',2,'$.hour',120,'$.vipUntil',0,'$.vipPass',JSON_OBJECT('night',1)) WHERE user_id=11; UPDATE chinalife_saves SET game_state=JSON_SET(game_state,'$.day',2,'$.vipUntil',0,'$.vipPass',JSON_OBJECT()) WHERE user_id=12");
+ for(const uid of [11,12])await call(uid,'presence.php','POST',{...presence('Guangzhou','night'),vip:true});
+ let list=(await call(12,'presence.php?city=Guangzhou')).data.players;const paid=list.find(p=>p.id==='11');assert.equal(paid.vip,true);assert.equal(paid.vip_pass,undefined);
+ list=(await call(11,'presence.php?city=Guangzhou')).data.players;assert.equal(list.find(p=>p.id==='12').vip,false);
+});

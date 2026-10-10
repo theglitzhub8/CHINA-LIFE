@@ -33,8 +33,10 @@ if($action==='invite') {
  }
  cl_rate('shared_invite',10,60);
  $presence=cl_one('SELECT city FROM chinalife_presence WHERE user_id=? AND seen_at>=DATE_SUB(NOW(),INTERVAL 20 SECOND)','i',[$uid]);
- if(($presence['city']??'')!=='Shenyang')cl_fail('Shared student activities start in Shenyang',409);
- cl_presence($peer,'Shenyang',cl_one('SELECT place FROM chinalife_presence WHERE user_id=?','i',[$peer])['place']??'');
+  $city=$presence['city']??'';$clubActivity=str_starts_with($kind,'club-')||str_starts_with($kind,'dice-');
+ if(!$clubActivity&&$city!=='Shenyang')cl_fail('Shared student activities start in Shenyang',409);
+ if($clubActivity){cl_presence($uid,$city,$catalog[$kind]['place']);cl_presence($peer,$city,$catalog[$kind]['place']);}
+ cl_presence($peer,$city,cl_one('SELECT place FROM chinalife_presence WHERE user_id=?','i',[$peer])['place']??'');
  $db->begin_transaction();
  try{
   cl_rows('SELECT user_id FROM users WHERE user_id IN (?,?) ORDER BY user_id FOR UPDATE','ii',[$uid,$peer]);
@@ -42,8 +44,8 @@ if($action==='invite') {
   if(cl_one('SELECT id FROM chinalife_shared_activities WHERE (inviter_id IN (?,?) OR invitee_id IN (?,?)) AND status IN ("pending","accepted","active") AND expires_at>NOW() LIMIT 1','iiii',[$uid,$peer,$uid,$peer]))cl_fail('Finish or cancel your current activity invitation first',409);
   if(!empty($catalog[$kind]['proposal'])&&cl_one('SELECT id FROM chinalife_shared_activities WHERE kind IN ("girlfriend","boyfriend") AND status="completed" AND (inviter_id IN (?,?) OR invitee_id IN (?,?)) LIMIT 1','iiii',[$uid,$peer,$uid,$peer]))cl_fail('End your existing relationship before starting another',409);
   [$first,$second]=cl_pair($uid,$peer);
-  if(cl_one('SELECT id FROM chinalife_shared_activities WHERE LEAST(inviter_id,invitee_id)=? AND GREATEST(inviter_id,invitee_id)=? AND kind=? AND status="completed" AND completed_at>=CURDATE()','iis',[$first,$second,$kind]))cl_fail('You already completed this activity together today',409);
-  $s=cl_query('INSERT INTO chinalife_shared_activities(inviter_id,invitee_id,kind,city,place,created_at,expires_at) VALUES(?,?,?,"Shenyang",?,NOW(),DATE_ADD(NOW(),INTERVAL 5 MINUTE))','iiss',[$uid,$peer,$kind,$catalog[$kind]['place']]);$id=(string)$s->insert_id;$s->close();$db->commit();json_response('success',['id'=>$id]);
+  if(empty($catalog[$kind]['stake'])&&cl_one('SELECT id FROM chinalife_shared_activities WHERE LEAST(inviter_id,invitee_id)=? AND GREATEST(inviter_id,invitee_id)=? AND kind=? AND status="completed" AND completed_at>=CURDATE()','iis',[$first,$second,$kind]))cl_fail('You already completed this activity together today',409);
+  $s=cl_query('INSERT INTO chinalife_shared_activities(inviter_id,invitee_id,kind,city,place,created_at,expires_at) VALUES(?,?,?,?,?,NOW(),DATE_ADD(NOW(),INTERVAL 5 MINUTE))','iisss',[$uid,$peer,$kind,$city,$catalog[$kind]['place']]);$id=(string)$s->insert_id;$s->close();$db->commit();json_response('success',['id'=>$id]);
  }catch(Throwable $e){$db->rollback();throw $e;}
 }
 $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);if(!$id)cl_fail('Choose an invitation');
@@ -83,7 +85,14 @@ try{
    shared_present($row);
    $saves=cl_rows('SELECT user_id,game_state FROM chinalife_saves WHERE user_id IN (?,?) ORDER BY user_id FOR UPDATE','ii',[(int)$row['inviter_id'],(int)$row['invitee_id']]);
    if(count($saves)!==2)cl_fail('Both characters must still be saved',409);
-   foreach($saves as $save){$g=json_decode($save['game_state'],true,512,JSON_THROW_ON_ERROR);if(($g['money']??0)+$spec['money']>1000000000||($g['xp']??0)+$spec['xp']>10000000)cl_fail('Reward limit reached',409);$g['money']+=$spec['money'];$g['xp']+=$spec['xp'];$g['transferTotal']=($g['transferTotal']??0)+$spec['money'];$g['sharedXP']=($g['sharedXP']??0)+$spec['xp'];cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($g,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),(int)$save['user_id']]);}
+   $diceDelta=[];$diceA=null;$diceB=null;
+   if(!empty($spec['stake'])){
+    foreach($saves as $save){$g=json_decode($save['game_state'],true,512,JSON_THROW_ON_ERROR);if(($g['money']??0)<$spec['stake'])cl_fail('Both players need enough coins for the agreed stake; cancel or top up first',409);}
+    $diceA=random_int(1,6)+random_int(1,6);$diceB=random_int(1,6)+random_int(1,6);$delta=$diceA<=>$diceB;
+    $diceDelta=[(int)$row['inviter_id']=>$delta*$spec['stake'],(int)$row['invitee_id']=>-$delta*$spec['stake']];
+   }
+   foreach($saves as $save){$g=json_decode($save['game_state'],true,512,JSON_THROW_ON_ERROR);$reward=$spec['money']+($diceDelta[(int)$save['user_id']]??0);if(($g['money']??0)+$reward>1000000000||($g['xp']??0)+$spec['xp']>10000000)cl_fail('Reward limit reached',409);$g['money']+=$reward;$g['xp']+=$spec['xp'];$g['transferTotal']=($g['transferTotal']??0)+$reward;$g['sharedXP']=($g['sharedXP']??0)+$spec['xp'];cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($g,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),(int)$save['user_id']]);}
+   if($diceA!==null)cl_run('UPDATE chinalife_shared_activities SET choice_a=?,choice_b=? WHERE id=?','ssi',[(string)$diceA,(string)$diceB,$id]);
    cl_run('UPDATE chinalife_shared_activities SET status="completed",completed_at=NOW() WHERE id=?','i',[$id]);
   }else cl_fail('Choose a valid activity action');
  }

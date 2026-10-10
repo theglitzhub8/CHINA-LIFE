@@ -11,5 +11,6 @@ $to=null;if(($input['to']??null)!==null){$to=cl_peer($input['to']);if(cl_blocked
  if(!cl_one('SELECT user_id FROM chinalife_presence WHERE user_id=? AND city=? AND place=? AND seen_at>=DATE_SUB(NOW(),INTERVAL 20 SECOND)','iss',[$to,$city,$place]))cl_fail('That player is no longer here',404);}
 cl_rate('gesture',6,10);
 cl_run('INSERT INTO chinalife_gestures(sender_id,target_id,city,place,phrase) VALUES(?,?,?,?,?)','iisss',[$uid,$to,$city,$place,$phrase]);
+$gestureId=(string)$db->insert_id;
 if(random_int(1,40)===1)cl_run('DELETE FROM chinalife_gestures WHERE created_at<DATE_SUB(NOW(),INTERVAL 1 HOUR)','',[]);
-json_response('success',['id'=>(string)$db->insert_id,'sent'=>true]);
+json_response('success',['id'=>$gestureId,'sent'=>true]);

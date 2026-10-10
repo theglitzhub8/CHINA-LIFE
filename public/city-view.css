@@ -371,3 +371,13 @@ dialog .activity-panel :is(.quest-card,.dream-card,.gist-card) { margin: 8px 0; 
 #radioDialog .radio-search input { min-width: 0; }
 #radioDialog .radio-artistname { overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) { .radio-eq i { animation: none; height: 8px; } }
+
+/* Keep the radio sheet centered at every viewport size. */
+#radioDialog { margin: auto; inset: 0; }
+#radioDialog .radio-hero { border-radius: 24px 24px 0 0; }
+.club-people { display: grid; gap: 10px; }
+.club-people article { padding: 12px; border-radius: 14px; background: #edf5f2; }
+.club-people article > div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.club-people button { min-height: 44px; }
+
+#radioDialog .radio-hero { overflow: hidden; }

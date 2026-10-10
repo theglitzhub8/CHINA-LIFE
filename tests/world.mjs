@@ -34,7 +34,7 @@ test('scenic flight circles the city and lands back at the same airport',()=>{
 });
 
 test('BLOOD & EMBERS and the SKYLIGHT rooftop are Shenyang clubs with a DJ booth',()=>{
- const t=setup();for(const id of ['blood','skylight']){t.game.state.place=id;t.internal.render();t.world.venue(id);assert.ok(t.game.clubs.includes(id));assert.ok([...t.document.querySelectorAll('.scene-label')].some(l=>/DJ booth/.test(l.textContent)))}
+ const t=setup();for(const id of ['blood','skylight']){t.game.state.place=id;t.internal.render();t.world.venue(id);assert.ok(t.game.clubs.includes(id));assert.ok([...t.document.querySelectorAll('.scene-label')].some(l=>/Club music/.test(l.textContent)))}
  assert.equal(t.game.locations.find(p=>p[0]==='blood')[1],'BLOOD & EMBERS');assert.equal(t.game.locations.find(p=>p[0]==='skylight')[1],'SKYLIGHT · Rooftop');
 });
 
@@ -180,3 +180,5 @@ test('club wall screen follows the active track and is removed when returning to
  W.updateClubMusic({title:'Radio song',artist:'Radio artist',cover:'',playing:true,source:'ChinaLife Radio'});assert.ok(W.signs.includes('Radio song · Radio artist'));assert.ok(!W.signs.includes('Our song · City artist'));
  W.map();W.updateClubMusic({title:'Old callback',artist:'Nobody',playing:true});assert.ok(!W.signs.some(s=>s.includes('Radio song')||s.includes('Old callback')));
 });
+
+test('club VIP seating is gated and paid VIP walks to the lounge',()=>{const t=setup();t.game.state.place='night';t.world.venue('night');assert.equal(t.world.vipSeat(),false);t.game.state.vipUntil=t.game.state.day+30;assert.equal(t.world.vipSeat(),true);for(let i=0;i<500;i++)t.tick();assert.ok(t.world.position.x<-3.8);assert.ok(t.world.position.z<-1.9);assert.equal(t.world.emoteNow,'sit');assert.ok(![...t.document.querySelectorAll('.scene-label')].some(l=>/^(Security|Guest)( · NPC)?$/.test(l.textContent)));});
