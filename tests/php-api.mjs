@@ -27,6 +27,9 @@ before(async()=>{
  fs.writeFileSync(path.join(root,'helpers.php'),`<?php function get_db_connection(){$db=new mysqli('localhost','root','','chinalife_test',0,getenv('CHINALIFE_TEST_SOCKET'));$db->set_charset('utf8mb4');return $db;} if(($_SERVER['REQUEST_METHOD']??'')==='OPTIONS'){http_response_code(204);exit;} function json_response($status,$data=null,$message=''){header('Content-Type: application/json');echo json_encode(compact('status','data','message'));exit;} function auth_user($db){$token=$_SERVER['HTTP_AUTHORIZATION']??'';if(!preg_match('/^Bearer test-([1-9][0-9]*)$/',$token,$m)){http_response_code(401);json_response('error',null,'Unauthorized');}$s=$db->prepare('SELECT * FROM users WHERE user_id=?');$id=(int)$m[1];$s->bind_param('i',$id);$s->execute();return $s->get_result()->fetch_assoc()?:[];}`);
  // Upgrade the schema already uploaded to the Hafrik server, twice, preserving its rows.
  for(const file of ['migration.sql','migration 2.sql','voice.sql'])sql('USE chinalife_test; '+fs.readFileSync('chinalife-api/'+file,'utf8'));
+ // Simulate the previously deployed lifetime-vote schema before the first upgrade.
+ const oldVotes=fs.readFileSync('chinalife-api/migration-all.sql','utf8').split('\n').find(x=>x.startsWith('CREATE TABLE IF NOT EXISTS chinalife_politics_votes')).replace("period VARCHAR(32) NOT NULL DEFAULT '',",'').replace('one_vote_period(city,office,period,voter_id)','one_vote(city,office,voter_id)');
+ sql("USE chinalife_test; "+oldVotes+" INSERT INTO chinalife_politics_votes(city,office,voter_id,candidate_id,created_at) VALUES ('Harbin','governor',12,999,NOW());");
  sql(`USE chinalife_test; INSERT INTO chinalife_saves(user_id,character_data,game_state) VALUES(12,'{}','${JSON.stringify(game())}');`);
  for(let i=0;i<2;i++)execFileSync('php',[path.join(root,'chinalife/migrate.php')],{env,stdio:'pipe'});
  const listener=net.createServer();await new Promise(resolve=>listener.listen(0,'127.0.0.1',resolve));const port=listener.address().port;await new Promise(resolve=>listener.close(resolve));base='http://127.0.0.1:'+port;
@@ -35,7 +38,7 @@ before(async()=>{
 });
 // Each run creates a ~190 MB MySQL data directory; remove it so repeated runs cannot fill the disk.
 after(async()=>{php?.kill();if(mysql&&mysql.exitCode===null){const exited=new Promise(resolve=>mysql.once('exit',resolve));mysql.kill();await exited}fs.rmSync(tmp,{recursive:true,force:true})});
-test('migration preserves existing saves and authenticated account identity',async()=>{const r=await call(12,'save.php');assert.equal(r.data.save.game.name,'Tester');assert.equal(r.data.revision,1);assert.equal(r.data.account.id,'12');assert.equal((await call(null,'save.php')).httpStatus,401)});
+test('migration preserves existing saves and authenticated account identity',async()=>{const r=await call(12,'save.php');assert.equal(r.data.save.game.name,'Tester');assert.equal(r.data.revision,1);assert.equal(r.data.account.id,'12');assert.equal((await call(null,'save.php')).httpStatus,401);assert.equal(sql("USE chinalife_test; SELECT period FROM chinalife_politics_votes WHERE city='Harbin'").trim(),'legacy')});
 test('save revision prevents lost updates and isolates accounts',async()=>{
  let r=await call(1,'save.php','POST',{revision:0,save:{character:{},game:game()}});assert.equal(r.httpStatus,200);assert.equal(r.data.revision,1);
  r=await call(1,'save.php','POST',{revision:0,save:{character:{},game:{...game(),money:0}}});assert.equal(r.httpStatus,409);assert.equal(r.data.save.game.money,3200);assert.equal((await call(2,'save.php')).data.exists,false);
@@ -786,4 +789,33 @@ test('signed-in game client claims and restores the server daily reward without 
  await t.game.claimDaily();assert.equal(t.game.state.sharedXP,xp+20);assert.equal(t.game.state.transferTotal,total+50);assert.equal(t.game.state.lastVisit,new Date(Date.now()+8*3600e3).toISOString().slice(0,10));
  const money=t.game.state.money;await t.game.claimDaily();assert.equal(t.game.state.money,money);assert.equal(await c.ChinaLifeCloud.upload(),true);
  assert.equal((await call(11,'save.php')).data.save.game.lastVisit,t.game.state.lastVisit);
+});
+
+test('election totals, tied ranks and private Gist activity are scoped to the election period',async()=>{
+ await call(1,'admin.php','POST',{action:'set_cities',open:['Shenyang','Guangzhou']});
+ const city='Shenyang',office='governor';
+ for(const id of [2,3])assert.equal((await call(id,'politics.php','POST',{city,office,statement:'A better city for everyone.'})).httpStatus,200);
+ let ballot=(await call(2,'politics.php?city=Shenyang')).data;assert.equal(ballot.candidates.length,0,'pending nominees are private');
+ const admin=(await call(1,'admin.php','POST',{action:'politics'})).data;
+ for(const c of admin.candidates)await call(1,'admin.php','POST',{action:'politics_review',id:Number(c.id),decision:'approved'});
+ sql("USE chinalife_test; INSERT INTO chinalife_politics_elections VALUES ('Shenyang','governor','test-first',DATE_SUB(NOW(),INTERVAL 1 HOUR),DATE_ADD(NOW(),INTERVAL 1 HOUR));");
+ ballot=(await call(2,'politics.php?city=Shenyang')).data;const a=Number(ballot.candidates.find(x=>Number(x.candidate_id)===2).id),b=Number(ballot.candidates.find(x=>Number(x.candidate_id)===3).id);
+ assert.equal((await call(4,'politics.php?vote=1','POST',{city,office,candidate_id:a})).httpStatus,200);
+ assert.equal((await call(4,'politics.php?vote=1','POST',{city,office,candidate_id:b})).httpStatus,409,'double votes rejected');
+ assert.equal((await call(5,'politics.php?vote=1','POST',{city,office,candidate_id:b})).httpStatus,200);
+ ballot=(await call(2,'politics.php?city=Shenyang')).data;assert.equal(ballot.my_votes,1);assert.deepEqual(ballot.results.map(x=>[x.rank,x.votes]),[[1,1],[1,1]]);
+ assert.deepEqual((await call(4,'politics.php?city=Shenyang')).data.voted_offices,['governor']);
+ const gist=(await call(6,'gist.php?city=Shenyang')).data;assert.equal(gist.election.candidates.length,2);assert.equal(gist.vote_activity.length,2);
+ for(const v of gist.vote_activity){assert.deepEqual(Object.keys(v).sort(),['at','id','office']);assert.ok(Number(v.at)>0);}
+ assert.equal((await call(6,'gist.php?city=Guangzhou')).data.vote_activity.length,0);
+ assert.equal((await call(6,'politics.php?vote=1','POST',{city:'Guangzhou',office,candidate_id:a})).httpStatus,409);
+ // Upgrade legacy votes without losing them, and allow the same account to vote next period.
+ sql(`USE chinalife_test; INSERT INTO chinalife_politics_votes(city,office,period,voter_id,candidate_id,created_at) VALUES ('Shenyang','governor','',9,${a},NOW());`);
+ for(let i=0;i<2;i++)execFileSync('php',[path.join(tmp,'web/api/v4/chinalife/migrate.php')],{env,stdio:'pipe'});
+ assert.equal(sql("USE chinalife_test; SELECT period FROM chinalife_politics_votes WHERE voter_id=9" ).trim(),'test-first');
+ sql("USE chinalife_test; UPDATE chinalife_politics_elections SET closes_at=DATE_SUB(NOW(),INTERVAL 1 SECOND) WHERE period='test-first'; INSERT INTO chinalife_politics_elections VALUES ('Shenyang','governor','test-next',NOW(),DATE_ADD(NOW(),INTERVAL 1 HOUR));");
+ ballot=(await call(2,'politics.php?city=Shenyang')).data;assert.equal(ballot.my_votes,0,'previous election totals are not carried forward');
+ assert.equal((await call(4,'politics.php?vote=1','POST',{city,office,candidate_id:a})).httpStatus,200);
+ assert.equal((await call(2,'politics.php?city=Shenyang')).data.my_votes,1);
+ assert.equal(sql('USE chinalife_test; SELECT COUNT(*) FROM chinalife_politics_votes WHERE city="Shenyang"').trim(),'4','all historical votes preserved');
 });

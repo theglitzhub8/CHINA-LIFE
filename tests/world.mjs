@@ -136,13 +136,17 @@ test('the Shenyang City Centre prototype replaces the generic block only in Shen
  t.game.setOpenCities(['Guangzhou']);t.world.browse('Guangzhou');assert.match(t.document.getElementById('worldVenueTitle').textContent,/Guangzhou/);assert.ok(t.context.ChinaLifeWorld.stats().meshes<700)});
 
 test('the city sky runs a fast shared day and night cycle, each city has daily weather, and interiors keep their own lighting',()=>{const t=setup(),W=t.context.ChinaLifeWorld;t.game.state.place='plaza';
- const dayOf=want=>{for(let d=1;d<400;d++)if(W.weatherFor('Shenyang',d)===want)return d};t.game.state.day=dayOf('clear');
- // The sky runs a 2-hour day: move real time until the sky reaches the wanted hour (5 real minutes per sky hour).
+ const weather=want=>{for(let d=0;d<400;d++){if(W.weatherFor('Shenyang')===want)return;t.passDays(1)}throw Error('Missing weather '+want)};
+ // Keep the approved fast sky while weather is shared by Beijing calendar date.
  const sky=h=>t.passMinutes(Math.round(((h-W.skyHour())%24+24)%24*5));
- const clear=dayOf('clear');sky(13);t.game.state.day=clear;t.world.map();const noon=W.lighting().sun;sky(23);t.game.state.day=clear;t.world.map();const night=W.lighting().sun;assert.ok(noon>2.5&&night<1,'noon '+noon+' night '+night);assert.ok(Math.abs(W.skyHour()-23)<.2);
- assert.equal(W.weatherFor('Shenyang',5),W.weatherFor('Shenyang',5),'weather is stable for the day');assert.ok(['clear','cloudy','rain','snow'].includes(W.weatherFor('Guangzhou',3)));
+ weather('clear');sky(13);t.world.map();const noon=W.lighting().sun;sky(23);t.world.map();const night=W.lighting().sun;assert.ok(noon>2.5&&night<1,'noon '+noon+' night '+night);assert.ok(Math.abs(W.skyHour()-23)<.2);
+ assert.equal(W.weatherFor('Shenyang',5),W.weatherFor('Shenyang',5),'weather is stable for the day');
  for(let d=1;d<200;d++)assert.notEqual(W.weatherFor('Guangzhou',d),'snow','no snow in Guangzhou');
- t.game.state.day=dayOf('snow');sky(13);t.game.state.day=dayOf('snow');t.world.map();assert.equal(W.lighting().weather,'snow');
+ sky(13);weather('snow');t.world.map();assert.equal(W.lighting().weather,'snow');
+ weather('rain');t.world.map();assert.equal(W.lighting().precipitation,'rain');const rainy=W.lighting().sun;
+ weather('cloudy');t.world.map();assert.equal(W.lighting().weather,'cloudy');assert.equal(W.lighting().precipitation,null);assert.ok(W.lighting().sun>rainy,'clouds are brighter than rain');
+ const before=W.lighting().weather;t.game.state.day+=17;t.world.map();assert.equal(W.lighting().weather,before,'character age does not change the shared weather');
+ for(let day=0;day<31;day++)assert.notEqual(W.weatherFor('Shenyang',Math.floor(Date.UTC(2026,6,day+1)/864e5)),'snow','no summer snow');
  t.game.state.place='gym';t.world.venue('gym');assert.equal(W.lighting().outdoor,false);assert.equal(W.lighting().weather,'clear','no snow indoors');assert.equal(W.lighting().sun,3)});
 
 test('every neighbourhood is built in its map-data style, cached per city, and browsing shows the browsed city names',()=>{const t=setup(),W=t.context.ChinaLifeWorld;

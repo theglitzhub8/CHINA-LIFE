@@ -1,11 +1,14 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/common.php';
+require_once __DIR__.'/politics-lib.php';
 cl_methods(['GET','POST']);
 if ($method==='GET') {
  $city=$_GET['city']??'Shenyang';
  if(!is_string($city)||!in_array($city,cl_open_cities(),true))cl_fail('Choose an active city');
- json_response('success',['posts'=>cl_rows('SELECT id,title,body,link,UNIX_TIMESTAMP(created_at)*1000 at FROM chinalife_gist_posts WHERE (city=? OR city="") AND active=1 AND starts_at<=NOW() AND ends_at>NOW() ORDER BY id DESC LIMIT 30','s',[$city])]);
+ $election=cl_politics_snapshot($city);
+ $votes=cl_rows('SELECT id,office,UNIX_TIMESTAMP(created_at)*1000 at FROM chinalife_politics_votes WHERE city=? ORDER BY id DESC LIMIT 30','s',[$city]);
+ json_response('success',['election'=>$election,'vote_activity'=>$votes,'posts'=>cl_rows('SELECT id,title,body,link,UNIX_TIMESTAMP(created_at)*1000 at FROM chinalife_gist_posts WHERE (city=? OR city="") AND active=1 AND starts_at<=NOW() AND ends_at>NOW() ORDER BY id DESC LIMIT 30','s',[$city])]);
 }
 cl_rate('gist_submit',3,3600);$input=cl_body();
 $city=$input['city']??'';$title=$input['title']??'';$body=$input['body']??'';$link=$input['link']??'';

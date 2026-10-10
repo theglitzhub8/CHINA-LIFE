@@ -1,6 +1,19 @@
 <?php
-declare(strict_types=1);require_once __DIR__.'/common.php';cl_methods(['GET','POST']);
-$offices=['governor','deputy-governor','city-councillor','student-representative'];
-if($method==='GET'){ $city=(string)($_GET['city']??'Shenyang');$active=[];$results=[];try{$now=cl_rows("SELECT office,period,opens_at,closes_at FROM chinalife_politics_elections WHERE city=? AND opens_at<=NOW() ORDER BY office,closes_at DESC",'s',[$city]);foreach($now as $e)if(strtotime($e['closes_at'])>=time()&&!isset($active[$e['office']]))$active[$e['office']]=$e;}catch(Throwable $e){} $c=cl_rows("SELECT c.id,c.office,c.statement,c.candidate_id,u.user_name name FROM chinalife_politics_candidates c JOIN users u ON u.user_id=c.candidate_id WHERE c.city=? AND c.status='approved' ORDER BY c.office,c.id",'s',[$city]);try{$results=cl_rows("SELECT c.office,u.user_name name,COUNT(v.id) votes FROM chinalife_politics_candidates c JOIN users u ON u.user_id=c.candidate_id LEFT JOIN chinalife_politics_votes v ON v.candidate_id=c.id WHERE c.city=? AND c.status='approved' GROUP BY c.id,c.office,u.user_name ORDER BY c.office,votes DESC",'s',[$city]);}catch(Throwable $e){}json_response('success',['city'=>$city,'offices'=>$offices,'elections'=>$active,'candidates'=>$c,'results'=>$results]); }
-if($method==='POST' && isset($_GET['vote'])) { $in=cl_body();$city=trim((string)($in['city']??''));$office=(string)($in['office']??'');$candidate=(int)($in['candidate_id']??0);$e=cl_one('SELECT period FROM chinalife_politics_elections WHERE city=? AND office=? AND opens_at<=NOW() AND closes_at>=NOW() ORDER BY closes_at DESC LIMIT 1','ss',[$city,$office]);if(!$e)cl_fail('Voting is closed',409);$c=cl_one("SELECT id FROM chinalife_politics_candidates WHERE id=? AND city=? AND office=? AND status='approved'",'iss',[$candidate,$city,$office]);if(!$c)cl_fail('Candidate is not approved',403);try{cl_run('INSERT INTO chinalife_politics_votes(city,office,voter_id,candidate_id,created_at) VALUES(?,?,?,?,NOW())','ssii',[$city,$office,$uid,$candidate]);}catch(Throwable $x){cl_fail('You already voted in this office',409);}json_response('success',['voted'=>true,'period'=>$e['period']]); }
-$in=cl_body();$city=trim((string)($in['city']??''));$office=(string)($in['office']??'');$statement=trim((string)($in['statement']??''));$candidate=(int)($in['candidate_id']??$uid);if(!in_array($office,$offices,true)||$city===''||mb_strlen($statement)>600||$candidate!==$uid)cl_fail('Invalid nomination');cl_run('INSERT INTO chinalife_politics_candidates(city,office,candidate_id,statement,created_at) VALUES(?,?,?,?,NOW())','ssis',[$city,$office,$uid,$statement]);json_response('success',['submitted'=>true]);
+declare(strict_types=1);
+require_once __DIR__.'/common.php';require_once __DIR__.'/politics-lib.php';cl_methods(['GET','POST']);
+$in=$method==='POST'?cl_body():$_GET;$city=$in['city']??'Shenyang';
+if(!is_string($city)||!in_array($city,cl_open_cities(),true))cl_fail('Choose an active city');
+if($method==='GET')json_response('success',cl_politics_snapshot($city));
+$office=$in['office']??'';if(!is_string($office)||!in_array($office,CL_OFFICES,true))cl_fail('Choose a valid office');
+if(isset($_GET['vote'])){
+ $candidate=filter_var($in['candidate_id']??null,FILTER_VALIDATE_INT);if(!$candidate||$candidate<1)cl_fail('Choose a candidate');
+ $e=cl_one('SELECT period FROM chinalife_politics_elections WHERE city=? AND office=? AND opens_at<=NOW() AND closes_at>=NOW() ORDER BY closes_at DESC LIMIT 1','ss',[$city,$office]);if(!$e)cl_fail('Voting is closed',409);
+ if(!cl_one("SELECT id FROM chinalife_politics_candidates WHERE id=? AND city=? AND office=? AND status='approved'",'iss',[$candidate,$city,$office]))cl_fail('Candidate is not approved',403);
+ try{cl_run('INSERT INTO chinalife_politics_votes(city,office,period,voter_id,candidate_id,created_at) VALUES(?,?,?,?,?,NOW())','sssii',[$city,$office,$e['period'],$uid,$candidate]);}catch(mysqli_sql_exception $x){if($x->getCode()===1062)cl_fail('You already voted in this office this election',409);throw $x;}
+ json_response('success',['voted'=>true,'period'=>$e['period'],'ballot'=>cl_politics_snapshot($city)]);
+}
+$statement=$in['statement']??'';$candidate=filter_var($in['candidate_id']??$uid,FILTER_VALIDATE_INT);
+if(!is_string($statement)||trim($statement)===''||mb_strlen($statement)>600||$candidate!==$uid)cl_fail('Invalid nomination');
+cl_rate('nomination',8,3600);
+try{cl_run('INSERT INTO chinalife_politics_candidates(city,office,candidate_id,statement,created_at) VALUES(?,?,?,?,NOW())','ssis',[$city,$office,$uid,trim($statement)]);}catch(mysqli_sql_exception $x){if($x->getCode()===1062)cl_fail('You already have a nomination for this office',409);throw $x;}
+json_response('success',['submitted'=>true]);

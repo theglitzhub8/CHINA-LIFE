@@ -281,3 +281,24 @@ dialog :is(.social-empty,.gist-card) p { font-size: 13px; line-height: 1.45; }
 dialog .activity-panel :is(p,li) { font-size: 13px; line-height: 1.5; }
 dialog .activity-panel h3 { font-size: 16px; line-height: 1.35; }
 dialog .activity-panel :is(.quest-card,.dream-card,.gist-card) { margin: 8px 0; }
+.politics-ranking { margin-top: 12px; }
+.politics-ranking h4 { font-size: 13px; margin: 0 0 8px; }
+.politics-ranking table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
+.politics-ranking th, .politics-ranking td { text-align: left; padding: 8px 4px; border-bottom: 1px solid #e3e9ed; overflow-wrap: anywhere; }
+.politics-ranking :is(th,td):first-child { width: 44px; }
+.politics-ranking :is(th,td):last-child { width: 48px; text-align: right; }
+.politics-ranking meter { display: block; width: 100%; height: 10px; margin-top: 4px; accent-color: #147d72; }
+.cantaball-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+#cantaballFrame iframe { display: block; width: 100%; height: min(480px, 52dvh); border: 0; border-radius: 14px; background: #2a2622; }
+@media (max-height: 500px) { #cantaballFrame iframe { height: calc(100dvh - 155px); min-height: 140px; } }
+#activityDialog.cantaball-screen #activityContent { height: min(680px, 74dvh); }
+#activityDialog.cantaball-screen .activity-panel { height: 100%; display: flex; flex-direction: column; padding: 14px 12px 12px; gap: 8px; }
+#activityDialog.cantaball-screen .activity-panel > :is(.eyebrow,.lead) { display: none; }
+#activityDialog.cantaball-screen h2 { margin: 0; padding-right: 44px; min-height: 32px; }
+.cantaball-card { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 8px; }
+.cantaball-tools { flex: none; }
+#activityDialog .cantaball-tools :is(button,a) { display: grid; place-items: center; min-width: 0; min-height: 44px; padding: 8px; font-size: 12px; flex: 1; margin: 0; text-align: center; }
+#activityDialog #cantaballStatus { font-size: 10px; margin: 0; flex: none; }
+#cantaballFrame { flex: 1; min-height: 0; }
+#cantaballFrame iframe { height: 100%; min-height: 0; }
+@media (max-height: 500px) { #activityDialog.cantaball-screen #activityContent { height: calc(100dvh - 24px); } }
