@@ -469,7 +469,7 @@ function arcadeScreen(result=''){const a=arcade();
  arcadePrizes.forEach(([id,name,cost])=>$('prize-'+id).onclick=()=>{if(a.prizes.includes(id))return toast('You already own '+name+'.');if(a.tickets<cost)return toast('You need '+(cost-a.tickets)+' more tickets.');a.tickets-=cost;a.prizes.push(id);state.xp+=cost/10;save();arcadeScreen('🎁 You won '+name+'!')})}
 // Hafrik HQ: players apply for real Hafrik services; admins review the applications in the panel.
 const appStatus={pending:'⏳ Waiting for review',approved:'✅ Approved · we will contact you',declined:'❌ Not available right now'};
-async function hqScreen(service=null){const signedIn=window.ChinaLifeCloud?.signedIn;
+async function hqScreen(service=null){if(window.ChinaLifeHQ)return window.ChinaLifeHQ.open(service);const signedIn=window.ChinaLifeCloud?.signedIn;
  if(!signedIn){screen('🏢 Hafrik HQ','Sign in with Hafrik to apply for services.',action('hqSignIn','Sign in with Hafrik','Your applications are linked to your Hafrik account'));$('hqSignIn').onclick=()=>window.ChinaLifeCloud?.open();return}
  screen('🏢 Hafrik HQ','Apply for Hafrik services. Our team replies on WhatsApp, WeChat or email.','<p id="hqBody">Loading…</p>');
  try{const r=await window.ChinaLifeAuth.request('/chinalife/applications.php','GET'),d=r.data||r;if(!$('hqBody'))return;const s=d.services||{};

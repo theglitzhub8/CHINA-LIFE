@@ -1,0 +1,9 @@
+# Hafrik HQ staff desks
+
+Staff desk access is granted to authenticated Hafrik usernames: Beatrice (Lawrence), sammy24 (Samuel), Iamloumie (Lawal), horlaarsman (CEO). It does not grant global admin access. The server resolves the authenticated account from its user ID; browser role claims are ignored. If these usernames change, update hq-team.php and public/hq-team.js together. Confirm the accounts are owned by the intended staff before production deployment.
+
+Visitors can read prepared desk information. Signed-in visitors submit requests through the existing applications table. Lawrence manages study, jobs, community, complaints, hiring and CEO appointments; Samuel handles advertising, artist promotion, events and content; Lawal handles visa, housing, company registration, arrival, translation, hotels, market visits, partnerships and operations. CEO handles major proposals. Co-founder offices are marked coming soon.
+
+Staff use Reception → My staff inbox to review only their assigned services and reply. Pending means submitted/in review; approved means approved/resolved; declined closes a request. Users read replies through My requests. Lawrence approving a CEO appointment unlocks the CEO desk conversation; returning it to pending or declining revokes that access. This is desk conversation access, not a separate live meeting room or chat session. Office avatars represent desk locations even while staff are offline; prepared answers are explicitly labeled, and online status is fetched on opening reception. No background polling, messages to staff, or emails are added.
+
+The HQ interior has four separate desks, name/role labels, a CEO partition, appointment entrance, hiring and co-founder markers. City towers, map geometry, lighting and HUD stay unchanged. No migration is needed: all requests use the existing chinalife_applications table. Offline preview cannot verify production account ownership or live staff status.

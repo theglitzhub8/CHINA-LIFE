@@ -855,3 +855,19 @@ test('VIP badges come from saved passes, include the after-midnight club night, 
  let list=(await call(12,'presence.php?city=Guangzhou')).data.players;const paid=list.find(p=>p.id==='11');assert.equal(paid.vip,true);assert.equal(paid.vip_pass,undefined);
  list=(await call(11,'presence.php?city=Guangzhou')).data.players;assert.equal(list.find(p=>p.id==='12').vip,false);
 });
+
+test('HQ staff permissions use authenticated usernames and isolate desk requests',async()=>{
+ sql("USE chinalife_test; UPDATE users SET user_name='Beatrice' WHERE user_id=2; UPDATE users SET user_name='sammy24' WHERE user_id=3;");
+ try{
+ const sent=await call(10,'applications.php','POST',{service:'ceo-meeting',name:'Visitor',contact:'visitor@example.com',city:'Shenyang',message:'Partnership meeting'});assert.equal(sent.httpStatus,200);
+ assert.equal((await call(10,'hq.php')).data.ceoAccess,false);
+ const desk=await call(2,'hq.php');assert.equal(desk.data.staff,'lawrence');assert(desk.data.inbox.some(r=>String(r.id)===sent.data.id));
+ assert.equal((await call(3,'hq.php')).data.inbox.some(r=>String(r.id)===sent.data.id),false);
+ assert.equal((await call(3,'hq.php','POST',{id:sent.data.id,status:'approved',note:'Come in'})).httpStatus,403);
+ assert.equal((await call(10,'hq.php','POST',{id:sent.data.id,status:'approved',note:'Self approval'})).httpStatus,403);
+ assert.equal((await call(2,'hq.php','POST',{id:sent.data.id,status:'approved',note:'Meeting approved by Lawrence'})).httpStatus,200);
+ assert.equal((await call(10,'hq.php')).data.ceoAccess,true);
+ assert.equal((await call(11,'hq.php')).data.ceoAccess,false);
+ assert.equal((await call(2,'admin.php','POST',{action:'applications'})).httpStatus,403,'desk access grants no global admin privileges');
+ }finally{sql("USE chinalife_test; UPDATE users SET user_name='user2' WHERE user_id=2; UPDATE users SET user_name='user3' WHERE user_id=3;")}
+});
