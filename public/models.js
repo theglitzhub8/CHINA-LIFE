@@ -25,6 +25,11 @@ export function furnitureModel(id,color='#16897b'){const g=new THREE.Group(),c=n
  else if(id==='toilet'){b(g,.7,.55,.9,0xffffff,0,.28);cy(g,.35,.12,0xe0e9ee,0,.6,.12);b(g,.7,.75,.22,0xf8fbfc,0,.9,-.32);b(g,.12,.04,.07,0x9caeb8,.2,1.3,-.18)}
  else if(id==='shower'){b(g,1.3,.08,1.3,0xdfe8eb);b(g,1.3,2.2,.05,0x90c8d3,0,1.1,-.63);b(g,.05,2.2,1.3,0x90c8d3,-.63,1.1);cy(g,.035,1.8,0xaebfc6,.45,1.1,-.56);cy(g,.22,.06,0xc9d7dd,.4,2,-.4)}
  else if(id==='fan'){cy(g,.4,.08,0x364a56,0,.04);cy(g,.055,1.2,0x526772,0,.65);const head=cy(g,.48,.1,0xa7bdc6,0,1.5,0,20);head.rotation.x=Math.PI/2;for(let i=0;i<3;i++){const blade=b(g,.16,.7,.07,c,0,1.5,.08);blade.rotation.z=i*Math.PI*2/3}cy(g,.1,.12,0x2b4859,0,1.5,.12).rotation.x=Math.PI/2}
+ else if(id==='fridge'){b(g,1.2,2.2,.9,0xd9e3e6,0,1.1);b(g,1.15,1.2,.06,c,0,1.52,.48);b(g,1.15,.85,.06,c,0,.46,.48);for(const y of [.6,1.5])b(g,.06,.4,.06,0x384b54,.4,y,.55)}
+ else if(id==='washer'){b(g,1,1.1,.9,0xe9edf0,0,.55);const drum=cy(g,.34,.07,0x40596a,0,.52,.48,20);drum.rotation.x=Math.PI/2;const glass=cy(g,.25,.08,c,0,.52,.53,20);glass.rotation.x=Math.PI/2;b(g,.8,.12,.04,0x30434e,0,.95,.48)}
+ else if(id==='wardrobe'){b(g,1.6,2.3,.65,0x9b7654,0,1.15);for(const x of [-.4,.4]){b(g,.76,2.2,.05,c,x,1.15,.35);b(g,.05,.4,.04,0xd4b574,x<0?-.08:.08,1.2,.4)}}
+ else if(id==='armchair'){b(g,1,.3,1,c,0,.5);b(g,1,.8,.2,c,0,.95,-.4);for(const x of [-.48,.48]){b(g,.14,.5,1,c,x,.75);for(const z of [-.35,.35])b(g,.08,.3,.08,0x604932,x,.15,z)}}
+ else if(id==='coffee-table'){b(g,1.6,.12,.9,0xb78c60,0,.55);for(const x of [-.65,.65])for(const z of [-.3,.3])b(g,.08,.5,.08,0x534338,x,.25,z);b(g,.45,.07,.3,c,-.3,.65,.1);b(g,.4,.06,.28,0xf4ebd8,-.25,.71,.1)}
  else if(id==='art'){b(g,2,1.6,.1,0x755638,0,1);b(g,1.8,1.4,.12,c,0,1,.04);cy(g,.35,.04,0xf2d894,-.3,1.2,.13).rotation.x=Math.PI/2;b(g,1.5,.3,.02,0x183b4f,.1,.6,.12)}
  return g}
 export function buildingModel(id,property='rental'){const g=new THREE.Group();g.userData.kind=id;

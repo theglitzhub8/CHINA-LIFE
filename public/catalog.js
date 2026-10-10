@@ -7,6 +7,11 @@ window.ChinaLifeCatalog = {
  {id:'advertise-south',map:{x:-25,z:33},venues:[]}
  ],
  furniture:[
+ {id:'fridge',name:'Double-door fridge',price:1650,detail:'A modern refrigerator for your kitchen',category:'Kitchen'},
+ {id:'washer',name:'Washing machine',price:950,detail:'A front-loading washer for your laundry corner',category:'Essentials'},
+ {id:'wardrobe',name:'Tall wardrobe',price:780,detail:'A full-height cabinet for your bedroom',category:'Bedroom'},
+ {id:'armchair',name:'Reading armchair',price:460,detail:'A cosy chair for your reading corner',category:'Living'},
+ {id:'coffee-table',name:'Coffee table',price:290,detail:'A low table with books for your lounge',category:'Living'},
  {id:'toilet',name:'Modern toilet',price:350,detail:'Upgrade your private bathroom',category:'Bathroom'},
  {id:'shower',name:'Glass shower',price:800,detail:'A glass shower enclosure in your bathroom',category:'Bathroom'},
  {id:'fan',name:'Standing fan',price:180,detail:'Keep your home comfortable',category:'Essentials'},

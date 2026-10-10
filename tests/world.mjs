@@ -185,13 +185,13 @@ test('club VIP seating is gated and paid VIP walks to the lounge',()=>{const t=s
 
 test('venue details collapse on entry and can be opened without losing the room',()=>{
  const t=setup(),ui=t.document.getElementById('worldUI'),toggle=t.document.getElementById('worldClean');
- t.world.venue('hq');assert(ui.classList.contains('venue-details-collapsed'));assert.equal(toggle.textContent,'Show details');assert.equal(toggle.getAttribute('aria-expanded'),'false');
+ t.world.venue('hq');assert(ui.classList.contains('venue-details-collapsed'));assert.equal(toggle.textContent,'🎁 Rewards & needs ▾');assert.equal(toggle.getAttribute('aria-expanded'),'false');
  toggle.onclick();assert(!ui.classList.contains('venue-details-collapsed'));assert.equal(toggle.getAttribute('aria-expanded'),'true');assert.equal(t.world.view,'venue');
  t.world.venue('night');assert(ui.classList.contains('venue-details-collapsed'));t.world.map();assert(ui.classList.contains('map-view'));
 });
 
 test('HUD displays global online and registered player counts from the existing online response',()=>{
- const t=setup();t.context.ChinaLifeCloud={online:{online:12,players:834,cities:{Shenyang:3}},players:[]};t.context.dispatchEvent(new t.context.CustomEvent('chinalife:online'));assert.equal(t.document.getElementById('worldOnline').textContent,'12 online · 834 players');
+ const t=setup();t.context.ChinaLifeCloud={online:{online:12,players:834,cities:{Shenyang:3}},players:[]};t.context.dispatchEvent(new t.context.CustomEvent('chinalife:online'));assert.equal(t.document.getElementById('worldOnline').textContent,'City pop. 4,352 · 12 online');
 });
 
 test('room furniture copies are bounded, with overflow accounted for in storage',()=>{

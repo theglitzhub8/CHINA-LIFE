@@ -25,3 +25,8 @@ test('additional furniture copies charge by quantity, persist, and reject invali
  const restored=harness(t.game.state);assert.equal(restored.game.state.furnitureQuantities.plant,4);const balance=t.game.state.money;t.document.getElementById('furnitureAmount').value='1000000';t.click('shopBuyMore');assert.equal(t.game.state.money,balance);
  t.game.shop('furniture','plant');t.document.getElementById('furnitureAmount').value='-1';t.click('shopBuyMore');assert.equal(t.game.state.money,balance);
 });
+
+test('new home appliances and lounge furniture have models and persist after purchase',()=>{
+ const t=harness({...fixture(),money:20000});for(const id of ['fridge','washer','wardrobe','armchair','coffee-table']){assert(t.game.catalog.furniture.some(f=>f.id===id));let meshes=0;furnitureModel(id).traverse(o=>{if(o.isMesh)meshes++});assert(meshes>=4);t.game.shop('furniture',id);t.click('shopBuy')}
+ const restored=harness(t.game.state);for(const id of ['fridge','washer','wardrobe','armchair','coffee-table'])assert.equal(restored.game.state.furnitureQuantities[id],1);
+});
