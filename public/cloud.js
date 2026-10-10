@@ -1,4 +1,4 @@
-const game = window.ChinaLife, $ = id => document.getElementById(id);
+const game = new Proxy({}, {get(_,key){return window.ChinaLife?.[key]}}), $ = id => document.getElementById(id);
 const HAFRIK_API = 'https://hafrik.com/api/v4', TOKEN_KEY = 'chinalife-hafrik-token', PROFILE_KEY = 'chinalife-hafrik-profile';
 const storage = {getItem(key) {try {return localStorage.getItem(key)} catch {return null}}, setItem(key, value) {try {localStorage.setItem(key, value)} catch {}}};
 let account = null, remote = {state:null}, auto = false, busy = false, loading = true, timer, presence = false, players = [], epoch = 0, authEpoch = 0, polling = false;
