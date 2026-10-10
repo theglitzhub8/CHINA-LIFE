@@ -182,3 +182,10 @@ test('club wall screen follows the active track and is removed when returning to
 });
 
 test('club VIP seating is gated and paid VIP walks to the lounge',()=>{const t=setup();t.game.state.place='night';t.world.venue('night');assert.equal(t.world.vipSeat(),false);t.game.state.vipUntil=t.game.state.day+30;assert.equal(t.world.vipSeat(),true);for(let i=0;i<500;i++)t.tick();assert.ok(t.world.position.x<-3.8);assert.ok(t.world.position.z<-1.9);assert.equal(t.world.emoteNow,'sit');assert.ok(![...t.document.querySelectorAll('.scene-label')].some(l=>/^(Security|Guest)( · NPC)?$/.test(l.textContent)));});
+
+test('venue details collapse on entry and can be opened without losing the room',()=>{
+ const t=setup(),ui=t.document.getElementById('worldUI'),toggle=t.document.getElementById('worldClean');
+ t.world.venue('hq');assert(ui.classList.contains('venue-details-collapsed'));assert.equal(toggle.textContent,'Show details');assert.equal(toggle.getAttribute('aria-expanded'),'false');
+ toggle.onclick();assert(!ui.classList.contains('venue-details-collapsed'));assert.equal(toggle.getAttribute('aria-expanded'),'true');assert.equal(t.world.view,'venue');
+ t.world.venue('night');assert(ui.classList.contains('venue-details-collapsed'));t.world.map();assert(ui.classList.contains('map-view'));
+});
