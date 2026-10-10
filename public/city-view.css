@@ -392,3 +392,5 @@ dialog .activity-panel :is(.quest-card,.dream-card,.gist-card) { margin: 8px 0; 
 
 /* Venue details are available on demand without covering the room. */
 #worldUI:not(.map-view).venue-details-collapsed .world-side :is(.event-chip,.objective-chip,.mini-needs){display:none!important}
+
+@media(max-width:600px){#worldOnline.hud-wide{display:inline!important;font-size:10px;white-space:nowrap}#worldMood{display:none!important}.time-chip{gap:6px!important}#worldOnline{overflow:hidden;text-overflow:ellipsis}}

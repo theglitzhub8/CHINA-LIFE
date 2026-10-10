@@ -23,4 +23,4 @@ if($action!=='accept'||(int)$v['guest_id']!==$uid||!in_array($v['status'],['pend
 $save=cl_one('SELECT game_state FROM chinalife_saves WHERE user_id=?','i',[(int)$v['owner_id']]);$g=json_decode($save['game_state']??'{}',true);if(empty($g['created']))cl_fail('The host character is unavailable',409);
 if($v['place']!=='home'&&!in_array($v['place'],$g['ownedHomes']??[],true))cl_fail('The host does not own this address',403);
 cl_run('UPDATE chinalife_home_visits SET status="accepted" WHERE id=?','i',[$id]);
-json_response('success',['visit'=>['id'=>(string)$id,'owner'=>(string)$v['owner_id'],'city'=>$v['city'],'place'=>$v['place'],'home'=>['properties'=>$g['properties']??[],'upgrades'=>$g['upgrades']??[],'furnitureColors'=>$g['furnitureColors']??[],'ownedHomes'=>$g['ownedHomes']??[]]]]);
+json_response('success',['visit'=>['id'=>(string)$id,'owner'=>(string)$v['owner_id'],'city'=>$v['city'],'place'=>$v['place'],'home'=>['properties'=>$g['properties']??[],'upgrades'=>$g['upgrades']??[],'furnitureColors'=>$g['furnitureColors']??[],'furnitureQuantities'=>$g['furnitureQuantities']??[],'ownedHomes'=>$g['ownedHomes']??[]]]]);

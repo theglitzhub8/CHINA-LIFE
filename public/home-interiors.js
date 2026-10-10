@@ -104,11 +104,15 @@ const DECOR={rental:[[-6,-3.9],[3.4,1.6],[-2.6,3.6],[.5,3.7],[-6,2.4],[4,3.6],[-
  villa:[[-3.6,-5.4],[1.6,-5.4],[-7.6,-.8],[-4,2.8],[-1,3.4],[1.6,3.6],[-6.4,4.4],[-8.6,1.8],[-3,5],[.4,5.2],[3,4.8],[-6.4,2.2],[6.6,6.6],[-8.8,7.4]],
  penthouse:[[-3.2,-5.8],[3.4,-5.8],[-8.2,-.2],[-6.8,4.6],[-2,3.6],[0,5.4],[-4.2,1.8],[-8.6,2.2],[-4.4,5.2],[-1.6,5.4],[5.6,5],[7.4,1.4],[-2.4,7.2],[7,7.2]],
  mansion:[[-5.2,-6.6],[4.6,-6.6],[-3.2,5.8],[3,5.8],[-12,-1.6],[5,4.8],[9,-4.2],[-6,.4],[2.6,3.2],[-6.8,6.2],[7.4,5.8],[-12,5.6],[3.6,-.2],[-2.2,1.4],[9.4,2.4]]};
-export function buildHome(type,{colors={},finish='#a4b4b8',owned=[],car=null}={}){const g=new THREE.Group();g.userData.kind='home-'+type;REG={};const recipe=HOMES[type]||HOMES.rental,info=recipe(g,{colors,finish}),items={};
- const slots=[...(DECOR[type]||DECOR.rental)];for(const id of owned){if(REG[id]){items[id]=REG[id];continue}const at=slots.shift();if(!at)continue;const a=furnitureModel(id,colors[id]||finish);a.position.set(at[0],0,at[1]);g.add(a);items[id]=a;info.colliders.push([at[0],at[1],1.1,1.1])}REG=null;
+export function buildHome(type,{colors={},finish='#a4b4b8',owned=[],quantities={},car=null}={}){const g=new THREE.Group();g.userData.kind='home-'+type;REG={};const recipe=HOMES[type]||HOMES.rental,info=recipe(g,{colors,finish}),items={};
+ const slots=[...(DECOR[type]||DECOR.rental)],stored=[],pending=[];
+ const placeCopy=id=>{const at=slots.shift();if(!at)return false;const a=furnitureModel(id,colors[id]||finish);a.position.set(at[0],0,at[1]);g.add(a);if(!items[id])items[id]=a;info.colliders.push([at[0],at[1],1.1,1.1]);return true};
+ // Give every furniture type a turn before filling spare space with duplicates.
+ for(const id of owned){let remaining=Math.max(1,Math.floor(quantities[id]||1));if(REG[id]){items[id]=REG[id];remaining--}else if(placeCopy(id))remaining--;pending.push({id,quantity:remaining})}
+ for(const entry of pending){while(entry.quantity>0&&slots.length){placeCopy(entry.id);entry.quantity--}if(entry.quantity>0)stored.push(entry)}REG=null;
  // Your active car waits on the drive at villas and mansions.
  const park={villa:[8.2,9.2],mansion:[0,13]}[type];if(car&&park){const v=carModel(car.style,car.color);v.position.set(park[0],.12,park[1]);v.rotation.y=Math.PI/2;g.add(v);info.colliders.push([park[0],park[1],1.6,3.2])}
- return {group:g,items,...info,colliders:info.colliders.map(([x,z,w,d])=>({x,z,w,d})),spots:Object.fromEntries(Object.entries(info.spots).map(([k,[x,z]])=>[k,{x,z}]))}}
+ return {group:g,items,stored,...info,colliders:info.colliders.map(([x,z,w,d])=>({x,z,w,d})),spots:Object.fromEntries(Object.entries(info.spots).map(([k,[x,z]])=>[k,{x,z}]))}}
 
 // ---- Exteriors on the city map: each tier looks like its price. ----
 export function homeExterior(type){const g=new THREE.Group();g.userData.kind='home';

@@ -19,3 +19,9 @@ test('unowned addresses route to purchase and other-city listings cannot charge 
  t.game.state.city='Guangzhou';const money=t.game.state.money;t.game.estate('home-mansion');t.click('estateBuy');assert.equal(t.game.state.money,money);assert.equal(t.game.state.ownedHomes.length,0);t.game.homes();assert.equal(t.document.getElementById('estate-home-mansion'),null);
  t.game.state.city='Shenyang';t.game.shop('properties','penthouse');const stale=t.document.getElementById('shopBuy').onclick;t.game.state.city='Guangzhou';stale();assert.equal(t.game.state.money,money);assert.equal(t.game.state.properties.Guangzhou,undefined);
 });
+
+test('additional furniture copies charge by quantity, persist, and reject invalid or unaffordable orders',()=>{
+ const t=harness({...fixture(),money:10000});t.game.shop('furniture','plant');t.document.getElementById('furnitureAmount').value='4';t.click('shopBuyMore');assert.equal(t.game.state.money,10000-4*95);assert.equal(t.game.state.furnitureQuantities.plant,4);
+ const restored=harness(t.game.state);assert.equal(restored.game.state.furnitureQuantities.plant,4);const balance=t.game.state.money;t.document.getElementById('furnitureAmount').value='1000000';t.click('shopBuyMore');assert.equal(t.game.state.money,balance);
+ t.game.shop('furniture','plant');t.document.getElementById('furnitureAmount').value='-1';t.click('shopBuyMore');assert.equal(t.game.state.money,balance);
+});

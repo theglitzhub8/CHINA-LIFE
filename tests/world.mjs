@@ -189,3 +189,13 @@ test('venue details collapse on entry and can be opened without losing the room'
  toggle.onclick();assert(!ui.classList.contains('venue-details-collapsed'));assert.equal(toggle.getAttribute('aria-expanded'),'true');assert.equal(t.world.view,'venue');
  t.world.venue('night');assert(ui.classList.contains('venue-details-collapsed'));t.world.map();assert(ui.classList.contains('map-view'));
 });
+
+test('HUD displays global online and registered player counts from the existing online response',()=>{
+ const t=setup();t.context.ChinaLifeCloud={online:{online:12,players:834,cities:{Shenyang:3}},players:[]};t.context.dispatchEvent(new t.context.CustomEvent('chinalife:online'));assert.equal(t.document.getElementById('worldOnline').textContent,'12 online · 834 players');
+});
+
+test('room furniture copies are bounded, with overflow accounted for in storage',()=>{
+ const t=setup(),home=t.context.buildHome('rental',{owned:['plant'],quantities:{plant:1000000}});let placed=0;home.group.traverse(o=>{if(o.userData?.kind==='plant'||o.userData?.homeFixture==='plant')placed++});
+ const stored=home.stored.find(x=>x.id==='plant');assert(stored);assert(stored.quantity>999900);assert(stored.quantity<1000000);assert(home.items.plant);
+ let meshes=0;home.group.traverse(o=>{if(o.isMesh)meshes++});assert(meshes<400,'large quantities do not generate unbounded meshes');
+});
