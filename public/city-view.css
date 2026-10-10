@@ -164,3 +164,120 @@
   #placeSheet.place-sheet { left: auto; right: 10px; transform: none; max-height: calc(100dvh - 150px); }
   #worldUI.map-view.search-open .map-controls { top: max(148px, calc(env(safe-area-inset-top) + 140px)); right: calc(var(--dock-width) + 20px); left: 10px; max-height: calc(100dvh - 180px); overflow-y: auto; }
 }
+
+/* In-game screens share a bounded panel size, rather than filling the device. */
+dialog {
+  box-sizing: border-box; width: min(480px, calc(100% - 24px));
+  max-width: calc(100% - 24px); max-height: min(680px, 74dvh);
+  border-radius: 22px; overflow-y: auto; overscroll-behavior: contain;
+}
+dialog .activity-panel { padding: 20px 16px 16px; min-width: 0; }
+dialog .activity-panel h2 { font: 800 20px/1.25 Manrope, system-ui, sans-serif; letter-spacing: -.35px; padding-right: 32px; }
+dialog .activity-panel .lead { font-size: 13px; line-height: 1.45; margin: 8px 0 14px; }
+dialog .choice-action { box-sizing: border-box; min-height: 44px; padding: 10px 12px; margin: 6px 0; gap: 4px; border-radius: 13px; }
+dialog .choice-action b { font-size: 13px; line-height: 1.35; }
+dialog .choice-action span { font-size: 12px; line-height: 1.4; }
+dialog :is(.primary-btn,.soft-btn,.ghost-btn) { min-height: 44px; font-size: 13px; padding: 10px 13px; }
+dialog :is(input,select,textarea) { box-sizing: border-box; max-width: 100%; font-size: 16px; }
+dialog :is(.close-x,.social-close,.social-back,.ai-x,.radio-x) { width: 44px; height: 44px; flex: none; }
+dialog :is(.social-empty,.chat-notice,.quest-card,.dream-card,.gist-card,.politics-office) { padding: 12px; border-radius: 14px; }
+dialog :is(.social-empty,.gist-card) h3 { font-size: 16px; margin: 4px 0 7px; }
+dialog :is(.social-empty,.gist-card) p { font-size: 13px; line-height: 1.45; }
+#socialDialog {
+  width: min(440px, calc(100% - 24px)); max-width: calc(100% - 24px);
+  height: min(600px, 70dvh); max-height: 70dvh; margin: auto;
+  border-radius: 22px; padding: 0; overflow: hidden;
+}
+#socialDialog .social-shell { height: 100%; min-width: 0; min-height: 0; }
+#socialDialog .social-heading { padding: 9px 12px; gap: 8px; flex: none; }
+#socialDialog .social-heading::before { display: none; }
+#socialDialog .social-heading h2 { font-size: 17px; line-height: 1.25; }
+#socialDialog .social-heading p { font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
+#socialDialog .social-tabs { padding: 5px 8px; gap: 2px; flex: none; }
+#socialDialog .social-tabs button { min-height: 44px; padding: 4px 0; font-size: 11px; }
+#socialDialog .social-tabs button span { font-size: 16px; }
+#socialDialog .social-body { padding: 10px 12px; min-width: 0; }
+#socialDialog :is(.chat-row,.player-card) { box-sizing: border-box; gap: 8px; padding: 8px 10px; margin-bottom: 5px; border-radius: 13px; min-width: 0; font-size: 13px; }
+#socialDialog .chat-row b, #socialDialog .player-copy b { font-size: 13px; }
+#socialDialog .chat-row small, #socialDialog .player-copy small { font-size: 11px; line-height: 1.4; }
+#socialDialog :is(.chat-row,.player-card) .player-avatar { width: 36px; height: 36px; font-size: 14px; }
+#socialDialog .player-avatar.large { width: 56px; height: 56px; font-size: 22px; }
+#socialDialog .player-actions { flex-wrap: wrap; }
+#socialDialog .player-actions button { min-height: 44px; padding: 6px 9px; font-size: 12px; }
+#socialDialog .social-section, #socialDialog .online-summary { margin: 8px 0; font-size: 12px; }
+#socialDialog .nearby-map { height: min(160px, 20dvh); width: 100%; margin-bottom: 8px; border-radius: 14px; }
+#socialDialog .chat-compose { flex: none; padding: 8px 10px; gap: 6px; }
+#socialDialog .chat-compose input { min-width: 0; }
+#socialDialog #socialFeedback { flex: none; font-size: 12px; margin: 0; padding: 4px 12px; }
+#phoneDialog {
+  box-sizing: border-box; width: min(420px, calc(100% - 24px)); max-width: calc(100% - 24px);
+  height: min(620px, 72dvh); max-height: 72dvh; margin: auto; padding: 0;
+  border: 0; border-radius: 24px; background: #f6f1ea; overflow: hidden;
+}
+#phoneDialog .phone-frame {
+  box-sizing: border-box; width: 100%; height: 100%; min-height: 0; max-height: 100%;
+  padding: 10px 12px 12px; border-radius: 24px; overflow: hidden;
+}
+#phoneDialog .phone-frame::before { display: none; }
+#phoneDialog .phone-status { flex: none; padding: 4px 48px 8px 2px; font-size: 12px; min-height: 34px; align-items: center; box-sizing: border-box; }
+#phoneDialog .phone-island, #phoneDialog .phone-signal { display: none; }
+#phoneDialog .close-x { top: 6px; right: 8px; width: 44px; height: 44px; background: #ebe4da; color: #2b241f; z-index: 6; box-shadow: none; }
+#phoneDialog #phoneContent { min-height: 0; min-width: 0; overflow-x: hidden; overflow-y: auto; }
+#phoneDialog .cl-phone { gap: 9px; padding: 0 0 8px; }
+#phoneDialog .cl-hero { border-radius: 18px; padding: 10px 12px; }
+#phoneDialog .cl-hero-top, #phoneDialog .cl-date { font-size: 11px; }
+#phoneDialog .cl-greet { font-size: 18px; margin-top: 6px; }
+#phoneDialog .cl-date { margin-bottom: 8px; }
+#phoneDialog .cl-hero .phone-widget { padding: 8px; border-radius: 12px; }
+#phoneDialog .phone-role > span { font-size: 20px; }
+#phoneDialog .phone-role b { font-size: 13px; }
+#phoneDialog .phone-role small { font-size: 11px; line-height: 1.3; }
+#phoneDialog .phone-money b { font-size: 17px; }
+#phoneDialog .cl-pill { min-height: 44px; font-size: 12px; padding: 8px 11px; }
+#phoneDialog .cl-search { min-height: 44px; padding: 9px 12px; }
+#phoneDialog .cl-group h4 { font-size: 10px; margin: 2px 3px 6px; }
+#phoneDialog .cl-phone :is(.phone-apps,.phone-dock) { padding: 9px 6px; gap: 9px 4px; border-radius: 16px; }
+#phoneDialog .cl-phone .phone-app { min-width: 0; min-height: 60px; gap: 4px; }
+#phoneDialog .cl-phone .phone-app b { width: 40px; height: 40px; border-radius: 12px; font-size: 20px; }
+#phoneDialog .cl-phone .phone-app span { font-size: 10px; overflow-wrap: anywhere; }
+#phoneDialog .cl-phone .phone-dock .phone-app span { font-size: 10px; }
+@media (max-width: 600px) {
+  #socialDialog, #phoneDialog {
+    position: fixed; inset: auto 0 calc(max(10px, env(safe-area-inset-bottom)) + 66px);
+    margin: 0 auto; width: calc(100% - 24px); max-width: 440px;
+    max-height: min(70dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 100px));
+  }
+  #socialDialog { height: min(560px, 70dvh); }
+  #phoneDialog { height: min(600px, 70dvh); }
+}
+@media (max-width: 360px) {
+  #socialDialog .player-card { flex-wrap: wrap; }
+  #socialDialog .player-actions { margin-left: 44px; }
+  #phoneDialog .cl-hero .phone-widgets { grid-template-columns: 1fr 1fr; }
+  #phoneDialog .phone-role { gap: 5px; }
+}
+@media (max-height: 500px) {
+  dialog { max-height: calc(100dvh - 24px); }
+  #socialDialog, #phoneDialog {
+    inset: 10px; margin: auto; width: min(600px, calc(100% - 24px));
+    height: calc(100dvh - 24px); max-height: calc(100dvh - 24px);
+  }
+  #socialDialog .nearby-map { height: 100px; }
+  #phoneDialog .cl-phone :is(.phone-apps,.phone-dock) { grid-template-columns: repeat(6, 1fr); }
+  #phoneDialog .cl-hero { padding: 8px 10px; }
+}
+/* Keep menu close controls outside the scrolling content. */
+#activityDialog, #cloudDialog, #voiceDialog, #audioDialog { overflow: hidden; }
+#activityContent, #cloudContent, #voiceContent, #audioContent {
+  max-height: min(680px, 74dvh); overflow-y: auto; overscroll-behavior: contain;
+}
+#socialDialog .social-body p, #socialDialog .message-text { font-size: 13px; line-height: 1.45; }
+#socialDialog :is(.social-actions,.profile-primary,.profile-more,.social-pills,.quick-replies) button { min-height: 44px; font-size: 12px; }
+#socialDialog .online-strip .player-avatar { width: 36px; height: 36px; }
+#socialDialog .profile-hero h3 { font-size: 18px; overflow-wrap: anywhere; }
+@media (max-height: 500px) {
+  #activityContent, #cloudContent, #voiceContent, #audioContent { max-height: calc(100dvh - 24px); }
+}
+dialog .activity-panel :is(p,li) { font-size: 13px; line-height: 1.5; }
+dialog .activity-panel h3 { font-size: 16px; line-height: 1.35; }
+dialog .activity-panel :is(.quest-card,.dream-card,.gist-card) { margin: 8px 0; }
