@@ -14,3 +14,6 @@ china-life.hafrik.com/
 /chinalife-api/push-config.php
 /chinalife-api/ai-config.php
 /chinalife-api/polling-config.json
+
+/chinalife-api/music-config.php
+*.zip

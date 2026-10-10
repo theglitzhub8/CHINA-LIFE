@@ -22,7 +22,9 @@ command -v rsync >/dev/null || { echo 'Install rsync before deploying' >&2; exit
 # Do not delete host files or replace Hafrik's shared configuration/authentication.
 # Copy HTML last so newly requested scripts are already available.
 rsync -a --exclude=index.html --exclude=.user.ini "$source_root/public/" "$game_root/"
-rsync -a "$source_root/chinalife-api/" "$hafrik_root/api/v4/chinalife/"
+# Server-only credentials must never be copied from a developer checkout.
+# Existing archives are blocked by .htaccess; remove them manually after review.
+rsync -a --include=shared-config.php --include=studio-config.php --include=fortune-config.php --include=services-config.php --exclude='*-config.php' --exclude=polling-config.json --exclude='.env*' --exclude='*.zip' --exclude='*.tar*' --exclude='*.gz' --exclude='*.bak' --exclude='*.old' --exclude='__MACOSX/' "$source_root/chinalife-api/" "$hafrik_root/api/v4/chinalife/"
 rsync -a "$source_root/public/index.html" "$game_root/index.html"
 # Public "How to play" page at hafrik.com/how-to-play
 mkdir -p "$hafrik_root/how-to-play"
