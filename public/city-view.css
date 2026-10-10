@@ -1,72 +1,157 @@
-/* Rounded city interface. Scene geometry, lighting and labels remain in world.css. */
-#worldUI { --ui-ink: #252729; --ui-muted: #777a7e; }
-#worldUI .hud-bar { background: #fffffff0; border-color: #ffffff90; box-shadow: 0 6px 24px #00000014; }
-#worldUI .world-caption > button { background: #fffffff0; color: #383b3e; }
-#worldUI .world-dock { gap: 12px; overflow: visible; }
+/* Responsive interface layer; city geometry, lighting and labels are unchanged. */
+#worldUI {
+  --ui-ink: #252729;
+  --ui-muted: #777a7e;
+  --view-gap: 10px;
+  --view-edge: 12px;
+  --view-bottom: max(10px, env(safe-area-inset-bottom));
+  --dock-height: 170px;
+  --nav-height: 58px;
+  --dock-width: min(440px, calc(100% - 24px));
+}
+#worldUI .hud-bar { background: #fff; border-color: #ffffff90; box-shadow: 0 4px 14px #00000010; backdrop-filter: none; -webkit-backdrop-filter: none; }
+#worldUI .world-caption > button { background: #fff; color: #383b3e; backdrop-filter: none; -webkit-backdrop-filter: none; }
+#worldUI .world-dock {
+  left: 50%; right: auto; transform: translateX(-50%); bottom: var(--view-bottom);
+  width: var(--dock-width); max-height: none; gap: var(--view-gap); overflow: visible;
+}
 #worldUI .venue-card {
-  position: relative; border-radius: 32px; padding: 25px 20px 18px;
-  background: #fffffff5; border: 1px solid #ffffffa8;
-  box-shadow: 0 10px 45px #0000001f;
+  position: relative; box-sizing: border-box; border-radius: 24px;
+  padding: 16px 14px 8px; background: #fffffff5;
+  border: 1px solid #ffffffa8; box-shadow: 0 10px 35px #0000001a;
+  max-height: min(36dvh, 340px); overflow-y: auto; overscroll-behavior: contain;
 }
+#worldUI:is(.map-view,.home-view):not(.dock-open) .venue-card { padding: 16px 14px 8px; border-radius: 24px; }
 #worldUI .venue-card::before, #placeSheet::before {
-  content: ''; display: block; width: 42px; height: 5px;
-  position: absolute; top: 10px; left: calc(50% - 21px);
-  border-radius: 99px; background: #d9d9db; pointer-events: none;
+  content: ''; width: 34px; height: 4px; position: absolute; top: 6px;
+  left: calc(50% - 17px); border-radius: 99px; background: #d9d9db; pointer-events: none;
 }
-#worldUI .venue-heading h1 { font-size: 19px; letter-spacing: -.5px; line-height: 1.25; }
-#worldUI .venue-heading p { color: #777a7e; font-size: 12px; line-height: 1.4; }
-#worldUI .venue-icon { background: #f1f1f2; color: #343739; border-radius: 50%; }
+#worldUI .venue-heading { min-width: 0; gap: 9px; }
+#worldUI .venue-heading > div:not(.venue-icon) { min-width: 0; flex: 1; }
+#worldUI .venue-heading h1 { font-size: 15px; letter-spacing: -.3px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#worldUI .venue-heading p { color: #777a7e; font-size: 11px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#worldUI:is(.map-view,.home-view):not(.dock-open) .venue-heading p { display: none; }
+#worldUI .venue-icon { width: 30px; height: 30px; flex: none; font-size: 17px; background: #f1f1f2; color: #343739; border-radius: 50%; }
+#worldUI #worldVenueMore { width: 44px; height: 44px; flex: none; }
+#worldUI:is(.map-view,.home-view) .venue-heading::after { padding: 0; font-size: 16px; }
 .destination-search { display: none; }
 #worldUI.map-view .destination-search {
-  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px;
-  margin: 0 0 16px; padding: 12px 18px; border-radius: 99px;
-  border: 1px solid #dfdfe1; background: #fff; color: #252729;
-  box-shadow: 0 3px 14px #0000000b; text-align: left;
+  box-sizing: border-box; display: flex; align-items: center; gap: 10px;
+  width: 100%; min-height: 44px; margin: 0 0 6px; padding: 9px 14px;
+  border-radius: 99px; border: 1px solid #dfdfe1; background: #fff; color: #252729;
+  box-shadow: 0 2px 10px #00000008; text-align: left;
 }
-.destination-search span { font-size: 20px; font-weight: 750; letter-spacing: -.4px; }
-.destination-search svg { flex: none; }
-.destination-search small { margin-left: auto; color: #777a7e; font-size: 12px; }
+.destination-search span { font-size: 16px; font-weight: 750; letter-spacing: -.3px; }
+.destination-search svg { flex: none; width: 20px; height: 20px; }
+.destination-search small { margin-left: auto; color: #777a7e; font-size: 11px; }
 #worldUI .world-nav {
-  margin: 0 auto; width: min(100%, 380px); box-sizing: border-box;
-  padding: 6px; border-radius: 99px; background: #ffffffe0;
-  border: 1px solid #ffffffb0; box-shadow: 0 5px 25px #0000001c;
+  margin: 0 auto; width: min(100%, 360px); box-sizing: border-box;
+  padding: 4px; border-radius: 99px; background: #ffffffe0;
+  border: 1px solid #ffffffb0; box-shadow: 0 5px 20px #00000016;
   backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
 }
-#worldUI .world-nav button { border-radius: 99px; min-height: 54px; color: #303234; font-size: 11px; gap: 4px; }
+#worldUI .world-nav button { border-radius: 99px; min-height: 46px; padding: 4px 0; color: #303234; font-size: 11px; gap: 3px; }
+#worldUI .world-nav button span { height: 20px; }
+#worldUI .world-nav button svg { width: 20px; height: 20px; }
 #worldUI .world-nav button.active { background: #e6e5e3; color: #202224; }
-#worldUI .world-nav button:hover { background: #eeeded; }
+#worldUI .scene-tools { right: var(--view-edge); gap: 7px; }
 #worldUI .scene-tools button, #worldUI .scene-tools #mapLabelMode {
-  width: 48px; height: 48px; min-width: 48px; border-radius: 50%;
+  width: 44px; height: 44px; min-width: 44px; min-height: 44px; border-radius: 50%;
   background: #ffffffe6; color: #252729; border: 1px solid #ffffff90;
-  box-shadow: 0 5px 20px #0000001a;
+  box-shadow: 0 4px 16px #00000016; font-size: 18px;
+}
+#worldUI.map-view.search-open .map-controls {
+  right: 72px; max-height: max(80px, calc(100dvh - var(--dock-height) - 160px));
+  overflow-y: auto; overscroll-behavior: contain;
 }
 #worldUI .world-activities button { border-radius: 99px; min-height: 44px; background: #f6f6f6; color: #343739; border-color: #e4e4e6; }
-#worldUI .venue-say { border-radius: 99px; background: #f5f5f5; }
-#worldUI .venue-chat-button { border-radius: 18px; background: #f4f4f4; color: #343739; }
-#placeSheet.place-sheet { border-radius: 32px; background: #fffffff5; padding: 28px 20px 20px; }
-#activityDialog.travel-sheet { border-radius: 32px; background: #fffffff5; }
-#worldUI .action-status { border-radius: 24px; background: #fffffff5; color: #252729; box-shadow: 0 8px 30px #0000001f; }
-#worldUI .action-status progress { accent-color: #bba467; }
-#worldUI .action-status > button { background: #eeeeef; color: #343739; }
+#worldUI .venue-say { border-radius: 99px; background: #f5f5f5; min-height: 44px; }
+#worldUI .venue-chat-button { border-radius: 16px; background: #f4f4f4; color: #343739; min-height: 44px; }
+#placeSheet.place-sheet {
+  width: var(--dock-width); bottom: calc(var(--view-bottom) + var(--nav-height) + var(--view-gap));
+  border-radius: 24px; background: #fffffff5; padding: 24px 16px 16px;
+  max-height: min(48dvh, 420px); overflow-y: auto; overscroll-behavior: contain;
+}
+#activityDialog.travel-sheet { border-radius: 24px; background: #fffffff5; bottom: calc(max(10px, env(safe-area-inset-bottom)) + 66px); max-height: 58dvh; overflow-y: auto; }
+/* The measured dock height keeps travel, audio and notifications above either panel state. */
+#worldUI .action-status {
+  box-sizing: border-box; left: 12px; right: 72px; transform: none; width: auto;
+  bottom: calc(var(--view-bottom) + var(--dock-height) + 12px);
+  border-radius: 18px; padding: 10px; background: #fffffff5; color: #252729;
+  box-shadow: 0 8px 25px #0000001a; gap: 8px;
+}
+#worldUI .action-status b { font-size: 13px; }
+#worldUI .action-status small { font-size: 11px; }
+#worldUI .action-status progress { accent-color: #bba467; height: 4px; }
+#worldUI .action-status > button { background: #eeeeef; color: #343739; min-width: 44px; min-height: 44px; padding: 6px; }
+#worldUI .quick-voice { right: var(--view-edge); bottom: calc(var(--view-bottom) + var(--dock-height) + 12px); width: 44px; height: 44px; font-size: 20px; }
+#worldUI .radio-fab { right: var(--view-edge); bottom: calc(var(--view-bottom) + var(--dock-height) + 64px); }
+#worldUI .quick-talk { right: 64px; bottom: calc(var(--view-bottom) + var(--dock-height) + 12px); max-width: calc(100% - 80px); }
+#worldUI.action-running .quick-talk { bottom: calc(var(--view-bottom) + var(--dock-height) + 100px); }
+#toast { bottom: calc(max(10px, env(safe-area-inset-bottom)) + var(--dock-height, 196px) + 12px); max-width: calc(100% - 24px); }
 #worldUI :is(.destination-search, .world-nav button, .scene-tools button):focus-visible { outline: 3px solid #12907b; outline-offset: 3px; }
-@media (min-width: 1000px) {
-  #worldUI .quick-voice { right: 16px; bottom: 24px; }
-  #worldUI .radio-fab { right: 16px; bottom: 84px; }
-  #worldUI .quick-talk { right: 72px; bottom: 28px; }
+@media (hover: hover) { #worldUI .world-nav button:hover { background: #eeeded; } }
+@media (max-width: 999px) {
+  #worldUI.compact-controls .scene-tools { flex-direction: row; top: max(96px, calc(env(safe-area-inset-top) + 92px)); }
+  #worldUI.compact-controls.search-open .map-controls { top: max(152px, calc(env(safe-area-inset-top) + 148px)); right: 12px; }
+  #worldUI.compact-controls .quick-voice { top: max(96px, calc(env(safe-area-inset-top) + 92px)); left: 10px; right: auto; bottom: auto; }
+  #worldUI.compact-controls .radio-fab { top: max(96px, calc(env(safe-area-inset-top) + 92px)); left: 62px; right: auto; bottom: auto; }
+  #worldUI.compact-controls .action-status { right: 12px; }
+  #worldUI.compact-controls .radio-fab { width: 44px; min-width: 44px; height: 44px; padding: 2px; grid-template-columns: 1fr; border-radius: 50%; box-sizing: border-box; }
+  #worldUI.compact-controls .radio-cover { width: 36px; height: 36px; }
+  #worldUI.compact-controls .radio-fab :is(.radio-now,.radio-mini,.radio-line) { display: none; }
 }
 @media (max-width: 600px) {
-  #worldUI .world-dock { left: 12px; right: 12px; width: auto; max-height: none; bottom: max(12px, env(safe-area-inset-bottom)); }
-  #worldUI .venue-card { max-height: 43dvh; overflow-y: auto; overscroll-behavior: contain; }
-  #worldUI:is(.map-view,.home-view):not(.dock-open) .venue-card { padding: 25px 18px 16px; border-radius: 30px; }
-  #worldUI.map-view:not(.dock-open) .venue-heading h1 { font-size: 17px; }
-  #worldUI.map-view .destination-search small { display: none; }
-  #worldUI .scene-tools { right: 14px; gap: 9px; }
-  #worldUI .world-nav button { min-height: 50px; }
-  #worldUI.map-view .action-status { bottom: calc(280px + env(safe-area-inset-bottom)); }
+  #worldUI .world-hud { left: 10px; right: 10px; }
+  #worldUI .hud-bar .time-chip { padding: 0 6px; gap: 5px; font-size: 12px; }
+  #worldUI #worldMood { font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
+  #worldUI .hud-bar .money-chip { flex: none; padding-left: 6px; font-size: 13px; gap: 6px; }
+  #worldUI .money-chip > span { width: 32px; height: 32px; }
+  #worldUI .world-caption { max-width: calc(100% - 24px); gap: 6px; }
+  #worldUI .world-caption > button { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #worldUI .world-caption span { font-size: 11px; padding: 4px 8px; }
+  #worldUI .destination-search small { display: none; }
+  #worldUI .radio-fab, #worldUI .radio-fab.has-song { width: 44px; min-width: 44px; height: 44px; padding: 2px; grid-template-columns: 1fr; border-radius: 50%; box-sizing: border-box; }
+  #worldUI .radio-cover { width: 36px; height: 36px; }
+  #worldUI .radio-fab :is(.radio-now,.radio-mini,.radio-line) { display: none; }
 }
-@media (max-height: 650px) {
-  #worldUI .venue-card { max-height: 32dvh; overflow-y: auto; }
-  #worldUI.map-view .destination-search { min-height: 44px; margin-bottom: 10px; }
-  #worldUI .world-dock { gap: 6px; }
-  #worldUI .world-nav button { min-height: 44px; }
+@media (max-width: 360px) {
+  #worldUI { --view-edge: 8px; --dock-width: calc(100% - 16px); }
+  #worldUI #worldMood, #worldUI .hud-bar .hud-divider { display: none; }
+  #worldUI .venue-card { padding-left: 10px; padding-right: 10px; }
+  #worldUI .venue-heading h1 { font-size: 14px; }
+}
+@media (max-height: 500px) and (max-width: 500px) {
+  #worldUI.map-view:not(.dock-open) .venue-heading { display: none; }
+  #worldUI .venue-card { max-height: 30dvh; }
+}
+@media (min-width: 601px) {
+  #worldUI .action-status { left: 50%; right: auto; transform: translateX(-50%); width: 360px; }
+  #worldUI .radio-fab { bottom: calc(var(--view-bottom) + var(--dock-height) + 96px); }
+}
+@media (min-width: 1000px) {
+  #worldUI { --dock-width: 400px; --view-bottom: max(16px, env(safe-area-inset-bottom)); }
+  #worldUI .world-dock { left: auto; right: 16px; transform: none; }
+  #placeSheet.place-sheet { left: auto; right: 16px; transform: none; }
+  #worldUI .action-status { left: 16px; right: auto; transform: none; width: min(360px, calc(100% - 460px)); bottom: var(--view-bottom); }
+  #worldUI .quick-voice { right: 432px; bottom: var(--view-bottom); }
+  #worldUI .radio-fab { right: 432px; bottom: calc(var(--view-bottom) + 56px); max-width: min(260px, calc(100vw - 460px)); }
+  #worldUI .quick-talk { right: 488px; bottom: var(--view-bottom); }
+  #worldUI.action-running .quick-talk { bottom: calc(var(--view-bottom) + 112px); }
+}
+@media (max-height: 500px) and (min-width: 501px) {
+  #worldUI { --dock-width: min(340px, 46vw); --view-bottom: max(8px, env(safe-area-inset-bottom)); --view-gap: 6px; }
+  #worldUI .world-dock { left: auto; right: max(10px, env(safe-area-inset-right)); transform: none; }
+  #worldUI .venue-card { max-height: calc(100dvh - 170px); padding: 16px 12px 8px; }
+  #worldUI .destination-search small { display: none; }
+  #worldUI .scene-tools { left: max(10px, env(safe-area-inset-left)); right: auto; flex-direction: row; top: max(98px, calc(env(safe-area-inset-top) + 90px)); }
+  #worldUI .world-side { max-height: calc(100dvh - 200px); overflow-y: auto; }
+  #worldUI .action-status { left: 64px; right: calc(var(--dock-width) + 24px); transform: none; width: auto; bottom: var(--view-bottom); }
+  #worldUI .action-status > span { display: none; }
+  #worldUI .action-status small { display: none; }
+  #worldUI .quick-voice { left: 10px; right: auto; bottom: var(--view-bottom); }
+  #worldUI .radio-fab { left: 10px; right: auto; bottom: calc(var(--view-bottom) + 84px); max-width: calc(100vw - var(--dock-width) - 30px); }
+  #worldUI .quick-talk, #worldUI.action-running .quick-talk { left: 64px; right: auto; bottom: calc(var(--view-bottom) + 112px); max-width: calc(100vw - var(--dock-width) - 88px); }
+  #placeSheet.place-sheet { left: auto; right: 10px; transform: none; max-height: calc(100dvh - 150px); }
+  #worldUI.map-view.search-open .map-controls { top: max(148px, calc(env(safe-area-inset-top) + 140px)); right: calc(var(--dock-width) + 20px); left: 10px; max-height: calc(100dvh - 180px); overflow-y: auto; }
 }
