@@ -25,3 +25,11 @@ test('every public venue has an AI host, named the same way as on the server, bu
  const host=t.ai.agentsAt('liaoning');assert.equal(host[0].id,'host');assert.equal(host[0].name,'Yan','same name as the server (crc32)');assert.match(host[0].role,/Host ·/);assert.equal(t.ai.agentsAt('home').length,0);
  await t.ai.open('host','liaoning');const get=t.calls.find(c=>c.method==='GET');assert.match(get.path,/agent=host&place=liaoning/);
 });
+
+test('AI residents are labeled, move, and stay out of private homes without altering human counts',()=>{
+ const t=setup();t.context.ChinaLifeCloud.joined=true;t.game.state.place='cafe';
+ const first=t.ai.residents();assert.equal(first.length,6);assert.ok(first.every(p=>p.simulated&&p.name.endsWith(' · AI')&&p.id.startsWith('resident:')));assert.ok(first.some(p=>p.place==='cafe'));
+ t.passMinutes(1);const next=t.ai.residents();assert.notEqual(next[0].x,first[0].x);
+ t.game.state.place='home';assert.ok(t.ai.residents().every(p=>!p.place.startsWith('home')));
+ t.context.ChinaLifeCloud.joined=false;assert.equal(t.ai.residents().length,0);
+});

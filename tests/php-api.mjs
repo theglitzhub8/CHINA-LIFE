@@ -752,3 +752,38 @@ test('partner upload quotas reject storage exhaustion before adding photos or so
  const r=await fetch(base+'/api/v4/chinalife/partner.php?action=upload_song&title=Quota&duration=30',{method:'POST',headers:{Authorization:'Bearer test-12','content-type':'audio/mpeg'},body:Buffer.from('ID3testaudio')});
  assert.equal(r.status,409);assert.match((await r.json()).message,/storage limit/);
 });
+
+test('admin announcements reach every city and its notice board, and ordinary users cannot publish them',async()=>{
+ const body={action:'create_announcement',title:'Welcome everyone',body:'Global news <script>test</script>',hours:24};
+ assert.equal((await call(12,'admin.php','POST',body)).httpStatus,403);
+ const r=await call(1,'admin.php','POST',body);assert.equal(r.httpStatus,200,JSON.stringify(r));
+ for(const city of ['Shenyang','Beijing']){
+  const events=await call(12,'events.php?city='+city);assert.ok(events.data.announcements.some(n=>String(n.id)===r.data.id));
+ }
+ assert.ok((await call(12,'gist.php?city=Shenyang')).data.posts.some(n=>String(n.id)===r.data.id));
+ assert.equal((await call(1,'admin.php','POST',{...body,title:''})).httpStatus,400);
+});
+test('daily rewards are server controlled, once per Beijing date, and stale saves cannot reset the claim',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id=11');
+ let saved=(await call(11,'save.php')).data;
+ const date=new Date(Date.now()+8*3600e3).toISOString().slice(0,10);
+ const yesterday=new Date(Date.now()+8*3600e3-864e5).toISOString().slice(0,10);
+ sql(`USE chinalife_test; UPDATE chinalife_saves SET game_state=JSON_SET(game_state,'$.lastVisit','${yesterday}','$.streak',2) WHERE user_id=11`);
+ const before=(await call(11,'save.php')).data.save.game;
+ const claims=await Promise.all([call(11,'daily.php','POST',{}),call(11,'daily.php','POST',{})]);
+ assert.deepEqual(claims.map(r=>r.httpStatus).sort(),[200,409]);
+ saved=(await call(11,'save.php')).data;assert.equal(saved.save.game.money,Number(before.money)+150);assert.equal(saved.save.game.xp,Number(before.xp)+60);assert.equal(saved.save.game.lastVisit,date);
+ const upload=await call(11,'save.php','POST',{revision:saved.revision,save:{character:{},game:{...saved.save.game,lastVisit:'',streak:0,day:saved.save.game.day+1}}});assert.equal(upload.httpStatus,200);
+ const restored=(await call(11,'save.php')).data;assert.equal(restored.save.game.lastVisit,date);assert.equal(restored.save.game.day,saved.save.game.day);assert.equal((await call(11,'daily.php','POST',{})).httpStatus,409);
+});
+
+test('signed-in game client claims and restores the server daily reward without paying twice',async()=>{
+ const yesterday=new Date(Date.now()+8*3600e3-864e5).toISOString().slice(0,10);
+ sql(`USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id=11; UPDATE chinalife_saves SET game_state=JSON_SET(game_state,'$.lastVisit','${yesterday}','$.streak',0) WHERE user_id=11`);
+ const t=harness(null),c=t.context,stored=new Map();c.localStorage={getItem:k=>stored.get(k)||null,setItem:(k,v)=>stored.set(k,v)};c.HafrikSession={token:'test-11',user:{id:'11',name:'user11'}};c.URLSearchParams=URLSearchParams;c.fetch=(url,options)=>fetch(base+new URL(url).pathname+new URL(url).search,options);
+ await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);
+ const xp=t.game.state.sharedXP||0,total=t.game.state.transferTotal||0;
+ await t.game.claimDaily();assert.equal(t.game.state.sharedXP,xp+20);assert.equal(t.game.state.transferTotal,total+50);assert.equal(t.game.state.lastVisit,new Date(Date.now()+8*3600e3).toISOString().slice(0,10));
+ const money=t.game.state.money;await t.game.claimDaily();assert.equal(t.game.state.money,money);assert.equal(await c.ChinaLifeCloud.upload(),true);
+ assert.equal((await call(11,'save.php')).data.save.game.lastVisit,t.game.state.lastVisit);
+});

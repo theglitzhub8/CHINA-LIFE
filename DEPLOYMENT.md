@@ -349,3 +349,13 @@ Partner accounts have cumulative limits of 50 MB/100 photos and 500 MB/60 songs.
 Deployment excludes private `*-config.php` files and archives, while retaining the four public game catalog configuration files. Existing server credentials are preserved. Previously deployed archives are not deleted automatically: review and remove them on the host. Verify archive/config requests return 403 or 404 on the live server; Apache must honor `.htaccess`, and Nginx needs equivalent deny rules. Directory indexing is disabled.
 
 Admin sign-out clears saved device credentials but does not revoke Hafrik sessions or stop other already-open tabs. Shared registration and authentication are unchanged. Scoped ChinaLife sessions, database isolation and server-authoritative money/XP remain separate follow-up work.
+
+## Announcements, Beijing calendar and AI residents
+
+Admins publish a global notification under Admin → Gist → City → All cities · show on every screen. These announcements use the existing gist table (empty city is the admin-only global scope), appear on every signed-in account's screen on the next events refresh (up to 45 seconds), and are included on every city's notice board. Dismissal is remembered per account/device. The Gist controls can end a notice. Expired notices stop appearing.
+
+Account daily rewards now use daily.php and a transaction lock on the saved character, once per Beijing calendar date. Save uploads cannot reset the claim date/streak or advance the account day arbitrarily. Client calendar anchors survive reloads, weekday/date displays and reset countdowns use Beijing time. Existing saved reward dates are preserved. No schema migration is needed.
+
+Six clearly labeled AI residents follow a shared schedule between public venues and move around the current venue. Chat opens the existing AI character service and requires that service to be enabled on the server. Residents do not increase human online counts, enter private homes, receive money, become friends or impersonate real accounts. Only the small remote-avatar integration in world.js changed; the city layout, styling and map controls are unchanged.
+
+Deploy daily.php, save.php and the updated clients together from the politics release checkout. Verify a notice with two accounts in different cities, a daily claim followed by refresh (no second payout), the real Beijing date/time, and resident chat in a public venue. Existing security controls and politics remain in place.

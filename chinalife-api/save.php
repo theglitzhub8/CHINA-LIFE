@@ -27,6 +27,13 @@ foreach (['money','xp','day','hour'] as $key) if (!is_numeric($game[$key]??null)
 foreach (['energy','hunger','hygiene','bladder','fun','social'] as $key) if (!is_numeric($game['needs'][$key]??null)||$game['needs'][$key]<0||$game['needs'][$key]>100) cl_fail('Invalid character needs');
 $stored=cl_one('SELECT game_state,TIMESTAMPDIFF(SECOND,updated_at,NOW()) elapsed FROM chinalife_saves WHERE user_id=?','i',[$uid]);
 $storedGame=$stored?json_decode($stored['game_state'],true):[];
+// Daily rewards are awarded by daily.php, never by an uploaded save.
+$game['lastVisit']=$storedGame['lastVisit']??'';$game['streak']=$storedGame['streak']??0;
+// Advance the saved day only at Beijing midnight, using the stored calendar anchor.
+$clockDay=intdiv(time()+8*3600,86400);$anchor=(int)($storedGame['chinaDay']??$clockDay);if($anchor<=0||$anchor>$clockDay)$anchor=$clockDay;
+$game['day']=$stored?(int)($storedGame['day']??1)+max(0,$clockDay-$anchor):1;
+$game['chinaDay']=$clockDay;$game['hour']=intdiv(time()+8*3600,60)%1440;
+
 if(($game['transferTotal']??0)!==($storedGame['transferTotal']??0)) {http_response_code(409);json_response('error',cl_save_result($uid),'Refresh your money transfers before saving.');}
 if(($game['sharedXP']??0)!==($storedGame['sharedXP']??0)){http_response_code(409);json_response('error',cl_save_result($uid),'Refresh shared activity rewards before saving.');}
 // XP and money come from the player's device, so growth is capped by real time since the last save.
