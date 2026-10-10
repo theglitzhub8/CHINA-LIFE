@@ -1,4 +1,4 @@
 Options -Indexes
-<FilesMatch "(?i)^(migrate|common|.*-config|push-setup|push-daily)\.php$|\.(sql|txt|md|zip|tar|gz|bak|old|env|log)$|~$">
+<FilesMatch "(?i)^polling-config\.json$|^(migrate|common|.*-config|push-setup|push-daily)\.php$|\.(sql|txt|md|zip|tar|gz|bak|old|env|log)$|~$">
   Require all denied
 </FilesMatch>
