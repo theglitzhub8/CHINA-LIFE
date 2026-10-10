@@ -21,12 +21,22 @@
   border: 1px solid #ffffffa8; box-shadow: 0 10px 35px #0000001a;
   max-height: min(36dvh, 340px); overflow-y: auto; overscroll-behavior: contain;
 }
-#worldUI:is(.map-view,.home-view):not(.dock-open) .venue-card { padding: 16px 14px 8px; border-radius: 24px; }
+#worldUI:is(.map-view,.home-view):not(.dock-open) .venue-card { padding: 6px 12px; border-radius: 22px; }
 #worldUI .venue-card::before, #placeSheet::before {
   content: ''; width: 34px; height: 4px; position: absolute; top: 6px;
   left: calc(50% - 17px); border-radius: 99px; background: #d9d9db; pointer-events: none;
 }
 #worldUI .venue-heading { min-width: 0; gap: 9px; }
+#worldUI:not(.dock-open) .venue-card {
+  padding: 6px 12px; border-radius: 22px; max-height: none; overflow: hidden;
+}
+#worldUI:not(.dock-open) .venue-card::before { display: none; }
+#worldUI:not(.dock-open) #worldVenueMore { display: none; }
+#worldUI:not(.dock-open) .venue-card :is(.destination-search,.venue-heading p,.venue-say,.world-activities,.venue-social-controls) { display: none; }
+#worldUI:not(.dock-open) .venue-heading { cursor: pointer; }
+#worldUI:is(.map-view,.home-view) .venue-heading::after { display: none; }
+#worldUI #panelToggle { flex: none; width: 44px; height: 44px; border-radius: 50%; background: transparent; color: #66747b; font-size: 20px; padding: 0; }
+#worldUI #panelToggle:hover { background: #f0f2f3; }
 #worldUI .venue-heading > div:not(.venue-icon) { min-width: 0; flex: 1; }
 #worldUI .venue-heading h1 { font-size: 15px; letter-spacing: -.3px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #worldUI .venue-heading p { color: #777a7e; font-size: 11px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -122,7 +132,6 @@
   #worldUI .venue-heading h1 { font-size: 14px; }
 }
 @media (max-height: 500px) and (max-width: 500px) {
-  #worldUI.map-view:not(.dock-open) .venue-heading { display: none; }
   #worldUI .venue-card { max-height: 30dvh; }
 }
 @media (min-width: 601px) {

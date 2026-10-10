@@ -52,3 +52,18 @@ test('destination button focuses existing search without closing an already open
   assert.equal(opened, 1);
   assert.equal(focused, 2);
 });
+
+test('info panel starts minimized and can be opened or minimized from its accessible button or title', () => {
+  const p = preview(), toggle = p.document.getElementById('panelToggle');
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+  assert.equal(toggle.getAttribute('aria-label'), 'Expand info menu');
+  toggle.click(); p.flush();
+  assert.equal(p.ui.classList.contains('dock-open'), true);
+  assert.equal(toggle.getAttribute('aria-expanded'), 'true');
+  assert.equal(toggle.getAttribute('aria-label'), 'Minimize info menu');
+  p.document.getElementById('worldVenueTitle').click(); p.flush();
+  assert.equal(p.ui.classList.contains('dock-open'), false);
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+  p.document.getElementById('worldVenueMore').click();
+  assert.equal(p.ui.classList.contains('dock-open'), false, 'details button does not toggle the panel');
+});
