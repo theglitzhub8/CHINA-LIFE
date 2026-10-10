@@ -10,7 +10,7 @@ async function setup(options={}){
    if(options.uploadStatus)return Response.json({status:'error',message:options.uploadStatus===409?'Newer save exists':'Session expired',data:{revision:2,save:{game:{...fixture(),money:5000}}}},{status:options.uploadStatus});
    const body=JSON.parse(request.body);money=body.save.game.money;revision++;return Response.json({status:'success',data:{revision}});
   }
-  if(url.pathname.endsWith('presence.php')){
+  if(url.pathname.endsWith('presence.php')){options.presenceCalls=(options.presenceCalls||0)+1;
    if(request.method==='GET'&&options.defer){options.defer=false;return new Promise(resolve=>pending=()=>resolve(Response.json({status:'success',data:{players:[{id:'2',city:'Shenyang',place:'home',name:'Other'}]}})))}
    return Response.json({status:'success',data:{players:[]}});
   }
@@ -39,3 +39,5 @@ test('changing venue discards a pending presence response',async()=>{
  const pulse=t.context.ChinaLifeCloud.refresh();await new Promise(setImmediate);t.game.state.place='park';t.release();await pulse;
  assert.equal(t.context.ChinaLifeCloud.players.length,0);
 });
+
+test('background presence updates are throttled but venue changes refresh immediately',async()=>{const options={};const t=await setup(options);await t.context.ChinaLifeCloud.refresh();const before=options.presenceCalls;await t.context.ChinaLifeCloud.refresh(true);await t.context.ChinaLifeCloud.refresh(true);assert.equal(options.presenceCalls,before);t.game.state.place='cafe';await t.context.ChinaLifeCloud.refresh(true);assert.equal(options.presenceCalls,before+2);});

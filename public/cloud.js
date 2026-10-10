@@ -195,9 +195,13 @@ function updateFeed(city){const now=Date.now(),current=new Map(players.filter(p=
 // What you are doing, shared with players in your city (People shows "💃 Dancing at 007 Club").
 const ACTIVITY={basketball:'sport',exercise:'sport',browse:'shop',cook:'cook',dance:'dance',eat:'eat',perform:'music',phone:'chat',talk:'chat',pray:'pray',serve:'work',type:'work',sit:'relax',sleep:'sleep',study:'study',medical:'health'};
 function activityNow(){const w=window.ChinaLifeWorld;if(w?.travelMode)return 'travel';const k=w?.actionKind;if(k&&ACTIVITY[k])return ACTIVITY[k];return w?.walking?'walk':'idle'}
-async function refreshPresence() {
+let presenceAttempt=0,presenceRoom='';
+async function refreshPresence(background=false) {
   if (!account || !presence || !game.state.created || document.hidden || polling) return false;
   const generation = epoch, state = game.state, city = state.city, place = state.place, world = window.ChinaLifeWorld, position = world?.roomPosition ?? (world?.view==='venue'?world.position:null);
+  const room=generation+':'+city+':'+place,interval=players.some(p=>p.city===city&&p.place===place)?5000:15000;
+  if(background&&room===presenceRoom&&Date.now()-presenceAttempt<interval)return true;
+  presenceRoom=room;presenceAttempt=Date.now();
   polling = true;
   try {
     await api('/chinalife/presence.php', 'POST', {city,place,name:state.name,color:state.color,skin:state.appearance?.skin || '#8b5c43',hair:state.appearance?.hair || 'cropped',x:position?.x || 0,z:position?.z || 0,activity:activityNow()});
@@ -258,16 +262,17 @@ $('cloudDialog').addEventListener('cancel', e => {if (!account) e.preventDefault
 $('cloudDialog').addEventListener('close', () => {if (!account) setTimeout(() => {if (!account) show()}, 0)});
 setInterval(() => {if (!account && !$('cloudDialog').open && window.ChinaLifeCloud?.ready) show()}, 1000);
 window.addEventListener('chinalife:save', () => {if (auto && !loading) scheduleSave()});
-window.addEventListener('chinalife:update', () => {if (!loading && account && game.state.created) {if (!presence) join(); else refreshPresence()}});
+window.addEventListener('chinalife:update', () => {if (!loading && account && game.state.created) {if (!presence) join(); else refreshPresence(true)}});
 window.addEventListener('hafrik:session', event => {if (event.detail?.token) connect(event.detail,{source:'app'})});
 document.addEventListener('visibilitychange', () => {if (!document.hidden && account && game.state.created) {if (presence) refreshPresence(); else join()}});
 // A failed first join must not disable all later heartbeats.
 async function presenceHeartbeat() {
   if (loading || !auto || !account || !game.state.created || document.hidden) return false;
-  return presence ? refreshPresence() : join();
+  if(!presence&&presenceRoom===epoch+':'+game.state.city+':'+game.state.place&&Date.now()-presenceAttempt<15000)return false;
+  return presence ? refreshPresence(true) : join();
 }
 setInterval(presenceHeartbeat, 2500);
-setInterval(syncTransfers,5000);
+setInterval(syncTransfers,15000);
 // Players online per city and in total, for the top bar, travel and rank screens.
 let online=null;
 async function refreshOnline(){if(!account||document.hidden)return;try{const result=await api('/chinalife/online.php'),data=result.data||result;online={online:data.online||0,cities:data.cities||{},players:data.players||0};window.dispatchEvent(new CustomEvent('chinalife:online',{detail:online}))}catch{}}

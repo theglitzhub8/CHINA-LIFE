@@ -71,6 +71,9 @@ $places=[];foreach (array_slice(is_array($c['places']??null)?$c['places']:[],0,8
 $partners=array_map(fn($r)=>'- '.$r['icon'].' '.$r['name'].' ('.$r['kind'].($r['district']?', '.$r['district']:'').')'.($r['menu']?': '.implode(', ',array_map(fn($m)=>$m[0].' ¥'.$m[1],array_slice($r['menu'],0,3))):''),array_slice(cl_restaurants($city),0,30));
 $events=array_map(fn($e)=>'- '.$e['title'].($e['place']?' at '.($places[$e['place']]??$e['place']):' (whole city)'),cl_rows('SELECT title,place FROM chinalife_events WHERE city=? AND starts_at<=NOW() AND ends_at>NOW() ORDER BY id DESC LIMIT 10','s',[$city]));
 [$name,$role,,$persona]=$agentDef;$persona=str_replace(['{name}','{venue}'],[$name,$places[$hostPlace]??($str('place',60)?:'this place')],$persona);
+// Local resident aliases are names only, never instructions from the client.
+$residentName=$str('residentName',40);
+if(preg_match('/^[A-Za-z]{2,12} [A-Za-z]{2,12}$/D',$residentName)){$persona=str_replace($name,$residentName,$persona);$name=$residentName;}
 $system=str_replace('{city}',$city,$persona)."\n\n"
  ."You live inside ChinaLife, a life game where players from around the world live in {$city}, China. Talk like a real person in a chat: warm, short (usually under 90 words), simple English unless the player writes in another language.\n"
  ."Rules: keep everything friendly and suitable for all ages. No sexual or romantic roleplay, no hate, no violence, nothing illegal, no political arguments. Never ask for passwords, payment details or personal information. For real-world visas, health, safety or money questions give general tips and say to check official sources. Do not make up businesses: only recommend the real ones listed below, or the game's places.\n"

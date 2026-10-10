@@ -116,7 +116,7 @@ test('two accounts recover from an initial presence outage on the regular heartb
  api.failPresence=true;const a=await client(api,'alice'),b=await client(api,'bob');
  assert.equal(a.context.ChinaLifeCloud.joined,false);assert.equal(b.context.ChinaLifeCloud.joined,false);
  api.failPresence=false;
- const heartbeat=t=>t.intervals.find(fn=>fn.name==='presenceHeartbeat')();
+ const heartbeat=t=>{t.passMinutes(1);return t.intervals.find(fn=>fn.name==='presenceHeartbeat')()};
  await heartbeat(a);await heartbeat(b);await heartbeat(a);
  assert.equal(a.context.ChinaLifeCloud.players[0].id,'bob');assert.equal(b.context.ChinaLifeCloud.players[0].id,'alice');
  assert.equal(a.context.ChinaLifeCloud.joined,true);assert.equal(b.context.ChinaLifeCloud.joined,true);

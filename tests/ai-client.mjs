@@ -28,8 +28,12 @@ test('every public venue has an AI host, named the same way as on the server, bu
 
 test('AI residents are labeled, move, and stay out of private homes without altering human counts',()=>{
  const t=setup();t.context.ChinaLifeCloud.joined=true;t.game.state.place='cafe';
- const first=t.ai.residents();assert.equal(first.length,6);assert.ok(first.every(p=>p.simulated&&p.name.endsWith(' · AI')&&p.id.startsWith('resident:')));assert.ok(first.some(p=>p.place==='cafe'));
+ const first=t.ai.residents();assert.equal(first.length,6);assert.ok(first.every(p=>p.simulated&&!p.name.includes('AI')&&p.id.startsWith('resident:')));assert.equal(new Set(first.map(p=>p.name)).size,6);
  t.passMinutes(1);const next=t.ai.residents();assert.notEqual(next[0].x,first[0].x);
  t.game.state.place='home';assert.ok(t.ai.residents().every(p=>!p.place.startsWith('home')));
  t.context.ChinaLifeCloud.joined=false;assert.equal(t.ai.residents().length,0);
 });
+
+test('resident names vary by city, visiting keeps the destination stable, and chat offers a visit button',async()=>{const t=setup();t.context.ChinaLifeCloud.joined=true;const first=t.ai.residents();t.game.state.city='Beijing';const other=t.ai.residents();assert.ok(other.every(p=>!first.some(q=>q.name===p.name)));t.game.state.city='Shenyang';const r=t.ai.residents()[0];await t.ai.openResident(r.id);assert.match(t.dialog.textContent,new RegExp(r.name));assert.match(t.dialog.textContent,/Virtual resident/);t.dialog.querySelector('#residentGo').onclick();assert.equal(t.went,r.place);t.game.state.place=r.place;assert.equal(t.ai.residents().find(p=>p.id===r.id).place,r.place);});
+
+test('arrival greetings run locally once and do not send chat requests',()=>{const t=setup();t.context.ChinaLifeCloud.joined=true;const r=t.ai.residents()[0];t.game.state.place=r.place;t.context.ChinaLifeWorld={view:'venue'};const greetings=[];t.game.toast=text=>greetings.push(text);t.context.dispatchEvent(new t.context.Event('chinalife:update'));t.context.dispatchEvent(new t.context.Event('chinalife:players'));assert.equal(greetings.length,1);assert.match(greetings[0],/Welcome to/);assert.equal(t.calls.length,0);});
