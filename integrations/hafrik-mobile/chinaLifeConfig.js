@@ -35,7 +35,7 @@ export function withChinaLifeTestMenu(items, config = CHINA_LIFE_CONFIG) {
 export function chinaLifeSessionScript(token, user, config = CHINA_LIFE_CONFIG, theme = 'light') {
   if (!token || !config) return 'true;';
   const session = JSON.stringify({token, user:{id:user?.user_id ?? user?.id, username:user?.username ?? user?.user_name, name:user?.name ?? user?.user_fullname}}).replace(/</g, '\\u003c');
-  return `(function(){if(window.location.origin!==${JSON.stringify(config.origin)}||!window.location.pathname.startsWith(${JSON.stringify(config.basePath)}))return;window.ChinaLifeHafrikNative=true;if(typeof document!=='undefined')document.documentElement.dataset.hafrikTheme=${JSON.stringify(theme==='dark'?'dark':'light')};if(window.HafrikSession&&window.HafrikSession.token===(${session}).token&&window.ChinaLifeAuth&&window.ChinaLifeAuth.token===(${session}).token)return;window.HafrikSession=${session};window.dispatchEvent(new CustomEvent('hafrik:session',{detail:window.HafrikSession}));})();true;`;
+  return `(function(){if(window.location.origin!==${JSON.stringify(config.origin)}||!window.location.pathname.startsWith(${JSON.stringify(config.basePath)}))return;window.ChinaLifeHafrikNative=true;window.ChinaLifeHafrikSharing=true;if(typeof document!=='undefined')document.documentElement.dataset.hafrikTheme=${JSON.stringify(theme==='dark'?'dark':'light')};if(window.HafrikSession&&window.HafrikSession.token===(${session}).token&&window.ChinaLifeAuth&&window.ChinaLifeAuth.token===(${session}).token)return;window.HafrikSession=${session};window.dispatchEvent(new CustomEvent('hafrik:session',{detail:window.HafrikSession}));})();true;`;
 }
 
 // Fixed destinations only. Web content cannot choose routes, URLs or navigation parameters.

@@ -4,6 +4,8 @@ import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import useStore from '../../repository/store';
+import { chinaLifeMilestoneDraft } from './chinaLifeExperience';
 import { FontFamily } from '../../theme';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../AuthContext';
@@ -12,6 +14,8 @@ import { CHINA_LIFE_CONFIG, isChinaLifeNavigationAllowed, chinaLifeSessionScript
 export default function ChinaLifeScreen({ navigation }) {
   const { colors, resolvedMode } = useTheme();
   const { user, token } = useAuth();
+  const openComposer = useStore(state => state.openComposer);
+  const composerOpen = useStore(state => state.isComposerOpen);
   const insets = useSafeAreaInsets();
   const focused = useIsFocused();
   const web = useRef(null);
@@ -39,11 +43,11 @@ export default function ChinaLifeScreen({ navigation }) {
   };
 
   useEffect(() => {
-    const update = (state = AppState.currentState) => web.current?.injectJavaScript(chinaLifeActivityScript(focused && state === 'active'));
+    const update = (state = AppState.currentState) => web.current?.injectJavaScript(chinaLifeActivityScript(focused && !composerOpen && state === 'active'));
     update();
     const subscription = AppState.addEventListener('change', update);
     return () => subscription.remove();
-  }, [focused]);
+  }, [focused, composerOpen]);
   useEffect(() => {
     if (focused) web.current?.injectJavaScript(chinaLifeSessionScript(token, user, CHINA_LIFE_CONFIG, resolvedMode));
   }, [focused, token, user, resolvedMode]);
@@ -166,6 +170,10 @@ export default function ChinaLifeScreen({ navigation }) {
             try {
               const message = JSON.parse(nativeEvent.data);
               if (message.type === 'chinalife:auth-request') web.current?.injectJavaScript(chinaLifeSessionScript(token, user, config, resolvedMode));
+              if (message.type === 'chinalife:share-milestone' && token && !useStore.getState().isComposerOpen) {
+                const draft = chinaLifeMilestoneDraft(message.milestone, config);
+                if (draft) { web.current?.injectJavaScript(chinaLifeActivityScript(false, config)); openComposer(draft); }
+              }
               if (message.type === 'chinalife:hafrik-open') {
                 const destination = chinaLifeHafrikDestination(message.destination);
                 if (destination) { web.current?.injectJavaScript(chinaLifeActivityScript(false, config)); navigation.push(destination.name, destination.params); }
@@ -188,7 +196,7 @@ export default function ChinaLifeScreen({ navigation }) {
           onLoadStart={({ nativeEvent }) => { documentUrl.current = nativeEvent.url; failed.current = false; setLoading(true); setProgress(0); }}
           onLoadProgress={({ nativeEvent }) => setProgress(nativeEvent.progress)}
           onLoad={() => {
-            if (!failed.current) { loaded.current = true; setError(null); setLoading(false); web.current?.injectJavaScript(chinaLifeActivityScript(focused && AppState.currentState === 'active', config)); }
+            if (!failed.current) { loaded.current = true; setError(null); setLoading(false); web.current?.injectJavaScript(chinaLifeActivityScript(focused && !composerOpen && AppState.currentState === 'active', config)); }
           }}
           onError={failLoad}
           onHttpError={({ nativeEvent }) => {
