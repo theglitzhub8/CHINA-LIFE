@@ -1,6 +1,6 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const screen=(title,body)=>window.ChinaLife.showScreen(esc(title),'Apply directly with your Hafrik account.',body);
+const screen=(title,body)=>{window.ChinaLife.showScreen(esc(title),'Apply directly with your Hafrik account.',body);$('activityDialog').classList.add('hafrik-panel');const eyebrow=$('activityContent').querySelector('.eyebrow');if(eyebrow)eyebrow.textContent='HAFRIK SERVICES';};
 const button=(id,label)=>'<button id="'+id+'" class="choice-action">'+esc(label)+'</button>';
 let generation=0;
 const owner=()=>String(window.ChinaLife.accountId??'');

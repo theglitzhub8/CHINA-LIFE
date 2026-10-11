@@ -32,10 +32,10 @@ export function withChinaLifeTestMenu(items, config = CHINA_LIFE_CONFIG) {
 }
 
 // Only inject the app session into the configured game document. Tokens stay out of URLs.
-export function chinaLifeSessionScript(token, user, config = CHINA_LIFE_CONFIG) {
+export function chinaLifeSessionScript(token, user, config = CHINA_LIFE_CONFIG, theme = 'light') {
   if (!token || !config) return 'true;';
   const session = JSON.stringify({token, user:{id:user?.user_id ?? user?.id, username:user?.username ?? user?.user_name, name:user?.name ?? user?.user_fullname}}).replace(/</g, '\\u003c');
-  return `(function(){if(window.location.origin!==${JSON.stringify(config.origin)}||!window.location.pathname.startsWith(${JSON.stringify(config.basePath)}))return;window.ChinaLifeHafrikNative=true;if(window.HafrikSession&&window.HafrikSession.token===(${session}).token&&window.ChinaLifeAuth&&window.ChinaLifeAuth.token===(${session}).token)return;window.HafrikSession=${session};window.dispatchEvent(new CustomEvent('hafrik:session',{detail:window.HafrikSession}));})();true;`;
+  return `(function(){if(window.location.origin!==${JSON.stringify(config.origin)}||!window.location.pathname.startsWith(${JSON.stringify(config.basePath)}))return;window.ChinaLifeHafrikNative=true;if(typeof document!=='undefined')document.documentElement.dataset.hafrikTheme=${JSON.stringify(theme==='dark'?'dark':'light')};if(window.HafrikSession&&window.HafrikSession.token===(${session}).token&&window.ChinaLifeAuth&&window.ChinaLifeAuth.token===(${session}).token)return;window.HafrikSession=${session};window.dispatchEvent(new CustomEvent('hafrik:session',{detail:window.HafrikSession}));})();true;`;
 }
 
 // Fixed destinations only. Web content cannot choose routes, URLs or navigation parameters.
@@ -53,4 +53,10 @@ export function chinaLifeHafrikDestination(value) {
     case 'exchange': return {name:'ExchangeHome'};
     default: return null;
   }
+}
+
+// Native focus is separate from authentication and never carries credentials.
+export function chinaLifeActivityScript(active, config = CHINA_LIFE_CONFIG) {
+  if (!config) return 'true;';
+  return `(function(){if(window.location.origin!==${JSON.stringify(config.origin)}||!window.location.pathname.startsWith(${JSON.stringify(config.basePath)}))return;window.ChinaLifeNativePaused=${!active};window.dispatchEvent(new CustomEvent('chinalife:native-active',{detail:{active:${!!active}}}));})();true;`;
 }
