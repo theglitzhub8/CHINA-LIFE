@@ -22,7 +22,7 @@ if ($method === 'POST') {
     cl_run('INSERT INTO chinalife_presence(user_id,name,city,place,color,skin,hair,x,z,activity,arrived_at,seen_at) VALUES(?,?,?,?,?,?,?,?,?,?,NOW(),NOW()) ON DUPLICATE KEY UPDATE arrived_at=IF(city=VALUES(city) AND place=VALUES(place) AND seen_at>=DATE_SUB(NOW(),INTERVAL 60 SECOND),arrived_at,NOW()),name=VALUES(name),city=VALUES(city),place=VALUES(place),color=VALUES(color),skin=VALUES(skin),hair=VALUES(hair),x=VALUES(x),z=VALUES(z),activity=VALUES(activity),seen_at=NOW()', 'issssssdds',[$uid,trim($name),$city,$place,$input['color'],$input['skin'],$input['hair'],(float)$input['x'],(float)$input['z'],$activity]);
 }
 $city = $input['city'] ?? '';
-if (!in_array($city,['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'],true)) cl_fail('Choose a valid city');
+if (!in_array($city,['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'],true)) cl_fail('Choose a valid city');
 $own=cl_one('SELECT place FROM chinalife_presence WHERE user_id=? AND city=?','is',[$uid,$city]);
 $private=$own&&cl_private_place($own['place']);$roomPlace=$own['place']??'';
 if($private){$base=explode('@',$roomPlace)[0];$owner=explode('@',$roomPlace)[1]??(string)$uid;cl_scoped_room(['city'=>$city,'place'=>$base,'homeOwner'=>$owner]);

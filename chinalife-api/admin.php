@@ -60,7 +60,7 @@ if ($action==='create_announcement') {
  cl_run('INSERT INTO chinalife_gist_posts(city,title,body,link,starts_at,ends_at,created_by,created_at) VALUES("",?,?,"",NOW(),DATE_ADD(NOW(),INTERVAL ? HOUR),?,NOW())','ssii',[$title,$body,$hours,$uid]);
  $id=(string)$db->insert_id;admin_log('create_announcement',null,null,$title);json_response('success',['id'=>$id]);
 }
-if ($action==='create_gist') { $title=trim((string)($input['title']??''));$body=trim((string)($input['body']??''));$city=trim((string)($input['city']??'Shenyang'));$link=trim((string)($input['link']??''));$hours=$input['hours']??168;if($title===''||mb_strlen($title)>100||$body===''||mb_strlen($body)>600||!in_array($city,['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'],true)||!is_int($hours)||$hours<1||$hours>2160)cl_fail('Check the gist fields');if($link!==''&&!preg_match('#^https://[^\s<>"]{3,290}$#',$link))cl_fail('Links must start with https://');cl_run('INSERT INTO chinalife_gist_posts(city,title,body,link,starts_at,ends_at,created_by,created_at) VALUES(?,?,?,?,NOW(),DATE_ADD(NOW(),INTERVAL ? HOUR),?,NOW())','ssssii',[$city,$title,$body,$link,$hours,$uid]);admin_log('create_gist',null,null,$city.' · '.$title);json_response('success',['id'=>(string)$db->insert_id]);}
+if ($action==='create_gist') { $title=trim((string)($input['title']??''));$body=trim((string)($input['body']??''));$city=trim((string)($input['city']??'Shenyang'));$link=trim((string)($input['link']??''));$hours=$input['hours']??168;if($title===''||mb_strlen($title)>100||$body===''||mb_strlen($body)>600||!in_array($city,['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'],true)||!is_int($hours)||$hours<1||$hours>2160)cl_fail('Check the gist fields');if($link!==''&&!preg_match('#^https://[^\s<>"]{3,290}$#',$link))cl_fail('Links must start with https://');cl_run('INSERT INTO chinalife_gist_posts(city,title,body,link,starts_at,ends_at,created_by,created_at) VALUES(?,?,?,?,NOW(),DATE_ADD(NOW(),INTERVAL ? HOUR),?,NOW())','ssssii',[$city,$title,$body,$link,$hours,$uid]);admin_log('create_gist',null,null,$city.' · '.$title);json_response('success',['id'=>(string)$db->insert_id]);}
 if ($action==='approve_gist') { $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);if(!$id)cl_fail('Choose a post');cl_run('UPDATE chinalife_gist_posts SET active=1,starts_at=NOW(),ends_at=DATE_ADD(NOW(),INTERVAL 7 DAY) WHERE id=? AND active=0','i',[$id]);admin_log('approve_gist',null,null,(string)$id);json_response('success',['approved'=>true]);}
 if ($action==='end_gist') { $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);if(!$id)cl_fail('Choose a post');cl_run('UPDATE chinalife_gist_posts SET active=0,ends_at=NOW() WHERE id=?','i',[$id]);admin_log('end_gist',null,null,(string)$id);json_response('success',['ended'=>true]);}
 if ($action==='politics') { json_response('success',['candidates'=>cl_rows('SELECT c.id,c.city,c.office,c.statement,c.status,c.created_at,u.user_name name,COUNT(v.id) votes FROM chinalife_politics_candidates c JOIN users u ON u.user_id=c.candidate_id LEFT JOIN chinalife_politics_votes v ON v.candidate_id=c.id GROUP BY c.id,c.city,c.office,c.statement,c.status,c.created_at,u.user_name ORDER BY c.city,c.office,votes DESC,c.id DESC LIMIT 200'),'elections'=>cl_rows('SELECT city,office,period,opens_at,closes_at FROM chinalife_politics_elections ORDER BY closes_at DESC LIMIT 50')]); }
@@ -71,6 +71,7 @@ if ($action==='events') {
     json_response('success',['events'=>cl_rows('SELECT id,title,body,city,place,reward,billboard,link,starts_at,ends_at,(starts_at<=NOW() AND ends_at>NOW()) active,(SELECT COUNT(*) FROM chinalife_event_claims c WHERE c.event_id=e.id) joined FROM chinalife_events e ORDER BY id DESC LIMIT 30')]);
 }
 if ($action==='create_event') {
+    $city=$input['city']??cl_open_cities()[0];if(!is_string($city)||!in_array($city,CL_CITIES,true))cl_fail('Choose a valid city');
     $title=trim((string)($input['title']??''));$body=trim((string)($input['body']??''));$place=(string)($input['place']??'');$link=trim((string)($input['link']??''));
     $reward=$input['reward']??0;$hours=$input['hours']??24;$billboard=!empty($input['billboard'])?1:0;
     if ($title===''||mb_strlen($title)>80||mb_strlen($body)>300) cl_fail('Give the event a title (up to 80 characters)');
@@ -78,7 +79,7 @@ if ($action==='create_event') {
     if (!is_int($reward)||$reward<0||$reward>1000000) cl_fail('Reward must be 0 to 1,000,000');
     if (!is_int($hours)||$hours<1||$hours>720) cl_fail('Duration must be 1 to 720 hours');
     if ($link!==''&&!preg_match('#^https://[^\s<>"]{3,290}$#',$link)) cl_fail('Links must start with https://');
-    cl_run('INSERT INTO chinalife_events(title,body,city,place,reward,billboard,link,starts_at,ends_at,created_by,created_at) VALUES(?,?,?,?,?,?,?,NOW(),DATE_ADD(NOW(),INTERVAL ? HOUR),?,NOW())','ssssiisii',[$title,$body,'Shenyang',$place,$reward,$billboard,$link,$hours,$uid]);
+    cl_run('INSERT INTO chinalife_events(title,body,city,place,reward,billboard,link,starts_at,ends_at,created_by,created_at) VALUES(?,?,?,?,?,?,?,NOW(),DATE_ADD(NOW(),INTERVAL ? HOUR),?,NOW())','ssssiisii',[$title,$body,$city,$place,$reward,$billboard,$link,$hours,$uid]);
     $id=(int)$db->insert_id;admin_log('create_event',null,$reward,$title);json_response('success',['id'=>$id]);
 }
 if ($action==='end_event') {
@@ -87,7 +88,7 @@ if ($action==='end_event') {
 }
 if ($action==='cities') json_response('success',['open'=>cl_open_cities()]);
 if ($action==='set_cities') {
-    $all=['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];$open=$input['open']??null;
+    $all=['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];$open=$input['open']??null;
     if (!is_array($open)||!count($open)||array_diff($open,$all)) cl_fail('Choose valid cities');
     $value=json_encode(array_values(array_unique($open)));
     cl_run('INSERT INTO chinalife_settings(name,value,updated_at) VALUES(\'open_cities\',?,NOW()) ON DUPLICATE KEY UPDATE value=VALUES(value),updated_at=NOW()','s',[$value]);
@@ -281,7 +282,7 @@ if ($action==='save_ad') {
     $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);$title=trim((string)($input['title']??''));$sponsor=trim((string)($input['sponsor']??''));$link=trim((string)($input['link']??''));
     $city=(string)($input['city']??'');$place=(string)($input['place']??'night');$days=$input['days']??30;$active=!empty($input['active'])?1:0;
     if ($title===''||mb_strlen($title)>80||mb_strlen($sponsor)>80) cl_fail('Give the ad a title (up to 80 characters)');
-    if ($city!==''&&!in_array($city,['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'],true)) cl_fail('Choose a city');
+    if ($city!==''&&!in_array($city,['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'],true)) cl_fail('Choose a city');
     cl_room(['city'=>'Shenyang','place'=>$place]);if (cl_private_place($place)) cl_fail('Choose a public venue');
     if ($link!==''&&!preg_match('#^(https://|weixin://)[^\s<>"]{3,290}$#',$link)) cl_fail('Links must start with https:// or weixin://');
     if (!is_int($days)||$days<1||$days>365) cl_fail('Run the ad for 1 to 365 days');

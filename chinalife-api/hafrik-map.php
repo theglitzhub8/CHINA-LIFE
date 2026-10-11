@@ -18,9 +18,9 @@ function cl_hafrik_item(string $source,array $row,string $city,string $near): ar
         'hafrik'=>['type'=>$source,'id'=>$id],'active'=>true];
 }
 function cl_hafrik_city(string $location): ?string {
-    $names=['Shenyang'=>'沈阳','Guangzhou'=>'广州','Shenzhen'=>'深圳','Beijing'=>'北京','Shanghai'=>'上海','Chengdu'=>'成都','Harbin'=>'哈尔滨'];$found=[];
+    $names=['China'=>'中国','Shenyang'=>'沈阳','Guangzhou'=>'广州','Shenzhen'=>'深圳','Beijing'=>'北京','Shanghai'=>'上海','Chengdu'=>'成都','Harbin'=>'哈尔滨'];$found=[];
     foreach($names as $city=>$han)if(preg_match('/\b'.preg_quote($city,'/').'\b/i',$location)||str_contains($location,$han))$found[]=$city;
-    return count($found)===1?$found[0]:null;
+    if(count($found)>1)$found=array_values(array_diff($found,['China']));return count($found)===1?$found[0]:null;
 }
 if ($method==='POST') {
     cl_hafrik_require('map');
@@ -47,10 +47,15 @@ foreach(['business','space','event','course'] as $source){
     [$table,$pk,$title,$slug,$description,$owner,$visible,$location]=cl_hafrik_source($source);
     if(!cl_hafrik_table($table)){$unavailable[]=$source;continue;}
     // Explicit placement overrides inferred addresses, including an explicit hide.
-    $rows=cl_rows("SELECT s.$pk id,s.$title title,s.$description description,p.near FROM chinalife_hafrik_places p JOIN `$table` s ON s.$pk=p.source_id WHERE p.source=? AND p.city=? AND p.active=1 AND ($visible) ORDER BY p.source_id LIMIT 100",'ss',[$source,$city]);
+    $cities=$city==='China'?array_values(array_unique(array_merge(['China'],array_diff(CL_CITIES,cl_open_cities())))):[$city];
+    $marks=implode(',',array_fill(0,count($cities),'?'));
+    $rows=cl_rows("SELECT s.$pk id,s.$title title,s.$description description,p.near FROM chinalife_hafrik_places p JOIN `$table` s ON s.$pk=p.source_id WHERE p.source=? AND p.city IN ($marks) AND p.active=1 AND ($visible) ORDER BY p.source_id LIMIT 100",str_repeat('s',count($cities)+1),array_merge([$source],$cities));
     foreach($rows as $r)$items[]=cl_hafrik_item($source,$r,$city,$r['near']);
-    if($location){
-        $han=['Shenyang'=>'沈阳','Guangzhou'=>'广州','Shenzhen'=>'深圳','Beijing'=>'北京','Shanghai'=>'上海','Chengdu'=>'成都','Harbin'=>'哈尔滨'][$city];
+    if($location&&$city==='China'){
+        $rows=cl_rows("SELECT s.$pk id,s.$title title,s.$description description,s.$location location FROM `$table` s LEFT JOIN chinalife_hafrik_places p ON p.source=? AND p.source_id=s.$pk WHERE p.source_id IS NULL AND ($visible) ORDER BY s.$pk DESC LIMIT 100",'s',[$source]);
+        foreach($rows as $r)if(cl_hafrik_city((string)$r['location'])!==null)$items[]=cl_hafrik_item($source,$r,$city,$source==='business'?'mall':'plaza');
+    }elseif($location){
+        $han=['China'=>'中国','Shenyang'=>'沈阳','Guangzhou'=>'广州','Shenzhen'=>'深圳','Beijing'=>'北京','Shanghai'=>'上海','Chengdu'=>'成都','Harbin'=>'哈尔滨'][$city];
         $rows=cl_rows("SELECT s.$pk id,s.$title title,s.$description description,s.$location location FROM `$table` s LEFT JOIN chinalife_hafrik_places p ON p.source=? AND p.source_id=s.$pk WHERE p.source_id IS NULL AND ($visible) AND (s.$location LIKE ? OR s.$location LIKE ?) ORDER BY s.$pk DESC LIMIT 100",'sss',[$source,'%'.$city.'%','%'.$han.'%']);
         foreach($rows as $r)if(cl_hafrik_city((string)$r['location'])===$city)$items[]=cl_hafrik_item($source,$r,$city,$source==='business'?'mall':'plaza');
     }

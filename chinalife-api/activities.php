@@ -34,7 +34,7 @@ if($action==='invite') {
  cl_rate('shared_invite',10,60);
  $presence=cl_one('SELECT city FROM chinalife_presence WHERE user_id=? AND seen_at>=DATE_SUB(NOW(),INTERVAL 20 SECOND)','i',[$uid]);
   $city=$presence['city']??'';$clubActivity=str_starts_with($kind,'club-')||str_starts_with($kind,'dice-');
- if(!$clubActivity&&$city!=='Shenyang')cl_fail('Shared student activities start in Shenyang',409);
+ if(!$clubActivity&&!in_array($city,['China','Shenyang'],true))cl_fail('Shared student activities are available in China and Shenyang',409);
  if($clubActivity){cl_presence($uid,$city,$catalog[$kind]['place']);cl_presence($peer,$city,$catalog[$kind]['place']);}
  cl_presence($peer,$city,cl_one('SELECT place FROM chinalife_presence WHERE user_id=?','i',[$peer])['place']??'');
  $db->begin_transaction();

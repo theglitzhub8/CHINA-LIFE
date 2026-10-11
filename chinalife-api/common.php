@@ -64,7 +64,7 @@ function cl_run(string $sql, string $types = '', array $values = []): int {
     $statement = cl_query($sql, $types, $values); $changed = $statement->affected_rows; $statement->close(); return $changed;
 }
 function cl_room(array $input): array {
-    $cities = ['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];
+    $cities = ['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];
     $places = ['hq','voting','home','ef','cafe','market','campus','gym','business','mall','park','night','station','african','church','plaza','gist','airport','university','liaoning','dongbei','blood','skylight','academy','hotel','palace','zhongjie','medical','aerospace','technology','normal','ligong','jianzhu','agricultural','pharmaceutical','chemical','tcm','medical-college','engineering','youle','ex','rex','orangutan','taxi-club','best-one','cats-eye','silver-knight','black-sheep','tank','home-campus','home-nanhu','home-hunnan','home-river','home-mansion','cantontower','cantonfair','baima','consulates','hospital','shamian','beijingroad','kama','partypier','bingsheng','bosphorus','gdufs','scnu','gzhu','smu','scau','gmu','gdut','gzucm','gdufe','gdpu','gafa','gzsport','hooleys','suns','tigerprawn','gzrestaurant','rosewood','ritz','shangrila','langham','grandview','parccentral','teemall','k11','shahe','guihuagang','baiyunmountain','chenclan','chimelong','sysmemorial','pearlcruise','polyexpo','sourcing','gzeast','gzrailway','baiyunstation','provincial','unitedfamily','gmuhospital','nanfang','haizhulake','tianhepark','liwanlake','childrenspark','ersha'];
     $city = $input['city'] ?? ''; $place = $input['place'] ?? '';
     if (!in_array($city, $cities, true) || !in_array($place, $places, true)) cl_fail('Choose a valid city and venue');
@@ -143,7 +143,7 @@ function cl_credit(int $userId, int $amount): int {
 function cl_open_cities(): array {
     $row=cl_one("SELECT value FROM chinalife_settings WHERE name='open_cities'");
     $list=$row?json_decode($row['value'],true):null;
-    return is_array($list)&&count($list)?array_values(array_unique(array_intersect($list,['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin']))):['Shenyang'];
+    return is_array($list)&&count($list)?array_values(array_unique(array_intersect($list,['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin']))):['China'];
 }
 // Player ranks (XP ladder) are configured by admins. They are game status only and never grant admin access.
 function cl_default_ranks(): array {
@@ -166,7 +166,9 @@ function cl_ranks(): array {
 }
 // Partner restaurants are added by admins per city. Ordering opens their own WeChat, WhatsApp or order link.
 function cl_restaurants(string $city, bool $all=false): array {
-    $rows=cl_rows('SELECT r.id,r.city,r.name,r.icon,r.district,r.description,r.menu,r.order_link,r.wechat_id,r.whatsapp,r.active,r.kind,r.photos,r.links,COALESCE(p.near,\'\') near FROM chinalife_restaurants r LEFT JOIN chinalife_restaurant_places p ON p.restaurant_id=r.id WHERE r.city=?'.($all?'':' AND r.active=1').' ORDER BY r.name LIMIT 200','s',[$city]);
+    $cities=$city==='China'&&!$all?array_values(array_unique(array_merge(['China'],array_diff(CL_CITIES,cl_open_cities())))):[$city];
+    $marks=implode(',',array_fill(0,count($cities),'?'));
+    $rows=cl_rows("SELECT r.id,r.city,r.name,r.icon,r.district,r.description,r.menu,r.order_link,r.wechat_id,r.whatsapp,r.active,r.kind,r.photos,r.links,COALESCE(p.near,'') near FROM chinalife_restaurants r LEFT JOIN chinalife_restaurant_places p ON p.restaurant_id=r.id WHERE r.city IN ($marks)".($all?'':' AND r.active=1')." ORDER BY r.name LIMIT 200",str_repeat('s',count($cities)),$cities);
     foreach ($rows as &$r) {$r['id']=(string)$r['id'];$r['kind']=$r['kind']?:'restaurant';$r['photos']=json_decode((string)($r['photos']??''),true)?:[];$r['links']=json_decode((string)($r['links']??''),true)?:[];$r['menu']=json_decode($r['menu'],true)?:[];$r['active']=(bool)$r['active'];}unset($r);
     return $rows;
 }
@@ -201,7 +203,7 @@ function cl_image(mixed $dataUrl, int $maxBytes=2097152, int $minW=200, int $min
     if ($info[0]<$minW||$info[1]<$minH||$info[0]>4096||$info[1]>4096) cl_fail('Use an image between '.$minW.'×'.$minH.' and 4096×4096 pixels');
     return [$bytes,$mime,(int)$info[0],(int)$info[1]];
 }
-const CL_CITIES=['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];
+const CL_CITIES=['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];
 const CL_PARTNER_KINDS=['restaurant','shop','service','creator','club','artist','event','ad'];
 // Partner applications from partners.html. Every field is checked here; what is stored is exactly what goes into the game
 // on approval. Photos must be images this account uploaded. Returns [city, title, data].
@@ -246,7 +248,7 @@ function cl_partner_data(string $kind, array $in, int $owner, bool $admin=false)
 function cl_valid_restaurant(array $input): array {
     $name=trim((string)($input['name']??''));$icon=trim((string)($input['icon']??''))?:'🍽';$district=trim((string)($input['district']??''));$description=trim((string)($input['description']??''));
     $link=trim((string)($input['order_link']??''));$wechat=trim((string)($input['wechat_id']??''));$whatsapp=preg_replace('/[^0-9]/','',(string)($input['whatsapp']??''));
-    if (!in_array($input['city']??'',['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'],true)) cl_fail('Choose a city');
+    if (!in_array($input['city']??'',['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'],true)) cl_fail('Choose a city');
     if ($name===''||mb_strlen($name)>80||mb_strlen($icon)>8||mb_strlen($district)>80||mb_strlen($description)>300) cl_fail('Give the restaurant a name (up to 80 characters)');
     if ($link!==''&&!preg_match('#^(https://|weixin://)[^\s<>"]{3,290}$#',$link)) cl_fail('Order links must start with https:// or weixin://');
     if ($wechat!==''&&!preg_match('/^[A-Za-z][-_A-Za-z0-9]{5,39}$/',$wechat)) cl_fail('Enter a valid WeChat ID (6 to 40 letters, numbers, - or _)');
