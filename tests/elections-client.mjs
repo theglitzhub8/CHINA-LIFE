@@ -18,3 +18,10 @@ test('Cantaball opens inline immediately and reload replaces the embedded sessio
 test('Phone clear-weather label follows the city sky rather than Beijing clock time',()=>{
  const t=harness();t.context.ChinaLifeWorld={weatherFor:()=> 'clear',skyHour:()=>12};t.game.phone();assert.match(t.document.getElementById('phoneContent').textContent,/Sunny/);t.context.ChinaLifeWorld.skyHour=()=>23;t.game.phone();assert.match(t.document.getElementById('phoneContent').textContent,/Clear night/);
 });
+test('a voter can choose another user without nominating and only own campaigns can be shared',async()=>{
+ const t=harness();const other={...candidate,id:2,candidate_id:99,name:'Other player',is_mine:false};let payload,shared;t.context.ChinaLifeMilestones={campaign:(c,city)=>{shared={c,city}}};t.context.ChinaLifeAuth={request:async(path,method,body)=>{if(method==='POST'){payload=body;return {data:{ballot:{...ballot,candidates:[candidate,other],voted_offices:['governor']}}}}return {data:{...ballot,candidates:[candidate,other]}}}};
+ t.game.phone();t.document.querySelector('[data-phone="politics"]').onclick();await settle();
+ assert.match(t.document.getElementById('politicsBody').textContent,/do not need to nominate yourself/);assert.equal(t.document.querySelectorAll('[data-campaign]').length,1);
+ t.document.querySelector('[data-campaign]').onclick();assert.equal(shared.c.candidate_id,7);
+ await t.document.querySelector('[data-vote="2"]').onclick();assert.equal(payload.candidate_id,2);assert.equal(payload.office,'governor');assert(t.document.querySelector('[data-vote="1"]').disabled);
+});

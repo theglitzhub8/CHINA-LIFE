@@ -101,3 +101,13 @@ The game's rank screen now offers “Share your milestones on Hafrik”. The fir
 Server pull/deploy publishes the milestone picker/bridge. The Home live card, one-time announcement and native post drafts require reloading the development app or shipping an updated Hafrik app. No new database migration is required for this change. Device verification should cover first-visit/later-visit welcome behavior, saved/new players, offline counts, returning from the game, composer cancel/publish, and account switching.
 
 Shared posts' canonical game links render as `ChinaLifeSharedLink` inside the native `LinkPreview` component. This opens the existing ChinaLife route directly. The detector accepts only the configured HTTPS origin and exact game mount path; lookalike hosts, credentials, unexpected ports, queries and other Hafrik pages retain the ordinary link handling. Copy `ChinaLifeSharedLink.jsx` with the other native bridge files, then check `isChinaLifeLaunchLink(cleanUrl, CHINA_LIFE_CONFIG)` before the generic/media link cases in `LinkPreview.jsx`. This is already applied to the local app. Older native wrappers without the sharing capability show an update prompt when the game Share button is tapped.
+
+### Election campaigns
+The Politics ballot explicitly lets any signed-in player vote for any approved
+candidate, without submitting a nomination. Each office permits one vote per
+account per election. Own approved candidates have an “Ask for votes on Hafrik”
+button while polls are open. It opens an editable native Hafrik text draft with
+the office, city, trusted game link and directions to Phone → Politics. The link
+opens the game; it does not automatically select a city, cast a vote or publish.
+The native `chinaLifeExperience.js` update must ship with the app for campaign
+drafts to work. No database migration or map appearance change is needed.

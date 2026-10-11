@@ -12,9 +12,13 @@ export function chinaLifeWelcomeKey(accountId, origin) {
 }
 export function chinaLifeMilestoneDraft(value, config) {
   if (!config || !value || typeof value !== 'object') return null;
-  if (!['rank','certificate','missions'].includes(value.kind)) return null;
+  if (!['rank','certificate','missions','campaign'].includes(value.kind)) return null;
   const clean = text => typeof text === 'string' && text.length > 0 && text.length <= 100 && !/[<>\u0000-\u001f]/.test(text);
   if (!clean(value.title) || !clean(value.city)) return null;
+  if (value.kind === 'campaign') {
+    if (!['governor','deputy governor','city councillor','student representative'].includes(value.title)) return null;
+    return { initialTab: 'text', initialText: `I’m standing for ${value.title} in ChinaLife’s ${value.city}!\nSupport my campaign: open the game, choose ${value.city}, then Phone → Politics and vote for my Hafrik username.\nYou can vote without standing for election. One vote per office.\n\n${config.url}\n#ChinaLife #Hafrik` };
+  }
   const line = value.kind === 'rank' ? `I reached ${value.title} in ChinaLife!` : value.kind === 'certificate' ? `I earned ${value.title} in ChinaLife!` : `I completed ${value.title} in ChinaLife!`;
   // The game cannot provide a URL, audience, target profile, attachment or post action.
   return { initialTab: 'text', initialText: `${line}\nMy game city: ${value.city}.\n\nPlay with me: ${config.url}\n#ChinaLife #Hafrik` };
