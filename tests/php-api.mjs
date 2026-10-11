@@ -243,9 +243,14 @@ test('admins open cities and every player receives the open list',async()=>{
  assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['Shenyang']);
  assert.equal((await call(5,'admin.php','POST',{action:'set_cities',open:['Harbin']})).httpStatus,403);
  assert.equal((await call(1,'admin.php','POST',{action:'set_cities',open:['Atlantis']})).httpStatus,400);
- const r=await call(1,'admin.php','POST',{action:'set_cities',open:['Harbin']});assert.deepEqual(r.data.open,['Shenyang','Harbin']);
- assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['Shenyang','Harbin']);
- await call(1,'admin.php','POST',{action:'set_cities',open:[]});assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['Shenyang']);
+ const r=await call(1,'admin.php','POST',{action:'set_cities',open:['Harbin']});assert.deepEqual(r.data.open,['Harbin']);
+ sql("USE chinalife_test; INSERT INTO users VALUES(13,'newArrival');");
+ assert.equal((await call(13,'save.php','POST',{revision:0,save:{character:{},game:game()}})).httpStatus,403);
+ assert.equal((await call(13,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'Harbin'}}})).httpStatus,200);
+ assert.equal((await call(13,'save.php')).data.save.game.city,'Harbin');
+ sql('USE chinalife_test; DELETE FROM chinalife_saves WHERE user_id=13; DELETE FROM users WHERE user_id=13;');
+ assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['Harbin']);
+ assert.equal((await call(1,'admin.php','POST',{action:'set_cities',open:[]})).httpStatus,400);await call(1,'admin.php','POST',{action:'set_cities',open:['Shenyang']});assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['Shenyang']);
 });
 
 test('daily push sends a valid VAPID-signed reminder and removes expired subscriptions',async()=>{

@@ -486,3 +486,12 @@ dialog .activity-panel :is(.quest-card,.dream-card,.gist-card) { margin: 8px 0; 
 @container phone-workspace (min-width:560px) { .phone-workspace .guide-results { grid-template-columns: repeat(2,minmax(0,1fr)); } .phone-workspace .admin-section-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
 
 :root[data-hafrik-theme="dark"] #activityDialog.phone-workspace-panel { --pw-canvas: #0d1416; --pw-surface: #152023; --pw-ink: #f2f7f7; --pw-border: #30474a; --pw-muted: #c2d5d2; --pw-soft: #0a2e33; }
+
+/* Election controls stay inside the Politics screen. */
+#politicsBody .politics-office-tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 0 12px; }
+#politicsBody .politics-office-tabs button { flex:0 0 auto; white-space:nowrap; }
+#politicsBody .politics-office-tabs [aria-pressed="true"] { background:#18776d; color:#fff; }
+#politicsBody .politics-search { display:grid; gap:8px; margin:12px 0 20px; }
+#politicsBody .politics-vote-share { display:grid; grid-template-columns:minmax(60px,1fr) auto; align-items:center; gap:12px; margin-top:14px; font-size:12px; color:#567a79; }
+#politicsBody .politics-vote-share meter { width:100%; accent-color:#18776d; }
+#politicsBody [hidden] { display:none !important; }

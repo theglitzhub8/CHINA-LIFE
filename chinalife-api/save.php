@@ -27,6 +27,7 @@ foreach (['money','xp','day','hour'] as $key) if (!is_numeric($game[$key]??null)
 foreach (['energy','hunger','hygiene','bladder','fun','social'] as $key) if (!is_numeric($game['needs'][$key]??null)||$game['needs'][$key]<0||$game['needs'][$key]>100) cl_fail('Invalid character needs');
 $stored=cl_one('SELECT game_state,TIMESTAMPDIFF(SECOND,updated_at,NOW()) elapsed FROM chinalife_saves WHERE user_id=?','i',[$uid]);
 $storedGame=$stored?json_decode($stored['game_state'],true):[];
+if(!$stored&&!in_array($game['city'],cl_open_cities(),true))cl_fail('Choose an available starting city',403);
 // Daily rewards are awarded by daily.php, never by an uploaded save.
 $game['lastVisit']=$storedGame['lastVisit']??'';$game['streak']=$storedGame['streak']??0;
 // Advance the saved day only at Beijing midnight, using the stored calendar anchor.

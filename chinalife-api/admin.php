@@ -88,8 +88,8 @@ if ($action==='end_event') {
 if ($action==='cities') json_response('success',['open'=>cl_open_cities()]);
 if ($action==='set_cities') {
     $all=['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];$open=$input['open']??null;
-    if (!is_array($open)||array_diff($open,$all)) cl_fail('Choose valid cities');
-    $value=json_encode(array_values(array_unique(array_merge(['Shenyang'],$open))));
+    if (!is_array($open)||!count($open)||array_diff($open,$all)) cl_fail('Choose valid cities');
+    $value=json_encode(array_values(array_unique($open)));
     cl_run('INSERT INTO chinalife_settings(name,value,updated_at) VALUES(\'open_cities\',?,NOW()) ON DUPLICATE KEY UPDATE value=VALUES(value),updated_at=NOW()','s',[$value]);
     admin_log('set_cities',null,null,$value);json_response('success',['open'=>json_decode($value,true)]);
 }
