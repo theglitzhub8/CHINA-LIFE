@@ -25,6 +25,9 @@ before(async()=>{
  const root=path.join(tmp,'web/api/v4');fs.mkdirSync(root,{recursive:true});fs.cpSync('chinalife-api',path.join(root,'chinalife'),{recursive:true});fs.writeFileSync(path.join(root,'chinalife/admin-config.php'),`<?php return ['usernames'=>['user1']];`);
  fs.writeFileSync(path.join(root,'db.php'),`<?php mysqli_report(MYSQLI_REPORT_ERROR|MYSQLI_REPORT_STRICT);`);
  fs.writeFileSync(path.join(root,'helpers.php'),`<?php function get_db_connection(){$db=new mysqli('localhost','root','','chinalife_test',0,getenv('CHINALIFE_TEST_SOCKET'));$db->set_charset('utf8mb4');return $db;} if(($_SERVER['REQUEST_METHOD']??'')==='OPTIONS'){http_response_code(204);exit;} function json_response($status,$data=null,$message=''){header('Content-Type: application/json');echo json_encode(compact('status','data','message'));exit;} function auth_user($db){$token=$_SERVER['HTTP_AUTHORIZATION']??'';if(!preg_match('/^Bearer test-([1-9][0-9]*)$/',$token,$m)){http_response_code(401);json_response('error',null,'Unauthorized');}$s=$db->prepare('SELECT * FROM users WHERE user_id=?');$id=(int)$m[1];$s->bind_param('i',$id);$s->execute();return $s->get_result()->fetch_assoc()?:[];}`);
+ // The bridge delegates to the installed Hafrik module; fixtures verify dispatch and auth, not Hafrik's database implementation.
+ fs.mkdirSync(path.join(root,'services'),{recursive:true});
+ for(const endpoint of ['list','detail','my_applications','get_application','apply'])fs.writeFileSync(path.join(root,'services',endpoint+'.php'),`<?php json_response('success',['endpoint'=>'${endpoint}','user_id'=>$uid,'id'=>$_GET['id']??null]);`);
  // Upgrade the schema already uploaded to the Hafrik server, twice, preserving its rows.
  for(const file of ['migration.sql','migration 2.sql','voice.sql'])sql('USE chinalife_test; '+fs.readFileSync('chinalife-api/'+file,'utf8'));
  // Simulate the previously deployed lifetime-vote schema before the first upgrade.
@@ -870,4 +873,16 @@ test('HQ staff permissions use authenticated usernames and isolate desk requests
  assert.equal((await call(11,'hq.php')).data.ceoAccess,false);
  assert.equal((await call(2,'admin.php','POST',{action:'applications'})).httpStatus,403,'desk access grants no global admin privileges');
  }finally{sql("USE chinalife_test; UPDATE users SET user_name='user2' WHERE user_id=2; UPDATE users SET user_name='user3' WHERE user_id=3;")}
+});
+
+test('Hafrik service bridge restricts dispatch and preserves trusted browser CORS',async()=>{
+ assert.equal((await call(null,'hafrik-services.php?endpoint=list')).httpStatus,401);
+ assert.equal((await call(1,'hafrik-services.php?endpoint=../admin')).httpStatus,404);
+ assert.equal((await call(1,'hafrik-services.php?endpoint=apply')).httpStatus,405);
+ assert.equal((await call(1,'hafrik-services.php?endpoint=list','POST',{})).httpStatus,405);
+ const detail=await call(2,'hafrik-services.php?endpoint=get_application&id=9');assert.equal(detail.data.endpoint,'get_application');assert.equal(detail.data.user_id,2);assert.equal(detail.data.id,'9');
+ const response=await fetch(base+'/api/v4/chinalife/hafrik-services.php?endpoint=list',{headers:{Authorization:'Bearer test-2',Origin:'https://china-life.hafrik.com'}});assert.equal(response.headers.get('access-control-allow-origin'),'https://china-life.hafrik.com');assert.equal(response.headers.get('access-control-allow-credentials'),'true');assert.match(response.headers.get('cache-control'),/no-store/);
+ const submitted=await call(2,'hafrik-services.php?endpoint=apply','POST',{service_id:12});assert.equal(submitted.httpStatus,200,JSON.stringify(submitted));assert.equal(submitted.data.endpoint,'apply');assert.equal(submitted.data.user_id,2);
+ for(let i=0;i<4;i++)assert.equal((await call(2,'hafrik-services.php?endpoint=apply','POST',{service_id:12})).httpStatus,200);
+ assert.equal((await call(2,'hafrik-services.php?endpoint=apply','POST',{service_id:12})).httpStatus,429);
 });
