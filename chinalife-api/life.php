@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/common.php';require_once __DIR__.'/life-lib.php';require_once __DIR__.'/hafrik-notify.php';cl_methods(['GET','POST']);
+if((int)(cl_one("SELECT COUNT(*) n FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('chinalife_life_visits','chinalife_life_claims','chinalife_city_launches','chinalife_community_members','chinalife_court_cases','chinalife_court_statements')")['n']??0)!==6)cl_fail('This game update needs its database migration. Ask the admin to run chinalife/migrate.php on the server.',503);
 $input=$method==='POST'?cl_body():$_GET;$view=$input['view']??'firstday';if(!is_string($view))cl_fail('Choose a screen');foreach(['reason','text','decision','action'] as $field)if(isset($input[$field])&&!is_string($input[$field]))cl_fail('Invalid text field');
 $save=cl_one('SELECT game_state FROM chinalife_saves WHERE user_id=?','i',[$uid]);if(!$save&&!($view==='courtadmin'&&cl_is_admin()))cl_fail('Create your character first',409);$g=json_decode($save['game_state']??'{}',true);$city=$g['city']??'China';
 if($method==='GET'){

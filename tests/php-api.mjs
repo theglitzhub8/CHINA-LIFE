@@ -1067,3 +1067,12 @@ test('city launch queues Hafrik notifications once, grants venue reward once and
  await call(201,'presence.php','POST',presence('Beijing','plaza'));const before=(await call(201,'save.php')).data.save.game.money;assert.equal((await call(201,'life.php','POST',{action:'launch',city:'Beijing'})).httpStatus,200);assert.equal((await call(201,'save.php')).data.save.game.money,before+200);assert.equal((await call(201,'life.php','POST',{action:'launch',city:'Beijing'})).httpStatus,409);
  await call(1,'admin.php','POST',{action:'set_cities',open:['China']});await call(1,'admin.php','POST',{action:'set_cities',open:['China','Beijing']});assert.equal(Number(sql("USE chinalife_test; SELECT COUNT(*) FROM chinalife_life_outbox WHERE city='Beijing'")),queued);
 });
+
+test('pending optional tables do not break multiplayer or events and the new screens explain migration',async()=>{
+ sql('USE chinalife_test; RENAME TABLE chinalife_life_visits TO test_pending_visits, chinalife_city_launches TO test_pending_launches');
+ try{
+  for(const id of [201,202])assert.equal((await call(id,'presence.php','POST',presence('China','hq'))).httpStatus,200);
+  const players=(await call(201,'presence.php?city=China')).data.players;assert(players.some(x=>x.id==='202'));const events=await call(201,'events.php?city=China');assert.equal(events.httpStatus,200);assert.deepEqual(events.data.city_launches,[]);const newScreen=await call(201,'life.php?view=firstday');assert.equal(newScreen.httpStatus,503);assert.match(newScreen.message,/database migration/);
+ }finally{sql('USE chinalife_test; RENAME TABLE test_pending_visits TO chinalife_life_visits, test_pending_launches TO chinalife_city_launches');}
+ assert.equal((await call(201,'life.php?view=firstday')).httpStatus,200);
+});

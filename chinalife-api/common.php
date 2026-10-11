@@ -63,6 +63,13 @@ function cl_one(string $sql, string $types = '', array $values = []): ?array {re
 function cl_run(string $sql, string $types = '', array $values = []): int {
     $statement = cl_query($sql, $types, $values); $changed = $statement->affected_rows; $statement->close(); return $changed;
 }
+// Optional release tables must not stop the shared city while a CLI migration is pending.
+function cl_optional_rows(string $sql,string $types='',array $values=[]): array {
+    try{return cl_rows($sql,$types,$values);}catch(mysqli_sql_exception $e){if($e->getCode()!==1146)throw $e;error_log('ChinaLife optional schema pending: '.$e->getMessage());return [];}
+}
+function cl_optional_run(string $sql,string $types='',array $values=[]): void {
+    try{cl_run($sql,$types,$values);}catch(mysqli_sql_exception $e){if($e->getCode()!==1146)throw $e;error_log('ChinaLife optional schema pending: '.$e->getMessage());}
+}
 function cl_room(array $input): array {
     $cities = ['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];
     $places = ['hq','voting','home','ef','cafe','market','campus','gym','business','mall','park','night','station','african','church','plaza','gist','airport','university','liaoning','dongbei','blood','skylight','academy','hotel','palace','zhongjie','medical','aerospace','technology','normal','ligong','jianzhu','agricultural','pharmaceutical','chemical','tcm','medical-college','engineering','youle','ex','rex','orangutan','taxi-club','best-one','cats-eye','silver-knight','black-sheep','tank','home-campus','home-nanhu','home-hunnan','home-river','home-mansion','cantontower','cantonfair','baima','consulates','hospital','shamian','beijingroad','kama','partypier','bingsheng','bosphorus','gdufs','scnu','gzhu','smu','scau','gmu','gdut','gzucm','gdufe','gdpu','gafa','gzsport','hooleys','suns','tigerprawn','gzrestaurant','rosewood','ritz','shangrila','langham','grandview','parccentral','teemall','k11','shahe','guihuagang','baiyunmountain','chenclan','chimelong','sysmemorial','pearlcruise','polyexpo','sourcing','gzeast','gzrailway','baiyunstation','provincial','unitedfamily','gmuhospital','nanfang','haizhulake','tianhepark','liwanlake','childrenspark','ersha'];
