@@ -191,7 +191,7 @@ test('venue details collapse on entry and can be opened without losing the room'
 });
 
 test('HUD displays global online and registered player counts from the existing online response',()=>{
- const t=setup();t.context.ChinaLifeCloud={online:{online:12,players:834,cities:{Shenyang:3}},players:[]};t.context.dispatchEvent(new t.context.CustomEvent('chinalife:online'));assert.equal(t.document.getElementById('worldOnline').textContent,'Game population 9,976 · Activity 588');
+ const t=setup();t.context.ChinaLifeCloud={online:{online:12,players:834,cities:{Shenyang:3}},players:[]};t.context.dispatchEvent(new t.context.CustomEvent('chinalife:online'));assert.equal(t.document.getElementById('worldOnline').textContent,'Total User 9,976 · Online Activity 588');
 });
 
 test('room furniture copies are bounded, with overflow accounted for in storage',()=>{
@@ -211,7 +211,7 @@ test('room furniture copies are bounded, with overflow accounted for in storage'
  });
  test('two online players produce 98 activity units while the total remains real',()=>{
  const t=setup();t.context.ChinaLifeCloud={online:{online:2,players:834,cities:{}},players:[]};t.context.dispatchEvent(new t.context.CustomEvent('chinalife:online'));
- assert.equal(t.document.getElementById('worldOnline').textContent,'Game population 9,976 · Activity 98');
+ assert.equal(t.document.getElementById('worldOnline').textContent,'Total User 9,976 · Online Activity 98');
  });
 
 test('Hun River player can move after entering with an identity that spawns at the table',()=>{

@@ -36,3 +36,7 @@ test('submitting a vote locks all candidates for that office until the ballot re
  const t=harness();let complete;const other={...candidate,id:2,is_mine:false};t.context.ChinaLifeAuth={request:(path,method)=>method==='POST'?new Promise(resolve=>complete=resolve):Promise.resolve({data:{...ballot,candidates:[candidate,other]}})};
  t.game.politics();await settle();const pending=t.document.querySelector('[data-vote="2"]').onclick();assert(t.document.querySelector('[data-vote="1"]').disabled);assert(t.document.querySelector('[data-vote="2"]').disabled);complete({data:{ballot:{...ballot,candidates:[candidate,other],voted_offices:['governor']}}});await pending;assert(t.document.querySelector('[data-vote="1"]').disabled);
 });
+
+test('a pending ballot from another account cannot render or enable that account campaign',async()=>{
+ const t=harness();t.game.setAccount('1');let complete;t.context.ChinaLifeAuth={request:()=>new Promise(resolve=>complete=resolve)};t.game.politics();t.game.setAccount('2');complete({data:ballot});await settle();assert.equal(t.document.querySelector('[data-vote]'),null);assert.equal(t.document.querySelector('[data-campaign]'),null);
+});
