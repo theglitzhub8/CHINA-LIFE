@@ -56,3 +56,7 @@ export function chinaLifePlayerStats(saved, accountId) {
   const mood = avg === null ? null : avg > 70 ? 'Feeling great' : avg > 40 ? 'Finding your rhythm' : 'Time to recharge';
   return { xp, money, rank, clock, mood, energy: typeof g.needs?.energy === 'number' && g.needs.energy >= 0 && g.needs.energy <= 100 ? Math.floor(g.needs.energy) : null };
 }
+
+export function chinaLifeActivityCount(online) {
+  return Number.isSafeInteger(online) && online >= 0 && Number.isSafeInteger(online * 49) ? online * 49 : null;
+}

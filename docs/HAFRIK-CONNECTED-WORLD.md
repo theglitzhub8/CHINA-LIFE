@@ -77,7 +77,7 @@ options={{ gestureEnabled: false, headerShown: false }}
 
 The existing feed owns its safe area and floating header. Adding a stack header
 above it produced extra vertical space. The Home feed card above stories now
-shows the signed-in player’s saved game clock, mood and game balance inside the existing CTA, alongside its online count. There is no separate stats block underneath. Tap it to
+shows the signed-in player’s saved game clock and mood inside the existing CTA, alongside its displayed online count (actual online × 49). Game balance is only shown in the game. There is no separate stats block underneath. Tap it to
 return to ChinaLife; the normal Hafrik tabs remain available. Values are marked
 as last synced and never drawn from another account’s cache. The card refreshes
 on focus, app foreground and every minute while active. No extra API or database
@@ -126,3 +126,13 @@ common.php. Their missing IDs rejected presence updates and prevented voice from
 joining those rooms. Both IDs now use the existing authenticated presence and
 voice checks; invented venues remain rejected. Deploy the PHP update; no schema
 migration or map change is needed.
+
+The redesigned ChinaLifeSlide uses Readex, Hafrik teal and a gold vector city.
+In banner.jsx apply the native slide integration in
+`integrations/hafrik-mobile/banner-native-slides.js`: after the lead banner,
+ChinaLife comes second and before the study slide. Remaining API banners keep
+their order; duplicate game actions collapse to one redesigned native slide.
+With no API banners the fallback remains Study, ChinaLife. The native CTA uses
+`chinaLifeActivityCount`, multiplying only the displayed count by 49. The server
+presence and voice counts keep their existing logic. Ship the updated banner.jsx,
+ChinaLifeSlide, ChinaLifeLiveCard and chinaLifeExperience with the native app.

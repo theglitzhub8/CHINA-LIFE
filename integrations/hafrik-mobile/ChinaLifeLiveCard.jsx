@@ -8,7 +8,7 @@ import { Colors, FontFamily } from '../../theme';
 import { useAuth } from '../../AuthContext';
 import apiClient from '../../api/apiClient';
 import { CHINA_LIFE_CONFIG } from './chinaLifeConfig';
-import { chinaLifeHomeState, chinaLifeWelcomeKey, chinaLifePlayerStats } from './chinaLifeExperience';
+import { chinaLifeHomeState, chinaLifeWelcomeKey, chinaLifePlayerStats, chinaLifeActivityCount } from './chinaLifeExperience';
 
 const dismissedWelcome = new Set();
 
@@ -55,11 +55,12 @@ export default function ChinaLifeLiveCard({ active = true }) {
   }, [owner]);
   const play = () => { dismiss(); navigation.navigate('ChinaLife'); };
   if (!CHINA_LIFE_CONFIG) return null;
+  const activity = chinaLifeActivityCount(state.online);
   const label = state.continuing ? 'Continue playing' : 'Enter ChinaLife';
   return <>
-    <TouchableOpacity onPress={play} activeOpacity={0.9} accessibilityRole="button" accessibilityLabel={`${label}. ${state.live ? state.online+' players online' : 'Explore your city in Hafrik'}`} style={[s.card,{backgroundColor:colors.surface,borderColor:colors.border}]}>
+    <TouchableOpacity onPress={play} activeOpacity={0.9} accessibilityRole="button" accessibilityLabel={`${label}. ${state.live ? activity+' players online' : 'Explore your city in Hafrik'}`} style={[s.card,{backgroundColor:colors.surface,borderColor:colors.border}]}>
       <View style={s.scene}><Ionicons name="business" size={42} color={Colors.honeydew} /><View style={s.live}><View style={[s.dot,{backgroundColor:state.live?Colors.java:Colors.spaceTextTertiary}]} /><Text style={s.liveText}>{state.live?'LIVE':'CHINA LIFE'}</Text></View></View>
-      <View style={s.copy}><Text style={[s.title,{color:colors.text}]}>{state.continuing?'Your ChinaLife':'A whole world inside Hafrik'}</Text><Text style={[s.body,{color:colors.textSecondary}]}>{state.continuing&&state.city?`Continue in ${state.city}`:'Explore cities. Meet people. Build your story.'}</Text>{!!state.stats && <><Text style={[s.gameClock,{color:colors.textSecondary}]}>{state.stats.clock || '—'} · {state.stats.mood || 'ChinaLife'}</Text><Text style={[s.gameBalance,{color:colors.text}]}>Game ¥{state.stats.money?.toLocaleString() ?? '—'}</Text></>}<Text style={[s.count,{color:colors.accent}]}>{state.live?`${state.online} ${state.online===1?'player':'players'} online · ${label}`:`${label} →`}</Text></View>
+      <View style={s.copy}><Text style={[s.title,{color:colors.text}]}>{state.continuing?'Your ChinaLife':'A whole world inside Hafrik'}</Text><Text style={[s.body,{color:colors.textSecondary}]}>{state.continuing&&state.city?`Continue in ${state.city}`:'Explore cities. Meet people. Build your story.'}</Text>{!!state.stats && <><Text style={[s.gameClock,{color:colors.textSecondary}]}>{state.stats.clock || '—'} · {state.stats.mood || 'ChinaLife'}</Text></>}<Text style={[s.count,{color:colors.accent}]}>{state.live?`${activity?.toLocaleString() ?? '—'} players online · ${label}`:`${label} →`}</Text></View>
       <Ionicons name="chevron-forward" size={18} color={colors.accent} />
     </TouchableOpacity>
     <Modal transparent visible={welcome && focused && active} animationType="fade" onRequestClose={dismiss}>
@@ -73,6 +74,6 @@ export default function ChinaLifeLiveCard({ active = true }) {
   </>;
 }
 const s=StyleSheet.create({
-  gameClock:{fontFamily:FontFamily.readexRegular,fontSize:10,lineHeight:16,marginTop:6},gameBalance:{fontFamily:FontFamily.readexSemiBold,fontSize:15,marginTop:4},
+  gameClock:{fontFamily:FontFamily.readexRegular,fontSize:10,lineHeight:16,marginTop:6},
   card:{marginHorizontal:18,marginVertical:12,padding:14,borderRadius:22,borderWidth:1,flexDirection:'row',alignItems:'center',gap:12},scene:{width:76,height:92,backgroundColor:Colors.cyprus,borderRadius:17,alignItems:'center',justifyContent:'center',gap:8},live:{flexDirection:'row',alignItems:'center',gap:4},dot:{width:5,height:5,borderRadius:3},liveText:{fontFamily:FontFamily.readexSemiBold,fontSize:8,color:Colors.honeydew},copy:{flex:1},title:{fontFamily:FontFamily.readexSemiBold,fontSize:15,lineHeight:21},body:{fontFamily:FontFamily.readexRegular,fontSize:11,lineHeight:17,marginTop:5},count:{fontFamily:FontFamily.readexMedium,fontSize:10,lineHeight:16,marginTop:8},backdrop:{flex:1,backgroundColor:'#061A1E88',justifyContent:'center',padding:24},welcome:{borderRadius:28,maxHeight:'90%',flexGrow:0},welcomeScene:{backgroundColor:Colors.cyprus,borderRadius:20,padding:24,alignItems:'center',gap:16},welcomeLive:{fontFamily:FontFamily.readexSemiBold,fontSize:11,color:Colors.honeydew,letterSpacing:1},welcomeTitle:{fontFamily:FontFamily.readexSemiBold,fontSize:24,lineHeight:32,marginTop:22},welcomeBody:{fontFamily:FontFamily.readexRegular,fontSize:14,lineHeight:23,marginTop:12,marginBottom:24},button:{padding:16,borderRadius:15,alignItems:'center'},buttonText:{fontFamily:FontFamily.readexSemiBold,fontSize:13},later:{padding:16,alignItems:'center'},
 });
