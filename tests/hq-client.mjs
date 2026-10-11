@@ -6,3 +6,11 @@ test('HQ guests can visit named desks without presenting prepared answers as a l
 });
 
 test('HQ service entry uses the real Hafrik catalogue',()=>{const h=harness();let opened=0;h.context.ChinaLifeServices={open:()=>opened++};h.game.hq();assert.equal(opened,1);});
+
+test('disabled Hafrik Services hides the reception and staff desk catalogue entries',async()=>{
+ const h=harness();h.context.ChinaLifeHafrik={enabled:key=>key!=='services'};vm.runInContext(fs.readFileSync('public/hq-team.js','utf8'),h.context);vm.runInContext(fs.readFileSync('public/hq.js','utf8'),h.context);await h.context.ChinaLifeHQ.open();assert(h.document.getElementById('hqRealServices').hidden);h.context.ChinaLifeHQ.desk('lawrence');assert(h.document.getElementById('hqDeskServices').hidden);
+});
+
+test('HQ catalogue shortcut falls back to staff reception when Services is disabled',()=>{
+ const h=harness();let catalogue=0,reception=0;h.context.ChinaLifeHafrik={enabled:()=>false};h.context.ChinaLifeServices={open:()=>catalogue++};h.context.ChinaLifeHQ={open:()=>reception++};h.game.hq();assert.equal(catalogue,0);assert.equal(reception,1);
+});

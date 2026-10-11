@@ -984,3 +984,24 @@ test('foreground app heartbeat preserves venue and position and never creates an
  const p=(await call(12,'presence.php?city=Shenyang')).data.players.find(p=>p.id==='11');assert.equal(p.place,'hq');assert.equal(p.x,7);assert.equal(p.z,4);
  assert.equal((await call(null,'app-presence.php','POST',{})).httpStatus,401);
 });
+
+test('admin Hafrik switches persist, reject unauthorized changes, gate actions and preserve source data',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits; DELETE FROM chinalife_settings WHERE name="hafrik_features"');
+ try{
+ const initial=await call(1,'admin.php','POST',{action:'hafrik_features'});assert.equal(initial.httpStatus,200);assert.equal(Object.keys(initial.data.features).length,11);assert(Object.values(initial.data.features).every(v=>v===true));
+ assert.equal((await call(2,'admin.php','POST',{action:'set_hafrik_features',features:{exchange:false}})).httpStatus,403);
+ for(const features of [{exchange:'false'},{unknown:false},[]])assert.equal((await call(1,'admin.php','POST',{action:'set_hafrik_features',features})).httpStatus,400);
+ const disabled=Object.fromEntries(Object.keys(initial.data.features).map(k=>[k,false]));assert.equal((await call(1,'admin.php','POST',{action:'set_hafrik_features',features:disabled})).httpStatus,200);
+ for(const action of ['businesses','business_follow','spaces','space_join','people','people_follow','academy','course_apply','events','event_rsvp','marketplace','product','exchange','exchange_quote','exchange_orders']){const method=['business_follow','space_join','people_follow','course_apply','event_rsvp'].includes(action)?'POST':'GET';assert.equal((await call(2,'hafrik.php?action='+action,method,method==='POST'?{}:undefined)).httpStatus,403,action);}
+ assert.equal((await call(2,'hafrik-services.php?endpoint=list')).httpStatus,403);
+ assert.equal((await call(2,'hafrik-services.php?endpoint=apply','POST',{})).httpStatus,403);
+ const map=await call(2,'hafrik-map.php?city=Shenyang');assert.deepEqual(map.data.items,[]);assert.equal(map.data.features.map,false);
+ const events=await call(2,'events.php?city=Shenyang');assert.equal(events.data.hafrik_features.exchange,false);
+ const notifyFixture=path.join(tmp,'web/api/v4/chinalife/feature-notify-test.php');fs.writeFileSync(notifyFixture,"<?php require __DIR__.'/common.php';require __DIR__.'/hafrik-notify.php';cl_hafrik_notify(2,'friend','feature-test-alert','Test alert',1);json_response('success',['done'=>true]);");
+ const before=Number(sql('USE chinalife_test; SELECT COUNT(*) FROM notifications'));assert.equal((await call(1,'feature-notify-test.php')).httpStatus,200);assert.equal(Number(sql('USE chinalife_test; SELECT COUNT(*) FROM notifications')),before);
+ const restored=await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{exchange:true}});assert.equal(restored.data.features.exchange,true);assert.equal(restored.data.features.space,false);assert.equal((await call(1,'admin.php','POST',{action:'hafrik_features'})).data.features.exchange,true);
+ assert.notEqual((await call(2,'hafrik.php?action=exchange')).httpStatus,403);
+ await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{notifications:true}});await call(1,'feature-notify-test.php');assert.equal(Number(sql('USE chinalife_test; SELECT COUNT(*) FROM notifications')),before+1);
+ assert(Number(sql("USE chinalife_test; SELECT COUNT(*) FROM chinalife_admin_log WHERE action='set_hafrik_features'"))>=2);
+ }finally{sql('USE chinalife_test; DELETE FROM chinalife_settings WHERE name="hafrik_features"');}
+});

@@ -14,6 +14,8 @@ $routes = [
 $action = $_GET['action'] ?? '';
 if (!is_string($action) || !isset($routes[$action])) cl_fail('Unknown Hafrik action',404);
 [$path,$verb] = $routes[$action];cl_methods([$verb]);
+$feature=match(explode('/',$path)[0]){'business'=>'business','communities'=>'space','people'=>'people','hafrikx'=>'course','events'=>'event','marketplace'=>'product','exchange'=>'exchange'};
+cl_hafrik_require($feature);
 $file = __DIR__.'/../'.$path;
 if (!is_file($file)) cl_fail('This Hafrik feature is temporarily unavailable',503);
 if ($verb === 'POST') {

@@ -31,3 +31,7 @@ test('a slow mark-read response cannot mark a different reopened inbox alert as 
 test('already read alerts do not send another mark-read request',async()=>{
  const h=setup();let posts=0;h.context.ChinaLifeAuth={request:async(path,method)=>{if(method==='POST')posts++;return {data:{items:[{id:'vote-42',message:'Read alert',time:'today',seen:1}]}}}};await h.context.ChinaLifeMilestones.inbox('vote-42');assert.equal(posts,0);assert.equal(h.document.getElementById('gameNotice-0').textContent,'Read');
 });
+
+test('admin sharing switch blocks campaign and milestone composer requests',()=>{
+ const h=setup();h.game.state.created=true;h.game.state.certs=['hsk1'];h.context.ChinaLifeHafrik={enabled:()=>false};let posts=0;h.context.ReactNativeWebView={postMessage:()=>posts++};h.context.ChinaLifeHafrikNative=true;h.context.ChinaLifeHafrikSharing=true;h.context.ChinaLifeMilestones.share('cert-hsk1');h.context.ChinaLifeMilestones.campaign({id:42,is_mine:true,office:'governor'},'Shenyang');assert.equal(posts,0);assert.match(h.document.getElementById('toast').textContent,/switched off/);
+});

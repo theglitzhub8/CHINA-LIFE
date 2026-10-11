@@ -7,6 +7,19 @@ $input=cl_body(3000000);$action=$input['action']??'';
 function admin_log(string $action,?int $target,?int $amount,string $note): void {
     global $uid;cl_run('INSERT INTO chinalife_admin_log(admin_id,action,target_id,amount,note,created_at) VALUES(?,?,?,?,?,NOW())','isiis',[$uid,$action,$target,$amount,mb_substr($note,0,300)]);
 }
+if($action==='hafrik_features')json_response('success',['features'=>cl_hafrik_features(),'labels'=>cl_hafrik_feature_labels()]);
+if($action==='set_hafrik_features'){
+ $changes=$input['features']??null;$labels=cl_hafrik_feature_labels();
+ if(!is_array($changes)||!$changes)cl_fail('Choose integrations to update');
+ foreach($changes as $key=>$value)if(!isset($labels[$key])||!is_bool($value))cl_fail('Use valid integration names and on/off values');
+ // A settings lock preserves concurrent changes to different switches.
+ $db->begin_transaction();cl_run("INSERT IGNORE INTO chinalife_settings(name,value,updated_at) VALUES('hafrik_features','{}',NOW())");
+ cl_one("SELECT value FROM chinalife_settings WHERE name='hafrik_features' FOR UPDATE");
+ $features=array_replace(cl_hafrik_features(),$changes);$value=json_encode($features);
+ cl_run("UPDATE chinalife_settings SET value=?,updated_at=NOW() WHERE name='hafrik_features'",'s',[$value]);
+ admin_log('set_hafrik_features',null,null,implode(' · ',array_map(fn($key)=>$labels[$key].': '.($changes[$key]?'on':'off'),array_keys($changes))));$db->commit();
+ json_response('success',['features'=>$features]);
+}
 $xp="CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(s.game_state,'$.xp')),'0') AS SIGNED)";
 $money="CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(s.game_state,'$.money')),'0') AS SIGNED)";
 if ($action==='stats') {

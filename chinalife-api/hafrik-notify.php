@@ -5,6 +5,7 @@ function cl_hafrik_notify(int $recipient,string $kind,string $key,string $messag
  global $db;
  if($recipient<1||!in_array($kind,['vote','friend','money'],true))return;
  try {
+  if(!cl_hafrik_features()['notifications'])return;
   $helper=__DIR__.'/../notifications/_admin_notify.php';
   if(!is_file($helper)){error_log('ChinaLife: Hafrik notification helper unavailable');return;}
   require_once $helper;

@@ -265,3 +265,5 @@ function cl_rank_status(int $userId): array {
     $s=cl_one('SELECT UNIX_TIMESTAMP(until)*1000 until_ms,reason FROM chinalife_rank_suspensions WHERE user_id=? AND until>NOW()','i',[$userId]);
     return ['badges'=>$badges,'rankSuspendedUntil'=>$s?(int)$s['until_ms']:null,'rankSuspendedReason'=>$s['reason']??null];
 }
+
+require_once __DIR__.'/hafrik-features.php';

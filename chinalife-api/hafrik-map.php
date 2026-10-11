@@ -23,9 +23,10 @@ function cl_hafrik_city(string $location): ?string {
     return count($found)===1?$found[0]:null;
 }
 if ($method==='POST') {
+    cl_hafrik_require('map');
     $in=cl_body();$source=$in['source']??'';$spec=is_string($source)?cl_hafrik_source($source):[];
     $id=filter_var($in['id']??null,FILTER_VALIDATE_INT);$city=$in['city']??'';$near=$in['near']??'plaza';
-    if (!$spec||!$id||$id<1) cl_fail('Choose a Hafrik listing');
+    if (!$spec||!$id||$id<1) cl_fail('Choose a Hafrik listing');cl_hafrik_require($source);
     if (!is_string($city)||!in_array($city,cl_open_cities(),true)) cl_fail('Choose an open ChinaLife city');
     if (!is_string($near)||!in_array($near,['plaza','mall','market','park','campus','ef','business'],true)) cl_fail('Choose a public venue');
     [$table,$pk,$title,$slug,$description,$owner,$visible]=$spec;
@@ -40,8 +41,9 @@ if ($method==='POST') {
     json_response('success',['city'=>$city,'near'=>$near,'active'=>(bool)$active]);
 }
 $city=$_GET['city']??'Shenyang';if(!is_string($city)||!in_array($city,cl_open_cities(),true))cl_fail('Choose an open ChinaLife city');
-$items=[];$unavailable=[];
+$features=cl_hafrik_features();$items=[];$unavailable=[];if(!$features['map'])json_response('success',['items'=>[],'unavailable'=>[],'city'=>$city,'features'=>$features]);
 foreach(['business','space','event','course'] as $source){
+    if(!$features[$source])continue;
     [$table,$pk,$title,$slug,$description,$owner,$visible,$location]=cl_hafrik_source($source);
     if(!cl_hafrik_table($table)){$unavailable[]=$source;continue;}
     // Explicit placement overrides inferred addresses, including an explicit hide.
@@ -53,4 +55,4 @@ foreach(['business','space','event','course'] as $source){
         foreach($rows as $r)if(cl_hafrik_city((string)$r['location'])===$city)$items[]=cl_hafrik_item($source,$r,$city,$source==='business'?'mall':'plaza');
     }
 }
-json_response('success',['items'=>$items,'unavailable'=>$unavailable,'city'=>$city]);
+json_response('success',['items'=>$items,'unavailable'=>$unavailable,'city'=>$city,'features'=>$features]);
