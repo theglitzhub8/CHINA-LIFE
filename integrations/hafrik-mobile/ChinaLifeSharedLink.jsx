@@ -3,11 +3,11 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontFamily } from '../../theme';
-export default function ChinaLifeSharedLink() {
+export default function ChinaLifeSharedLink({ url }) {
   const navigation = useNavigation();
-  return <TouchableOpacity onPress={() => navigation.navigate('ChinaLife')} activeOpacity={0.9} accessibilityRole="button" accessibilityLabel="Play ChinaLife inside Hafrik" style={s.card}>
+  return <TouchableOpacity onPress={() => navigation.navigate('ChinaLife', { launchUrl: url })} activeOpacity={0.9} accessibilityRole="button" accessibilityLabel="Play ChinaLife inside Hafrik" style={s.card}>
     <View style={s.icon}><Ionicons name="game-controller" size={28} color={Colors.cyprus} /></View>
-    <View style={s.copy}><Text style={s.title}>Play ChinaLife</Text><Text style={s.body}>Explore the city. Meet players. Build your story inside Hafrik.</Text></View>
+    <View style={s.copy}><Text style={s.title}>{url?.includes('#view=voting') ? 'View ChinaLife campaign' : 'Play ChinaLife'}</Text><Text style={s.body}>Explore the city. Meet players. Build your story inside Hafrik.</Text></View>
     <Ionicons name="arrow-forward" size={20} color={Colors.honeydew} />
   </TouchableOpacity>;
 }

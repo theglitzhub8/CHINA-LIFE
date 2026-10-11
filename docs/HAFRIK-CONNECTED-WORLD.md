@@ -107,7 +107,14 @@ The Politics ballot explicitly lets any signed-in player vote for any approved
 candidate, without submitting a nomination. Each office permits one vote per
 account per election. Own approved candidates have an “Ask for votes on Hafrik”
 button while polls are open. It opens an editable native Hafrik text draft with
-the office, city, trusted game link and directions to Phone → Politics. The link
-opens the game; it does not automatically select a city, cast a vote or publish.
+the office, city and trusted campaign link. The link opens the candidate’s city
+ballot and marks their card without moving the character, casting a vote or
+publishing. Closed/unavailable candidates show a message. Login is required.
 The native `chinaLifeExperience.js` update must ship with the app for campaign
 drafts to work. No database migration or map appearance change is needed.
+
+Campaign links use only `#view=voting&city=…&candidate=…` on the configured game
+URL. The native link preview passes a validated launch URL to ChinaLifeScreen;
+the campaign opens a fresh game document with the existing saved character.
+Update ChinaLifeSharedLink, ChinaLifeScreen, chinaLifeExperience, and the native
+LinkPreview call to `<ChinaLifeSharedLink url={cleanUrl} />` when shipping.

@@ -25,3 +25,5 @@ test('a voter can choose another user without nominating and only own campaigns 
  t.document.querySelector('[data-campaign]').onclick();assert.equal(shared.c.candidate_id,7);
  await t.document.querySelector('[data-vote="2"]').onclick();assert.equal(payload.candidate_id,2);assert.equal(payload.office,'governor');assert(t.document.querySelector('[data-vote="1"]').disabled);
 });
+
+test('shared campaigns open a different city ballot without moving the character',async()=>{const t=harness();const before=t.game.state.city;let requested;t.context.ChinaLifeAuth={request:async(path)=>{requested=path;return {data:ballot}}};t.game.politics('Guangzhou',1);await settle();assert.equal(t.game.state.city,before);assert.match(requested,/city=Guangzhou/);assert.equal(t.document.querySelector('[aria-label="Shared campaign"] b').textContent,candidate.name);});

@@ -17,7 +17,9 @@ export function chinaLifeMilestoneDraft(value, config) {
   if (!clean(value.title) || !clean(value.city)) return null;
   if (value.kind === 'campaign') {
     if (!['governor','deputy governor','city councillor','student representative'].includes(value.title)) return null;
-    return { initialTab: 'text', initialText: `I’m standing for ${value.title} in ChinaLife’s ${value.city}!\nSupport my campaign: open the game, choose ${value.city}, then Phone → Politics and vote for my Hafrik username.\nYou can vote without standing for election. One vote per office.\n\n${config.url}\n#ChinaLife #Hafrik` };
+    if (!Number.isSafeInteger(value.candidateId) || value.candidateId < 1) return null;
+    const campaignUrl = `${config.url}#${new URLSearchParams({view:'voting',city:value.city,candidate:String(value.candidateId)})}`;
+    return { initialTab: 'text', initialText: `I’m standing for ${value.title} in ChinaLife’s ${value.city}!\nOpen my campaign below and vote for my Hafrik username.\nYou can vote without standing for election. One vote per office.\n\n${campaignUrl}\n#ChinaLife #Hafrik` };
   }
   const line = value.kind === 'rank' ? `I reached ${value.title} in ChinaLife!` : value.kind === 'certificate' ? `I earned ${value.title} in ChinaLife!` : `I completed ${value.title} in ChinaLife!`;
   // The game cannot provide a URL, audience, target profile, attachment or post action.
@@ -29,6 +31,11 @@ export function isChinaLifeLaunchLink(value, config) {
   try {
     const url = new URL(value);
     const path = url.pathname.endsWith('/') ? url.pathname : url.pathname + '/';
-    return url.protocol === 'https:' && url.origin === config.origin && path === config.basePath && !url.username && !url.password && !url.search && !url.hash;
+    return url.protocol === 'https:' && url.origin === config.origin && path === config.basePath && !url.username && !url.password && !url.search && (!url.hash || isChinaLifeCampaignHash(url.hash));
   } catch { return false; }
+}
+
+export function isChinaLifeCampaignHash(hash) {
+  const p = new URLSearchParams(hash.slice(1));
+  return [...p.keys()].length === 3 && p.get('view') === 'voting' && /^[1-9][0-9]{0,14}$/.test(p.get('candidate') || '') && Number.isSafeInteger(Number(p.get('candidate'))) && typeof p.get('city') === 'string' && p.get('city').length > 0 && p.get('city').length <= 100 && !/[<>\u0000-\u001f]/.test(p.get('city'));
 }

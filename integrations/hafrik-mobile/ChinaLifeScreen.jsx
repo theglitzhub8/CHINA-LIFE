@@ -5,13 +5,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useStore from '../../repository/store';
-import { chinaLifeMilestoneDraft } from './chinaLifeExperience';
+import { chinaLifeMilestoneDraft, isChinaLifeLaunchLink } from './chinaLifeExperience';
 import { FontFamily } from '../../theme';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../AuthContext';
 import { CHINA_LIFE_CONFIG, isChinaLifeNavigationAllowed, chinaLifeSessionScript, chinaLifeHafrikDestination, chinaLifeActivityScript } from './chinaLifeConfig';
 
-export default function ChinaLifeScreen({ navigation }) {
+export default function ChinaLifeScreen({ navigation, route }) {
   const { colors, resolvedMode } = useTheme();
   const { user, token } = useAuth();
   const openComposer = useStore(state => state.openComposer);
@@ -157,9 +157,9 @@ export default function ChinaLifeScreen({ navigation }) {
       </Modal>
       <View style={styles.game}>
         {!!config && <WebView
-          key={accountKey}
+          key={accountKey + (route?.params?.launchUrl || '')}
           ref={web}
-          source={{ uri: config.url }}
+          source={{ uri: isChinaLifeLaunchLink(route?.params?.launchUrl, config) ? route.params.launchUrl : config.url }}
           style={{ flex: 1, backgroundColor: colors.background }}
           javaScriptEnabled domStorageEnabled
           incognito={false}
