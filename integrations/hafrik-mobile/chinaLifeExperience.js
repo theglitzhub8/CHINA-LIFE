@@ -39,3 +39,15 @@ export function isChinaLifeCampaignHash(hash) {
   const p = new URLSearchParams(hash.slice(1));
   return [...p.keys()].length === 3 && p.get('view') === 'voting' && /^[1-9][0-9]{0,14}$/.test(p.get('candidate') || '') && Number.isSafeInteger(Number(p.get('candidate'))) && typeof p.get('city') === 'string' && p.get('city').length > 0 && p.get('city').length <= 100 && !/[<>\u0000-\u001f]/.test(p.get('city'));
 }
+
+// Account-owned saved snapshot, never another user's cached character.
+export function chinaLifePlayerStats(saved, accountId) {
+  if (!accountId || saved?.status !== 'success' || String(saved.data?.account?.id) !== String(accountId) || !saved.data?.exists) return null;
+  const g = saved.data.save?.game;
+  if (g?.created !== true) return null;
+  const number = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.floor(value) : null;
+  const xp = number(g.xp), money = number(g.money);
+  const ranks = [[0,'Newcomer'],[200,'Explorer'],[600,'Local'],[1500,'Regular'],[3500,'Insider'],[7000,'Shenyang Star'],[12000,'Legend']];
+  const rank = ranks.filter(([threshold]) => xp !== null && xp >= threshold).at(-1)?.[1] || 'Newcomer';
+  return { xp, money, rank, energy: typeof g.needs?.energy === 'number' && g.needs.energy >= 0 && g.needs.energy <= 100 ? Math.floor(g.needs.energy) : null };
+}

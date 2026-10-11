@@ -69,20 +69,21 @@ After deployment, verify with two test Hafrik accounts: compare a business name 
 
 Connected panels now use Hafrik 5's canonical tokens from `src/theme/colors.ts`, `palettes.js` and `typography.ts`: Java `#1F8E93`, Cyprus `#0C3F44`, canvas `#EDF7F5`, white surfaces and Readex Pro. Regular and semibold fonts are bundled in `public/hafrik-fonts.css`; their SIL Open Font License is in `docs/Readex-Pro-LICENSE.txt`. No external font request is needed. Event cards use cover images, calendar badges and actual dates/location/attendance. Businesses, Spaces, people and Academy share the same card hierarchy; services, Marketplace and Exchange share the panel, action and form styling. Theme rules apply only to Hafrik integration panels. Other game panels retain their own style.
 
-The wrapper follows the app's resolved light/dark theme. A native “Hafrik apps” menu pushes fixed app routes above the ChinaLife screen; Back returns to that existing game instance. It includes the Hafrik feed, businesses, Spaces, people, events, learning, Marketplace and Exchange. The feed push uses `params: {chinaLifeReturn: true}`; the app's existing `MainTabs` registration must expose a native return header for this invocation:
+The wrapper follows the app's resolved light/dark theme. A native “Hafrik apps” menu pushes fixed app routes above the ChinaLife screen; Back returns to that existing game instance. It includes the Hafrik feed, businesses, Spaces, people, events, learning, Marketplace and Exchange. The feed opens the normal Hafrik tabs without a second stack header. Register MainTabs in App.js with:
 
 ```jsx
-options={({ route }) => ({
-  gestureEnabled: false,
-  headerShown: route.params?.chinaLifeReturn === true,
-  title: 'Hafrik',
-  headerBackTitle: 'Game',
-  headerStyle: { backgroundColor: themeColors.surface },
-  headerTintColor: themeColors.text,
-})}
+options={{ gestureEnabled: false, headerShown: false }}
 ```
 
-This is applied in the local Hafrik 5 `App.js`, alongside the wrapper/config changes. Preserve its other existing edits when packaging the app. Server deployment alone cannot add the native menu or return header; reload the development app or ship a new native build.
+The existing feed owns its safe area and floating header. Adding a stack header
+above it produced extra vertical space. The Home feed card above stories now
+shows the signed-in player’s saved rank, XP, game balance and energy. Tap it to
+return to ChinaLife; the normal Hafrik tabs remain available. Values are marked
+as last synced and never drawn from another account’s cache. The card refreshes
+on focus, app foreground and every minute while active. No extra API or database
+migration is required. These changes are applied locally in Hafrik 5. Ship the
+updated ChinaLifeLiveCard/chinaLifeExperience and MainTabs options with the app;
+server deployment alone cannot change native spacing or display the stats.
 
 Trusted focus messages save the current game and release voice/microphone, radio and club audio when the game is covered or the app backgrounds. Rendering pauses without rebuilding the city or resetting the character. Returning reenables rendering and refreshes the connected map data. Audio stays paused until the user plays again; voice can resume its normal listen-only behavior, with microphone use requiring the existing explicit action. The only city renderer edit is the early rendering pause guard; map appearance and layout are unchanged.
 
