@@ -66,7 +66,7 @@ test('all fifteen university campuses and new dining/clubs have separate routes 
 test('all seven travel choices charge once on arrival and cancellation costs nothing',()=>{for(const [id,fare] of [['walkTravel',0],['bikeTravel',2],['metroTravel',4],['busTravel',2],['cabTravel',25],['didiEconomyTravel',18],['didiPremiumTravel',38]]){const t=setup();t.game.state.needs.energy=100;const before=t.game.state.money;t.game.travel('black-sheep');t.click(id);assert.equal(t.game.state.money,before);t.world.cancel();t.tick(15);assert.equal(t.game.state.place,'home');assert.equal(t.game.state.money,before);t.game.travel('black-sheep');t.click(id);t.tick(20);assert.equal(t.game.state.place,'black-sheep',id);assert.equal(t.game.state.money,before-fare,id)}});
 
 test('remote players retain their positions in the expanded 007 room',()=>{const t=setup();t.game.state.place='night';t.world.venue('night');t.context.dispatchEvent(new t.context.CustomEvent('chinalife:players',{detail:[{id:'2',name:'Partner',city:'Shenyang',place:'night',x:7.5,z:5.5,xp:200}]}));assert.equal(t.world.remotePositions[0].x,7.5);assert.equal(t.world.remotePositions[0].z,5.5)});
-test('owned homes change interior style, render every purchased item and keep actions reachable',()=>{const t=setup();t.game.state.upgrades=t.game.catalog.furniture.map(f=>f.id);for(const type of ['apartment','townhouse','villa','penthouse','mansion']){t.game.state.properties.Shenyang=type;t.world.venue('home');assert.equal(t.world.homeStyle,type);for(const id of t.game.state.upgrades)assert.ok(t.world.furniture.includes(id),type+':'+id);let completed=0;t.world.perform({...activityMotion('home',1),label:'Cook'},()=>completed++);t.tick(20);assert.equal(completed,1,type)} });
+test('owned homes change interior style, account for purchased items in the room or inventory and keep actions reachable',()=>{const t=setup();t.game.state.upgrades=t.game.catalog.furniture.map(f=>f.id);for(const type of ['apartment','townhouse','villa','penthouse','mansion']){t.game.state.properties.Shenyang=type;t.world.venue('home');assert.equal(t.world.homeStyle,type);const inventory=t.context.buildHome(type,{owned:t.game.state.upgrades}).stored;for(const id of t.game.state.upgrades)assert.ok(t.world.furniture.includes(id)||inventory.some(f=>f.id===id),type+':'+id);let completed=0;t.world.perform({...activityMotion('home',1),label:'Cook'},()=>completed++);t.tick(20);assert.equal(completed,1,type)} });
 test('switching city addresses and owned home types immediately changes the active house scene',()=>{const t=setup();t.game.state.money=5000000;for(const [id,type] of [['home-mansion','mansion'],['home-nanhu','townhouse']]){t.game.estate(id);t.document.getElementById('estateBuy').onclick();assert.equal(t.game.state.place,id);assert.equal(t.world.homeStyle,type)}t.game.shop('properties','penthouse');t.document.getElementById('shopBuy').onclick();assert.equal(t.game.state.place,'home');assert.equal(t.world.homeStyle,'penthouse');t.game.estate('home-mansion');const money=t.game.state.money;t.document.getElementById('estateBuy').onclick();assert.equal(t.game.state.money,money);assert.equal(t.world.homeStyle,'mansion');assert.equal(t.game.homeAddress(),'home-mansion')});
 test('Home navigation from the map travels to the selected owned address',()=>{const t=setup();t.game.state.ownedHomes=['home-mansion'];t.game.state.activeHome='home-mansion';t.game.state.place='plaza';t.world.map();t.document.getElementById('navHome').onclick();t.document.getElementById('choose-home-0').onclick();assert.ok(t.document.getElementById('cabTravel'));t.document.getElementById('cabTravel').onclick();t.tick(12);assert.equal(t.game.state.place,'home-mansion');assert.equal(t.world.homeStyle,'mansion')});
 
@@ -191,7 +191,7 @@ test('venue details collapse on entry and can be opened without losing the room'
 });
 
 test('HUD displays global online and registered player counts from the existing online response',()=>{
- const t=setup();t.context.ChinaLifeCloud={online:{online:12,players:834,cities:{Shenyang:3}},players:[]};t.context.dispatchEvent(new t.context.CustomEvent('chinalife:online'));assert.equal(t.document.getElementById('worldOnline').textContent,'Total players 834 · Activity 588');
+ const t=setup();t.context.ChinaLifeCloud={online:{online:12,players:834,cities:{Shenyang:3}},players:[]};t.context.dispatchEvent(new t.context.CustomEvent('chinalife:online'));assert.equal(t.document.getElementById('worldOnline').textContent,'Game population 9,976 · Activity 588');
 });
 
 test('room furniture copies are bounded, with overflow accounted for in storage',()=>{
@@ -211,11 +211,31 @@ test('room furniture copies are bounded, with overflow accounted for in storage'
  });
  test('two online players produce 98 activity units while the total remains real',()=>{
  const t=setup();t.context.ChinaLifeCloud={online:{online:2,players:834,cities:{}},players:[]};t.context.dispatchEvent(new t.context.CustomEvent('chinalife:online'));
- assert.equal(t.document.getElementById('worldOnline').textContent,'Total players 834 · Activity 98');
+ assert.equal(t.document.getElementById('worldOnline').textContent,'Game population 9,976 · Activity 98');
  });
 
 test('Hun River player can move after entering with an identity that spawns at the table',()=>{
  const t=setup();let id;for(let i=0;i<100;i++){const p=entryPosition('river-'+i);if(p.x>2&&p.x<4.8){id='river-'+i;break}}
  assert(id);t.context.ChinaLifeCloud={playerId:id,players:[]};t.game.state.place='home-river';t.world.venue('home-river');
  const start=t.world.position.clone();t.key('d');t.tick();assert(t.world.position.distanceTo(start)>.1,'player walks on clear floor');
+});
+
+test('furniture positioning saves independent copies and blocks occupied floor and visitor edits',()=>{
+ const t=setup();t.game.state.upgrades=['gold-sculpture'];t.game.state.furnitureQuantities={'gold-sculpture':2};t.game.state.place='home';t.world.venue('home');
+ const pieces=t.world.homeFurniture;assert.equal(pieces.length,2);const first=pieces[0],other=pieces[1];
+ assert.equal(t.world.moveFurniture(first.key,other.x,other.z,0),false);
+ assert.equal(t.world.moveFurniture(first.key,100,100,0),false);
+ let moved=false;for(let z=-3;z<3&&!moved;z+=.5)for(let x=-5;x<5&&!moved;x+=.5)moved=t.world.moveFurniture(first.key,x,z,90);
+ assert(moved,'there is clear floor for this small piece');assert.equal(t.world.homeFurniture.find(f=>f.key===first.key).rotation,90);
+ const saved=t.game.state.furnitureLayouts['Shenyang|home|'+t.world.homeStyle][first.key];t.world.venue('home');assert.equal(t.world.homeFurniture.find(f=>f.key===first.key).x,saved.x);
+ t.context.ChinaLifeHomeVisits={current:{home:t.game.state}};assert.equal(t.world.moveFurniture(first.key,0,0,0),false);
+});
+
+test('furniture floor mode has a cancel button and is cleared when leaving the room',()=>{const t=setup();t.game.state.upgrades=['gold-sculpture'];t.game.state.place='home';t.world.venue('home');const key=t.world.homeFurniture[0].key;assert(t.world.arrangeFurniture(key));assert(t.document.getElementById('furniturePlacement'));t.document.getElementById('furnitureCancel').onclick();assert.equal(t.document.getElementById('furniturePlacement'),null);assert(t.world.arrangeFurniture(key));t.world.map();assert.equal(t.document.getElementById('furniturePlacement'),null)});
+
+test('new furniture copies avoid an existing custom position and all copies remain accounted for',()=>{
+ const t=setup(),home=t.context.buildHome('rental',{owned:['gold-sculpture','wine-bar'],quantities:{'gold-sculpture':1,'wine-bar':20},placements:{'gold-sculpture:0':{x:3.4,z:1.6,rotation:0}}});
+ const sculpture=home.movable.find(f=>f.id==='gold-sculpture');assert.equal(sculpture.x,3.4);assert.equal(sculpture.z,1.6);
+ for(const f of home.movable.filter(f=>f.id==='wine-bar'))assert(Math.abs(f.x-sculpture.x)>=(f.w+sculpture.w)/2+.15||Math.abs(f.z-sculpture.z)>=(f.d+sculpture.d)/2+.15);
+ assert.equal(home.movable.filter(f=>f.id==='wine-bar').length+(home.stored.find(f=>f.id==='wine-bar')?.quantity||0),20);
 });

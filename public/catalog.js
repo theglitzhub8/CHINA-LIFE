@@ -7,6 +7,12 @@ window.ChinaLifeCatalog = {
  {id:'advertise-south',map:{x:-25,z:33},venues:[]}
  ],
  furniture:[
+ {id:'wine-bar',name:'Private wine bar',price:12800,detail:'A walnut cabinet, gold trim and a private wine collection',category:'Luxury'},
+ {id:'massage-chair',name:'Executive massage chair',price:18500,detail:'A reclining leather chair with a generous footrest',category:'Luxury'},
+ {id:'luxury-aquarium',name:'Panoramic aquarium',price:24000,detail:'An illuminated glass tank on a marble cabinet',category:'Luxury'},
+ {id:'gold-sculpture',name:'Golden sculpture',price:32000,detail:'A striking sculptural centrepiece on a stone plinth',category:'Luxury'},
+ {id:'record-console',name:'Vintage record console',price:9800,detail:'A turntable, vinyl collection and matching speakers',category:'Luxury'},
+
  {id:'fridge',name:'Double-door fridge',price:1650,detail:'A modern refrigerator for your kitchen',category:'Kitchen'},
  {id:'washer',name:'Washing machine',price:950,detail:'A front-loading washer for your laundry corner',category:'Essentials'},
  {id:'wardrobe',name:'Tall wardrobe',price:780,detail:'A full-height cabinet for your bedroom',category:'Bedroom'},

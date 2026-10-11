@@ -30,3 +30,11 @@ test('new home appliances and lounge furniture have models and persist after pur
  const t=harness({...fixture(),money:20000});for(const id of ['fridge','washer','wardrobe','armchair','coffee-table']){assert(t.game.catalog.furniture.some(f=>f.id===id));let meshes=0;furnitureModel(id).traverse(o=>{if(o.isMesh)meshes++});assert(meshes>=4);t.game.shop('furniture',id);t.click('shopBuy')}
  const restored=harness(t.game.state);for(const id of ['fridge','washer','wardrobe','armchair','coffee-table'])assert.equal(restored.game.state.furnitureQuantities[id],1);
 });
+
+test('luxury purchases and furniture layouts survive save reload with invalid positions filtered',()=>{
+ const t=harness({...fixture(),money:150000});for(const id of ['wine-bar','massage-chair','luxury-aquarium','gold-sculpture','record-console']){t.game.shop('furniture',id);t.click('shopBuy');assert(t.game.state.upgrades.includes(id));assert(new Box3().setFromObject(furnitureModel(id)).getSize(new Vector3()).length()>1)}
+ t.game.state.furnitureLayouts={'Shenyang|home':{'gold-sculpture:0':{x:-2,z:2,rotation:90},'gold-sculpture:1':{x:100,z:0,rotation:0},'unknown:0':{x:0,z:0,rotation:0}}};
+ const restored=harness(t.game.state);assert.deepEqual(JSON.parse(JSON.stringify(restored.game.state.furnitureLayouts['Shenyang|home'])),{'gold-sculpture:0':{x:-2,z:2,rotation:90}});
+});
+
+test('home collection filters luxury and owned pieces without another request',()=>{const t=harness();t.game.shop('furniture','wine-bar');t.document.querySelector('[data-collection="Luxury"]').onclick();assert.equal(t.document.querySelector('[data-item="plant"]').hidden,true);assert.equal(t.document.querySelector('[data-item="wine-bar"]').hidden,false);t.document.querySelector('[data-collection="all"]').onclick();assert.equal(t.document.querySelector('[data-item="plant"]').hidden,false)});
