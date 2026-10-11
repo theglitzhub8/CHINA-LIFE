@@ -1,0 +1,2 @@
+/* Hafrik integration panels only; the approved map and HUD retain their styles. */
+.hafrik-list{display:grid;gap:12px}.hafrik-cover{display:block;max-width:100%;width:100%;max-height:180px;object-fit:cover;border-radius:14px}.hafrik-list .quest-card p{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}

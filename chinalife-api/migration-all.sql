@@ -167,3 +167,11 @@ CREATE TABLE IF NOT EXISTS chinalife_ai_messages (
 
 CREATE TABLE IF NOT EXISTS chinalife_politics_votes (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,city VARCHAR(40) NOT NULL,office VARCHAR(40) NOT NULL,period VARCHAR(32) NOT NULL DEFAULT '',voter_id INT UNSIGNED NOT NULL,candidate_id BIGINT UNSIGNED NOT NULL,created_at DATETIME NOT NULL,UNIQUE KEY one_vote_period(city,office,period,voter_id),INDEX(city,office),FOREIGN KEY(voter_id) REFERENCES users(user_id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS chinalife_politics_elections (city VARCHAR(40) NOT NULL,office VARCHAR(40) NOT NULL,period VARCHAR(32) NOT NULL,opens_at DATETIME NOT NULL,closes_at DATETIME NOT NULL,PRIMARY KEY(city,office,period),INDEX(city,office,opens_at,closes_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Placement only. Hafrik retains ownership of listing content and membership.
+CREATE TABLE IF NOT EXISTS chinalife_hafrik_places (
+ source VARCHAR(16) NOT NULL,source_id INT UNSIGNED NOT NULL,
+ city VARCHAR(40) NOT NULL,near VARCHAR(64) NOT NULL DEFAULT 'plaza',
+ active TINYINT NOT NULL DEFAULT 1,updated_by INT UNSIGNED NOT NULL,updated_at DATETIME NOT NULL,
+ PRIMARY KEY(source,source_id),KEY city_active(city,active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

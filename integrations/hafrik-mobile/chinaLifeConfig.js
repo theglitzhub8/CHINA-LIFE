@@ -35,5 +35,22 @@ export function withChinaLifeTestMenu(items, config = CHINA_LIFE_CONFIG) {
 export function chinaLifeSessionScript(token, user, config = CHINA_LIFE_CONFIG) {
   if (!token || !config) return 'true;';
   const session = JSON.stringify({token, user:{id:user?.user_id ?? user?.id, username:user?.username ?? user?.user_name, name:user?.name ?? user?.user_fullname}}).replace(/</g, '\\u003c');
-  return `(function(){if(window.location.origin!==${JSON.stringify(config.origin)}||!window.location.pathname.startsWith(${JSON.stringify(config.basePath)}))return;if(window.HafrikSession&&window.HafrikSession.token===(${session}).token&&window.ChinaLifeAuth&&window.ChinaLifeAuth.token===(${session}).token)return;window.HafrikSession=${session};window.dispatchEvent(new CustomEvent('hafrik:session',{detail:window.HafrikSession}));})();true;`;
+  return `(function(){if(window.location.origin!==${JSON.stringify(config.origin)}||!window.location.pathname.startsWith(${JSON.stringify(config.basePath)}))return;window.ChinaLifeHafrikNative=true;if(window.HafrikSession&&window.HafrikSession.token===(${session}).token&&window.ChinaLifeAuth&&window.ChinaLifeAuth.token===(${session}).token)return;window.HafrikSession=${session};window.dispatchEvent(new CustomEvent('hafrik:session',{detail:window.HafrikSession}));})();true;`;
+}
+
+// Fixed destinations only. Web content cannot choose routes, URLs or navigation parameters.
+export function chinaLifeHafrikDestination(value) {
+  if (!value || typeof value !== 'object') return null;
+  const {type, id} = value;
+  if (id != null && (!Number.isSafeInteger(id) || id <= 0)) return null;
+  switch(type) {
+    case 'business': return id ? {name:'BusinessDetails',params:{pageId:id}} : {name:'BusinessPages'};
+    case 'space': return id ? {name:'GroupDetails',params:{groupId:id}} : {name:'GroupScreen'};
+    case 'people': return id ? {name:'UserProfile',params:{userId:id}} : {name:'PeopleYouMayKnow'};
+    case 'course': return id ? {name:'HafrikXAcademyCourse',params:{id}} : {name:'HafrikXLearn'};
+    case 'event': return id ? {name:'EventDetail',params:{eventId:id}} : {name:'EventsScreen'};
+    case 'product': return id ? {name:'ProductDetail',params:{post_id:id}} : {name:'MarketplaceScreen'};
+    case 'exchange': return {name:'ExchangeHome'};
+    default: return null;
+  }
 }

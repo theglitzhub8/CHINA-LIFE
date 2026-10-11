@@ -28,6 +28,11 @@ before(async()=>{
  // The bridge delegates to the installed Hafrik module; fixtures verify dispatch and auth, not Hafrik's database implementation.
  fs.mkdirSync(path.join(root,'services'),{recursive:true});
  for(const endpoint of ['list','detail','my_applications','get_application','apply'])fs.writeFileSync(path.join(root,'services',endpoint+'.php'),`<?php json_response('success',['endpoint'=>'${endpoint}','user_id'=>$uid,'id'=>$_GET['id']??null]);`);
+ // Installed Hafrik modules are stubbed only for bridge dispatch; map tests use real SQL below.
+ for(const modulePath of ['business/list','business/view','business/follow','communities/list','communities/view','communities/join','communities/leave','people/list','people/follow_toggle','hafrikx/academy/courses','hafrikx/academy/course-detail','hafrikx/academy/apply','events/list','events/detail','events/rsvp','marketplace/get_marketplace','marketplace/get_product','exchange/rates_get','exchange/quote','exchange/orders_my']) {
+  const destination=path.join(root,modulePath+'.php');fs.mkdirSync(path.dirname(destination),{recursive:true});
+  fs.writeFileSync(destination,`<?php header('Access-Control-Allow-Origin: *');json_response('success',['module'=>'${modulePath}','user_id'=>$uid,'input'=>json_decode(file_get_contents('php://input'),true),'query'=>$_GET]);`);
+ }
  // Upgrade the schema already uploaded to the Hafrik server, twice, preserving its rows.
  for(const file of ['migration.sql','migration 2.sql','voice.sql'])sql('USE chinalife_test; '+fs.readFileSync('chinalife-api/'+file,'utf8'));
  // Simulate the previously deployed lifetime-vote schema before the first upgrade.
@@ -885,4 +890,49 @@ test('Hafrik service bridge restricts dispatch and preserves trusted browser COR
  const submitted=await call(2,'hafrik-services.php?endpoint=apply','POST',{service_id:12});assert.equal(submitted.httpStatus,200,JSON.stringify(submitted));assert.equal(submitted.data.endpoint,'apply');assert.equal(submitted.data.user_id,2);
  for(let i=0;i<4;i++)assert.equal((await call(2,'hafrik-services.php?endpoint=apply','POST',{service_id:12})).httpStatus,200);
  assert.equal((await call(2,'hafrik-services.php?endpoint=apply','POST',{service_id:12})).httpStatus,429);
+});
+
+test('Hafrik bridge allows only named workflows and reasserts credentialed CORS',async()=>{
+ assert.equal((await call(null,'hafrik.php?action=businesses')).httpStatus,401);
+ assert.equal((await call(2,'hafrik.php?action=../admin')).httpStatus,404);
+ assert.equal((await call(2,'hafrik.php?action=space_join')).httpStatus,405);
+ assert.equal((await call(2,'hafrik.php?action=exchange_quote','POST',{})).httpStatus,405);
+ const response=await fetch(base+'/api/v4/chinalife/hafrik.php?action=businesses',{headers:{Authorization:'Bearer test-2',Origin:'https://china-life.hafrik.com'}});
+ assert.equal(response.headers.get('access-control-allow-origin'),'https://china-life.hafrik.com');assert.equal(response.headers.get('access-control-allow-credentials'),'true');assert.match(response.headers.get('cache-control'),/no-store/);
+ for(const [action,modulePath,body] of [['business_follow','business/follow',{page_id:3,action:'follow'}],['space_join','communities/join',{group_id:4}],['people_follow','people/follow_toggle',{user_id:5,action:'follow'}],['course_apply','hafrikx/academy/apply',{course_id:6}],['event_rsvp','events/rsvp',{event_id:7,status:'going'}]]){
+  const r=await call(2,'hafrik.php?action='+action,'POST',body);assert.equal(r.httpStatus,200,JSON.stringify(r));assert.equal(r.data.module,modulePath);assert.equal(r.data.user_id,2);assert.deepEqual(r.data.input,body);
+ }
+ for(const [action,modulePath] of [['exchange','exchange/rates_get'],['exchange_quote','exchange/quote'],['exchange_orders','exchange/orders_my'],['marketplace','marketplace/get_marketplace'],['product','marketplace/get_product'],['academy','hafrikx/academy/courses'],['people','people/list'],['events','events/list'],['spaces','communities/list']])assert.equal((await call(2,'hafrik.php?action='+action)).data.module,modulePath);
+});
+test('Hafrik map keeps source IDs, live content, owner placement and privacy synchronized',async()=>{
+ sql(`USE chinalife_test;
+ CREATE TABLE pages(page_id INT PRIMARY KEY,page_title VARCHAR(100),page_name VARCHAR(100),page_description TEXT,page_admin INT,page_location VARCHAR(100));
+ CREATE TABLE pages_admins(page_id INT,user_id INT);
+ CREATE TABLE \`groups\`(group_id INT PRIMARY KEY,group_title VARCHAR(100),group_name VARCHAR(100),group_description TEXT,group_admin INT,group_privacy VARCHAR(20));
+ CREATE TABLE groups_admins(group_id INT,user_id INT);
+ CREATE TABLE events(event_id INT PRIMARY KEY,event_title VARCHAR(100),event_name VARCHAR(100),event_description TEXT,event_admin INT,event_privacy VARCHAR(20),event_location VARCHAR(100),event_end_date DATETIME);
+ CREATE TABLE hafrikx_academy_courses(id INT PRIMARY KEY,title VARCHAR(100),description TEXT,is_active INT);
+ INSERT INTO pages VALUES(91,'Live business','live','Business content',2,'Shenyang, China'),(92,'Ambiguous','ambiguous','',2,'Shenyang and Beijing'),(93,'Unknown','unknown','',2,'China'),(94,'Chinese address','chinese','',2,'沈阳和平区');
+ INSERT INTO \`groups\` VALUES(91,'Study Space','study','Community content',2,'public');
+ INSERT INTO groups_admins VALUES(91,3);
+ INSERT INTO events VALUES(91,'Meetup','meetup','Event content',2,'public','Shenyang',DATE_ADD(NOW(),INTERVAL 2 DAY));
+ INSERT INTO hafrikx_academy_courses VALUES(91,'Course','Course content',1);
+ `);
+ let r=await call(2,'hafrik-map.php?city=Shenyang');assert.equal(r.httpStatus,200,JSON.stringify(r));let items=r.data.items;
+ assert(items.some(x=>x.id==='hafrik-business-91'));assert(items.some(x=>x.id==='hafrik-business-94'));assert(items.some(x=>x.id==='hafrik-event-91'));assert(!items.some(x=>x.id==='hafrik-business-92'));assert(!items.some(x=>x.id==='hafrik-business-93'));assert(!items.some(x=>x.id==='hafrik-space-91'));
+ assert.equal((await call(4,'hafrik-map.php','POST',{source:'business',id:91,city:'Shenyang',near:'mall'})).httpStatus,403);
+ assert.equal((await call(2,'hafrik-map.php','POST',{source:'business',id:91,city:'Shenyang',near:'home'})).httpStatus,400);
+ assert.equal((await call(2,'hafrik-map.php','POST',{source:'space',id:91,city:'Unknown',near:'plaza'})).httpStatus,400);
+ assert.equal((await call(3,'hafrik-map.php','POST',{source:'space',id:91,city:'Shenyang',near:'ef'})).httpStatus,200,'co-admin may place their Space');
+ assert.equal((await call(2,'hafrik-map.php','POST',{source:'course',id:91,city:'Shenyang',near:'campus'})).httpStatus,403);
+ assert.equal((await call(1,'hafrik-map.php','POST',{source:'course',id:91,city:'Shenyang',near:'campus'})).httpStatus,200);
+ assert.equal((await call(2,'hafrik-map.php','POST',{source:'business',id:91,city:'Shenyang',near:'market'})).httpStatus,200);
+ sql("USE chinalife_test; UPDATE pages SET page_title='Changed in Hafrik' WHERE page_id=91;");
+ items=(await call(2,'hafrik-map.php?city=Shenyang')).data.items;assert.equal(items.find(x=>x.id==='hafrik-business-91').name,'Changed in Hafrik');assert.equal(items.find(x=>x.id==='hafrik-business-91').near,'market');assert(items.some(x=>x.id==='hafrik-space-91'));assert(items.some(x=>x.id==='hafrik-course-91'));
+ assert.equal((await call(2,'hafrik-map.php','POST',{source:'business',id:91,city:'Shenyang',near:'mall',active:false})).httpStatus,200);assert(!(await call(2,'hafrik-map.php?city=Shenyang')).data.items.some(x=>x.id==='hafrik-business-91'),'hidden placement suppresses inferred city');
+ sql("USE chinalife_test; UPDATE `groups` SET group_privacy='secret' WHERE group_id=91; UPDATE events SET event_end_date=DATE_SUB(NOW(),INTERVAL 1 DAY) WHERE event_id=91; UPDATE hafrikx_academy_courses SET is_active=0 WHERE id=91;");
+ items=(await call(2,'hafrik-map.php?city=Shenyang')).data.items;assert(!items.some(x=>['hafrik-space-91','hafrik-event-91','hafrik-course-91'].includes(x.id)));
+ assert.equal((await call(2,'hafrik-map.php','POST',{source:'space',id:91,city:'Shenyang',near:'ef'})).httpStatus,404);
+ sql('USE chinalife_test; DELETE FROM pages WHERE page_id=94');assert(!(await call(2,'hafrik-map.php?city=Shenyang')).data.items.some(x=>x.id==='hafrik-business-94'));
+ assert.equal((await call(null,'hafrik-map.php?city=Shenyang')).httpStatus,401);
 });

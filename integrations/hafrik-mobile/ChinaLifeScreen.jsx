@@ -6,7 +6,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../AuthContext';
-import { CHINA_LIFE_CONFIG, isChinaLifeNavigationAllowed, chinaLifeSessionScript } from './chinaLifeConfig';
+import { CHINA_LIFE_CONFIG, isChinaLifeNavigationAllowed, chinaLifeSessionScript, chinaLifeHafrikDestination } from './chinaLifeConfig';
 
 export default function ChinaLifeScreen({ navigation }) {
   const { colors } = useTheme();
@@ -127,7 +127,12 @@ export default function ChinaLifeScreen({ navigation }) {
           onMessage={({ nativeEvent }) => {
             if (!isChinaLifeNavigationAllowed(nativeEvent.url, config.origin, config.basePath)) return;
             try {
-              if (JSON.parse(nativeEvent.data).type === 'chinalife:auth-request') web.current?.injectJavaScript(chinaLifeSessionScript(token, user, config));
+              const message = JSON.parse(nativeEvent.data);
+              if (message.type === 'chinalife:auth-request') web.current?.injectJavaScript(chinaLifeSessionScript(token, user, config));
+              if (message.type === 'chinalife:hafrik-open') {
+                const destination = chinaLifeHafrikDestination(message.destination);
+                if (destination) navigation.navigate(destination.name, destination.params);
+              }
             } catch {}
           }}
           sharedCookiesEnabled={false}
