@@ -1,0 +1,3 @@
+Use chinaLifeNotificationDestination(data, CHINA_LIFE_CONFIG) before normal notification routes in src/helpers/notificationRouting.js (push taps) and before actor/web/post routing in ActivityScreen.jsx (inbox taps). Both return a fixed ChinaLife route and validated launch URL. Changes are applied locally in Hafrik 5.
+
+Mount useChinaLifeAppPresence(token) once in NotificationProvider (context/notificationcontext.tsx). It runs only with authenticated foreground app activity and skips the visible game. Applied locally. Existing push token registration, permissions and delivery configuration are reused.

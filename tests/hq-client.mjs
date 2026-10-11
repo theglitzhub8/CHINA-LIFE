@@ -4,3 +4,5 @@ test('HQ guests can visit named desks without presenting prepared answers as a l
  assert.equal(h.document.querySelectorAll('[id^="hqDesk-"]').length,4);h.click('hqDesk-lawrence');assert.match(h.document.getElementById('activityContent').textContent,/Prepared desk information/);assert.match(h.document.getElementById('activityContent').textContent,/not a live conversation/);
  h.context.ChinaLifeHQ.desk('ceo');assert(h.document.getElementById('hqAppointment'));assert(!h.document.getElementById('hqService-major-proposal'));assert(!h.document.getElementById('hqInbox'));
 });
+
+test('HQ service entry uses the real Hafrik catalogue',()=>{const h=harness();let opened=0;h.context.ChinaLifeServices={open:()=>opened++};h.game.hq();assert.equal(opened,1);});

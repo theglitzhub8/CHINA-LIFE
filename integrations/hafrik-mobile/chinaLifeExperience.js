@@ -31,7 +31,7 @@ export function isChinaLifeLaunchLink(value, config) {
   try {
     const url = new URL(value);
     const path = url.pathname.endsWith('/') ? url.pathname : url.pathname + '/';
-    return url.protocol === 'https:' && url.origin === config.origin && path === config.basePath && !url.username && !url.password && !url.search && (!url.hash || isChinaLifeCampaignHash(url.hash));
+    return url.protocol === 'https:' && url.origin === config.origin && path === config.basePath && !url.username && !url.password && !url.search && (!url.hash || isChinaLifeCampaignHash(url.hash) || isChinaLifeInboxHash(url.hash));
   } catch { return false; }
 }
 
@@ -59,4 +59,15 @@ export function chinaLifePlayerStats(saved, accountId) {
 
 export function chinaLifeActivityCount(online) {
   return Number.isSafeInteger(online) && online >= 0 && Number.isSafeInteger(online * 49) ? online * 49 : null;
+}
+
+export function isChinaLifeInboxHash(hash) {
+ const p=new URLSearchParams(hash.slice(1));return [...p.keys()].length===2 && p.get('view')==='inbox' && /^[a-zA-Z0-9-]{1,100}$/.test(p.get('notice')||'');
+}
+export function chinaLifeNotificationDestination(data,config) {
+ if(!config||!['chinalife_vote','chinalife_friend','chinalife_money'].includes(String(data?.type||data?.action||'')))return null;
+ let notice=data.notice || data.notify_id || data.target?.notify_id;
+ if(!notice){try{notice=new URL(data.node_url||data.target?.node_url||data.target?.id).hash;notice=new URLSearchParams(notice.slice(1)).get('notice');}catch{}}
+ if(!/^[a-zA-Z0-9-]{1,100}$/.test(notice||''))return null;
+ return {name:'ChinaLife',params:{launchUrl:config.url+'#'+new URLSearchParams({view:'inbox',notice})}};
 }

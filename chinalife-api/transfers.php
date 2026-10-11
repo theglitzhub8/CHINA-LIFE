@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__.'/common.php';
+require_once __DIR__.'/common.php';require_once __DIR__.'/hafrik-notify.php';
 cl_methods(['GET','POST']);
 if($method==='GET') {
  $rows=cl_rows('SELECT t.id,t.sender_id,t.recipient_id,t.amount,t.created_at,s.user_name sender_name,r.user_name recipient_name FROM chinalife_transfers t JOIN users s ON s.user_id=t.sender_id JOIN users r ON r.user_id=t.recipient_id WHERE t.sender_id=? OR t.recipient_id=? ORDER BY t.created_at DESC,t.id DESC LIMIT 20','ii',[$uid,$uid]);
@@ -23,5 +23,5 @@ try {
  if(($games[$uid]['money']??0)<$amount){$db->rollback();cl_fail('Not enough money',409);}
  if(($games[$peer]['money']??0)+$amount>1000000000){$db->rollback();cl_fail('Recipient balance is full',409);}
  foreach([$uid=>-$amount,$peer=>$amount] as $id=>$delta){$g=$games[$id];$g['money']+=$delta;$g['transferTotal']=($g['transferTotal']??0)+$delta;cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($g,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),$id]);}
- cl_run('INSERT INTO chinalife_transfers(id,sender_id,recipient_id,amount,created_at) VALUES(?,?,?,?,NOW())','siii',[$key,$uid,$peer,$amount]);if($spray)cl_run('INSERT INTO chinalife_gestures(sender_id,target_id,city,place,phrase) VALUES(?,?,?,?,"spray")','iiss',[$uid,$peer,$sprayRoom['city'],$sprayRoom['place']]);$db->commit();json_response('success',['sent'=>true,'amount'=>$amount]);
+ cl_run('INSERT INTO chinalife_transfers(id,sender_id,recipient_id,amount,created_at) VALUES(?,?,?,?,NOW())','siii',[$key,$uid,$peer,$amount]);if($spray)cl_run('INSERT INTO chinalife_gestures(sender_id,target_id,city,place,phrase) VALUES(?,?,?,?,"spray")','iiss',[$uid,$peer,$sprayRoom['city'],$sprayRoom['place']]);$db->commit();cl_hafrik_notify($peer,'money','money-'.$key,($auth['user_name']??'A player').' sent you ¥'.$amount.' in ChinaLife.',$uid);json_response('success',['sent'=>true,'amount'=>$amount]);
 }catch(Throwable $e){$db->rollback();throw $e;}

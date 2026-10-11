@@ -25,6 +25,10 @@ before(async()=>{
  const root=path.join(tmp,'web/api/v4');fs.mkdirSync(root,{recursive:true});fs.cpSync('chinalife-api',path.join(root,'chinalife'),{recursive:true});fs.writeFileSync(path.join(root,'chinalife/admin-config.php'),`<?php return ['usernames'=>['user1']];`);
  fs.writeFileSync(path.join(root,'db.php'),`<?php mysqli_report(MYSQLI_REPORT_ERROR|MYSQLI_REPORT_STRICT);`);
  fs.writeFileSync(path.join(root,'helpers.php'),`<?php function get_db_connection(){$db=new mysqli('localhost','root','','chinalife_test',0,getenv('CHINALIFE_TEST_SOCKET'));$db->set_charset('utf8mb4');return $db;} if(($_SERVER['REQUEST_METHOD']??'')==='OPTIONS'){http_response_code(204);exit;} function json_response($status,$data=null,$message=''){header('Content-Type: application/json');echo json_encode(compact('status','data','message'));exit;} function auth_user($db){$token=$_SERVER['HTTP_AUTHORIZATION']??'';if(!preg_match('/^Bearer test-([1-9][0-9]*)$/',$token,$m)){http_response_code(401);json_response('error',null,'Unauthorized');}$s=$db->prepare('SELECT * FROM users WHERE user_id=?');$id=(int)$m[1];$s->bind_param('i',$id);$s->execute();return $s->get_result()->fetch_assoc()?:[];}`);
+ // Hafrik notification helper contract: inbox SQL is real; provider transport is recorded.
+ sql("USE chinalife_test; CREATE TABLE notifications(notification_id INT AUTO_INCREMENT PRIMARY KEY,to_user_id INT,from_user_id INT,from_user_type VARCHAR(20) DEFAULT 'user',action VARCHAR(50),node_type VARCHAR(30),node_url VARCHAR(500),notify_id VARCHAR(100),message TEXT,time DATETIME,seen CHAR(1) DEFAULT '0'); CREATE TABLE test_device_push(user_id INT,payload TEXT);");
+ fs.mkdirSync(path.join(root,'notifications'),{recursive:true});
+ fs.writeFileSync(path.join(root,'notifications/_admin_notify.php'),`<?php function v2_notify_user($db,$to,$p){$s=$db->prepare("INSERT INTO notifications(to_user_id,from_user_id,action,node_type,node_url,notify_id,message,time) VALUES(?,?,?,?,?,?,?,NOW())");$s->bind_param('iisssss',$to,$p['from_user_id'],$p['action'],$p['node_type'],$p['node_url'],$p['notify_id'],$p['message']);$s->execute();$j=json_encode($p['data']);$s=$db->prepare('INSERT INTO test_device_push VALUES(?,?)');$s->bind_param('is',$to,$j);$s->execute();return ['inserted'=>true];}`);
  // The bridge delegates to the installed Hafrik module; fixtures verify dispatch and auth, not Hafrik's database implementation.
  fs.mkdirSync(path.join(root,'services'),{recursive:true});
  for(const endpoint of ['list','detail','my_applications','get_application','apply'])fs.writeFileSync(path.join(root,'services',endpoint+'.php'),`<?php json_response('success',['endpoint'=>'${endpoint}','user_id'=>$uid,'id'=>$_GET['id']??null]);`);
@@ -955,4 +959,28 @@ test('missing next election opens automatically and ordinary players votes count
  for(const voter of [6,7])assert.equal((await call(voter,'politics.php?vote=1','POST',{city:'Shenyang',office:'governor',candidate_id:candidate})).httpStatus,200);
  assert.equal((await call(6,'politics.php?vote=1','POST',{city:'Shenyang',office:'governor',candidate_id:candidate})).httpStatus,409);
  ballot=(await call(6,'politics.php?city=Shenyang')).data;assert.equal(ballot.results.find(c=>Number(c.id)===candidate).votes,2);assert.equal(Number(sql("USE chinalife_test; SELECT COUNT(*) FROM chinalife_politics_votes WHERE city='Shenyang'").trim()),Number(before)+2);
+});
+
+test('Hafrik inbox and device push receive votes, friend requests and money once with private vote identity',async()=>{
+ sql("USE chinalife_test; DELETE FROM chinalife_friends WHERE first_id=5 AND second_id=6; DELETE FROM notifications; DELETE FROM test_device_push;");
+ assert.equal((await call(5,'friends.php','POST',{peer:6,action:'request'})).httpStatus,200);
+ await call(5,'friends.php','POST',{peer:6,action:'request'});
+ const key='native-money-notification-1234';
+ sql("USE chinalife_test; UPDATE chinalife_saves SET game_state=JSON_SET(game_state,'$.money',5000) WHERE user_id=11;");
+ for(let i=0;i<2;i++)assert.equal((await call(11,'transfers.php','POST',{peer:12,amount:30,request_id:key})).httpStatus,200);
+ const ballot=(await call(8,'politics.php?city=Shenyang')).data,candidate=ballot.candidates[0];
+ assert.equal((await call(8,'politics.php?vote=1','POST',{city:'Shenyang',office:'governor',candidate_id:Number(candidate.id)})).httpStatus,200);
+ const notices=(await call(6,'game-notifications.php')).data.items;assert.equal(notices.length,1);assert.match(notices[0].message,/friend request/);
+ const money=(await call(12,'game-notifications.php')).data.items;assert.equal(money.length,1);assert.match(money[0].message,/¥30/);
+ const votes=(await call(Number(candidate.candidate_id),'game-notifications.php')).data.items;assert.equal(votes.length,1);assert.equal(sql("USE chinalife_test; SELECT from_user_id FROM notifications WHERE action='chinalife_vote'").trim(),'0');
+ assert.equal(sql('USE chinalife_test; SELECT COUNT(*) FROM test_device_push').trim(),'3');
+ assert.equal((await call(5,'game-notifications.php')).data.items.length,0);
+ await call(5,'game-notifications.php','POST',{notice:notices[0].id});assert.equal((await call(6,'game-notifications.php')).data.items[0].seen,'0');
+ await call(6,'game-notifications.php','POST',{notice:notices[0].id});assert.equal((await call(6,'game-notifications.php')).data.items[0].seen,'1');
+});
+test('foreground app heartbeat preserves venue and position and never creates an unsaved character',async()=>{
+ await call(11,'presence.php','POST',{...presence('Shenyang','hq'),x:7,z:4});
+ assert.equal((await call(11,'app-presence.php','POST',{})).httpStatus,200);
+ const p=(await call(12,'presence.php?city=Shenyang')).data.players.find(p=>p.id==='11');assert.equal(p.place,'hq');assert.equal(p.x,7);assert.equal(p.z,4);
+ assert.equal((await call(null,'app-presence.php','POST',{})).httpStatus,401);
 });

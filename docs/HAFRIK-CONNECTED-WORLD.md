@@ -154,3 +154,36 @@ The general useWebViewSession helper uses a token-bearing redirect URL and is
 not needed here. The cloud login fallback is now deferred while the native
 session connects. It appears after the eight-second missing-session timeout or
 a connection error, rather than flashing during a normal session restore.
+
+### HQ services, labels and native notifications
+HQ’s general services entry now opens the same live Hafrik Services catalogue as
+the phone. Staff desks link to that catalogue; CEO appointment and careers flows
+remain separate. The Send Money screen shows the available balance without the
+old disclaimer line. Inside HQ, short names appear over staff and role plaques
+sit on their desks. Only that HQ label line in world.js changed; city layout,
+map appearance and all other rooms are preserved.
+
+Votes, new friend requests and successful transfers call the installed Hafrik
+`notifications/_admin_notify.php` helper. It creates normal Hafrik inbox rows,
+increments the normal badge and uses the existing device push provider.
+Transfer retries and repeated pending friend requests do not create duplicates;
+vote notices use a system sender and do not disclose the voter. Failed push
+integration is logged and does not reverse a successful game action. Device
+push depends on existing provider configuration, permission and registered
+user tokens. These were not exercised against production devices here.
+
+Native push and Activity inbox taps use chinaLifeNotificationDestination to
+open the configured game with a bounded notice key. The game has a Phone →
+Notifications app and highlights the tapped alert. game-notifications.php reads
+only the authenticated recipient’s rows and marks only their alerts as read.
+Ship the changed native notificationRouting.js, ActivityScreen.jsx,
+NotificationProvider hook, useChinaLifeAppPresence and chinaLifeExperience.
+See notification-integration.md for the targeted integration points.
+
+useChinaLifeAppPresence keeps saved players online every 15 seconds while the
+native app is foregrounded. It skips the visible game, which owns movement
+heartbeats. app-presence.php preserves existing positions and private-home
+access checks. Backgrounding stops the native heartbeat and normal presence
+expiry applies. This is active-app presence, not an always-online claim after
+OS suspension. No database migration or new notification credentials required.
+Preflight now requires the installed Hafrik notification and push helpers.
