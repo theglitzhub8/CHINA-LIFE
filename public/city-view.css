@@ -399,3 +399,27 @@ dialog .activity-panel :is(.quest-card,.dream-card,.gist-card) { margin: 8px 0; 
 #worldUI.venue-details-collapsed:not(.map-view) #worldClean{animation:rewards-invite 2s ease-in-out 3}
 @keyframes rewards-invite{50%{box-shadow:0 0 0 5px #f5cd6140,0 3px 12px #604e2526}}
 @media(prefers-reduced-motion:reduce){#worldUI.venue-details-collapsed:not(.map-view) #worldClean{animation:none}}
+
+/* Civic Hall: scoped to the Politics dialog, without changing the city map. */
+#politicsBody { color: #0c3f44; gap: 16px; font-family: 'Readex Pro', sans-serif; }
+#politicsBody .politics-hero { background: #0c3f44; border-radius: 22px; padding: 20px; flex-wrap: wrap; }
+#politicsBody .politics-hero p { line-height: 1.6; }
+#politicsBody .politics-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+#politicsBody .politics-actions button { min-height: 48px; padding: 12px; }
+#politicsBody .politics-note { margin: 0; line-height: 1.7; }
+#politicsBody .politics-office { background: #edf7f5; border: 1px solid #cfe3df; border-radius: 22px; padding: 16px; }
+#politicsBody .politics-office header { align-items: flex-start; margin-bottom: 16px; }
+#politicsBody .politics-office header small { display: block; line-height: 1.6; }
+#politicsBody .politics-candidate { display: grid; gap: 14px; padding: 18px; margin: 12px 0; border: 1px solid #d9e7e3; border-radius: 16px; background: #fff; }
+#politicsBody .politics-candidate-info { min-width: 0; }
+#politicsBody .politics-candidate-info small { color: #567a79; display: block; margin-bottom: 8px; }
+#politicsBody .politics-candidate-info b { display: block; font-size: 17px; overflow-wrap: anywhere; }
+#politicsBody .politics-candidate-info p { font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; margin-bottom: 0; }
+#politicsBody .politics-candidate-actions { display: grid; gap: 8px; }
+#politicsBody .politics-candidate-actions button { width: 100%; min-height: 46px; white-space: normal; padding: 12px; border-radius: 12px; }
+#politicsBody .politics-vote { background: #1f8e93; color: #fff; border: 0; font-weight: 600; }
+#politicsBody .politics-vote:disabled { background: #e2edeb; color: #567a79; cursor: default; }
+#politicsBody .politics-ranking { border-top: 1px solid #cfe3df; padding-top: 12px; overflow-x: auto; }
+#politicsBody .politics-ranking td { overflow-wrap: anywhere; }
+#politicsBody [aria-label="Shared campaign"] { border-color: #1f8e93; box-shadow: 0 0 0 2px #1f8e931a; }
+@media (max-width: 380px) { #politicsBody .politics-actions { grid-template-columns: 1fr; } #politicsBody .politics-office { padding: 12px; } }

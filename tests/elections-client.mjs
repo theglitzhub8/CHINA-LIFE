@@ -27,3 +27,12 @@ test('a voter can choose another user without nominating and only own campaigns 
 });
 
 test('shared campaigns open a different city ballot without moving the character',async()=>{const t=harness();const before=t.game.state.city;let requested;t.context.ChinaLifeAuth={request:async(path)=>{requested=path;return {data:ballot}}};t.game.politics('Guangzhou',1);await settle();assert.equal(t.game.state.city,before);assert.match(requested,/city=Guangzhou/);assert.equal(t.document.querySelector('[aria-label="Shared campaign"] b').textContent,candidate.name);});
+
+test('closed polls retain approved candidates and Hafrik campaign sharing with disabled voting',async()=>{
+ const t=harness();let shared,posts=0;t.context.ChinaLifeMilestones={campaign:c=>shared=c};t.context.ChinaLifeAuth={request:async(path,method)=>{if(method==='POST')posts++;return {data:{...ballot,elections:{}}}}};
+ t.game.politics();await settle();const button=t.document.querySelector('[data-vote="1"]');assert(button.disabled);assert.equal(button.textContent,'Voting closed');await button.onclick();assert.equal(posts,0);t.document.querySelector('[data-campaign="1"]').onclick();assert.equal(shared.id,1);assert.match(t.document.getElementById('politicsBody').textContent,/Voting closed/);
+});
+test('submitting a vote locks all candidates for that office until the ballot refreshes',async()=>{
+ const t=harness();let complete;const other={...candidate,id:2,is_mine:false};t.context.ChinaLifeAuth={request:(path,method)=>method==='POST'?new Promise(resolve=>complete=resolve):Promise.resolve({data:{...ballot,candidates:[candidate,other]}})};
+ t.game.politics();await settle();const pending=t.document.querySelector('[data-vote="2"]').onclick();assert(t.document.querySelector('[data-vote="1"]').disabled);assert(t.document.querySelector('[data-vote="2"]').disabled);complete({data:{ballot:{...ballot,candidates:[candidate,other],voted_offices:['governor']}}});await pending;assert(t.document.querySelector('[data-vote="1"]').disabled);
+});
