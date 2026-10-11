@@ -8,7 +8,8 @@ function setFeatures(next,fromMap=false){if(!next||typeof next!=='object')return
  const city=window.ChinaLife.state.city;window.ChinaLife.setHafrikPlaces(enabled('map')?[...hubs(city),...mapItems.filter(r=>enabled(r.hafrik?.type))]:[]);
  if(currentFeature&&!enabled(currentFeature)&&!$('activityContent')?.querySelector('[data-hafrik-feature]')&&$('activityContent')?.querySelector('[data-hafrik-hub-screen]')){clearPrivateView();if($('activityContent')?.querySelector('[id^="hafrik"]'))screen('Hafrik integrations updated','<p>Availability has changed. Open the feature again from your phone.</p>');}
  window.dispatchEvent(new CustomEvent('chinalife:hafrik-features',{detail:features}));
- if($('phoneDialog')?.open)window.ChinaLife.phone();
+ // Update availability in place so an open phone keeps its search and scroll.
+ if($('phoneDialog')?.open)for(const b of $('phoneContent').querySelectorAll('[data-phone]')){const key={hafrikBusiness:'business',spaces:'space',exchange:'exchange',meet:'people',academy:'course',hafrikEvents:'event',marketplace:'product',services:'services'}[b.dataset.phone];if(key)b.disabled=!enabled(key);}
 }
 let generation=0,mapEpoch=0,mapKey='',mapItems=[],syncing=false,screenOwner=null,browseContext=null;
 const account=()=>String(window.ChinaLife.accountId??'');

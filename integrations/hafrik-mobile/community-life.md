@@ -16,7 +16,9 @@ Community meetup is available all day at Hafrik Square; lunch runs 12:00–14:00
 
 ## Police and Court
 
-Players file private cases only against their own recorded outgoing game transfers. Both parties can submit up to five statements; game advisers provide writing guidance. Phone admin and the full admin dashboard can review evidence, schedule a hearing within 30 days and resolve/dismiss the case. Refunds cannot exceed the recorded transfer or available defendant funds and move funds between the two accounts once. An admin cannot rule on their own case. No automatic guilt, arrest or real-world legal action is implied. Harassment reporting still uses player-profile reporting.
+From a player profile, choose Report player, choose a reason, write a note, then Send to Police. Failed requests keep the draft; a retry key prevents duplicate reports. A new incident gets a separate report. Police shows only the reporter’s own reports and their progress. Phone Admin → Reports → Review Police reports and full Admin → Reports → Review Police reports open the review queue. An admin can mark under review, close with an explanation, or refer once to Court. An admin cannot review a report involving their own account. The reported player receives case access and a notification only after referral. Both parties can submit up to five statements; admins schedule hearings and record a decision, which also updates My reports.
+
+Court starts with cases. Recorded outgoing transfer disputes remain available in a collapsed Money disputes section. Refunds apply only to recorded transfer cases, cannot exceed the transfer or defendant balance, and move existing funds once. Report referrals have no refund controls. An admin cannot rule on their own case. No automatic guilt, arrest or real-world legal action is implied. Police, Court and community screens refresh only when the player taps Refresh or completes an action, preserving typing and reading position between updates.
 
 Case notifications reuse Hafrik inbox/push and open the recipient's case after server authorization. Private statements stay out of notification previews. Device delivery depends on the existing Hafrik push provider and permissions; local tests record provider payloads, not real device delivery.
 
@@ -41,3 +43,7 @@ Hafrik currently requires PHP 8.4.1 or newer. A server whose shell `php` resolve
 Optional first-day visit tracking and city-launch reads now tolerate only missing-table errors so core presence and existing events keep working while an interrupted migration is repaired. New community screens report that the migration is required. Other database errors still surface normally.
 
 Matching Hafrik businesses for existing game clubs use their canonical club map location. The place sheet keeps Go/Enter and adds View Hafrik business; it opens the synced business details, with the existing native Hafrik handoff. No new stall is generated for that same business. Matching is limited to unique names in the current city, with punctuation/case normalization; ambiguous listings stay separate. Existing approved club buildings and layouts are preserved. Meet People requests the Hafrik API's random sort on each discovery refresh, retains relevant search, and offers Shuffle people.
+
+## Phone home
+
+The phone uses a Hafrik teal wallpaper, consistent SVG app icons, glass widgets and a role-based dock. App pages swipe horizontally, page dots are selectable, and Search apps filters the available apps. Integration availability updates disable affected buttons in place while the phone is open, preserving search text and scroll; reopening removes disabled integrations. Phone styling is isolated in `public/phone.css`, with no map/HUD style changes.

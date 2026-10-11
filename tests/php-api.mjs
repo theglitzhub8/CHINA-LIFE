@@ -43,6 +43,10 @@ before(async()=>{
  const oldVotes=fs.readFileSync('chinalife-api/migration-all.sql','utf8').split('\n').find(x=>x.startsWith('CREATE TABLE IF NOT EXISTS chinalife_politics_votes')).replace("period VARCHAR(32) NOT NULL DEFAULT '',",'').replace('one_vote_period(city,office,period,voter_id)','one_vote(city,office,voter_id)');
  sql("USE chinalife_test; "+oldVotes+" INSERT INTO chinalife_politics_votes(city,office,voter_id,candidate_id,created_at) VALUES ('Harbin','governor',12,999,NOW());");
  sql(`USE chinalife_test; INSERT INTO chinalife_saves(user_id,character_data,game_state) VALUES(12,'{}','${JSON.stringify(game())}');`);
+ // Simulate existing reports and transaction cases from the previous release.
+ sql("USE chinalife_test; CREATE TABLE chinalife_player_reports(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,reporter_id INT UNSIGNED NOT NULL,peer_id INT UNSIGNED NOT NULL,reason VARCHAR(24) NOT NULL,note VARCHAR(300) NOT NULL DEFAULT '',city VARCHAR(40) NOT NULL DEFAULT '',place VARCHAR(40) NOT NULL DEFAULT '',created_at DATETIME NOT NULL,UNIQUE KEY(reporter_id,peer_id,reason)); INSERT INTO chinalife_player_reports(reporter_id,peer_id,reason,note,created_at) VALUES(12,11,'scam','Preserve this existing report',NOW());");
+ const oldCases=fs.readFileSync('chinalife-api/migration-all.sql','utf8').split('\n').find(x=>x.startsWith('CREATE TABLE IF NOT EXISTS chinalife_court_cases')).replace('transfer_id VARCHAR(80) NULL,report_id BIGINT UNSIGNED NULL,','transfer_id VARCHAR(80) NOT NULL,').replace('UNIQUE KEY court_report(report_id),','');
+ sql("USE chinalife_test; "+oldCases+" INSERT INTO chinalife_court_cases(transfer_id,claimant_id,defendant_id,city,reason,created_at,updated_at) VALUES('legacy-case-transfer',12,11,'China','Preserve this existing case',NOW(),NOW());");
  for(let i=0;i<2;i++)execFileSync('php',[path.join(root,'chinalife/migrate.php')],{env,stdio:'pipe'});
  sql("USE chinalife_test; INSERT INTO chinalife_settings(name,value,updated_at) VALUES('open_cities','[\"Shenyang\"]',NOW());");
  const listener=net.createServer();await new Promise(resolve=>listener.listen(0,'127.0.0.1',resolve));const port=listener.address().port;await new Promise(resolve=>listener.close(resolve));base='http://127.0.0.1:'+port;
@@ -1076,3 +1080,26 @@ test('pending optional tables do not break multiplayer or events and the new scr
  }finally{sql('USE chinalife_test; RENAME TABLE test_pending_visits TO chinalife_life_visits, test_pending_launches TO chinalife_city_launches');}
  assert.equal((await call(201,'life.php?view=firstday')).httpStatus,200);
 });
+
+test('player report goes privately to Police, admin refers once, Court permits responses and closes the report',async()=>{
+ const report=await call(201,'report.php','POST',{peer:202,reason:'harassment',note:'The player repeatedly disrupted the venue chat.',request_id:'police-flow-incident-1'});assert.equal(report.httpStatus,200);const reportId=report.data.id;
+ const retry=await call(201,'report.php','POST',{peer:202,reason:'harassment',note:'Do not replace original evidence',request_id:'police-flow-incident-1'});assert.equal(retry.data.id,reportId);
+ assert.equal((await call(201,'life.php?view=police')).data.reports.find(r=>+r.id===reportId).note,'The player repeatedly disrupted the venue chat.');
+ assert.equal((await call(202,'life.php?view=police')).data.reports.some(r=>+r.id===reportId),false);
+ const review={view:'courtadmin',action:'report_refer',id:reportId,decision:'Both players should respond before a decision is made.'};assert.equal((await call(203,'life.php','POST',review)).httpStatus,403);
+ assert.equal((await call(1,'life.php','POST',{...review,action:'report_review'})).httpStatus,200);
+ const referred=await call(1,'life.php','POST',review);assert.equal(referred.httpStatus,200);const id=referred.data.id;assert.equal((await call(1,'life.php','POST',review)).httpStatus,409);
+ const c=(await call(202,'life.php?view=court&id='+id)).data.cases[0];assert.equal(+c.report_id,reportId);assert.equal(c.evidence,null);assert.equal((await call(203,'life.php?view=court&id='+id)).data.cases.length,0);
+ assert.equal((await call(202,'life.php','POST',{action:'statement',id,text:'Here is my response to the complaint.'})).httpStatus,200);
+ assert.equal((await call(1,'life.php','POST',{action:'rule',id,outcome:'resolved',refund:1,decision:'A report cannot create an unrecorded money refund.'})).httpStatus,400);
+ assert.equal((await call(1,'life.php','POST',{action:'rule',id,outcome:'resolved',refund:0,decision:'Both responses reviewed. The incident is now resolved.'})).httpStatus,200);
+ assert.equal((await call(201,'life.php?view=police')).data.reports.find(r=>+r.id===reportId).status,'resolved');
+ assert.equal(sql('USE chinalife_test; SELECT COUNT(*) FROM chinalife_court_cases WHERE report_id='+reportId).trim(),'1');
+ assert.equal(sql("USE chinalife_test; SELECT COUNT(*) FROM notifications WHERE to_user_id=202 AND node_url LIKE '%case%'").trim()!=='0',true);
+ const newIncident=await call(201,'report.php','POST',{peer:202,reason:'harassment',note:'A separate new incident.',request_id:'police-flow-incident-2'});assert.equal(newIncident.httpStatus,200);assert.notEqual(newIncident.data.id,reportId);
+ assert.equal((await call(1,'life.php','POST',{...review,id:newIncident.data.id,action:'report_dismiss',decision:'Reviewed and closed without referring to Court.'})).httpStatus,200);
+ assert.equal((await call(1,'life.php','POST',{...review,id:newIncident.data.id})).httpStatus,409);
+ assert.equal((await call(201,'report.php','POST',{peer:202,reason:'scam',note:[]})).httpStatus,400);
+});
+
+test('Police migration preserves previous reports and transaction cases after repeated upgrades',()=>{assert.equal(sql("USE chinalife_test; SELECT note,request_id FROM chinalife_player_reports WHERE reporter_id=12 AND peer_id=11").trim(),'Preserve this existing report\tlegacy-11-scam');assert.equal(sql("USE chinalife_test; SELECT reason FROM chinalife_court_cases WHERE transfer_id='legacy-case-transfer'").trim(),'Preserve this existing case');assert.equal(sql("SELECT IS_NULLABLE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='chinalife_test' AND TABLE_NAME='chinalife_court_cases' AND COLUMN_NAME='transfer_id'").trim(),'YES')});
