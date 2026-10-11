@@ -136,3 +136,21 @@ With no API banners the fallback remains Study, ChinaLife. The native CTA uses
 `chinaLifeActivityCount`, multiplying only the displayed count by 49. The server
 presence and voice counts keep their existing logic. Ship the updated banner.jsx,
 ChinaLifeSlide, ChinaLifeLiveCard and chinaLifeExperience with the native app.
+
+### Continuous weekly voting and native sign-in
+Politics now ensures missing weekly elections when a ballot loads or a vote is
+cast. Weeks run Monday 00:00 through Sunday 23:59:59 Beijing time. Active or
+future admin schedules are preserved; active custom elections take priority.
+Old votes remain attached to their election period. Non-candidates can vote for
+any approved candidate once per office, and the returned ballot updates totals.
+No migration or cron task is required.
+
+Player profiles expose “View Hafrik profile”: the app opens the fixed UserProfile
+route with the verified numeric account ID; browsers open the profile username
+on hafrik.com. AI residents do not get this action.
+
+ChinaLife receives the native token directly through its existing session bridge.
+The general useWebViewSession helper uses a token-bearing redirect URL and is
+not needed here. The cloud login fallback is now deferred while the native
+session connects. It appears after the eight-second missing-session timeout or
+a connection error, rather than flashing during a normal session restore.

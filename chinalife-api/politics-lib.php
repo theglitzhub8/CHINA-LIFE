@@ -1,9 +1,20 @@
 <?php
 declare(strict_types=1);
 const CL_OFFICES=['governor','deputy-governor','city-councillor','student-representative'];
+// Fill missing weekly ballots lazily; concurrent clients share the unique period.
+function cl_politics_ensure_week(string $city): void {
+ $now=new DateTimeImmutable('now',new DateTimeZone('Asia/Shanghai'));
+ $start=$now->modify('monday this week')->setTime(0,0);$end=$start->modify('+7 days')->modify('-1 second');
+ $period='weekly-'.$start->format('Y-m-d');
+ foreach(CL_OFFICES as $office){
+  if(cl_one('SELECT period FROM chinalife_politics_elections WHERE city=? AND office=? AND closes_at>=NOW() LIMIT 1','ss',[$city,$office]))continue;
+  cl_run('INSERT IGNORE INTO chinalife_politics_elections(city,office,period,opens_at,closes_at) VALUES(?,?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?))','sssii',[$city,$office,$period,$start->getTimestamp(),$end->getTimestamp()]);
+ }
+}
 function cl_politics_snapshot(string $city): array {
+ cl_politics_ensure_week($city);
  $latest=[];$active=[];
- foreach(cl_rows('SELECT office,period,opens_at,closes_at,closes_at>=NOW() voting_open FROM chinalife_politics_elections WHERE city=? AND opens_at<=NOW() ORDER BY closes_at DESC','s',[$city]) as $e){
+ foreach(cl_rows('SELECT office,period,opens_at,closes_at,closes_at>=NOW() voting_open FROM chinalife_politics_elections WHERE city=? AND opens_at<=NOW() ORDER BY voting_open DESC,(period LIKE \'weekly-%\') ASC,closes_at DESC','s',[$city]) as $e){
   if(isset($latest[$e['office']]))continue;$latest[$e['office']]=$e;if($e['voting_open'])$active[$e['office']]=$e;
  }
  $c=cl_rows("SELECT c.id,c.office,c.statement,c.candidate_id,u.user_name name,UNIX_TIMESTAMP(COALESCE(c.reviewed_at,c.created_at))*1000 at FROM chinalife_politics_candidates c JOIN users u ON u.user_id=c.candidate_id WHERE c.city=? AND c.status='approved' ORDER BY c.office,c.id",'s',[$city]);

@@ -32,7 +32,7 @@ const inApp = () => !!(window.ReactNativeWebView || window.HafrikSession);
 function requestAppSession() {
   if (!window.ReactNativeWebView) return;
   window.ReactNativeWebView.postMessage(JSON.stringify({type:'chinalife:auth-request'}));
-  clearTimeout(appWait); appWaiting = true; appWait = setTimeout(() => {appWaiting = false; if (!account && $('cloudDialog').open) show()}, 8000);
+  clearTimeout(appWait); appWaiting = true; appWait = setTimeout(() => {appWaiting = false; if (!account) show()}, 8000);
 }
 function show() {
   const name=esc(account?.username || account?.user_name || 'Hafrik user'), head='<div class="auth-brand"><img class="hafrik-logo" src="https://s3.ap-northeast-1.wasabisys.com/hafriksocial/uploads/photos/2025/07/sngine_1c76aafda2234d9e92ff37897edbd4be.png" alt="Hafrik"><small>CHINALIFE</small></div>';
@@ -104,6 +104,7 @@ async function connect(session,{source}={}) {
     loading = false; status(error.message);if(account){restoreFailed=true;notify();show()}
     // A failed restore must not silently replace an existing account character.
     if (error.status === 401) {liveToken = ''; storage.setItem(TOKEN_KEY, ''); account = null; notify()}
+    if(inApp()&&!account)show();
     return false;
   }
 }
@@ -259,8 +260,8 @@ $('cloudButton').onclick = show; $('closeCloud').onclick = () => {if (account) $
 // The login window cannot be dismissed (× or Escape) until the player is signed in.
 $('cloudDialog').addEventListener('cancel', e => {if (!account) e.preventDefault()});
 // Browsers may still close it (e.g. a second Escape); reopen at once while nobody is signed in.
-$('cloudDialog').addEventListener('close', () => {if (!account) setTimeout(() => {if (!account) show()}, 0)});
-setInterval(() => {if (!account && !$('cloudDialog').open && window.ChinaLifeCloud?.ready) show()}, 1000);
+$('cloudDialog').addEventListener('close', () => {if (!account) setTimeout(() => {if (!account && !(inApp()&&(appWaiting||loading))) show()}, 0)});
+setInterval(() => {if (!account && !$('cloudDialog').open && window.ChinaLifeCloud?.ready && !(inApp()&&(appWaiting||loading))) show()}, 1000);
 window.addEventListener('chinalife:save', () => {if (auto && !loading) scheduleSave()});
 window.addEventListener('chinalife:update', () => {if (!loading && account && game.state.created) {if (!presence) join(); else refreshPresence(true)}});
 window.addEventListener('hafrik:session', event => {if (event.detail?.token) connect(event.detail,{source:'app'})});
@@ -293,5 +294,5 @@ let golden=null;
 async function refreshGolden(){if(!account||document.hidden)return;try{const result=await api('/chinalife/golden.php'),data=result.data||result;const changed=JSON.stringify(data)!==JSON.stringify(golden);golden=data;if(changed)window.dispatchEvent(new CustomEvent('chinalife:golden',{detail:golden}))}catch{}}
 async function claimGolden(){const result=await api('/chinalife/golden.php','POST',{});await refreshGolden();await syncTransfers();return result.data||result}
 setInterval(refreshGolden,60000);window.addEventListener('chinalife:cloudready',refreshGolden);
-window.ChinaLifeCloud.ready = initialize().then(ok => {if (!account) show(); return ok});
+window.ChinaLifeCloud.ready = initialize().then(ok => {if (!account && !(inApp()&&(appWaiting||loading))) show(); return ok});
 await window.ChinaLifeCloud.ready;

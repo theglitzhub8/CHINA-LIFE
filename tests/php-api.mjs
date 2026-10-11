@@ -806,7 +806,7 @@ test('election totals, tied ranks and private Gist activity are scoped to the el
  let ballot=(await call(2,'politics.php?city=Shenyang')).data;assert.equal(ballot.candidates.length,0,'pending nominees are private');
  const admin=(await call(1,'admin.php','POST',{action:'politics'})).data;
  for(const c of admin.candidates)await call(1,'admin.php','POST',{action:'politics_review',id:Number(c.id),decision:'approved'});
- sql("USE chinalife_test; INSERT INTO chinalife_politics_elections VALUES ('Shenyang','governor','test-first',DATE_SUB(NOW(),INTERVAL 1 HOUR),DATE_ADD(NOW(),INTERVAL 1 HOUR));");
+ sql("USE chinalife_test; DELETE FROM chinalife_politics_elections WHERE city='Shenyang' AND office='governor'; INSERT INTO chinalife_politics_elections VALUES ('Shenyang','governor','test-first',DATE_SUB(NOW(),INTERVAL 1 HOUR),DATE_ADD(NOW(),INTERVAL 1 HOUR));");
  ballot=(await call(2,'politics.php?city=Shenyang')).data;const a=Number(ballot.candidates.find(x=>Number(x.candidate_id)===2).id),b=Number(ballot.candidates.find(x=>Number(x.candidate_id)===3).id);
  assert.equal((await call(4,'politics.php?vote=1','POST',{city,office,candidate_id:a})).httpStatus,200);
  assert.equal((await call(4,'politics.php?vote=1','POST',{city,office,candidate_id:b})).httpStatus,409,'double votes rejected');
@@ -816,7 +816,7 @@ test('election totals, tied ranks and private Gist activity are scoped to the el
  const gist=(await call(6,'gist.php?city=Shenyang')).data;assert.equal(gist.election.candidates.length,2);assert.equal(gist.vote_activity.length,2);
  for(const v of gist.vote_activity){assert.deepEqual(Object.keys(v).sort(),['at','id','office']);assert.ok(Number(v.at)>0);}
  assert.equal((await call(6,'gist.php?city=Guangzhou')).data.vote_activity.length,0);
- assert.equal((await call(6,'politics.php?vote=1','POST',{city:'Guangzhou',office,candidate_id:a})).httpStatus,409);
+ assert.equal((await call(6,'politics.php?vote=1','POST',{city:'Guangzhou',office,candidate_id:a})).httpStatus,403);
  // Upgrade legacy votes without losing them, and allow the same account to vote next period.
  sql(`USE chinalife_test; INSERT INTO chinalife_politics_votes(city,office,period,voter_id,candidate_id,created_at) VALUES ('Shenyang','governor','',9,${a},NOW());`);
  for(let i=0;i<2;i++)execFileSync('php',[path.join(tmp,'web/api/v4/chinalife/migrate.php')],{env,stdio:'pipe'});
@@ -946,4 +946,13 @@ test('Hafrik HQ and Civic Hall accept presence and HQ players can see and talk t
  for(const id of [11,12])await call(id,'voice.php','DELETE',{session:sessions[id]});
  assert.equal((await call(11,'presence.php','POST',presence('Shenyang','voting'))).httpStatus,200);
  assert.equal((await call(11,'presence.php','POST',presence('Shenyang','invented-room'))).httpStatus,400);
+});
+
+test('missing next election opens automatically and ordinary players votes count for another candidate',async()=>{
+ sql("USE chinalife_test; DELETE FROM chinalife_politics_elections WHERE city='Shenyang' AND office='governor' AND period LIKE 'weekly-%'; UPDATE chinalife_politics_elections SET closes_at=DATE_SUB(NOW(),INTERVAL 1 DAY) WHERE city='Shenyang' AND office='governor';");
+ const before=sql("USE chinalife_test; SELECT COUNT(*) FROM chinalife_politics_votes WHERE city='Shenyang'").trim();
+ let ballot=(await call(6,'politics.php?city=Shenyang')).data;assert.match(ballot.elections.governor.period,/^weekly-/);const candidate=Number(ballot.candidates[0].id);
+ for(const voter of [6,7])assert.equal((await call(voter,'politics.php?vote=1','POST',{city:'Shenyang',office:'governor',candidate_id:candidate})).httpStatus,200);
+ assert.equal((await call(6,'politics.php?vote=1','POST',{city:'Shenyang',office:'governor',candidate_id:candidate})).httpStatus,409);
+ ballot=(await call(6,'politics.php?city=Shenyang')).data;assert.equal(ballot.results.find(c=>Number(c.id)===candidate).votes,2);assert.equal(Number(sql("USE chinalife_test; SELECT COUNT(*) FROM chinalife_politics_votes WHERE city='Shenyang'").trim()),Number(before)+2);
 });
