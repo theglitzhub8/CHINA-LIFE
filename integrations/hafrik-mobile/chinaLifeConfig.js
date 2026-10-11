@@ -49,7 +49,7 @@ export function chinaLifeHafrikDestination(value) {
     case 'people': return id ? {name:'UserProfile',params:{userId:id}} : {name:'PeopleYouMayKnow'};
     case 'course': return id ? {name:'HafrikXAcademyCourse',params:{id}} : {name:'HafrikXLearn'};
     case 'event': return id ? {name:'EventDetail',params:{eventId:id}} : {name:'EventsScreen'};
-    case 'product': return id ? {name:'ProductDetail',params:{post_id:id}} : {name:'MarketplaceScreen'};
+    case 'product': return id ? {name:'NativeMarketplaceProduct',params:{productId:id}} : {name:'MarketplaceScreen'};
     case 'exchange': return {name:'ExchangeHome'};
     default: return null;
   }

@@ -54,7 +54,7 @@ Update the app's existing ChinaLife wrapper using both files in `integrations/ha
 | Person | UserProfile / PeopleYouMayKnow | userId |
 | Course | HafrikXAcademyCourse / HafrikXLearn | id |
 | Event | EventDetail / EventsScreen | eventId |
-| Product | ProductDetail / MarketplaceScreen | post_id (post ID, not product ID) |
+| Product | NativeMarketplaceProduct / MarketplaceScreen | productId (Hafrik post ID, not WooCommerce ID) |
 | Exchange | ExchangeHome | none |
 
 The origin/path checks remain enforced; only fixed destination types and positive numeric IDs are accepted. URLs, tokens and caller-selected route names are never sent as navigation parameters. An older wrapper can still use the embedded API views, but native handoff tells the user to update rather than silently losing the tap. This repository contains the wrapper integration source; an actual mobile build is still required.
