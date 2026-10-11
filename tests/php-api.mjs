@@ -936,3 +936,14 @@ test('Hafrik map keeps source IDs, live content, owner placement and privacy syn
  sql('USE chinalife_test; DELETE FROM pages WHERE page_id=94');assert(!(await call(2,'hafrik-map.php?city=Shenyang')).data.items.some(x=>x.id==='hafrik-business-94'));
  assert.equal((await call(null,'hafrik-map.php?city=Shenyang')).httpStatus,401);
 });
+
+test('Hafrik HQ and Civic Hall accept presence and HQ players can see and talk to each other',async()=>{
+ for(const id of [11,12]){const r=await call(id,'presence.php','POST',presence('Shenyang','hq'));assert.equal(r.httpStatus,200,r.message);}
+ for(const [id,peer] of [[11,12],[12,11]]){const r=await call(id,'presence.php?city=Shenyang');assert(r.data.players.some(p=>p.id===String(peer)&&p.place==='hq'));}
+ const sessions={11:crypto.randomUUID(),12:crypto.randomUUID()};
+ for(const id of [11,12]){const r=await call(id,'voice.php','POST',{city:'Shenyang',place:'hq',session:sessions[id],action:'join',muted:false,after:0});assert.equal(r.httpStatus,200,r.message);}
+ const r=await call(11,'voice.php','POST',{city:'Shenyang',place:'hq',session:sessions[11],action:'pulse',muted:false,after:0});assert(r.data.members.some(p=>String(p.id)==='12'));
+ for(const id of [11,12])await call(id,'voice.php','DELETE',{session:sessions[id]});
+ assert.equal((await call(11,'presence.php','POST',presence('Shenyang','voting'))).httpStatus,200);
+ assert.equal((await call(11,'presence.php','POST',presence('Shenyang','invented-room'))).httpStatus,400);
+});

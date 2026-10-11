@@ -49,5 +49,10 @@ export function chinaLifePlayerStats(saved, accountId) {
   const xp = number(g.xp), money = number(g.money);
   const ranks = [[0,'Newcomer'],[200,'Explorer'],[600,'Local'],[1500,'Regular'],[3500,'Insider'],[7000,'Shenyang Star'],[12000,'Legend']];
   const rank = ranks.filter(([threshold]) => xp !== null && xp >= threshold).at(-1)?.[1] || 'Newcomer';
-  return { xp, money, rank, energy: typeof g.needs?.energy === 'number' && g.needs.energy >= 0 && g.needs.energy <= 100 ? Math.floor(g.needs.energy) : null };
+  const needs = ['energy','hunger','hygiene','bladder','fun','social'].map(key => g.needs?.[key]);
+  const avg = needs.every(n => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 100) ? needs.reduce((sum,n) => sum+n,0)/6 : null;
+  const hour = number(g.hour);
+  const clock = hour === null ? null : `${String(Math.floor(hour/60)%24).padStart(2,'0')}:${String(hour%60).padStart(2,'0')}`;
+  const mood = avg === null ? null : avg > 70 ? 'Feeling great' : avg > 40 ? 'Finding your rhythm' : 'Time to recharge';
+  return { xp, money, rank, clock, mood, energy: typeof g.needs?.energy === 'number' && g.needs.energy >= 0 && g.needs.energy <= 100 ? Math.floor(g.needs.energy) : null };
 }

@@ -77,7 +77,7 @@ options={{ gestureEnabled: false, headerShown: false }}
 
 The existing feed owns its safe area and floating header. Adding a stack header
 above it produced extra vertical space. The Home feed card above stories now
-shows the signed-in player’s saved rank, XP, game balance and energy. Tap it to
+shows the signed-in player’s saved game clock, mood and game balance inside the existing CTA, alongside its online count. There is no separate stats block underneath. Tap it to
 return to ChinaLife; the normal Hafrik tabs remain available. Values are marked
 as last synced and never drawn from another account’s cache. The card refreshes
 on focus, app foreground and every minute while active. No extra API or database
@@ -119,3 +119,10 @@ URL. The native link preview passes a validated launch URL to ChinaLifeScreen;
 the campaign opens a fresh game document with the existing saved character.
 Update ChinaLifeSharedLink, ChinaLifeScreen, chinaLifeExperience, and the native
 LinkPreview call to `<ChinaLifeSharedLink url={cleanUrl} />` when shipping.
+
+### HQ multiplayer venue correction
+Hafrik HQ (`hq`) and the Civic Hall (`voting`) must be accepted by `cl_room` in
+common.php. Their missing IDs rejected presence updates and prevented voice from
+joining those rooms. Both IDs now use the existing authenticated presence and
+voice checks; invented venues remain rejected. Deploy the PHP update; no schema
+migration or map change is needed.
