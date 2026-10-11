@@ -45,7 +45,7 @@ export function chinaLifeHafrikDestination(value) {
   if (id != null && (!Number.isSafeInteger(id) || id <= 0)) return null;
   switch(type) {
     case 'business': return id ? {name:'BusinessDetails',params:{pageId:id}} : {name:'BusinessPages'};
-    case 'space': return id ? {name:'GroupDetails',params:{groupId:id}} : {name:'GroupScreen'};
+    case 'space': return id ? {name:'GroupDetails',params:{groupId:id}} : {name:'Groups'};
     case 'people': return id ? {name:'UserProfile',params:{userId:id}} : {name:'PeopleYouMayKnow'};
     case 'course': return id ? {name:'HafrikXAcademyCourse',params:{id}} : {name:'HafrikXLearn'};
     case 'event': return id ? {name:'EventDetail',params:{eventId:id}} : {name:'EventsScreen'};

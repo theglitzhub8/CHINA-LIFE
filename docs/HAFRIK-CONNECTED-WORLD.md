@@ -45,12 +45,12 @@ The migration is required for the new placement-only table. It is repeatable and
 
 ## Mobile handoff
 
-Update the app's existing ChinaLife wrapper using both files in `integrations/hafrik-mobile/` and build/release the mobile app. The reference was checked against local HafrikAppV2 route names and parameter conventions:
+Update the app's existing ChinaLife wrapper using both files in `integrations/hafrik-mobile/` and build/release the mobile app. The reference was checked against local Hafrik 5 app route names and parameter conventions:
 
 | Destination | Native route | Parameters |
 | --- | --- | --- |
 | Business | BusinessDetails / BusinessPages | pageId |
-| Space | GroupDetails / GroupScreen | groupId |
+| Space | GroupDetails / Groups | groupId |
 | Person | UserProfile / PeopleYouMayKnow | userId |
 | Course | HafrikXAcademyCourse / HafrikXLearn | id |
 | Event | EventDetail / EventsScreen | eventId |
