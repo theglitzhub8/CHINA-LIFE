@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__.'/common.php';
+require_once __DIR__.'/common.php';require_once __DIR__.'/hafrik-notify.php';
 cl_methods(['GET','POST','DELETE']);
 if ($method==='DELETE') {
     $id=filter_var($_GET['id']??null,FILTER_VALIDATE_INT);
@@ -21,6 +21,7 @@ if ($method==='POST') {
     $statement=cl_query('INSERT INTO chinalife_messages(sender_id,recipient_id,city,place,body,created_at) VALUES(?,?,?,?,?,NOW())','iisss',[$uid,$peer,$city,$place,trim($text)]);
     $id=(string)$statement->insert_id;$statement->close();
     cl_run('DELETE FROM chinalife_messages WHERE created_at<DATE_SUB(NOW(),INTERVAL 7 DAY)');
+    if($peer)cl_hafrik_notify($peer,'message','message-'.$id,($auth['user_name']??'A player').' sent you a ChinaLife message.',$uid);
     json_response('success',['id'=>$id]);
 }
 $base='SELECT m.id,m.sender_id player_id,u.user_name name,COALESCE(p.color,"#246fa7") color,m.body,UNIX_TIMESTAMP(m.created_at)*1000 created_at,(m.sender_id=?) own FROM chinalife_messages m JOIN users u ON u.user_id=m.sender_id LEFT JOIN chinalife_presence p ON p.user_id=m.sender_id WHERE m.created_at>=DATE_SUB(NOW(),INTERVAL 7 DAY) AND ';

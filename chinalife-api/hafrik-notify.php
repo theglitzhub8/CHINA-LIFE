@@ -3,7 +3,7 @@ declare(strict_types=1);
 // Shared Hafrik inbox and device push, after the game action succeeds.
 function cl_hafrik_notify(int $recipient,string $kind,string $key,string $message,int $actor=0): void {
  global $db;
- if($recipient<1||!in_array($kind,['vote','friend','money'],true))return;
+ if($recipient<1||!in_array($kind,['vote','friend','money','message','activity'],true))return;
  try {
   if(!cl_hafrik_features()['notifications'])return;
   $helper=__DIR__.'/../notifications/_admin_notify.php';

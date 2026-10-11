@@ -974,9 +974,16 @@ test('Hafrik inbox and device push receive votes, friend requests and money once
  const money=(await call(12,'game-notifications.php')).data.items;assert.equal(money.length,1);assert.match(money[0].message,/¥30/);
  const votes=(await call(Number(candidate.candidate_id),'game-notifications.php')).data.items;assert.equal(votes.length,1);assert.equal(sql("USE chinalife_test; SELECT from_user_id FROM notifications WHERE action='chinalife_vote'").trim(),'0');
  assert.equal(sql('USE chinalife_test; SELECT COUNT(*) FROM test_device_push').trim(),'3');
+ assert.equal(notices[0].target.type,'friends');assert.equal(notices[0].target.peer,'5');assert.equal(money[0].target.type,'wallet');assert.equal(votes[0].target.type,'ballot');assert.equal(Number(votes[0].target.candidate),Number(candidate.id));
+ assert.equal((await call(7,'game-notifications.php?notice='+notices[0].id)).data.items.some(n=>n.id===notices[0].id),false);
  assert.equal((await call(5,'game-notifications.php')).data.items.length,0);
  await call(5,'game-notifications.php','POST',{notice:notices[0].id});assert.equal((await call(6,'game-notifications.php')).data.items[0].seen,'0');
  await call(6,'game-notifications.php','POST',{notice:notices[0].id});assert.equal((await call(6,'game-notifications.php')).data.items[0].seen,'1');
+ assert.equal((await call(6,'friends.php','POST',{peer:5,action:'accept'})).httpStatus,200);assert.match((await call(5,'game-notifications.php')).data.items[0].message,/accepted/);
+ const message=await call(5,'messages.php','POST',{peer:6,text:'Private notification test'});assert.equal(message.httpStatus,200);
+ let incoming=(await call(6,'game-notifications.php?notice=message-'+message.data.id)).data.items.find(n=>n.action==='chinalife_message');assert.equal(incoming.target.type,'message');assert.equal(incoming.target.peer,'5');assert.equal(incoming.target.message,message.data.id);assert.doesNotMatch(incoming.message,/Private notification test/);
+ await call(5,'messages.php?id='+message.data.id,'DELETE');incoming=(await call(6,'game-notifications.php')).data.items.find(n=>n.action==='chinalife_message');assert.equal(incoming.target,null);
+
 });
 test('foreground app heartbeat preserves venue and position and never creates an unsaved character',async()=>{
  await call(11,'presence.php','POST',{...presence('Shenyang','hq'),x:7,z:4});
