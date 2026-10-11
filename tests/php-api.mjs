@@ -1020,3 +1020,50 @@ test('admin Hafrik switches persist, reject unauthorized changes, gate actions a
 });
 
 test('China launch consolidates new players once and preserves later admin unlocks and old saves',async()=>{const existing=(await call(12,'save.php')).data.save.game;const launch=path.join(tmp,'web/api/v4/chinalife/activate-china.php');execFileSync('php',[launch],{env,stdio:'pipe'});assert.deepEqual((await call(1,'admin.php','POST',{action:'cities'})).data.open,['China']);assert.deepEqual((await call(12,'save.php')).data.save.game,existing);sql("USE chinalife_test; INSERT INTO users VALUES(101,'chinaOne'),(102,'chinaTwo');");for(const id of [101,102]){assert.equal((await call(id,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China',place:'campus'}}})).httpStatus,200);assert.equal((await call(id,'presence.php','POST',presence('China','campus'))).httpStatus,200);}assert((await call(101,'presence.php?city=China')).data.players.some(p=>p.id==='102'));for(const id of [101,102])assert.equal((await call(id,'voice.php','POST',{city:'China',place:'campus',action:'join',session:'china-player-'+id,muted:false,after:0})).httpStatus,200);assert((await call(101,'voice.php','POST',{city:'China',place:'campus',action:'pulse',session:'china-player-101',muted:false,after:0})).data.members.some(m=>m.id==='102'));const invite=await call(101,'activities.php','POST',{action:'invite',peer:102,kind:'study'});assert.equal(invite.httpStatus,200);assert.equal((await call(102,'activities.php','POST',{action:'accept',id:Number(invite.data.id)})).httpStatus,200);assert.equal((await call(101,'politics.php?city=China')).httpStatus,200);const event=await call(1,'admin.php','POST',{action:'create_event',title:'China welcome',city:'China',hours:1});assert.equal(event.httpStatus,200);assert((await call(101,'events.php?city=China')).data.events.some(e=>String(e.id)===String(event.data.id)));assert.equal((await call(101,'hafrik-map.php?city=China')).httpStatus,200);assert.equal((await call(1,'admin.php','POST',{action:'set_cities',open:['China','Guangzhou']})).httpStatus,200);execFileSync('php',[launch],{env,stdio:'pipe'});assert.deepEqual((await call(1,'admin.php','POST',{action:'cities'})).data.open,['China','Guangzhou']);assert.equal((await fetch(base+'/api/v4/chinalife/activate-china.php')).status,404);});
+
+test('first day uses recorded visits, accepted friendship and daily reward, and pays once',async()=>{
+ sql("USE chinalife_test; INSERT INTO users VALUES(201,'lifeOne'),(202,'lifeTwo'),(203,'lifeOther'); DELETE FROM chinalife_rate_limits;");
+ for(const id of [201,202,203])assert.equal((await call(id,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China'}}})).httpStatus,200);
+ assert.equal((await call(201,'life.php','POST',{action:'firstday'})).httpStatus,409);
+ for(const place of ['hq','plaza','campus'])assert.equal((await call(201,'presence.php','POST',presence('China',place))).httpStatus,200);
+ await call(201,'life.php','POST',{action:'services'});await call(201,'friends.php','POST',{action:'request',peer:'202'});await call(202,'friends.php','POST',{action:'accept',peer:'201'});
+ assert.equal((await call(201,'daily.php','POST',{})).httpStatus,200);
+ const checklist=await call(201,'life.php?view=firstday');assert.deepEqual(checklist.data.steps,{hq:true,explore:true,services:true,meet:true,daily:true});const before=(await call(201,'save.php')).data.save.game;
+ assert.equal((await call(201,'life.php','POST',{action:'firstday'})).httpStatus,200);const after=(await call(201,'save.php')).data.save.game;assert.equal(after.money-before.money,300);assert.equal(after.xp-before.xp,50);assert.equal((await call(201,'life.php','POST',{action:'firstday'})).httpStatus,409);
+ assert.equal((await call(201,'life.php','POST',{action:'file',reason:['invalid']})).httpStatus,400);
+});
+test('community requires another unblocked member and continuous venue attendance, then pays once',async()=>{
+ for(const id of [201,202]){await call(id,'presence.php','POST',presence('China','plaza'));assert.equal((await call(id,'life.php','POST',{action:'join',kind:'social'})).httpStatus,200);}
+ assert.equal((await call(201,'life.php','POST',{action:'complete',kind:'social'})).httpStatus,409);
+ sql("USE chinalife_test; UPDATE chinalife_community_members SET joined_at=UNIX_TIMESTAMP()-120 WHERE user_id IN(201,202); UPDATE chinalife_presence SET arrived_at=DATE_SUB(NOW(),INTERVAL 2 MINUTE),seen_at=NOW() WHERE user_id IN(201,202);");
+ await call(201,'block.php','POST',{peer:'202',blocked:true});assert.equal((await call(201,'life.php','POST',{action:'complete',kind:'social'})).httpStatus,409);await call(201,'block.php','POST',{peer:'202',blocked:false});
+ sql('USE chinalife_test; DELETE FROM chinalife_blocks WHERE owner_id=201 AND peer_id=202');
+ await call(201,'presence.php','POST',presence('China','hq'));await call(201,'presence.php','POST',presence('China','plaza'));assert.equal((await call(201,'life.php','POST',{action:'complete',kind:'social'})).httpStatus,409);
+ sql('USE chinalife_test; UPDATE chinalife_presence SET arrived_at=DATE_SUB(NOW(),INTERVAL 2 MINUTE),seen_at=NOW() WHERE user_id IN(201,202)');const before=(await call(201,'save.php')).data.save.game.money;
+ assert.equal((await call(201,'life.php','POST',{action:'complete',kind:'social'})).httpStatus,200);assert.equal((await call(201,'save.php')).data.save.game.money,before+100);assert.equal((await call(201,'life.php','POST',{action:'complete',kind:'social'})).httpStatus,409);
+});
+test('Court only accepts owned transfer evidence, protects statements and conserves funds on admin ruling',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits');
+ assert.equal((await call(201,'transfers.php','POST',{peer:'202',amount:75,request_id:'life-court-transfer-001'})).httpStatus,200);
+ const transfer=sql("USE chinalife_test; SELECT id FROM chinalife_transfers WHERE sender_id=201 LIMIT 1").trim();
+ assert.equal((await call(203,'life.php','POST',{action:'file',transfer,reason:'A transaction disagreement.'})).httpStatus,403);
+ const filed=await call(201,'life.php','POST',{action:'file',transfer,reason:'Our game agreement was not completed.'});assert.equal(filed.httpStatus,200);const id=filed.data.id;
+ assert.equal((await call(201,'life.php','POST',{action:'file',transfer,reason:'The same recorded transfer again.'})).httpStatus,409);
+ assert.equal((await call(203,'life.php?view=court&id='+id)).data.cases.length,0);assert.equal((await call(203,'life.php','POST',{action:'statement',id,text:'Not my case'})).httpStatus,403);
+ assert.equal((await call(202,'life.php','POST',{action:'statement',id,text:'My response to the game dispute.'})).httpStatus,200);
+ assert.equal((await call(201,'life.php','POST',{action:'rule',id,outcome:'resolved',decision:'An unauthorised decision.',refund:50})).httpStatus,403);
+ assert.equal((await call(1,'life.php','POST',{view:'courtadmin',action:'rule',id,outcome:'resolved',decision:'Refund above the evidence amount.',refund:76})).httpStatus,400);
+ const before=await Promise.all([201,202].map(async u=>(await call(u,'save.php')).data.save.game.money));assert.equal((await call(1,'life.php','POST',{view:'courtadmin',action:'rule',id,outcome:'resolved',decision:'The recorded game transfer is refunded in part.',refund:50})).httpStatus,200);
+ const after=await Promise.all([201,202].map(async u=>(await call(u,'save.php')).data.save.game.money));assert.deepEqual(after,[before[0]+50,before[1]-50]);assert.equal((await call(1,'life.php','POST',{view:'courtadmin',action:'rule',id,outcome:'resolved',decision:'Attempt to apply the refund twice.',refund:50})).httpStatus,409);
+ assert.equal((await call(203,'life.php','POST',{action:'statement',id,text:'Guessing a closed case'})).httpStatus,403);const notices=(await call(202,'game-notifications.php?notice=case-'+id)).data.items;assert.equal(notices[0].target.type,'case');assert.equal(notices[0].target.id,id);
+ assert.equal((await call(203,'life.php?view=courtadmin')).httpStatus,403);
+});
+test('city launch queues Hafrik notifications once, grants venue reward once and preserves future unlocks',async()=>{
+ sql("USE chinalife_test; DELETE FROM chinalife_rate_limits; DELETE FROM chinalife_city_launches WHERE city='Beijing'; DELETE FROM chinalife_life_outbox WHERE city='Beijing';");
+ assert.equal((await call(1,'admin.php','POST',{action:'set_cities',open:['China']})).httpStatus,200);assert.equal((await call(1,'admin.php','POST',{action:'set_cities',open:['China','Beijing']})).httpStatus,200);
+ assert.equal((await call(201,'life.php?view=launches')).data.launches.filter(x=>x.city==='Beijing').length,1);const queued=Number(sql("USE chinalife_test; SELECT COUNT(*) FROM chinalife_life_outbox WHERE city='Beijing'"));assert(queued>0);
+ const worker=path.join(tmp,'web/api/v4/chinalife/dispatch-life-notifications.php');execFileSync('php',[worker],{env});execFileSync('php',[worker],{env});assert.equal(Number(sql("USE chinalife_test; SELECT COUNT(*) FROM notifications WHERE action='chinalife_city' AND notify_id='city-Beijing'")),queued);
+ const notices=(await call(201,'game-notifications.php?notice=city-Beijing')).data.items;assert.equal(notices[0].target.type,'launches');
+ await call(201,'presence.php','POST',presence('Beijing','plaza'));const before=(await call(201,'save.php')).data.save.game.money;assert.equal((await call(201,'life.php','POST',{action:'launch',city:'Beijing'})).httpStatus,200);assert.equal((await call(201,'save.php')).data.save.game.money,before+200);assert.equal((await call(201,'life.php','POST',{action:'launch',city:'Beijing'})).httpStatus,409);
+ await call(1,'admin.php','POST',{action:'set_cities',open:['China']});await call(1,'admin.php','POST',{action:'set_cities',open:['China','Beijing']});assert.equal(Number(sql("USE chinalife_test; SELECT COUNT(*) FROM chinalife_life_outbox WHERE city='Beijing'")),queued);
+});

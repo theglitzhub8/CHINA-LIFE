@@ -1,0 +1,20 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';import {harness,fixture} from './game-harness.mjs';
+const settle=async()=>{for(let i=0;i<8;i++)await Promise.resolve()};
+function setup(request){const h=harness(fixture());h.game.setAccount('201');h.context.ChinaLifeCloud={signedIn:true,syncTransfers:async()=>{}};h.context.ChinaLifeAuth={request};vm.runInContext(fs.readFileSync('public/community-life.js','utf8'),h.context);return h}
+test('first-day buttons remain wired after rendering and server errors preserve case drafts',async()=>{
+ let friends=false;const h=setup(async(path,method)=>{if(method==='POST')throw Error('Network unavailable');if(path.includes('firstday'))return {steps:{hq:false,explore:false,services:false,meet:false,daily:false},claimed:false};return {cases:[],transfers:[{id:'transfer-1',recipient:'friend',amount:50,created_at:'today'}],server_time:1}});h.context.ChinaLifeSocial={open:()=>friends=true};await h.context.ChinaLifeCommunity.open();h.click('tour-meet');assert(friends);assert.equal(typeof h.document.getElementById('lifeClaim').onclick,'function');
+ await h.context.ChinaLifeCommunity.open('court');const reason=h.document.getElementById('caseReason');reason.value='A meaningful private explanation.';await h.document.getElementById('lifeFile').onsubmit({preventDefault(){}});await settle();assert.equal(h.document.getElementById('caseReason'),reason);assert.equal(reason.value,'A meaningful private explanation.');assert.equal(h.document.getElementById('caseFile').disabled,false);
+});
+test('case views escape private statements and close immediately on account change',async()=>{
+ const h=setup(async()=>({cases:[{id:1,status:'filed',claimant:'<img src=x>',defendant:'other',reason:'<script>evil()</script>',evidence:{amount:50},statements:[{name:'<b>name</b>',body:'<img onerror=evil()>',created_at:'today'}]}],transfers:[],server_time:1}));await h.context.ChinaLifeCommunity.open('court',1);assert.equal(h.document.querySelector('#communityRoot script'),null);assert.equal(h.document.querySelector('#communityRoot img'),null);assert.match(h.document.getElementById('communityRoot').textContent,/<script>evil/);h.game.setAccount('202');h.context.dispatchEvent(new h.context.Event('chinalife:update'));assert.equal(h.document.getElementById('communityRoot'),null);assert.equal(h.document.getElementById('activityDialog').open,false);
+});
+test('old-account loads cannot reveal cases in the new account screen',async()=>{
+ let resolve;const h=setup(()=>new Promise(r=>resolve=r));const pending=h.context.ChinaLifeCommunity.open('court');const finish=resolve;h.game.setAccount('202');finish({cases:[{id:1,reason:'Private old account record'}],transfers:[]});await pending;assert.doesNotMatch(h.document.getElementById('activityContent').textContent,/Private old account/);
+});
+test('community activity buttons post the selected server activity and duplicate taps are locked',async()=>{
+ const posts=[];let finish;const h=setup(async(path,method,data)=>{if(method==='POST'){posts.push(data);await new Promise(r=>finish=r);return {updated:true}}return {sessions:[{kind:'social',title:'Community meetup',place:'plaza',opens_at:0,ends_at:1000,membership:null,participants:2}],server_time:500}});await h.context.ChinaLifeCommunity.open('community');const first=h.click('communityJoin-0');await h.document.getElementById('communityJoin-0').onclick();assert.equal(posts.length,1);assert.equal(posts[0].kind,'social');finish();await first;
+});
+
+test('city celebrations make travel free and preserve zero-fare flight tickets on restore',()=>{
+ const h=harness({...fixture(),city:'China',place:'airport'});h.game.setOpenCities(['China','Beijing']);h.game.setCityLaunches([{city:'Beijing',ends_at:(h.context.Date.now()+3600000)/1000}]);h.game.flights();const booking=h.document.querySelector('[id^="flight-"]');assert.match(booking.textContent,/¥0/);booking.onclick();assert.equal(h.game.state.flightBookings[0].fare,0);const validated=h.internal.validateSave(JSON.parse(JSON.stringify(h.game.state)));assert.equal(validated.flightBookings[0].fare,0);
+});

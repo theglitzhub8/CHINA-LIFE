@@ -1,10 +1,12 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/common.php';cl_methods(['GET','POST']);
-$actions="('chinalife_vote','chinalife_friend','chinalife_money','chinalife_message','chinalife_activity')";
+$actions="('chinalife_vote','chinalife_friend','chinalife_money','chinalife_message','chinalife_activity','chinalife_case','chinalife_city')";
 function cl_notice_target(array $n): ?array {
  global $uid;
  $key=$n['id'];$actor=(int)$n['from_user_id'];
+ if($n['action']==='chinalife_case'&&preg_match('/^case-([1-9][0-9]*)(?:-[0-9]+)?$/',$key,$m)&&cl_one('SELECT id FROM chinalife_court_cases WHERE id=? AND (claimant_id=? OR defendant_id=?)','iii',[(int)$m[1],$uid,$uid]))return ['type'=>'case','id'=>(int)$m[1]];
+ if($n['action']==='chinalife_city'&&str_starts_with($key,'city-')&&in_array(substr($key,5),cl_open_cities(),true))return ['type'=>'launches'];
  if($n['action']==='chinalife_friend'&&$actor>0&&!cl_blocked($uid,$actor)){
   [$a,$b]=cl_pair($uid,$actor);
   if(cl_one('SELECT status FROM chinalife_friends WHERE first_id=? AND second_id=?','ii',[$a,$b]))return ['type'=>'friends','peer'=>(string)$actor];

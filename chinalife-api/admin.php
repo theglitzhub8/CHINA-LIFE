@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__.'/common.php';
+require_once __DIR__.'/common.php';require_once __DIR__.'/life-lib.php';
 cl_methods(['POST']);cl_admin();cl_rate('admin',60,60);
 // Admins can send a banner image (up to 2 MB, about 2.8 MB as base64), so their requests may be larger.
 $input=cl_body(3000000);$action=$input['action']??'';
@@ -90,8 +90,10 @@ if ($action==='cities') json_response('success',['open'=>cl_open_cities()]);
 if ($action==='set_cities') {
     $all=['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];$open=$input['open']??null;
     if (!is_array($open)||!count($open)||array_diff($open,$all)) cl_fail('Choose valid cities');
+    $db->begin_transaction();cl_one("SELECT value FROM chinalife_settings WHERE name='open_cities' FOR UPDATE");$before=cl_open_cities();
     $value=json_encode(array_values(array_unique($open)));
     cl_run('INSERT INTO chinalife_settings(name,value,updated_at) VALUES(\'open_cities\',?,NOW()) ON DUPLICATE KEY UPDATE value=VALUES(value),updated_at=NOW()','s',[$value]);
+    cl_life_city_launches($before,$open);$db->commit();
     admin_log('set_cities',null,null,$value);json_response('success',['open'=>json_decode($value,true)]);
 }
 if ($action==='reports') {

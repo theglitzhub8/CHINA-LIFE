@@ -65,7 +65,7 @@ export function isChinaLifeInboxHash(hash) {
  const p=new URLSearchParams(hash.slice(1));return [...p.keys()].length===2 && p.get('view')==='inbox' && /^[a-zA-Z0-9-]{1,100}$/.test(p.get('notice')||'');
 }
 export function chinaLifeNotificationDestination(data,config) {
- if(!config||!['chinalife_vote','chinalife_friend','chinalife_money','chinalife_message','chinalife_activity'].includes(String(data?.type||data?.action||'')))return null;
+ if(!config||!['chinalife_vote','chinalife_friend','chinalife_money','chinalife_message','chinalife_activity','chinalife_case','chinalife_city'].includes(String(data?.type||data?.action||'')))return null;
  let notice=data.notice || data.notify_id || data.target?.notify_id;
  if(!notice){try{notice=new URL(data.node_url||data.target?.node_url||data.target?.id).hash;notice=new URLSearchParams(notice.slice(1)).get('notice');}catch{}}
  if(!/^[a-zA-Z0-9-]{1,100}$/.test(notice||''))return null;

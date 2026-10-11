@@ -20,6 +20,7 @@ if ($method === 'POST') {
     $activity=$input['activity']??'idle';if(!in_array($activity,['idle','walk','travel','sport','shop','cook','dance','eat','music','chat','pray','work','relax','sleep','study','health'],true))$activity='idle';
     // arrived_at is set first so it still compares against the old place; it records when they reached this venue.
     cl_run('INSERT INTO chinalife_presence(user_id,name,city,place,color,skin,hair,x,z,activity,arrived_at,seen_at) VALUES(?,?,?,?,?,?,?,?,?,?,NOW(),NOW()) ON DUPLICATE KEY UPDATE arrived_at=IF(city=VALUES(city) AND place=VALUES(place) AND seen_at>=DATE_SUB(NOW(),INTERVAL 60 SECOND),arrived_at,NOW()),name=VALUES(name),city=VALUES(city),place=VALUES(place),color=VALUES(color),skin=VALUES(skin),hair=VALUES(hair),x=VALUES(x),z=VALUES(z),activity=VALUES(activity),seen_at=NOW()', 'issssssdds',[$uid,trim($name),$city,$place,$input['color'],$input['skin'],$input['hair'],(float)$input['x'],(float)$input['z'],$activity]);
+    if(!cl_private_place($place))cl_run('INSERT IGNORE INTO chinalife_life_visits(user_id,city,place,created_at) VALUES(?,?,?,NOW())','iss',[$uid,$city,$place]);
 }
 $city = $input['city'] ?? '';
 if (!in_array($city,['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'],true)) cl_fail('Choose a valid city');
