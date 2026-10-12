@@ -148,10 +148,10 @@ if ($action==='suspend_rank') {
 }
 // Hafrik HQ service applications.
 if ($action==='applications') {
-    $status=$input['status']??'pending';if (!in_array($status,['pending','approved','declined','all'],true)) cl_fail('Choose a status');
-    $rows=cl_rows('SELECT a.id,a.service,a.name,a.contact,a.city,a.message,a.status,a.admin_note,a.created_at,u.user_name username FROM chinalife_applications a LEFT JOIN users u ON u.user_id=a.user_id'.($status==='all'?'':' WHERE a.status=?').' ORDER BY a.id DESC LIMIT 100',$status==='all'?'':'s',$status==='all'?[]:[$status]);
-    foreach ($rows as &$r) $r['id']=(string)$r['id'];unset($r);
-    json_response('success',['applications'=>$rows,'services'=>require __DIR__.'/services-config.php','pending'=>(int)cl_one('SELECT COUNT(*) n FROM chinalife_applications WHERE status="pending"')['n']]);
+    $status=$input['status']??'all';$page=$input['page']??0;if (!is_int($page)||$page<0||$page>100000) cl_fail('Choose a page');$offset=$page*100;if (!in_array($status,['pending','approved','declined','all'],true)) cl_fail('Choose a status');
+    $rows=cl_rows('SELECT a.id,a.service,a.name,a.contact,a.city,a.message,a.status,a.admin_note,a.created_at,u.user_name username FROM chinalife_applications a LEFT JOIN users u ON u.user_id=a.user_id'.($status==='all'?'':' WHERE a.status=?').' ORDER BY a.id DESC LIMIT 101 OFFSET ?',$status==='all'?'i':'si',$status==='all'?[$offset]:[$status,$offset]);
+    $hasMore=count($rows)>100;if($hasMore)array_pop($rows);foreach ($rows as &$r) $r['id']=(string)$r['id'];unset($r);
+    json_response('success',['page'=>$page,'hasMore'=>$hasMore,'applications'=>$rows,'services'=>require __DIR__.'/services-config.php','pending'=>(int)cl_one('SELECT COUNT(*) n FROM chinalife_applications WHERE status="pending"')['n']]);
 }
 if ($action==='set_application') {
     $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);$status=$input['status']??'';$note=mb_substr(trim((string)($input['note']??'')),0,300);
