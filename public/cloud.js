@@ -160,6 +160,7 @@ async function upload(manual = false) {
   } finally {busy = false}
 }
 function reconcileTransfers(saved) {
+  if(account&&String(saved.account?.id)===String(account.user_id??account.id))account.avatar=saved.account.avatar??null;
   const delta=(saved.state?.transferTotal||0)-(remote.state?.transferTotal||0);
   const sharedXP=(saved.state?.sharedXP||0)-(remote.state?.sharedXP||0);
   if(!delta&&!sharedXP)return false;
@@ -255,7 +256,7 @@ async function initialize() {
   return connected;
 }
 window.ChinaLifeAuth = {base:HAFRIK_API,get token(){return liveToken},request:api,connect};
-window.ChinaLifeCloud = {open:show,ready:null,get playerId(){return String(account?.user_id ?? account?.id ?? '')},get signedIn(){return !!account},get joined(){return presence},get players(){if(game.state.place==='home'||game.state.place.startsWith('home-'))return players.filter(p=>p.place===game.state.place&&String(p.homeOwner)===String(window.ChinaLifeHomeVisits?.current?.owner||account?.user_id||account?.id));return players.filter(p => p.city === game.state.city && p.place === game.state.place)},get residents(){return window.ChinaLifeAI?.residents?.()||[]},get scenePlayers(){return [...this.players,...this.residents.filter(p=>p.place===game.state.place&&!game.isResidence?.(p.place))]},get online(){return online},get events(){return events},get gist(){return gist},get announcements(){return announcements},enablePush,get golden(){return golden},claimGolden,get isAdmin(){return admin},joinEvent,claimDaily,admin:adminRequest,refreshEvents,get cityPlayers(){return players.filter(p => p.city === game.state.city)},refresh:refreshPresence,gesture,get feed(){return feed},get ads(){return ads},get songs(){return songs},adImage,join,leave,upload,transfer,syncTransfers};
+window.ChinaLifeCloud = {open:show,ready:null,get playerId(){return String(account?.user_id ?? account?.id ?? '')},get signedIn(){return !!account},get profilePicture(){return account?.avatar||null},get joined(){return presence},get players(){if(game.state.place==='home'||game.state.place.startsWith('home-'))return players.filter(p=>p.place===game.state.place&&String(p.homeOwner)===String(window.ChinaLifeHomeVisits?.current?.owner||account?.user_id||account?.id));return players.filter(p => p.city === game.state.city && p.place === game.state.place)},get residents(){return window.ChinaLifeAI?.residents?.()||[]},get scenePlayers(){return [...this.players,...this.residents.filter(p=>p.place===game.state.place&&!game.isResidence?.(p.place))]},get online(){return online},get events(){return events},get gist(){return gist},get announcements(){return announcements},enablePush,get golden(){return golden},claimGolden,get isAdmin(){return admin},joinEvent,claimDaily,admin:adminRequest,refreshEvents,get cityPlayers(){return players.filter(p => p.city === game.state.city)},refresh:refreshPresence,gesture,get feed(){return feed},get ads(){return ads},get songs(){return songs},adImage,join,leave,upload,transfer,syncTransfers};
 $('cloudButton').onclick = show; $('closeCloud').onclick = () => {if (account) $('cloudDialog').close()};
 // The login window cannot be dismissed (× or Escape) until the player is signed in.
 $('cloudDialog').addEventListener('cancel', e => {if (!account) e.preventDefault()});

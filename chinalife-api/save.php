@@ -9,7 +9,15 @@ function cl_save_result(int $id): array {
     if (!is_array($game)||!is_array($character)) cl_fail('Saved game data is corrupted',500);
     return ['exists'=>true,'save'=>['game'=>$game,'character'=>$character],'revision'=>(int)$row['revision'],'updated_at'=>$row['updated_at'],'created_at'=>$row['created_at']];
 }
-if ($method==='GET') json_response('success',cl_save_result($uid)+['account'=>['id'=>(string)$uid,'username'=>$auth['user_name']??'Hafrik user']]);
+if ($method==='GET') {
+    $picture=is_string($auth['user_picture']??null)?trim($auth['user_picture']):'';
+    $avatar=null;
+    if($picture!==''&&!preg_match('~(?:blank_profile|default-avatar)~i',$picture)){
+        $url=function_exists('fix_url')?fix_url($picture):(preg_match('~^https?://~i',$picture)?$picture:'https://s3.ap-northeast-1.wasabisys.com/hafriksocial/uploads/'.preg_replace('~^uploads/~','',ltrim($picture,'/')));
+        if(is_string($url)&&filter_var($url,FILTER_VALIDATE_URL)&&strtolower(parse_url($url,PHP_URL_SCHEME)??'')==='https'&&!parse_url($url,PHP_URL_USER)&&!parse_url($url,PHP_URL_PASS))$avatar=$url;
+    }
+    json_response('success',cl_save_result($uid)+['account'=>['id'=>(string)$uid,'username'=>$auth['user_name']??'Hafrik user','avatar'=>$avatar]]);
+}
 if ($method==='DELETE') {
     cl_run('DELETE FROM chinalife_saves WHERE user_id=?','i',[$uid]);json_response('success',['deleted'=>true]);
 }

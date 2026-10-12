@@ -67,3 +67,28 @@
 #phoneDialog .phone-app b{width:55px!important;height:55px!important}
 #phoneDialog .phone-dock .phone-app b{width:51px!important;height:51px!important}
 @media(max-height:760px){#phoneDialog .phone-app b{width:49px!important;height:49px!important}}
+/* Compact phone, locally bundled colour icons and account-photo wallpaper. */
+#phoneDialog{width:min(344px,calc(100vw - 38px))}
+#phoneDialog .phone-frame{height:min(680px,82dvh);border-width:6px;border-radius:40px;isolation:isolate;background:#183e42}
+#phoneDialog .phone-wallpaper{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;z-index:-2;pointer-events:none}
+#phoneDialog .phone-frame::before{content:"";position:absolute;inset:0;width:100%;height:100%;transform:none;border-radius:0;background:linear-gradient(180deg,#061c2b75,#061d2550 35%,#041b258f);z-index:-1;pointer-events:none}
+#phoneDialog .ios-phone{padding:5px 13px 24px;gap:9px}
+#phoneDialog .phone-status{flex-basis:39px;padding:10px 18px 2px;font-size:12px}
+#phoneDialog .phone-island{width:86px;height:24px;top:7px}
+#phoneDialog .phone-home-heading h3{font-size:21px;margin:2px 0}
+#phoneDialog .phone-home-heading small{font-size:11px}
+#phoneDialog #phoneWeather{font-size:10px}
+#phoneDialog .phone-widget{min-height:80px;padding:10px;border-radius:20px}
+#phoneDialog .phone-widget b{font-size:16px}
+#phoneDialog .phone-money b{font-size:19px}
+#phoneDialog .phone-widget small{font-size:9px}
+#phoneDialog .phone-role>span{font-size:16px}
+#phoneDialog .phone-pages{min-height:202px}
+#phoneDialog .phone-apps{gap:11px 4px}
+#phoneDialog .phone-app b,#phoneDialog .phone-dock .phone-app b{width:46px!important;height:46px!important;border-radius:14px;background:linear-gradient(145deg,#fffffff0,#e2eeece0);border:1px solid #ffffff80;box-shadow:inset 0 1px 2px #fff,0 4px 8px #071e3133}
+#phoneDialog .phone-app b img{width:39px;height:39px;object-fit:contain;filter:drop-shadow(0 2px 1px #112e4320)}
+#phoneDialog .phone-app span{font-size:9px;min-height:22px}
+#phoneDialog .phone-dock{padding:9px 5px 4px;border-radius:24px}
+#phoneDialog .cl-search{padding:7px 10px;font-size:11px}
+#phoneDialog .phone-frame::after{width:28%;left:36%;height:4px;bottom:7px}
+@media(max-height:710px){#phoneDialog .phone-home-heading{display:none}#phoneDialog .phone-widget{min-height:68px}#phoneDialog .ios-phone{gap:7px}#phoneDialog .phone-apps{gap:8px 4px}}
