@@ -13,8 +13,12 @@ function cl_life_steps(int $player): array {
 }
 function cl_life_sessions(string $city): array {
  $clock=new DateTimeImmutable('now',new DateTimeZone('Asia/Shanghai'));$day=$clock->format('Y-m-d');$items=[];
- foreach([['study','Study together','campus',18,20],['meal','Community lunch','market',12,14],['social','Community meetup · all day','plaza',0,24]] as [$kind,$title,$place,$start,$end]){
-  $a=$clock->setTime($start,0)->getTimestamp();$b=$clock->setTime($end,0)->getTimestamp();$items[]=['kind'=>$kind,'title'=>$title,'city'=>$city,'day'=>$day,'place'=>$place,'opens_at'=>$a,'ends_at'=>$b,'money'=>100,'xp'=>30,'participants'=>(int)(cl_one('SELECT COUNT(*) n FROM chinalife_community_members m JOIN chinalife_presence p ON p.user_id=m.user_id AND p.city=m.city AND p.place=? AND p.seen_at>=DATE_SUB(NOW(),INTERVAL 20 SECOND) WHERE m.city=? AND m.day=? AND m.kind=?','ssss',[$place,$city,$day,$kind])['n']??0)];
+ $defaults=[['study','Study together','campus',1080,1200],['meal','Community lunch','market',720,840],['social','Community meetup · all day','plaza',0,1440]];
+ $templates=cl_optional_rows('SELECT title,place,start_min,end_min,config FROM chinalife_weekly_templates WHERE kind="legacy" AND enabled=1 AND (city="" OR city=?)','s',[$city]);
+ $exists=cl_one("SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='chinalife_weekly_templates'");
+ $sessions=$exists?array_map(fn($t)=>[json_decode($t['config'],true)['legacy_kind'],$t['title'],$t['place'],(int)$t['start_min'],(int)$t['end_min']],$templates):$defaults;
+ foreach($sessions as [$kind,$title,$place,$start,$end]){
+  $a=$clock->setTime(intdiv($start,60),$start%60)->getTimestamp();$b=$clock->setTime(intdiv($end,60),$end%60)->getTimestamp();$items[]=['kind'=>$kind,'title'=>$title,'city'=>$city,'day'=>$day,'place'=>$place,'opens_at'=>$a,'ends_at'=>$b,'money'=>100,'xp'=>30,'participants'=>(int)(cl_one('SELECT COUNT(*) n FROM chinalife_community_members m JOIN chinalife_presence p ON p.user_id=m.user_id AND p.city=m.city AND p.place=? AND p.seen_at>=DATE_SUB(NOW(),INTERVAL 20 SECOND) WHERE m.city=? AND m.day=? AND m.kind=?','ssss',[$place,$city,$day,$kind])['n']??0)];
  }return $items;
 }
 function cl_life_city_launches(array $before,array $after): void {

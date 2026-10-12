@@ -13,7 +13,7 @@ if ($action==='request') {
 }
 if ($action==='accept') {
     if (!$edge||$edge['status']!=='pending'||(int)$edge['requested_by']===$uid) cl_fail('Only the recipient can accept',403);
-    $updated=cl_run("UPDATE chinalife_friends SET status='accepted' WHERE first_id=? AND second_id=? AND status='pending' AND requested_by<>?",'iii',[$first,$second,$uid]);if($updated)cl_hafrik_notify($peer,'friend','friend-accepted-'.$uid.'-'.$peer.'-'.time(),($auth['user_name']??'A player').' accepted your ChinaLife friend request.',$uid);json_response('success',['status'=>'accepted']);
+    $updated=cl_run("UPDATE chinalife_friends SET status='accepted' WHERE first_id=? AND second_id=? AND status='pending' AND requested_by<>?",'iii',[$first,$second,$uid]);if($updated)cl_optional_run('INSERT IGNORE INTO chinalife_weekly_friends(first_id,second_id,day) VALUES(?,?,?)','iis',[$first,$second,gmdate('Y-m-d',time()+28800)]);if($updated)cl_hafrik_notify($peer,'friend','friend-accepted-'.$uid.'-'.$peer.'-'.time(),($auth['user_name']??'A player').' accepted your ChinaLife friend request.',$uid);json_response('success',['status'=>'accepted']);
 }
 if (!in_array($action,['decline','cancel','remove'],true)) cl_fail('Invalid friendship action');
 if (!$edge) json_response('success',['ok'=>true]);

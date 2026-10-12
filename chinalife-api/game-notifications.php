@@ -20,6 +20,9 @@ function cl_notice_target(array $n): ?array {
   if($r&&in_array($r['city'],cl_open_cities(),true))return ['type'=>'ballot','city'=>$r['city'],'candidate'=>(int)$r['id']];
  }
  if($n['action']==='chinalife_money'&&str_starts_with($key,'money-')&&cl_one('SELECT id FROM chinalife_transfers WHERE id=? AND recipient_id=?','si',[substr($key,6),$uid]))return ['type'=>'wallet'];
+ if($n['action']==='chinalife_activity'&&preg_match('/^weekly-([1-9][0-9]*)-(?:start|result)$/',$key,$m)){
+  $r=cl_one('SELECT r.id,r.city FROM chinalife_weekly_runs r JOIN chinalife_weekly_members p ON p.run_id=r.id WHERE r.id=? AND p.user_id=?','ii',[(int)$m[1],$uid]);if($r&&in_array($r['city'],cl_open_cities(),true))return ['type'=>'weekly','id'=>(int)$r['id']];
+ }
  if($n['action']==='chinalife_activity'&&preg_match('/^activity-([1-9][0-9]*)$/',$key,$m)){
   $r=cl_one('SELECT inviter_id,city,place FROM chinalife_shared_activities WHERE id=? AND invitee_id=? AND status="pending" AND expires_at>NOW()','ii',[(int)$m[1],$uid]);
   if($r&&!cl_blocked($uid,(int)$r['inviter_id']))return ['type'=>'activity','city'=>$r['city'],'place'=>$r['place']];

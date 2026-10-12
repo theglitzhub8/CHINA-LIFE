@@ -186,3 +186,22 @@ CREATE TABLE IF NOT EXISTS chinalife_court_statements(id BIGINT UNSIGNED NOT NUL
 CREATE TABLE IF NOT EXISTS chinalife_life_outbox (user_id INT UNSIGNED NOT NULL,city VARCHAR(32) NOT NULL,actor_id INT UNSIGNED NOT NULL,delivered_at DATETIME NULL,created_at DATETIME NOT NULL,PRIMARY KEY(user_id,city),INDEX(delivered_at,created_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS chinalife_police_reviews(report_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,status VARCHAR(16) NOT NULL DEFAULT 'pending',decision TEXT NULL,reviewed_by INT UNSIGNED NULL,updated_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS chinalife_weekly_templates(id VARCHAR(24) PRIMARY KEY,title VARCHAR(80) NOT NULL,kind VARCHAR(24) NOT NULL,weekday TINYINT UNSIGNED NOT NULL,start_min SMALLINT UNSIGNED NOT NULL,end_min SMALLINT UNSIGNED NOT NULL,place VARCHAR(40) NOT NULL,city VARCHAR(40) NOT NULL DEFAULT '',enabled TINYINT NOT NULL DEFAULT 1,money INT UNSIGNED NOT NULL DEFAULT 50,xp INT UNSIGNED NOT NULL DEFAULT 20,config TEXT NOT NULL,revision INT UNSIGNED NOT NULL DEFAULT 1,updated_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_weekly_runs(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,template_id VARCHAR(24) NOT NULL,city VARCHAR(40) NOT NULL,day DATE NOT NULL,starts_at BIGINT NOT NULL,ends_at BIGINT NOT NULL,snapshot TEXT NOT NULL,cancelled TINYINT NOT NULL DEFAULT 0,UNIQUE KEY occurrence(template_id,city,day),INDEX(city,starts_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_weekly_members(run_id BIGINT UNSIGNED NOT NULL,user_id INT UNSIGNED NOT NULL,joined_at BIGINT NULL,progress INT UNSIGNED NOT NULL DEFAULT 0,choice VARCHAR(24) NULL,completed_at BIGINT NULL,reminder TINYINT NOT NULL DEFAULT 0,reminded_at DATETIME NULL,PRIMARY KEY(run_id,user_id),INDEX(user_id,completed_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_weekly_visits(user_id INT UNSIGNED NOT NULL,city VARCHAR(40) NOT NULL,place VARCHAR(40) NOT NULL,day DATE NOT NULL,PRIMARY KEY(user_id,city,place,day),INDEX(day)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_daily_receipts(user_id INT UNSIGNED NOT NULL,day DATE NOT NULL,PRIMARY KEY(user_id,day)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+INSERT IGNORE INTO chinalife_weekly_templates VALUES
+('mystery','City Mystery','mystery',1,1140,1260,'plaza','',1,60,20,'{"clues":[{"place":"plaza","text":"Start where the city meets: Hafrik Square."},{"place":"station","text":"Find the gateway where travellers arrive by rail."},{"place":"campus","text":"Finish where students begin their next chapter."}]}',1,NOW()),
+('campus-clash','Campus Clash','coming',2,1200,1290,'campus','',0,0,0,'{}',1,NOW()),
+('gist-night','Gist Night','gist',3,1200,1320,'gist','',1,40,20,'{"topic":"What helped you settle into life in China?"}',1,NOW()),
+('business-day','Business Day','coming',4,1140,1260,'business','',0,0,0,'{}',1,NOW()),
+('party-night','Party Night','party',5,1200,1380,'night','',1,50,20,'{"question":"Which music role selects and mixes tracks for the dance floor?","options":["DJ","Goalkeeper","Pilot"],"answer":0}',1,NOW()),
+('city-showdown','City Showdown','coming',6,1140,1320,'gym','',0,0,0,'{}',1,NOW()),
+('city-hall','City Hall','hall',7,1200,1290,'voting','',1,30,15,'{"topic":"Which community activity should we feature next?","options":["Study meetup","City exploration","Music quiz"]}',1,NOW());
+CREATE TABLE IF NOT EXISTS chinalife_weekly_friends(first_id INT UNSIGNED NOT NULL,second_id INT UNSIGNED NOT NULL,day DATE NOT NULL,PRIMARY KEY(first_id,second_id),INDEX(day)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+INSERT IGNORE INTO chinalife_weekly_templates VALUES
+('daily-study','Study together','legacy',0,1080,1200,'campus','',1,100,30,'{"legacy_kind":"study"}',1,NOW()),
+('daily-lunch','Community lunch','legacy',0,720,840,'market','',1,100,30,'{"legacy_kind":"meal"}',1,NOW()),
+('daily-meetup','Community meetup','legacy',0,0,1440,'plaza','',1,100,30,'{"legacy_kind":"social"}',1,NOW());

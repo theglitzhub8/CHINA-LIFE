@@ -10,8 +10,9 @@ function openCampaign(){if(!pendingCampaign||!window.ChinaLifeCloud?.signedIn)re
 window.addEventListener('hashchange',readCampaign);window.addEventListener('chinalife:cloudready',openCampaign);if(window.location?.hash)readCampaign();
 async function openNotice(target,owner){
  if(!target||owner!==String(game.accountId??'')||!window.ChinaLifeCloud?.signedIn)return;
- const kinds=['friends','message','wallet','ballot','activity','case','launches'];if(!kinds.includes(target.type))return;
+ const kinds=['friends','message','wallet','ballot','activity','case','launches','weekly'];if(!kinds.includes(target.type))return;
  $('activityDialog').close();
+ if(target.type==='weekly')await window.ChinaLifeWeekly?.open('calendar',target.id);
  if(target.type==='friends')await window.ChinaLifeSocial?.open('friends');
  if(target.type==='message'&&/^[1-9][0-9]*$/.test(String(target.peer)))await window.ChinaLifeSocial?.openDirect(String(target.peer),{messageId:target.message});
  if(target.type==='case')await window.ChinaLifeCommunity?.open('court',target.id);

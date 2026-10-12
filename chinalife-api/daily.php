@@ -16,5 +16,6 @@ try {
  $g['transferTotal']=(int)($g['transferTotal']??0)+$money;$g['sharedXP']=(int)($g['sharedXP']??0)+$xp;
  $g['lastVisit']=$today;$g['streak']=$streak;
  cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($g,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),$uid]);
+ cl_optional_run('INSERT IGNORE INTO chinalife_daily_receipts(user_id,day) VALUES(?,?)','is',[$uid,$today]);
  $db->commit();json_response('success',['date'=>$today,'streak'=>$streak,'money'=>$money,'xp'=>$xp]);
 }catch(Throwable $e){$db->rollback();throw $e;}
