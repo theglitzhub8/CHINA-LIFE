@@ -92,3 +92,29 @@
 #phoneDialog .cl-search{padding:7px 10px;font-size:11px}
 #phoneDialog .phone-frame::after{width:28%;left:36%;height:4px;bottom:7px}
 @media(max-height:710px){#phoneDialog .phone-home-heading{display:none}#phoneDialog .phone-widget{min-height:68px}#phoneDialog .ios-phone{gap:7px}#phoneDialog .phone-apps{gap:8px 4px}}
+
+/* A fixed home-screen grid: swiping and searching never move the dock. */
+#phoneDialog .phone-frame{height:min(680px,82svh)}
+#phoneDialog #phoneContent{overflow:hidden;overscroll-behavior:none}
+#phoneDialog .ios-phone{height:100%;min-height:0;display:grid;grid-template-rows:56px 80px minmax(0,1fr) 12px 32px 84px;position:relative;gap:9px}
+#phoneDialog .phone-widgets{min-height:0}
+#phoneDialog .phone-widget{height:80px;min-height:0;box-sizing:border-box}
+#phoneDialog .phone-pages{min-height:0;height:100%;overflow-y:hidden;overscroll-behavior:none;touch-action:pan-x}
+#phoneDialog .phone-page{height:100%;align-self:stretch;box-sizing:border-box}
+#phoneDialog .phone-apps{grid-auto-rows:74px;gap:8px 4px}
+#phoneDialog .phone-app span{height:22px;min-height:22px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+#phoneDialog .phone-app b{transition:none}
+#phoneDialog .phone-app:active b{transform:none}
+#phoneDialog .cl-search,#phoneDialog .cl-search:focus{width:100%;height:32px;transition:none;text-align:left;align-self:stretch}
+#phoneDialog .cl-for-you{grid-row:6;min-height:0}
+#phoneDialog .phone-page-controls{grid-row:4}
+#phoneDialog .cl-search{grid-row:5}
+#phoneDialog .phone-searching .phone-home-heading{display:block}
+#phoneDialog .phone-searching .phone-widgets{display:grid}
+#phoneDialog .phone-searching .phone-page-controls{display:flex;visibility:hidden}
+#phoneDialog .phone-searching .phone-pages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:74px;align-content:start;gap:8px 4px;overflow-x:hidden;overflow-y:auto;touch-action:pan-y;scroll-snap-type:none}
+#phoneDialog .phone-searching .phone-page,#phoneDialog .phone-searching .phone-apps{display:contents}
+#phoneDialog .phone-searching .cl-search{order:0;position:static;background:#ffffff17}
+#phoneDialog .phone-searching .phone-dock{padding:9px 5px 4px;border:1px solid #ffffff3b;background:linear-gradient(155deg,#ffffff28,#ffffff14);backdrop-filter:blur(25px)}
+#phoneDialog #phoneNoResults{position:absolute;top:45%;left:13px;right:13px;text-align:center;margin:0;pointer-events:none}
+@media(max-height:710px){#phoneDialog .ios-phone{grid-template-rows:0 68px minmax(0,1fr) 10px 32px 80px;gap:7px}#phoneDialog .phone-home-heading,#phoneDialog .phone-searching .phone-home-heading{display:none}#phoneDialog .phone-widget{height:68px}#phoneDialog .phone-apps,#phoneDialog .phone-searching .phone-pages{grid-auto-rows:68px;gap:4px}}
