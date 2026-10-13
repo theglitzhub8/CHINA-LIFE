@@ -87,11 +87,11 @@ try{
    if(count($saves)!==2)cl_fail('Both characters must still be saved',409);
    $diceDelta=[];$diceA=null;$diceB=null;
    if(!empty($spec['stake'])){
-    foreach($saves as $save){$g=json_decode($save['game_state'],true,512,JSON_THROW_ON_ERROR);if(($g['money']??0)<$spec['stake'])cl_fail('Both players need enough coins for the agreed stake; cancel or top up first',409);}
+    foreach($saves as $save){$bal=cl_balances_lock((int)$save['user_id']);if($bal['coins']<$spec['stake'])cl_fail('Both players need enough coins for the agreed stake; cancel or top up first',409);}
     $diceA=random_int(1,6)+random_int(1,6);$diceB=random_int(1,6)+random_int(1,6);$delta=$diceA<=>$diceB;
     $diceDelta=[(int)$row['inviter_id']=>$delta*$spec['stake'],(int)$row['invitee_id']=>-$delta*$spec['stake']];
    }
-   foreach($saves as $save){$g=json_decode($save['game_state'],true,512,JSON_THROW_ON_ERROR);$reward=$spec['money']+($diceDelta[(int)$save['user_id']]??0);if(($g['money']??0)+$reward>1000000000||($g['xp']??0)+$spec['xp']>10000000)cl_fail('Reward limit reached',409);$g['money']+=$reward;$g['xp']+=$spec['xp'];$g['transferTotal']=($g['transferTotal']??0)+$reward;$g['sharedXP']=($g['sharedXP']??0)+$spec['xp'];cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($g,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),(int)$save['user_id']]);}
+   foreach($saves as $save){$g=json_decode($save['game_state'],true,512,JSON_THROW_ON_ERROR);$reward=(int)$spec['money']+($diceDelta[(int)$save['user_id']]??0);$moved=cl_move_totals((int)$save['user_id'],$g,$reward,(int)$spec['xp']);$g['transferTotal']=($g['transferTotal']??0)+$reward;$g['sharedXP']=($g['sharedXP']??0)+$spec['xp'];cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($g,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),(int)$save['user_id']]);unset($moved);}
    if($diceA!==null)cl_run('UPDATE chinalife_shared_activities SET choice_a=?,choice_b=? WHERE id=?','ssi',[(string)$diceA,(string)$diceB,$id]);
    cl_run('UPDATE chinalife_shared_activities SET status="completed",completed_at=NOW() WHERE id=?','i',[$id]);
   }else cl_fail('Choose a valid activity action');

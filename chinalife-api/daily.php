@@ -12,7 +12,7 @@ try {
  if((string)($g['lastVisit']??'')>=$today){$db->rollback();cl_fail('Today’s Beijing daily reward is already claimed',409);}
  $streak=($g['lastVisit']??'')===$yesterday?min(7,max(0,(int)($g['streak']??0))+1):1;
  $money=50*$streak;$xp=20*$streak;
- $g['money']=(int)($g['money']??0)+$money;$g['xp']=(int)($g['xp']??0)+$xp;
+ cl_move_totals($uid,$g,$money,$xp);
  $g['transferTotal']=(int)($g['transferTotal']??0)+$money;$g['sharedXP']=(int)($g['sharedXP']??0)+$xp;
  $g['lastVisit']=$today;$g['streak']=$streak;
  cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($g,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),$uid]);

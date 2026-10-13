@@ -3,7 +3,7 @@ declare(strict_types=1);
 function cl_life_award(int $player,string $key,int $money,int $xp): bool {
  $row=cl_one('SELECT game_state FROM chinalife_saves WHERE user_id=? FOR UPDATE','i',[$player]);if(!$row)cl_fail('Create your character first',409);
  if(!cl_run('INSERT IGNORE INTO chinalife_life_claims(user_id,claim_key,created_at) VALUES(?,?,NOW())','is',[$player,$key]))return false;
- $g=json_decode($row['game_state'],true,512,JSON_THROW_ON_ERROR);if((int)$g['money']+$money>1000000000)cl_fail('Spend some game funds before claiming this reward',409);$g['money']=(int)$g['money']+$money;$g['xp']=(int)$g['xp']+$xp;$g['transferTotal']=(int)($g['transferTotal']??0)+$money;$g['sharedXP']=(int)($g['sharedXP']??0)+$xp;
+ $g=json_decode($row['game_state'],true,512,JSON_THROW_ON_ERROR);$held=cl_balances_lock($player);if($held['coins']+$money>1000000000)cl_fail('Spend some game funds before claiming this reward',409);cl_move_totals($player,$g,$money,$xp);$g['transferTotal']=(int)($g['transferTotal']??0)+$money;$g['sharedXP']=(int)($g['sharedXP']??0)+$xp;
  cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($g,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),$player]);return true;
 }
 function cl_life_steps(int $player): array {

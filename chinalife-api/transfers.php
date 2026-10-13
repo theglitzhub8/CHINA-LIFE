@@ -20,8 +20,9 @@ try {
  $spray=($input['effect']??'')==='spray';$sprayRoom=null;
  if($spray){$sprayRoom=cl_one('SELECT city,place FROM chinalife_presence WHERE user_id=? AND seen_at>=DATE_SUB(NOW(),INTERVAL 20 SECOND)','i',[$uid]);$clubs=require __DIR__.'/shared-config.php';if(!$sprayRoom||!isset($clubs['club-'.$sprayRoom['place']]))cl_fail('Visit a club to spray money',409);cl_presence($peer,$sprayRoom['city'],$sprayRoom['place']);}
  $games=[];foreach($rows as $row)$games[(int)$row['user_id']]=json_decode($row['game_state'],true,512,JSON_THROW_ON_ERROR);
- if(($games[$uid]['money']??0)<$amount){$db->rollback();cl_fail('Not enough money',409);}
- if(($games[$peer]['money']??0)+$amount>1000000000){$db->rollback();cl_fail('Recipient balance is full',409);}
- foreach([$uid=>-$amount,$peer=>$amount] as $id=>$delta){$g=$games[$id];$g['money']+=$delta;$g['transferTotal']=($g['transferTotal']??0)+$delta;cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($g,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),$id]);}
+ $ids=[$uid,$peer];sort($ids);$locked=[];foreach($ids as $id)$locked[$id]=cl_balances_lock($id);
+ if($locked[$uid]['coins']<$amount){$db->rollback();cl_fail('Not enough money',409);}
+ if($locked[$peer]['coins']+$amount>1000000000){$db->rollback();cl_fail('Recipient balance is full',409);}
+ foreach([$uid=>-$amount,$peer=>$amount] as $id=>$delta){$g=$games[$id];$coins=$locked[$id]['coins']+$delta;cl_balance_write($id,$coins,$locked[$id]['xp']);$g['money']=$coins;$g['xp']=$locked[$id]['xp'];$g['transferTotal']=($g['transferTotal']??0)+$delta;cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($g,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),$id]);}
  cl_run('INSERT INTO chinalife_transfers(id,sender_id,recipient_id,amount,created_at) VALUES(?,?,?,?,NOW())','siii',[$key,$uid,$peer,$amount]);if($spray)cl_run('INSERT INTO chinalife_gestures(sender_id,target_id,city,place,phrase) VALUES(?,?,?,?,"spray")','iiss',[$uid,$peer,$sprayRoom['city'],$sprayRoom['place']]);$db->commit();cl_hafrik_notify($peer,'money','money-'.$key,($auth['user_name']??'A player').' sent you ¥'.$amount.' in ChinaLife.',$uid);json_response('success',['sent'=>true,'amount'=>$amount]);
 }catch(Throwable $e){$db->rollback();throw $e;}
