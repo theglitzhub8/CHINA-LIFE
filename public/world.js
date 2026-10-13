@@ -11,7 +11,7 @@ import {buildDistricts} from './districts.js'
 import {helicopter} from './helicopter.js?v=20261013w8b';
 import {buildHome,homeExterior} from './home-interiors.js?v=20261013w8';
 import {carModel} from './garage.js';
-import {nightClub} from './club-host.js?v=20261014v9';
+import {nightClub} from './club-host.js?v=20261014v9e';
 let clubFx=null;
 
 const $=id=>document.getElementById(id),game=window.ChinaLife;
@@ -217,7 +217,7 @@ window.addEventListener('chinalife:ads',()=>{if(view==='venue'&&place)adWalls(pl
 // AI characters (ai-agents.js) stand at their venues in every city; tapping one opens the chat.
 function aiCharacters(id){for(const a of window.ChinaLifeAI?.agentsAt?.(id)||[]){const body=person(a.spot[0],a.spot[1],a.color,0xa06d4d,game.clubs.includes(id)?a.name:'🤖 '+a.name+' · '+a.role,'ai:'+a.id);body.rotation.y=Math.PI*.15;actors.push(body);const l=labels.find(x=>x.follow===body);if(l){l.el.classList.add('ai-label');if(game.clubs.includes(id))l.el.classList.remove('npc')}}}
 window.addEventListener('chinalife:ai-ready',()=>{if(view==='venue'&&place&&!actors.some(a=>String(a.userData.npc||'').startsWith('ai:')))aiCharacters(place)});
-function room(id){buildRoom(id);populate(id);aiCharacters(id);if(game.clubs.includes(id)){const quiet=labels.filter(l=>l.el.classList.contains('npc')&&!l.el.classList.contains('ai-label'));quiet.forEach(l=>l.el.remove());labels=labels.filter(l=>!quiet.includes(l))}hideTreasure(id);hideGolden(id);placeMystery(id);lessonBoard(id);mergeStatic([player,...actors]);adWalls(id);outdoorView=['park','market','station','plaza','skylight','palace','zhongjie','cantontower'].includes(venueModelId(id));applyLighting(true)}
+function room(id){buildRoom(id);populate(id);aiCharacters(id);if(game.clubs.includes(id)){const quiet=labels.filter(l=>l.el.classList.contains('npc')&&!l.el.classList.contains('ai-label'));quiet.forEach(l=>l.el.remove());labels=labels.filter(l=>!quiet.includes(l))}hideTreasure(id);hideGolden(id);placeMystery(id);lessonBoard(id);mergeStatic([player,...actors,...(clubFx?.keep||[])]);adWalls(id);outdoorView=['park','market','station','plaza','skylight','palace','zhongjie','cantontower'].includes(venueModelId(id));applyLighting(true)}
 // Classroom boards show today's Chinese lesson.
 function lessonBoard(id){if(!game.isClassroom?.(id))return;const [title,words]=game.currentLesson();sign(title+' · '+words.map(w=>w[0]).join('  '),0,2.15,-4.68)}
 // The weekly golden envelope: bigger, gold and shining, until someone finds it.
