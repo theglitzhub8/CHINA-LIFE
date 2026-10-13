@@ -9,7 +9,10 @@ function songTick(){if(Date.now()-songCheck<400)return;songCheck=Date.now();cons
 let ctx,master,playing=false,track=venueTrack(),startedAt=Date.now(),volume=(()=>{try{const v=Number(localStorage.getItem('chinalife-music-volume'));return Number.isFinite(v)&&localStorage.getItem('chinalife-music-volume')!==null?Math.min(1,Math.max(0,v)):.3}catch{return .3}})(),duck=false,nextStep=0,polling=false,queue=[],serverOffset=0;
 let enabled=true,unlocked=false,audioGeneration=0;try{enabled=localStorage.getItem('chinalife-club-music')!=='off'}catch{}
 const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-async function api(method='GET',data){const result=await window.ChinaLifeAuth.request('/chinalife/music.php',method,{place:game.state.place,...(data||{city:game.state.city})});return result.data||result}
+// Music needs the server to know we're in this venue: on a room change, send presence first (no extra request if it's already current), and retry once after a "join first" refusal.
+let musicRoom='';async function api(method='GET',data){const room=game.state.city+':'+game.state.place,cloud=window.ChinaLifeCloud;if(room!==musicRoom){musicRoom=room;try{await cloud?.presenceNow?.()}catch{}}
+ const call=()=>window.ChinaLifeAuth.request('/chinalife/music.php',method,{place:game.state.place,...(data||{city:game.state.city})});
+ let result;try{result=await call()}catch(e){if(!/join this venue|403/i.test(String(e?.message||e)+' '+(e?.status||'')))throw e;await cloud?.presenceNow?.();result=await call()}return result.data||result}
 function nearness(){const w=window.ChinaLifeWorld;if(!w||w.view==='map')return .2;const p=w.position;if(!p)return 1;const d=Math.hypot(p.x,p.z+3.5);return Math.max(.35,Math.min(1,1-(d-2)/9))}
 // While ChinaLife Radio plays, the club's own music steps aside.
 let radioOn=false;
