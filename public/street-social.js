@@ -84,4 +84,4 @@ setInterval(()=>{mapButton();const b=$('liveMapBtn');if(b)b.hidden=!$('navMap')?
 
 // v5: the camera toggle joins the right-hand tool column; brighter streets at night while walking.
 setInterval(()=>{const t=$('tpToggle'),col=document.querySelector('.scene-tools');if(t&&col&&t.parentElement!==col)col.append(t);
- const ui=$('worldUI');if(!ui)return;const lit=W()?.lighting?.();ui.classList.toggle('night-walk',!!W()?.streetWalking?.()&&lit&&lit.sun!=null&&lit.sun<1.2)},800);
+ const ui=$('worldUI');if(!ui)return;const vp=$('worldViewport');if(vp&&!vp.querySelector('.night-glow')){const g=document.createElement('div');g.className='night-glow';vp.append(g)}const lit=W()?.lighting?.();ui.classList.toggle('night-walk',!!W()?.streetWalking?.()&&lit&&lit.sun!=null&&lit.sun<1.2)},800);

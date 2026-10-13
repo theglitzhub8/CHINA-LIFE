@@ -164,3 +164,7 @@ html body .tp-enter{max-width:min(250px,calc(100% - 140px))!important;bottom:cal
 #phoneDialog .pw4 button:focus,#phoneDialog .pw4 button:focus-visible{outline:none!important;box-shadow:0 1px 0 rgba(255,255,255,.25) inset!important}
 #worldUI.night-walk #worldViewport canvas{filter:brightness(1.6) contrast(1.05) saturate(1.1)}
 #phoneDialog .pw4 .pw-clock small{font-size:10px!important;letter-spacing:-.01em}
+/* v5b: brighter night streets while walking: lifted exposure + warm streetlight glow, still blue night */
+#worldUI.night-walk #worldViewport canvas{filter:brightness(2.1) contrast(1.08) saturate(1.15)!important}
+.night-glow{position:absolute;inset:0;pointer-events:none;z-index:1;display:none;mix-blend-mode:screen;background:radial-gradient(42% 30% at 50% 60%,rgba(255,210,140,.34),rgba(255,190,120,.12) 55%,transparent 75%),radial-gradient(30% 22% at 12% 30%,rgba(255,220,160,.16),transparent 70%),radial-gradient(30% 22% at 88% 34%,rgba(255,220,160,.16),transparent 70%),linear-gradient(180deg,rgba(40,70,140,.18),transparent 40%)}
+#worldUI.night-walk .night-glow{display:block}
