@@ -18,6 +18,14 @@ Every server-side money change goes through the ledger (`chinalife_economy_actio
 
 # Changelog
 
+## R2 (r2-ios): shipped Wed 14 Oct 2026, ~06:14 China time (founder-approved, outside the Friday slot)
+- Hafrik iOS design: Hafrik colours, an iOS type scale (min 12 px), 8 pt spacing, and one outline icon set for controls.
+- Single-row top bar, docked 4-tab bar, 88 px joystick and 56 px jump.
+- Sheets with peek / half / near-full heights and one × close; the phone opens as a full sheet with no drawn frame.
+- One Party button in clubs (Dance, Toast, Hype, Spray, Drinks); decluttered map labels; labels never cover controls.
+- Press-and-spring animations that respect reduced motion. Front end only, no new polling.
+- Backup: /root/backups/r2-20261013-221409 (server time).
+
 ## R1 (r1-load): shipped Wed 14 Oct 2026, ~05:21 China time (founder-approved, outside the Friday slot)
 - Lighter on the server: notifications are checked every 5–20 s and pause while the tab is hidden; presence every 20 s; saves at most once a minute and only when something changed; voice and home-visit checks run only while in use; one combined feed call a minute.
 - Music streams as AAC (.m4a, 225 MB down to 11 MB) with year-long caching. The .wav originals are kept.
