@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS chinalife_fortune_claims (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS chinalife_player_reports (
  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,reporter_id INT UNSIGNED NOT NULL,peer_id INT UNSIGNED NOT NULL,reason VARCHAR(24) NOT NULL,note VARCHAR(300) NOT NULL DEFAULT '',city VARCHAR(40) NOT NULL DEFAULT '',place VARCHAR(40) NOT NULL DEFAULT '',created_at DATETIME NOT NULL,
- UNIQUE KEY(reporter_id,peer_id,reason),INDEX(created_at),INDEX(peer_id)
+ request_id VARCHAR(80) NOT NULL DEFAULT '',UNIQUE KEY report_request(reporter_id,request_id),INDEX(created_at),INDEX(peer_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS chinalife_home_visits (
  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,owner_id INT UNSIGNED NOT NULL,guest_id INT UNSIGNED NOT NULL,city VARCHAR(40) NOT NULL,place VARCHAR(40) NOT NULL,status VARCHAR(12) NOT NULL,expires_at DATETIME NOT NULL,
@@ -165,8 +165,43 @@ CREATE TABLE IF NOT EXISTS chinalife_ai_messages (
  INDEX(user_id,agent,id),INDEX(user_id,created_at),CONSTRAINT fk_chinalife_ai_user FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS chinalife_politics_votes (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,city VARCHAR(40) NOT NULL,office VARCHAR(40) NOT NULL,voter_id INT UNSIGNED NOT NULL,candidate_id BIGINT UNSIGNED NOT NULL,created_at DATETIME NOT NULL,UNIQUE KEY one_vote(city,office,voter_id),INDEX(city,office),FOREIGN KEY(voter_id) REFERENCES users(user_id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-CREATE TABLE IF NOT EXISTS chinalife_inbox (
- user_id INT UNSIGNED NOT NULL PRIMARY KEY,messages INT UNSIGNED NOT NULL DEFAULT 0,activities INT UNSIGNED NOT NULL DEFAULT 0,visits INT UNSIGNED NOT NULL DEFAULT 0,updated_at DATETIME NOT NULL,
- CONSTRAINT fk_chinalife_inbox_user FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS chinalife_politics_votes (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,city VARCHAR(40) NOT NULL,office VARCHAR(40) NOT NULL,period VARCHAR(32) NOT NULL DEFAULT '',voter_id INT UNSIGNED NOT NULL,candidate_id BIGINT UNSIGNED NOT NULL,created_at DATETIME NOT NULL,UNIQUE KEY one_vote_period(city,office,period,voter_id),INDEX(city,office),FOREIGN KEY(voter_id) REFERENCES users(user_id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_politics_elections (city VARCHAR(40) NOT NULL,office VARCHAR(40) NOT NULL,period VARCHAR(32) NOT NULL,opens_at DATETIME NOT NULL,closes_at DATETIME NOT NULL,PRIMARY KEY(city,office,period),INDEX(city,office,opens_at,closes_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Placement only. Hafrik retains ownership of listing content and membership.
+CREATE TABLE IF NOT EXISTS chinalife_hafrik_places (
+ source VARCHAR(16) NOT NULL,source_id INT UNSIGNED NOT NULL,
+ city VARCHAR(40) NOT NULL,near VARCHAR(64) NOT NULL DEFAULT 'plaza',
+ active TINYINT NOT NULL DEFAULT 1,updated_by INT UNSIGNED NOT NULL,updated_at DATETIME NOT NULL,
+ PRIMARY KEY(source,source_id),KEY city_active(city,active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS chinalife_life_visits(user_id INT UNSIGNED NOT NULL,city VARCHAR(40) NOT NULL,place VARCHAR(40) NOT NULL,created_at DATETIME NOT NULL,PRIMARY KEY(user_id,city,place)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_life_claims(user_id INT UNSIGNED NOT NULL,claim_key VARCHAR(180) NOT NULL,created_at DATETIME NOT NULL,PRIMARY KEY(user_id,claim_key)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_city_launches(city VARCHAR(40) NOT NULL PRIMARY KEY,opens_at BIGINT NOT NULL,ends_at BIGINT NOT NULL,created_by INT UNSIGNED NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_community_members(user_id INT UNSIGNED NOT NULL,city VARCHAR(40) NOT NULL,day VARCHAR(10) NOT NULL,kind VARCHAR(20) NOT NULL,joined_at BIGINT NOT NULL,completed TINYINT NOT NULL DEFAULT 0,PRIMARY KEY(user_id,city,day,kind)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_court_cases(id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,transfer_id VARCHAR(80) NULL,report_id BIGINT UNSIGNED NULL,claimant_id INT UNSIGNED NOT NULL,defendant_id INT UNSIGNED NOT NULL,city VARCHAR(40) NOT NULL,reason TEXT NOT NULL,adviser VARCHAR(20) NOT NULL DEFAULT 'evidence',status VARCHAR(16) NOT NULL DEFAULT 'filed',hearing_at BIGINT NULL,decision TEXT NULL,refund INT UNSIGNED NOT NULL DEFAULT 0,judge_id INT UNSIGNED NULL,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,UNIQUE KEY(transfer_id),UNIQUE KEY court_report(report_id),INDEX(claimant_id),INDEX(defendant_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_court_statements(id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,case_id BIGINT UNSIGNED NOT NULL,user_id INT UNSIGNED NOT NULL,body TEXT NOT NULL,created_at DATETIME NOT NULL,INDEX(case_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS chinalife_life_outbox (user_id INT UNSIGNED NOT NULL,city VARCHAR(32) NOT NULL,actor_id INT UNSIGNED NOT NULL,delivered_at DATETIME NULL,created_at DATETIME NOT NULL,PRIMARY KEY(user_id,city),INDEX(delivered_at,created_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS chinalife_police_reviews(report_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,status VARCHAR(16) NOT NULL DEFAULT 'pending',decision TEXT NULL,reviewed_by INT UNSIGNED NULL,updated_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS chinalife_weekly_templates(id VARCHAR(24) PRIMARY KEY,title VARCHAR(80) NOT NULL,kind VARCHAR(24) NOT NULL,weekday TINYINT UNSIGNED NOT NULL,start_min SMALLINT UNSIGNED NOT NULL,end_min SMALLINT UNSIGNED NOT NULL,place VARCHAR(40) NOT NULL,city VARCHAR(40) NOT NULL DEFAULT '',enabled TINYINT NOT NULL DEFAULT 1,money INT UNSIGNED NOT NULL DEFAULT 50,xp INT UNSIGNED NOT NULL DEFAULT 20,config TEXT NOT NULL,revision INT UNSIGNED NOT NULL DEFAULT 1,updated_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_weekly_runs(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,template_id VARCHAR(24) NOT NULL,city VARCHAR(40) NOT NULL,day DATE NOT NULL,starts_at BIGINT NOT NULL,ends_at BIGINT NOT NULL,snapshot TEXT NOT NULL,cancelled TINYINT NOT NULL DEFAULT 0,UNIQUE KEY occurrence(template_id,city,day),INDEX(city,starts_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_weekly_members(run_id BIGINT UNSIGNED NOT NULL,user_id INT UNSIGNED NOT NULL,joined_at BIGINT NULL,progress INT UNSIGNED NOT NULL DEFAULT 0,choice VARCHAR(24) NULL,completed_at BIGINT NULL,reminder TINYINT NOT NULL DEFAULT 0,reminded_at DATETIME NULL,PRIMARY KEY(run_id,user_id),INDEX(user_id,completed_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_weekly_visits(user_id INT UNSIGNED NOT NULL,city VARCHAR(40) NOT NULL,place VARCHAR(40) NOT NULL,day DATE NOT NULL,PRIMARY KEY(user_id,city,place,day),INDEX(day)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS chinalife_daily_receipts(user_id INT UNSIGNED NOT NULL,day DATE NOT NULL,PRIMARY KEY(user_id,day)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+INSERT IGNORE INTO chinalife_weekly_templates VALUES
+('mystery','City Mystery','mystery',1,1140,1260,'plaza','',1,60,20,'{"clues":[{"place":"plaza","text":"Start where the city meets: Hafrik Square."},{"place":"station","text":"Find the gateway where travellers arrive by rail."},{"place":"campus","text":"Finish where students begin their next chapter."}]}',1,NOW()),
+('campus-clash','Campus Clash','coming',2,1200,1290,'campus','',0,0,0,'{}',1,NOW()),
+('gist-night','Gist Night','gist',3,1200,1320,'gist','',1,40,20,'{"topic":"What helped you settle into life in China?"}',1,NOW()),
+('business-day','Business Day','coming',4,1140,1260,'business','',0,0,0,'{}',1,NOW()),
+('party-night','Party Night','party',5,1200,1380,'night','',1,50,20,'{"question":"Which music role selects and mixes tracks for the dance floor?","options":["DJ","Goalkeeper","Pilot"],"answer":0}',1,NOW()),
+('city-showdown','City Showdown','coming',6,1140,1320,'gym','',0,0,0,'{}',1,NOW()),
+('city-hall','City Hall','hall',7,1200,1290,'voting','',1,30,15,'{"topic":"Which community activity should we feature next?","options":["Study meetup","City exploration","Music quiz"]}',1,NOW());
+CREATE TABLE IF NOT EXISTS chinalife_weekly_friends(first_id INT UNSIGNED NOT NULL,second_id INT UNSIGNED NOT NULL,day DATE NOT NULL,PRIMARY KEY(first_id,second_id),INDEX(day)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+INSERT IGNORE INTO chinalife_weekly_templates VALUES
+('daily-study','Study together','legacy',0,1080,1200,'campus','',1,100,30,'{"legacy_kind":"study"}',1,NOW()),
+('daily-lunch','Community lunch','legacy',0,720,840,'market','',1,100,30,'{"legacy_kind":"meal"}',1,NOW()),
+('daily-meetup','Community meetup','legacy',0,0,1440,'plaza','',1,100,30,'{"legacy_kind":"social"}',1,NOW());

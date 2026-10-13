@@ -1,0 +1,4 @@
+Phone icon artwork: Microsoft Fluent Emoji, MIT license.
+Source: https://github.com/microsoft/fluentui-emoji
+Pinned revision: 1ffb34c752ecf5d402f04cfb4b392c77f57c54bc
+See LICENSE.txt. Icons are bundled locally.

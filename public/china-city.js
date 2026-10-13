@@ -1,6 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 // Stylized districts inspired by Chinese urban life; these are fictional layouts.
 const styles={
+ China:{wall:0xb76f55,roof:0x53636a,glass:0x8cb5c2,trees:0xcba44d,sign:'中国生活 · CHINALIFE',station:'中国站',district:'中国生活区'},
  Shenyang:{wall:0xb76f55,roof:0x53636a,glass:0x8cb5c2,trees:0xcba44d,sign:'和平大街 · HEPING',station:'沈阳站',district:'和平生活区'},
  Beijing:{wall:0xb3aaa0,roof:0x45535d,glass:0x86b2bf,trees:0x889950,sign:'胡同 · HUTONG',station:'北京站',district:'胡同生活区'},
  Shanghai:{wall:0xc3a17d,roof:0x455e6a,glass:0x84b9d4,trees:0x669b75,sign:'滨江大道 · RIVERSIDE',station:'上海站',district:'滨江生活区'},
@@ -45,7 +46,7 @@ export function chineseCityDetails(layout,name,{skipCentre=false,skipCrosswalks=
 }
 export function chineseVenueDetails(id,name){
  const group=new THREE.Group();group.userData.kind='chinese-venue';
- const names={gist:'城市新闻 · CITY GIST',home:'欢迎回家 · WELCOME HOME',cafe:'咖啡 · COFFEE',market:'欢迎光临 · MARKET',ef:'国际学生中心 · STUDENT CENTRE',campus:'学习交流 · CAMPUS',university:'大学 · UNIVERSITY',liaoning:'大学 · UNIVERSITY',dongbei:'财经课堂 · BUSINESS SCHOOL',gym:'健身 · FITNESS',business:'创业空间 · STARTUP HUB',mall:'购物中心 · SHOPPING',park:'公园 · PARK',night:'音乐现场 · LIVE MUSIC',station:(styles[name]||styles.Shenyang).station,airport:'出发 · DEPARTURES',plaza:'哈弗里克广场 · HAFRIK SQUARE'};
+ const names={gist:'城市新闻 · CITY GOSSIP',home:'欢迎回家 · WELCOME HOME',cafe:'咖啡 · COFFEE',market:'欢迎光临 · MARKET',ef:'国际学生中心 · STUDENT CENTRE',campus:'学习交流 · CAMPUS',university:'大学 · UNIVERSITY',liaoning:'大学 · UNIVERSITY',dongbei:'财经课堂 · BUSINESS SCHOOL',gym:'健身 · FITNESS',business:'创业空间 · STARTUP HUB',mall:'购物中心 · SHOPPING',park:'公园 · PARK',night:'音乐现场 · LIVE MUSIC',station:(styles[name]||styles.Shenyang).station,airport:'出发 · DEPARTURES',plaza:'哈弗里克广场 · HAFRIK SQUARE'};
  if(names[id]){if(['market','park','station','plaza'].includes(id)){for(const x of [-4.8,4.8])box(group,.1,2.7,.1,0x4f6469,x,1.35,-4.7);textSign(group,names[id],0,2.5,-4.6,7)}else textSign(group,names[id],1.5,2.7,-4.69,5.5)}
  if(['market','plaza'].includes(id))for(const x of [-4.8,4.8])lantern(group,x,2,-4.6);
  if(id==='cafe'){textSign(group,'拿铁 · 茶 · LATTE',-3,1.8,-2.6,2.4,'#785640')}

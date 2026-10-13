@@ -1,0 +1,71 @@
+<?php
+declare(strict_types=1);
+require_once __DIR__.'/common.php';require_once __DIR__.'/life-lib.php';require_once __DIR__.'/hafrik-notify.php';cl_methods(['GET','POST']);
+if((int)(cl_one("SELECT COUNT(*) n FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('chinalife_life_visits','chinalife_life_claims','chinalife_city_launches','chinalife_community_members','chinalife_court_cases','chinalife_court_statements','chinalife_police_reviews')")['n']??0)!==7)cl_fail('This game update needs its database migration. Ask the admin to run chinalife/migrate.php on the server.',503);
+$input=$method==='POST'?cl_body():$_GET;$view=$input['view']??'firstday';if(!is_string($view))cl_fail('Choose a screen');foreach(['reason','text','decision','action'] as $field)if(isset($input[$field])&&!is_string($input[$field]))cl_fail('Invalid text field');
+$save=cl_one('SELECT game_state FROM chinalife_saves WHERE user_id=?','i',[$uid]);if(!$save&&!($view==='courtadmin'&&cl_is_admin()))cl_fail('Create your character first',409);$g=json_decode($save['game_state']??'{}',true);$city=$g['city']??'China';
+if($method==='GET'){
+ if(isset($_GET['id'])&&(!is_string($_GET['id'])||!preg_match('/^[1-9][0-9]{0,18}$/',$_GET['id'])))cl_fail('Choose a valid case');
+ if($view==='firstday')json_response('success',['steps'=>cl_life_steps($uid),'claimed'=>(bool)cl_one("SELECT 1 FROM chinalife_life_claims WHERE user_id=? AND claim_key='firstday'",'i',[$uid]),'money'=>300,'xp'=>50]);
+ if($view==='community'){$sessions=cl_life_sessions($city);foreach($sessions as &$s){$s['membership']=cl_one('SELECT joined_at,completed FROM chinalife_community_members WHERE user_id=? AND city=? AND day=? AND kind=?','isss',[$uid,$city,$s['day'],$s['kind']]);}unset($s);json_response('success',['sessions'=>$sessions,'server_time'=>time()]);}
+ if($view==='launches'){$rows=cl_rows('SELECT city,opens_at,ends_at FROM chinalife_city_launches WHERE ends_at>?','i',[time()]);$rows=array_values(array_filter($rows,fn($r)=>in_array($r['city'],cl_open_cities(),true)));foreach($rows as &$r)$r['claimed']=(bool)cl_one('SELECT 1 FROM chinalife_life_claims WHERE user_id=? AND claim_key=?','is',[$uid,'launch-'.$r['city']]);unset($r);json_response('success',['launches'=>$rows]);}
+ if(in_array($view,['police','court','courtadmin'],true)){
+  $admin=$view==='courtadmin';if($admin&&!cl_is_admin())cl_fail('Admin access required',403);
+  $cases=cl_rows('SELECT c.*,u.user_name claimant,v.user_name defendant FROM chinalife_court_cases c JOIN users u ON u.user_id=c.claimant_id JOIN users v ON v.user_id=c.defendant_id'.($admin?' WHERE 1=1':' WHERE (c.claimant_id=? OR c.defendant_id=?)').(isset($_GET['id'])?' AND c.id='.(int)$_GET['id']:'').' ORDER BY c.id DESC LIMIT 50',$admin?'':'ii',$admin?[]:[$uid,$uid]);
+  foreach($cases as &$c){$c['statements']=cl_rows('SELECT s.user_id,u.user_name name,s.body,s.created_at FROM chinalife_court_statements s JOIN users u ON u.user_id=s.user_id WHERE s.case_id=? ORDER BY s.id','i',[(int)$c['id']]);$c['evidence']=cl_one('SELECT id,amount,created_at FROM chinalife_transfers WHERE id=?','s',[$c['transfer_id']]);}unset($c);
+  $transfers=cl_rows('SELECT t.id,t.amount,t.created_at,u.user_name recipient FROM chinalife_transfers t JOIN users u ON u.user_id=t.recipient_id WHERE t.sender_id=? AND NOT EXISTS(SELECT 1 FROM chinalife_court_cases c WHERE c.transfer_id=t.id) ORDER BY t.created_at DESC LIMIT 30','i',[$uid]);$reports=cl_rows('SELECT r.id,r.reason,r.note,r.city,r.place,r.created_at,u.user_name player,a.user_name reporter,COALESCE(p.status,"pending") status,p.decision,c.id case_id FROM chinalife_player_reports r JOIN users u ON u.user_id=r.peer_id JOIN users a ON a.user_id=r.reporter_id LEFT JOIN chinalife_police_reviews p ON p.report_id=r.id LEFT JOIN chinalife_court_cases c ON c.report_id=r.id'.($admin?'':' WHERE r.reporter_id=?').' ORDER BY r.created_at DESC LIMIT 50',$admin?'':'i',$admin?[]:[$uid]);json_response('success',['reports'=>$reports,'cases'=>$cases,'transfers'=>$transfers,'server_time'=>time(),'admin'=>cl_is_admin()]);
+ }
+ cl_fail('Choose a screen');
+}
+cl_rate('life',20,60);$action=$input['action']??'';
+// Police review is private until an admin refers a report to Court.
+if(in_array($action,['report_review','report_dismiss','report_refer'],true)){
+ if(!cl_is_admin())cl_fail('Admin access required',403);
+ $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);$decision=trim($input['decision']??'');
+ if(!$id||mb_strlen($decision)<10||mb_strlen($decision)>1000)cl_fail('Choose a report and explain your review (10–1,000 characters)');
+ $db->begin_transaction();try{
+  $r=cl_one('SELECT * FROM chinalife_player_reports WHERE id=? FOR UPDATE','i',[$id]);if(!$r)cl_fail('Report not found',404);
+  if(in_array($uid,[(int)$r['reporter_id'],(int)$r['peer_id']],true))cl_fail('Another admin must review your own report',403);
+  $review=cl_one('SELECT status FROM chinalife_police_reviews WHERE report_id=?','i',[$id]);
+  if(in_array($review['status']??'pending',['referred','resolved','dismissed'],true))cl_fail('This report has already been reviewed',409);
+  $status=['report_review'=>'reviewing','report_dismiss'=>'dismissed','report_refer'=>'referred'][$action];
+  cl_run('INSERT INTO chinalife_police_reviews(report_id,status,decision,reviewed_by,updated_at) VALUES(?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE status=VALUES(status),decision=VALUES(decision),reviewed_by=VALUES(reviewed_by),updated_at=NOW()','issi',[$id,$status,$decision,$uid]);
+  $caseId=null;if($action==='report_refer'){
+   cl_run('INSERT INTO chinalife_court_cases(report_id,claimant_id,defendant_id,city,reason,adviser,created_at,updated_at) VALUES(?,?,?,?,?,"police",NOW(),NOW())','iiiss',[$id,(int)$r['reporter_id'],(int)$r['peer_id'],$r['city'],$r['reason'].': '.$r['note'].'\nPolice referral: '.$decision]);$caseId=(int)$db->insert_id;
+  }
+  $db->commit();if($caseId)foreach([(int)$r['reporter_id'],(int)$r['peer_id']] as $recipient)cl_hafrik_notify($recipient,'case','case-'.$caseId,'A ChinaLife Police report has been referred to Court. Open the case to respond.',$uid);
+  json_response('success',['updated'=>true,'id'=>$caseId]);
+ }catch(Throwable $e){$db->rollback();throw $e;}
+}
+if($action==='file'){
+ $key=$input['transfer']??'';$reason=trim((string)($input['reason']??''));$adviser=$input['adviser']??'evidence';if(!is_string($key)||strlen($key)>80||mb_strlen($reason)<10||mb_strlen($reason)>1000||!in_array($adviser,['evidence','mediation','hearing'],true))cl_fail('Choose a recorded transfer and explain what happened (10–1,000 characters)');
+ $t=cl_one('SELECT recipient_id FROM chinalife_transfers WHERE id=? AND sender_id=?','si',[$key,$uid]);if(!$t)cl_fail('Only your own recorded outgoing transfer can support this case',403);
+ try{cl_run('INSERT INTO chinalife_court_cases(transfer_id,claimant_id,defendant_id,city,reason,adviser,created_at,updated_at) VALUES(?,?,?,?,?,?,NOW(),NOW())','siisss',[$key,$uid,(int)$t['recipient_id'],$city,$reason,$adviser]);}catch(mysqli_sql_exception $e){if($e->getCode()===1062)cl_fail('A case already exists for this transfer',409);throw $e;}
+ $id=(int)$db->insert_id;cl_hafrik_notify((int)$t['recipient_id'],'case','case-'.$id,'A ChinaLife game transaction case needs your response.',$uid);json_response('success',['id'=>$id]);
+}
+if(in_array($action,['statement','schedule','rule'],true)){
+ $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);if(!$id)cl_fail('Choose a case');$db->begin_transaction();
+ try{$c=cl_one('SELECT * FROM chinalife_court_cases WHERE id=? FOR UPDATE','i',[$id]);if(!$c)cl_fail('Case not found',404);if($action==='statement'&&!in_array($uid,[(int)$c['claimant_id'],(int)$c['defendant_id']],true))cl_fail('This case is private',403);if($action!=='statement'&&!cl_is_admin())cl_fail('Admin access required',403);if(in_array($c['status'],['resolved','dismissed'],true))cl_fail('This case is closed',409);
+ if($action==='statement'){
+  if(!in_array($uid,[(int)$c['claimant_id'],(int)$c['defendant_id']],true))cl_fail('This case is private',403);$text=trim((string)($input['text']??''));if(mb_strlen($text)<1||mb_strlen($text)>1000)cl_fail('Write a statement up to 1,000 characters');if((int)cl_one('SELECT COUNT(*) n FROM chinalife_court_statements WHERE case_id=? AND user_id=?','ii',[$id,$uid])['n']>=5)cl_fail('Five statements per player are allowed');cl_run('INSERT INTO chinalife_court_statements(case_id,user_id,body,created_at) VALUES(?,?,?,NOW())','iis',[$id,$uid,$text]);
+ }else{if(!cl_is_admin())cl_fail('Only a game admin can schedule or rule on cases',403);
+ if($action==='schedule'){$date=$input['hearing']??'';if(!is_string($date)||!preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/',$date))cl_fail('Choose a Beijing hearing time');$parsed=DateTimeImmutable::createFromFormat('!Y-m-d\TH:i',$date,new DateTimeZone('Asia/Shanghai'));if(!$parsed||$parsed->format('Y-m-d\TH:i')!==$date)cl_fail('Choose a valid Beijing hearing time');$time=$parsed->getTimestamp();if($time<time()||$time>time()+2592000)cl_fail('Schedule within the next 30 days');cl_run('UPDATE chinalife_court_cases SET status="hearing",hearing_at=?,updated_at=NOW() WHERE id=?','ii',[$time,$id]);
+ }else{
+ if(in_array($uid,[(int)$c['claimant_id'],(int)$c['defendant_id']],true))cl_fail('Another admin must review your own case',403);$decision=trim((string)($input['decision']??''));$outcome=$input['outcome']??'';$refund=$input['refund']??0;if(mb_strlen($decision)<10||mb_strlen($decision)>1000||!in_array($outcome,['resolved','dismissed'],true)||!is_int($refund)||$refund<0||($outcome==='dismissed'&&$refund!==0))cl_fail('Choose a decision, explanation and whole refund amount');$e=cl_one('SELECT amount FROM chinalife_transfers WHERE id=?','s',[$c['transfer_id']]);if((!$e&&(empty($c['report_id'])||$refund!==0))||($e&&$refund>(int)$e['amount']))cl_fail('Refund cannot exceed the recorded transfer');
+ if($refund){$rows=cl_rows('SELECT user_id,game_state FROM chinalife_saves WHERE user_id IN (?,?) ORDER BY user_id FOR UPDATE','ii',[(int)$c['claimant_id'],(int)$c['defendant_id']]);$games=[];foreach($rows as $r)$games[(int)$r['user_id']]=json_decode($r['game_state'],true);$ids=[(int)$c['claimant_id'],(int)$c['defendant_id']];sort($ids);$held=[];foreach($ids as $hid)$held[$hid]=cl_balances_lock($hid);if(count($games)!==2||$held[(int)$c['defendant_id']]['coins']<$refund)cl_fail('The defendant has insufficient game funds for this refund',409);if($held[(int)$c['claimant_id']]['coins']+$refund>1000000000)cl_fail('The claimant cannot receive this refund yet',409);foreach([(int)$c['claimant_id']=>$refund,(int)$c['defendant_id']=>-$refund] as $player=>$delta){$state=$games[$player];cl_move_totals($player,$state,$delta,0);$state['transferTotal']=($state['transferTotal']??0)+$delta;cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($state,JSON_THROW_ON_ERROR),$player]);}}
+ cl_run('UPDATE chinalife_court_cases SET status=?,decision=?,refund=?,judge_id=?,updated_at=NOW() WHERE id=?','ssiii',[$outcome,$decision,$refund,$uid,$id]);
+ if(!empty($c['report_id']))cl_run('UPDATE chinalife_police_reviews SET status=?,decision=?,reviewed_by=?,updated_at=NOW() WHERE report_id=?','ssii',[$outcome,$decision,$uid,(int)$c['report_id']]);
+ }}$db->commit();foreach([(int)$c['claimant_id'],(int)$c['defendant_id']] as $recipient)if($recipient!==$uid)cl_hafrik_notify($recipient,'case','case-'.$id.'-'.time(),'Your ChinaLife case has an update.',$uid);json_response('success',['updated'=>true]);
+ }catch(Throwable $e){$db->rollback();throw $e;}
+}
+$db->begin_transaction();try{
+ if($action==='services'){if(!cl_hafrik_features()['services'])cl_fail('Hafrik Services is switched off',403);cl_life_award($uid,'tour-services',0,0);}
+ elseif($action==='firstday'){if(in_array(false,cl_life_steps($uid),true))cl_fail('Finish your first-day checklist first',409);if(!cl_life_award($uid,'firstday',300,50))cl_fail('Welcome reward already claimed',409);}
+ elseif($action==='launch'){$target=$input['city']??'';$launch=is_string($target)?cl_one('SELECT ends_at FROM chinalife_city_launches WHERE city=? AND ends_at>?','si',[$target,time()]):null;if(!$launch||!in_array($target,cl_open_cities(),true))cl_fail('This city celebration has ended',409);cl_presence($uid,$target,'plaza');if(!cl_life_award($uid,'launch-'.$target,200,40))cl_fail('City welcome already claimed',409);}
+ elseif(in_array($action,['join','complete'],true)){
+  $kind=$input['kind']??'';$sessions=cl_life_sessions($city);$s=null;foreach($sessions as $item)if($item['kind']===$kind)$s=$item;if(!$s||time()<$s['opens_at']||time()>=$s['ends_at'])cl_fail('Join during the Beijing activity hours',409);cl_presence($uid,$city,$s['place']);
+  if($action==='join')cl_run('INSERT IGNORE INTO chinalife_community_members(user_id,city,day,kind,joined_at) VALUES(?,?,?,?,?)','isssi',[$uid,$city,$s['day'],$kind,time()]);
+  else{$member=cl_one('SELECT joined_at FROM chinalife_community_members WHERE user_id=? AND city=? AND day=? AND kind=? FOR UPDATE','isss',[$uid,$city,$s['day'],$kind]);$presence=cl_one('SELECT UNIX_TIMESTAMP(arrived_at) arrived FROM chinalife_presence WHERE user_id=?','i',[$uid]);$peers=cl_rows('SELECT m.user_id FROM chinalife_community_members m JOIN chinalife_presence p ON p.user_id=m.user_id AND p.city=m.city AND p.place=? AND p.seen_at>=DATE_SUB(NOW(),INTERVAL 20 SECOND) WHERE m.city=? AND m.day=? AND m.kind=? AND m.user_id<>?','ssssi',[$s['place'],$city,$s['day'],$kind,$uid]);$peers=array_filter($peers,fn($p)=>!cl_blocked($uid,(int)$p['user_id']));if(!$member||time()-max((int)$member['joined_at'],(int)($presence['arrived']??time()))<60||!$peers)cl_fail('Spend at least one minute here with another joined player',409);if(!cl_life_award($uid,'community-'.$city.'-'.$s['day'].'-'.$kind,100,30))cl_fail('Activity reward already claimed',409);cl_run('UPDATE chinalife_community_members SET completed=1 WHERE user_id=? AND city=? AND day=? AND kind=?','isss',[$uid,$city,$s['day'],$kind]);}
+ }else cl_fail('Choose an action');
+ $db->commit();json_response('success',['updated'=>true]);
+}catch(Throwable $e){$db->rollback();throw $e;}

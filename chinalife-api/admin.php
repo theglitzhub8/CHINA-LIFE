@@ -1,11 +1,24 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__.'/common.php';
+require_once __DIR__.'/common.php';require_once __DIR__.'/life-lib.php';
 cl_methods(['POST']);cl_admin();cl_rate('admin',60,60);
 // Admins can send a banner image (up to 2 MB, about 2.8 MB as base64), so their requests may be larger.
 $input=cl_body(3000000);$action=$input['action']??'';
 function admin_log(string $action,?int $target,?int $amount,string $note): void {
     global $uid;cl_run('INSERT INTO chinalife_admin_log(admin_id,action,target_id,amount,note,created_at) VALUES(?,?,?,?,?,NOW())','isiis',[$uid,$action,$target,$amount,mb_substr($note,0,300)]);
+}
+if($action==='hafrik_features')json_response('success',['features'=>cl_hafrik_features(),'labels'=>cl_hafrik_feature_labels()]);
+if($action==='set_hafrik_features'){
+ $changes=$input['features']??null;$labels=cl_hafrik_feature_labels();
+ if(!is_array($changes)||!$changes)cl_fail('Choose integrations to update');
+ foreach($changes as $key=>$value)if(!isset($labels[$key])||!is_bool($value))cl_fail('Use valid integration names and on/off values');
+ // A settings lock preserves concurrent changes to different switches.
+ $db->begin_transaction();cl_run("INSERT IGNORE INTO chinalife_settings(name,value,updated_at) VALUES('hafrik_features','{}',NOW())");
+ cl_one("SELECT value FROM chinalife_settings WHERE name='hafrik_features' FOR UPDATE");
+ $features=array_replace(cl_hafrik_features(),$changes);$value=json_encode($features);
+ cl_run("UPDATE chinalife_settings SET value=?,updated_at=NOW() WHERE name='hafrik_features'",'s',[$value]);
+ admin_log('set_hafrik_features',null,null,implode(' · ',array_map(fn($key)=>$labels[$key].': '.($changes[$key]?'on':'off'),array_keys($changes))));$db->commit();
+ json_response('success',['features'=>$features]);
 }
 $xp="CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(s.game_state,'$.xp')),'0') AS SIGNED)";
 $money="CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(s.game_state,'$.money')),'0') AS SIGNED)";
@@ -40,15 +53,25 @@ if ($action==='grant') {
     json_response('success',['balance'=>$balance]);
 }
 if ($action==='gist') { json_response('success',['posts'=>cl_rows('SELECT id,title,body,city,link,starts_at,ends_at,active FROM chinalife_gist_posts ORDER BY id DESC LIMIT 50')]); }
-if ($action==='create_gist') { $title=trim((string)($input['title']??''));$body=trim((string)($input['body']??''));$city=trim((string)($input['city']??'Shenyang'));$link=trim((string)($input['link']??''));$hours=$input['hours']??168;if($title===''||mb_strlen($title)>100||$body===''||mb_strlen($body)>600||!in_array($city,['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'],true)||!is_int($hours)||$hours<1||$hours>2160)cl_fail('Check the gist fields');if($link!==''&&!preg_match('#^https://[^\s<>"]{3,290}$#',$link))cl_fail('Links must start with https://');cl_run('INSERT INTO chinalife_gist_posts(city,title,body,link,starts_at,ends_at,created_by,created_at) VALUES(?,?,?,?,NOW(),DATE_ADD(NOW(),INTERVAL ? HOUR),?,NOW())','ssssii',[$city,$title,$body,$link,$hours,$uid]);admin_log('create_gist',null,null,$city.' · '.$title);json_response('success',['id'=>(string)$db->insert_id]);}
+if ($action==='create_announcement') {
+ $title=trim((string)($input['title']??''));$body=trim((string)($input['body']??''));$hours=$input['hours']??168;
+ if($title===''||mb_strlen($title)>100||$body===''||mb_strlen($body)>600||!is_int($hours)||$hours<1||$hours>2160)cl_fail('Add a title, message and duration');
+ // Empty city is reserved for admin announcements visible in every city.
+ cl_run('INSERT INTO chinalife_gist_posts(city,title,body,link,starts_at,ends_at,created_by,created_at) VALUES("",?,?,"",NOW(),DATE_ADD(NOW(),INTERVAL ? HOUR),?,NOW())','ssii',[$title,$body,$hours,$uid]);
+ $id=(string)$db->insert_id;admin_log('create_announcement',null,null,$title);json_response('success',['id'=>$id]);
+}
+if ($action==='create_gist') { $title=trim((string)($input['title']??''));$body=trim((string)($input['body']??''));$city=trim((string)($input['city']??'Shenyang'));$link=trim((string)($input['link']??''));$hours=$input['hours']??168;if($title===''||mb_strlen($title)>100||$body===''||mb_strlen($body)>600||!in_array($city,['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'],true)||!is_int($hours)||$hours<1||$hours>2160)cl_fail('Check the gossip fields');if($link!==''&&!preg_match('#^https://[^\s<>"]{3,290}$#',$link))cl_fail('Links must start with https://');cl_run('INSERT INTO chinalife_gist_posts(city,title,body,link,starts_at,ends_at,created_by,created_at) VALUES(?,?,?,?,NOW(),DATE_ADD(NOW(),INTERVAL ? HOUR),?,NOW())','ssssii',[$city,$title,$body,$link,$hours,$uid]);admin_log('create_gist',null,null,$city.' · '.$title);json_response('success',['id'=>(string)$db->insert_id]);}
 if ($action==='approve_gist') { $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);if(!$id)cl_fail('Choose a post');cl_run('UPDATE chinalife_gist_posts SET active=1,starts_at=NOW(),ends_at=DATE_ADD(NOW(),INTERVAL 7 DAY) WHERE id=? AND active=0','i',[$id]);admin_log('approve_gist',null,null,(string)$id);json_response('success',['approved'=>true]);}
 if ($action==='end_gist') { $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);if(!$id)cl_fail('Choose a post');cl_run('UPDATE chinalife_gist_posts SET active=0,ends_at=NOW() WHERE id=?','i',[$id]);admin_log('end_gist',null,null,(string)$id);json_response('success',['ended'=>true]);}
-if ($action==='politics') { json_response('success',['candidates'=>cl_rows('SELECT c.id,c.city,c.office,c.statement,c.status,c.created_at,u.user_name name FROM chinalife_politics_candidates c JOIN users u ON u.user_id=c.candidate_id ORDER BY c.id DESC LIMIT 100')]); }
+if ($action==='politics') { json_response('success',['candidates'=>cl_rows('SELECT c.id,c.city,c.office,c.statement,c.status,c.created_at,u.user_name name,COUNT(v.id) votes FROM chinalife_politics_candidates c JOIN users u ON u.user_id=c.candidate_id LEFT JOIN chinalife_politics_votes v ON v.candidate_id=c.id GROUP BY c.id,c.city,c.office,c.statement,c.status,c.created_at,u.user_name ORDER BY c.city,c.office,votes DESC,c.id DESC LIMIT 200'),'elections'=>cl_rows('SELECT city,office,period,opens_at,closes_at FROM chinalife_politics_elections ORDER BY closes_at DESC LIMIT 50')]); }
 if ($action==='politics_review') { $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);$decision=$input['decision']??'';if(!$id||!in_array($decision,['approved','rejected'],true))cl_fail('Choose a candidate and decision');cl_run('UPDATE chinalife_politics_candidates SET status=?,reviewed_at=NOW() WHERE id=?','si',[$decision,$id]);admin_log('politics_'.$decision,null,null,(string)$id);json_response('success',['updated'=>true]);}
+if ($action==='politics_delete') { $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);if(!$id)cl_fail('Choose a candidate');cl_run('DELETE FROM chinalife_politics_candidates WHERE id=?','i',[$id]);admin_log('politics_delete',null,null,(string)$id);json_response('success',['deleted'=>true]);}
+if ($action==='politics_elections') { $city=trim((string)($input['city']??'Shenyang'));$office=(string)($input['office']??'');$opens=trim((string)($input['opens_at']??''));$closes=trim((string)($input['closes_at']??''));$period=trim((string)($input['period']??date('Y')));if(!in_array($office,['governor','deputy-governor','city-councillor','student-representative'],true)||$opens===''||$closes===''||strtotime($closes)<=strtotime($opens))cl_fail('Choose valid election times');cl_run('INSERT INTO chinalife_politics_elections(city,office,period,opens_at,closes_at) VALUES(?,?,?,?,?) ON DUPLICATE KEY UPDATE opens_at=VALUES(opens_at),closes_at=VALUES(closes_at)','sssss',[$city,$office,$period,$opens,$closes]);json_response('success',['saved'=>true]);}
 if ($action==='events') {
     json_response('success',['events'=>cl_rows('SELECT id,title,body,city,place,reward,billboard,link,starts_at,ends_at,(starts_at<=NOW() AND ends_at>NOW()) active,(SELECT COUNT(*) FROM chinalife_event_claims c WHERE c.event_id=e.id) joined FROM chinalife_events e ORDER BY id DESC LIMIT 30')]);
 }
 if ($action==='create_event') {
+    $city=$input['city']??cl_open_cities()[0];if(!is_string($city)||!in_array($city,CL_CITIES,true))cl_fail('Choose a valid city');
     $title=trim((string)($input['title']??''));$body=trim((string)($input['body']??''));$place=(string)($input['place']??'');$link=trim((string)($input['link']??''));
     $reward=$input['reward']??0;$hours=$input['hours']??24;$billboard=!empty($input['billboard'])?1:0;
     if ($title===''||mb_strlen($title)>80||mb_strlen($body)>300) cl_fail('Give the event a title (up to 80 characters)');
@@ -56,7 +79,7 @@ if ($action==='create_event') {
     if (!is_int($reward)||$reward<0||$reward>1000000) cl_fail('Reward must be 0 to 1,000,000');
     if (!is_int($hours)||$hours<1||$hours>720) cl_fail('Duration must be 1 to 720 hours');
     if ($link!==''&&!preg_match('#^https://[^\s<>"]{3,290}$#',$link)) cl_fail('Links must start with https://');
-    cl_run('INSERT INTO chinalife_events(title,body,city,place,reward,billboard,link,starts_at,ends_at,created_by,created_at) VALUES(?,?,?,?,?,?,?,NOW(),DATE_ADD(NOW(),INTERVAL ? HOUR),?,NOW())','ssssiisii',[$title,$body,'Shenyang',$place,$reward,$billboard,$link,$hours,$uid]);
+    cl_run('INSERT INTO chinalife_events(title,body,city,place,reward,billboard,link,starts_at,ends_at,created_by,created_at) VALUES(?,?,?,?,?,?,?,NOW(),DATE_ADD(NOW(),INTERVAL ? HOUR),?,NOW())','ssssiisii',[$title,$body,$city,$place,$reward,$billboard,$link,$hours,$uid]);
     $id=(int)$db->insert_id;admin_log('create_event',null,$reward,$title);json_response('success',['id'=>$id]);
 }
 if ($action==='end_event') {
@@ -65,10 +88,12 @@ if ($action==='end_event') {
 }
 if ($action==='cities') json_response('success',['open'=>cl_open_cities()]);
 if ($action==='set_cities') {
-    $all=['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];$open=$input['open']??null;
-    if (!is_array($open)||array_diff($open,$all)) cl_fail('Choose valid cities');
-    $value=json_encode(array_values(array_unique(array_merge(['Shenyang'],$open))));
+    $all=['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];$open=$input['open']??null;
+    if (!is_array($open)||!count($open)||array_diff($open,$all)) cl_fail('Choose valid cities');
+    $db->begin_transaction();cl_one("SELECT value FROM chinalife_settings WHERE name='open_cities' FOR UPDATE");$before=cl_open_cities();
+    $value=json_encode(array_values(array_unique($open)));
     cl_run('INSERT INTO chinalife_settings(name,value,updated_at) VALUES(\'open_cities\',?,NOW()) ON DUPLICATE KEY UPDATE value=VALUES(value),updated_at=NOW()','s',[$value]);
+    cl_life_city_launches($before,$open);$db->commit();
     admin_log('set_cities',null,null,$value);json_response('success',['open'=>json_decode($value,true)]);
 }
 if ($action==='reports') {
@@ -96,9 +121,10 @@ if ($action==='player') json_response('success',['player'=>['id'=>(string)$targe
 if ($action==='set_rank') {
     // Moves the player's XP to the start of the chosen rank. Rank rewards are not paid for admin changes.
     $ranks=cl_ranks();$i=$input['rank']??null;if (!is_int($i)||!isset($ranks[$i])) cl_fail('Choose a rank');if ($note==='') cl_fail('Give a reason for the audit log');
-    $db->begin_transaction();$row=cl_one('SELECT game_state FROM chinalife_saves WHERE user_id=? FOR UPDATE','i',[$target]);$game=json_decode($row['game_state'],true,512,JSON_THROW_ON_ERROR);$from=(int)($game['xp']??0);
-    $game['xp']=$ranks[$i]['xp'];$game['rankClaimed']=$i;
-    cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($game,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),$target]);
+    $db->begin_transaction();$game=cl_lock_character((int)$target);$from=(int)($game['xp']??0);
+    $held=cl_balances_lock((int)$target);cl_balance_write((int)$target,$held['coins'],(int)$ranks[$i]['xp']);
+    $game['money']=$held['coins'];$game['xp']=$ranks[$i]['xp'];$game['rankClaimed']=$i;
+    cl_store_character((int)$target,$game);
     admin_log('set_rank',(int)$target,$i,$ranks[$i]['icon'].' '.$ranks[$i]['name'].' (was '.$from.' XP) · '.$note);$db->commit();json_response('success',['xp'=>$ranks[$i]['xp']]);
 }
 if ($action==='award_badge') {
@@ -123,10 +149,10 @@ if ($action==='suspend_rank') {
 }
 // Hafrik HQ service applications.
 if ($action==='applications') {
-    $status=$input['status']??'pending';if (!in_array($status,['pending','approved','declined','all'],true)) cl_fail('Choose a status');
-    $rows=cl_rows('SELECT a.id,a.service,a.name,a.contact,a.city,a.message,a.status,a.admin_note,a.created_at,u.user_name username FROM chinalife_applications a LEFT JOIN users u ON u.user_id=a.user_id'.($status==='all'?'':' WHERE a.status=?').' ORDER BY a.id DESC LIMIT 100',$status==='all'?'':'s',$status==='all'?[]:[$status]);
-    foreach ($rows as &$r) $r['id']=(string)$r['id'];unset($r);
-    json_response('success',['applications'=>$rows,'services'=>require __DIR__.'/services-config.php','pending'=>(int)cl_one('SELECT COUNT(*) n FROM chinalife_applications WHERE status="pending"')['n']]);
+    $status=$input['status']??'all';$page=$input['page']??0;if (!is_int($page)||$page<0||$page>100000) cl_fail('Choose a page');$offset=$page*100;if (!in_array($status,['pending','approved','declined','all'],true)) cl_fail('Choose a status');
+    $rows=cl_rows('SELECT a.id,a.service,a.name,a.contact,a.city,a.message,a.status,a.admin_note,a.created_at,u.user_name username FROM chinalife_applications a LEFT JOIN users u ON u.user_id=a.user_id'.($status==='all'?'':' WHERE a.status=?').' ORDER BY a.id DESC LIMIT 101 OFFSET ?',$status==='all'?'i':'si',$status==='all'?[$offset]:[$status,$offset]);
+    $hasMore=count($rows)>100;if($hasMore)array_pop($rows);foreach ($rows as &$r) $r['id']=(string)$r['id'];unset($r);
+    json_response('success',['page'=>$page,'hasMore'=>$hasMore,'applications'=>$rows,'services'=>require __DIR__.'/services-config.php','pending'=>(int)cl_one('SELECT COUNT(*) n FROM chinalife_applications WHERE status="pending"')['n']]);
 }
 if ($action==='set_application') {
     $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);$status=$input['status']??'';$note=mb_substr(trim((string)($input['note']??'')),0,300);
@@ -259,7 +285,7 @@ if ($action==='save_ad') {
     $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);$title=trim((string)($input['title']??''));$sponsor=trim((string)($input['sponsor']??''));$link=trim((string)($input['link']??''));
     $city=(string)($input['city']??'');$place=(string)($input['place']??'night');$days=$input['days']??30;$active=!empty($input['active'])?1:0;
     if ($title===''||mb_strlen($title)>80||mb_strlen($sponsor)>80) cl_fail('Give the ad a title (up to 80 characters)');
-    if ($city!==''&&!in_array($city,['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'],true)) cl_fail('Choose a city');
+    if ($city!==''&&!in_array($city,['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'],true)) cl_fail('Choose a city');
     cl_room(['city'=>'Shenyang','place'=>$place]);if (cl_private_place($place)) cl_fail('Choose a public venue');
     if ($link!==''&&!preg_match('#^(https://|weixin://)[^\s<>"]{3,290}$#',$link)) cl_fail('Links must start with https:// or weixin://');
     if (!is_int($days)||$days<1||$days>365) cl_fail('Run the ad for 1 to 365 days');

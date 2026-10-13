@@ -1,0 +1,120 @@
+/* Phone-only styling. The approved city map and HUD are unchanged. */
+#phoneDialog{padding:0;background:transparent;border:0;overflow:visible;width:min(414px,calc(100vw - 24px));max-width:none;max-height:none;color:#f6fffa}
+#phoneDialog::backdrop{background:rgba(4,20,22,.54);backdrop-filter:blur(12px)}
+#phoneDialog .phone-frame{box-sizing:border-box;width:100%;height:min(850px,90dvh);max-height:none;margin:0;border:7px solid #172021;border-radius:48px;box-shadow:0 24px 90px #0006,inset 0 0 0 1px #ffffff50;overflow:hidden;background:radial-gradient(ellipse at 15% 30%,#94baa280,transparent 52%),radial-gradient(ellipse at 95% 65%,#407e7480,transparent 60%),linear-gradient(165deg,#103a3d,#346b60 55%,#132f37);display:flex;flex-direction:column;position:relative;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+#phoneDialog .phone-frame::after{content:"";position:absolute;bottom:8px;left:35%;width:30%;height:5px;border-radius:9px;background:#ffffffba;pointer-events:none}
+#phoneDialog .phone-status{flex:0 0 43px;padding:12px 22px 2px;background:transparent;color:white;font-size:14px;font-weight:650;position:relative;box-sizing:border-box}
+#phoneDialog .phone-island{width:102px;height:27px;top:8px;background:#0b1113;box-shadow:inset 0 0 0 1px #ffffff0b}
+#phoneDialog .phone-signal i,#phoneDialog .phone-signal b{background:white}
+#phoneDialog #phoneContent{padding:0;flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;background:transparent}
+#phoneDialog .ios-phone{min-height:100%;box-sizing:border-box;padding:9px 17px 27px;display:flex;flex-direction:column;gap:14px;color:#f6fffa;background:transparent}
+#phoneDialog .phone-home-heading{text-align:center;margin:0}
+#phoneDialog .phone-home-heading small{font-size:12px;opacity:.8;letter-spacing:.3px}
+#phoneDialog .phone-home-heading h3{margin:3px 0;font-size:25px;letter-spacing:-.7px;color:inherit}
+#phoneDialog #phoneWeather{font-size:11px;opacity:.78}
+#phoneDialog .phone-widgets{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin:0}
+#phoneDialog .phone-widget{min-height:104px;padding:13px;border:1px solid #ffffff30;border-radius:24px;text-align:left;box-shadow:inset 0 1px 1px #ffffff20,0 6px 16px #09282818;backdrop-filter:blur(22px);background:linear-gradient(150deg,#ffffff24,#ffffff0e);color:white;display:flex;flex-direction:column;align-items:flex-start;gap:6px;overflow:hidden}
+#phoneDialog .phone-widget b{font-size:18px;letter-spacing:-.5px;color:inherit}
+#phoneDialog .phone-widget small{font-size:10px;line-height:1.35;color:#e6f6eee3}
+#phoneDialog .phone-role>span{font-size:19px;line-height:1;margin:0}
+#phoneDialog .phone-role div{display:flex;flex-direction:column;gap:5px}
+#phoneDialog .phone-money{justify-content:center;background:linear-gradient(155deg,#b9d4bd40,#ffffff0d)}
+#phoneDialog .phone-money b{font-size:22px;font-variant-numeric:tabular-nums}
+#phoneDialog .phone-pages{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;flex:1;min-height:240px;gap:0}
+#phoneDialog .phone-page{flex:0 0 100%;min-width:0;scroll-snap-align:start;margin:0;padding:3px 0;background:transparent;border:0;box-shadow:none;align-self:flex-start}
+#phoneDialog .phone-apps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px 5px;padding:0;background:none;border:0;border-radius:0;box-shadow:none}
+#phoneDialog .phone-app{display:flex;flex-direction:column;align-items:center;gap:6px;padding:0;border:0;background:transparent;min-width:0;color:white;text-align:center;font:inherit;box-shadow:none;border-radius:0;touch-action:manipulation}
+#phoneDialog .phone-app b{position:relative;display:grid;place-items:center;width:55px;height:55px;box-sizing:border-box;border-radius:16px;border:1px solid #ffffff30;box-shadow:inset 0 1px 2px #ffffff40,0 4px 10px #10272633;color:#f9fff9;font-size:26px;transition:transform .15s}
+#phoneDialog .phone-app svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+#phoneDialog .phone-app span{font-size:10px;line-height:1.2;min-height:24px;max-width:80px;word-break:normal;text-shadow:0 1px 3px #0003;font-weight:500;color:inherit}
+#phoneDialog .phone-app:active b{transform:scale(.92)}
+#phoneDialog button:focus-visible,#phoneDialog input:focus-visible{outline:2px solid #d6eedc;outline-offset:3px}
+#phoneDialog .app-badge{position:absolute;right:-4px;top:-5px;min-width:16px;height:17px;line-height:17px;background:#e45860;color:white;font-size:9px;border:1px solid #ffcccc80;border-radius:10px;font-style:normal}
+#phoneDialog .phone-page-controls{display:flex;align-items:center;justify-content:center;gap:8px;margin:0}
+#phoneDialog .phone-page-controls button{width:6px;height:6px;padding:0;background:#ffffff55;border:0;border-radius:9px;min-height:0;box-shadow:none;position:relative}
+#phoneDialog .phone-page-controls button::before{content:"";position:absolute;inset:-11px}
+#phoneDialog .phone-page-controls button[aria-current=true]{background:white;width:16px}
+#phoneDialog .cl-search{box-sizing:border-box;width:130px;align-self:center;margin:0;padding:9px 12px;border:1px solid #ffffff26;border-radius:24px;background:#ffffff17;color:white;backdrop-filter:blur(20px);font:inherit;font-size:12px;text-align:center;transition:width .2s}
+#phoneDialog .cl-search::placeholder{color:#ffffffbd}
+#phoneDialog .cl-search:focus{width:100%;text-align:left}
+#phoneDialog .cl-for-you{padding:0;margin:0;border:0;background:transparent;box-shadow:none}
+#phoneDialog .phone-dock{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;padding:12px 7px 6px;border:1px solid #ffffff3b;border-radius:29px;background:linear-gradient(155deg,#ffffff28,#ffffff14);backdrop-filter:blur(25px);box-shadow:inset 0 1px 0 #ffffff29,0 5px 20px #0e252c30}
+#phoneDialog .phone-dock .phone-app b{width:51px;height:51px;border-radius:15px}
+#phoneDialog .phone-dock .phone-app span{font-size:9px;min-height:21px}
+#phoneDialog #closePhone{top:-12px;right:-7px;width:32px;height:32px;border:1px solid #ffffff55;border-radius:50%;color:#e8f6ef;background:#174648;font-size:21px;z-index:5}
+#phoneDialog .phone-searching .phone-home-heading,#phoneDialog .phone-searching .phone-widgets,#phoneDialog .phone-searching .phone-page-controls{display:none}
+#phoneDialog .phone-searching .phone-pages{display:block;overflow:visible;min-height:0}
+#phoneDialog .phone-searching .phone-page{margin-bottom:16px}
+#phoneDialog .phone-searching .cl-search{width:100%;text-align:left;order:-1;position:sticky;top:0;z-index:2;background:#285c57}
+#phoneDialog .phone-searching .phone-dock{background:none;border:0;box-shadow:none;backdrop-filter:none;padding:0}
+#phoneDialog [hidden]{display:none!important}
+#phoneDialog .phone-app:disabled{opacity:.45}
+.community-life .life-money-dispute{padding:14px;border:1px solid #d6e6e2;border-radius:18px;margin:14px 0;background:#f5faf8}
+.community-life .life-money-dispute summary{cursor:pointer;font-weight:650;color:#285a52}
+.community-life .life-money-dispute .life-card{margin-bottom:0}
+@media(max-height:760px){#phoneDialog .phone-home-heading h3{font-size:21px}#phoneDialog .ios-phone{gap:10px}#phoneDialog .phone-widget{min-height:86px;padding:10px}#phoneDialog .phone-apps{gap:10px 5px}#phoneDialog .phone-app b{width:49px;height:49px}#phoneDialog .phone-pages{min-height:220px}}
+@media(prefers-reduced-motion:reduce){#phoneDialog *{transition:none!important;scroll-behavior:auto!important}}
+/* Override the old mobile bottom-sheet rules only for this phone. */
+#phoneDialog{position:fixed!important;top:50%!important;bottom:auto!important;left:0!important;right:0!important;margin:0 auto!important;height:auto!important;transform:translateY(-50%)!important;padding:0!important;max-height:none!important;border-radius:48px;box-shadow:none}
+#phoneDialog .phone-frame{padding:0}
+#phoneDialog .phone-frame::before,#phoneDialog #phoneTime::before{content:none}
+#phoneDialog .phone-island{display:block;position:absolute;left:50%;transform:translateX(-50%)}
+#phoneDialog .phone-signal{display:flex}
+#phoneDialog .phone-apps{margin:0}
+#phoneDialog .phone-app span{margin-top:0;overflow-wrap:normal}
+@media(max-width:360px){#phoneDialog .ios-phone{padding-left:11px;padding-right:11px}#phoneDialog .phone-app span{font-size:9px}}
+#phoneDialog #phoneTime::before{content:none!important;display:none!important}
+#phoneDialog .phone-app b{width:55px!important;height:55px!important}
+#phoneDialog .phone-dock .phone-app b{width:51px!important;height:51px!important}
+@media(max-height:760px){#phoneDialog .phone-app b{width:49px!important;height:49px!important}}
+/* Compact phone, locally bundled colour icons and account-photo wallpaper. */
+#phoneDialog{width:min(344px,calc(100vw - 38px))}
+#phoneDialog .phone-frame{height:min(680px,82dvh);border-width:6px;border-radius:40px;isolation:isolate;background:#183e42}
+#phoneDialog .phone-wallpaper{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;z-index:-2;pointer-events:none}
+#phoneDialog .phone-frame::before{content:"";position:absolute;inset:0;width:100%;height:100%;transform:none;border-radius:0;background:linear-gradient(180deg,#061c2b75,#061d2550 35%,#041b258f);z-index:-1;pointer-events:none}
+#phoneDialog .ios-phone{padding:5px 13px 24px;gap:9px}
+#phoneDialog .phone-status{flex-basis:39px;padding:10px 18px 2px;font-size:12px}
+#phoneDialog .phone-island{width:86px;height:24px;top:7px}
+#phoneDialog .phone-home-heading h3{font-size:21px;margin:2px 0}
+#phoneDialog .phone-home-heading small{font-size:11px}
+#phoneDialog #phoneWeather{font-size:10px}
+#phoneDialog .phone-widget{min-height:80px;padding:10px;border-radius:20px}
+#phoneDialog .phone-widget b{font-size:16px}
+#phoneDialog .phone-money b{font-size:19px}
+#phoneDialog .phone-widget small{font-size:9px}
+#phoneDialog .phone-role>span{font-size:16px}
+#phoneDialog .phone-pages{min-height:202px}
+#phoneDialog .phone-apps{gap:11px 4px}
+#phoneDialog .phone-app b,#phoneDialog .phone-dock .phone-app b{width:46px!important;height:46px!important;border-radius:14px;background:linear-gradient(145deg,#fffffff0,#e2eeece0);border:1px solid #ffffff80;box-shadow:inset 0 1px 2px #fff,0 4px 8px #071e3133}
+#phoneDialog .phone-app b img{width:39px;height:39px;object-fit:contain;filter:drop-shadow(0 2px 1px #112e4320)}
+#phoneDialog .phone-app span{font-size:9px;min-height:22px}
+#phoneDialog .phone-dock{padding:9px 5px 4px;border-radius:24px}
+#phoneDialog .cl-search{padding:7px 10px;font-size:11px}
+#phoneDialog .phone-frame::after{width:28%;left:36%;height:4px;bottom:7px}
+@media(max-height:710px){#phoneDialog .phone-home-heading{display:none}#phoneDialog .phone-widget{min-height:68px}#phoneDialog .ios-phone{gap:7px}#phoneDialog .phone-apps{gap:8px 4px}}
+
+/* A fixed home-screen grid: swiping and searching never move the dock. */
+#phoneDialog .phone-frame{height:min(680px,82svh)}
+#phoneDialog #phoneContent{overflow:hidden;overscroll-behavior:none}
+#phoneDialog .ios-phone{height:100%;min-height:0;display:grid;grid-template-rows:56px 80px minmax(0,1fr) 12px 32px 84px;position:relative;gap:9px}
+#phoneDialog .phone-widgets{min-height:0}
+#phoneDialog .phone-widget{height:80px;min-height:0;box-sizing:border-box}
+#phoneDialog .phone-pages{min-height:0;height:100%;overflow-y:hidden;overscroll-behavior:none;touch-action:pan-x}
+#phoneDialog .phone-page{height:100%;align-self:stretch;box-sizing:border-box}
+#phoneDialog .phone-apps{grid-auto-rows:74px;gap:8px 4px}
+#phoneDialog .phone-app span{height:22px;min-height:22px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+#phoneDialog .phone-app b{transition:none}
+#phoneDialog .phone-app:active b{transform:none}
+#phoneDialog .cl-search,#phoneDialog .cl-search:focus{width:100%;height:32px;transition:none;text-align:left;align-self:stretch}
+#phoneDialog .cl-for-you{grid-row:6;min-height:0}
+#phoneDialog .phone-page-controls{grid-row:4}
+#phoneDialog .cl-search{grid-row:5}
+#phoneDialog .phone-searching .phone-home-heading{display:block}
+#phoneDialog .phone-searching .phone-widgets{display:grid}
+#phoneDialog .phone-searching .phone-page-controls{display:flex;visibility:hidden}
+#phoneDialog .phone-searching .phone-pages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:74px;align-content:start;gap:8px 4px;overflow-x:hidden;overflow-y:auto;touch-action:pan-y;scroll-snap-type:none}
+#phoneDialog .phone-searching .phone-page,#phoneDialog .phone-searching .phone-apps{display:contents}
+#phoneDialog .phone-searching .cl-search{order:0;position:static;background:#ffffff17}
+#phoneDialog .phone-searching .phone-dock{padding:9px 5px 4px;border:1px solid #ffffff3b;background:linear-gradient(155deg,#ffffff28,#ffffff14);backdrop-filter:blur(25px)}
+#phoneDialog #phoneNoResults{position:absolute;top:45%;left:13px;right:13px;text-align:center;margin:0;pointer-events:none}
+@media(max-height:710px){#phoneDialog .ios-phone{grid-template-rows:0 68px minmax(0,1fr) 10px 32px 80px;gap:7px}#phoneDialog .phone-home-heading,#phoneDialog .phone-searching .phone-home-heading{display:none}#phoneDialog .phone-widget{height:68px}#phoneDialog .phone-apps,#phoneDialog .phone-searching .phone-pages{grid-auto-rows:68px;gap:4px}}
