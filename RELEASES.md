@@ -18,6 +18,12 @@ Every server-side money change goes through the ledger (`chinalife_economy_actio
 
 # Changelog
 
+## world-v10a hotfix: shipped Wed 14 Oct 2026, ~03:34 China time (founder-approved)
+- The joystick and jump button stay visible above the open room panel, so you can always walk.
+- Clubs: the action column sits above the jump button; music and mic move to the left above the joystick. No overlaps at 390×844 with the panel open or closed.
+- Street performance: pixel ratio capped at 1.5, shadow map refreshed every 3rd frame, camera collision against building boxes instead of 90k triangles, far cars hidden and frozen, far pedestrians not animated, labels refreshed at 30 Hz, no per-frame allocations, smoothed frame time, MSAA off on high-DPI phones. Street walk at 4× CPU throttle: 7.3 → 13.4 fps (headless, software GL).
+- Backup: /root/backups/worldv10a-20261013-193430 (server time).
+
 ## world-v10: shipped Wed 14 Oct 2026, ~03:06 China time (founder-approved, outside the Friday slot)
 - A: room panel opens when you enter; voting centre wall board and ballot panel with candidate photos.
 - B: themed clubs; money spray (¥100/500/2000, 20 s cooldown, ¥20k/day cap, server ledger) with money rain; the voting card starts folded.
