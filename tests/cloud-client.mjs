@@ -7,7 +7,7 @@ async function setup(options={}){
   const url=new URL(raw);
   if(url.pathname.endsWith('save.php')){
    if(request.method==='GET')return Response.json({status:'success',data:{revision,save:{game:{...fixture(),money}},account:{id:'1',username:'Tester'}}});
-   if(options.uploadStatus)return Response.json({status:'error',message:options.uploadStatus===409?'Newer save exists':'Session expired',data:{revision:2,save:{game:{...fixture(),money:5000}}}},{status:options.uploadStatus});
+   if(options.uploadStatus)return Response.json({status:'error',message:options.uploadStatus===409?'Newer save exists':'Session expired',data:{revision:2,save:{game:options.ledgerOnly?{...fixture(),money:5000}:{...fixture(),money:5000,logs:['Played on another phone']}}}},{status:options.uploadStatus});
    const body=JSON.parse(request.body);money=body.save.game.money;revision++;return Response.json({status:'success',data:{revision}});
   }
   if(url.pathname.endsWith('presence.php')){
@@ -22,6 +22,10 @@ test('save conflicts retain the newer account save and pause automatic overwrite
  const t=await setup({uploadStatus:409});assert.equal(await t.context.ChinaLifeCloud.upload(),false);
  assert.match(t.document.getElementById('cloudContent').textContent,/newer save/);
  t.document.getElementById('cloudLoad').onclick();assert.equal(t.game.state.money,5000);
+});
+test('a conflict that only changed ledger totals (server economy action) is adopted without the newer-save modal',async()=>{
+ const t=await setup({uploadStatus:409,ledgerOnly:true});assert.equal(await t.context.ChinaLifeCloud.upload(),false);
+ assert.doesNotMatch(t.document.getElementById('cloudContent').textContent,/newer save/);assert.equal(t.game.state.money,5000);
 });
 test('expired app authentication asks the app again and keeps password login optional',async()=>{
  const t=await setup({uploadStatus:401});assert.equal(await t.context.ChinaLifeCloud.upload(),false);
