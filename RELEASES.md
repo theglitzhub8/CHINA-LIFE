@@ -18,6 +18,10 @@ Every server-side money change goes through the ledger (`chinalife_economy_actio
 
 # Changelog
 
+## Hotfix r2a: shipped Wed 14 Oct 2026, ~06:29 China time (founder-approved)
+- Club music no longer gets a 403 on entry: presence is sent (or an in-flight send awaited) before the first music request in a room, with one retry after a "join first" refusal. No new polling.
+- Backups: /root/backups/hotfix-r2a-20261013-222057 and /root/backups/hotfix-r2a-step2-20261013-222931 (server time).
+
 ## R2 (r2-ios): shipped Wed 14 Oct 2026, ~06:14 China time (founder-approved, outside the Friday slot)
 - Hafrik iOS design: Hafrik colours, an iOS type scale (min 12 px), 8 pt spacing, and one outline icon set for controls.
 - Single-row top bar, docked 4-tab bar, 88 px joystick and 56 px jump.
