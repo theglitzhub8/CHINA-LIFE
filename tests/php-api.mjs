@@ -915,3 +915,20 @@ test('Gist Night shows an anonymous handle, keeps the author for admins, and cou
  assert.equal(vote.httpStatus,200,vote.message);assert.equal(vote.data.posts[0].poll.options[0].votes,1);assert.equal(vote.data.posts[0].poll.voted,0);
  assert.equal((await call(6,'gist-night.php','POST',{action:'vote',city:'Shenyang',poll:+post.poll.id,option:1})).httpStatus,409);
 });
+
+test('City Hall records one vote per player per office per election and publishes results',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (5,6,7); DELETE FROM chinalife_election_votes; DELETE FROM chinalife_elections; DELETE FROM chinalife_politics_candidates WHERE candidate_id IN (5,6)');
+ assert.equal((await call(5,'politics.php','POST',{city:'Shenyang',office:'governor',statement:'Light the square.'})).httpStatus,200);
+ sql("USE chinalife_test; UPDATE chinalife_politics_candidates SET status='approved' WHERE candidate_id=5 AND office='governor'");
+ const before=await call(6,'elections.php?city=Shenyang');const gov=before.data.elections.find(e=>e.office==='governor');
+ assert.equal(gov.candidates[0].name,'user5');assert.equal(gov.candidates[0].votes,0);assert.equal(gov.open,false);
+ const cast=await call(6,'elections.php','POST',{city:'Shenyang',office:'governor',candidate:+gov.candidates[0].id});
+ assert.equal(cast.httpStatus,200,cast.message);assert.equal(cast.data.elections.find(e=>e.office==='governor').candidates[0].votes,1);assert.equal(cast.data.elections.find(e=>e.office==='governor').mine,gov.candidates[0].id);
+ assert.equal((await call(6,'elections.php','POST',{city:'Shenyang',office:'governor',candidate:+gov.candidates[0].id})).httpStatus,409);
+ assert.equal((await call(7,'elections.php','POST',{city:'Shenyang',office:'governor',candidate:+gov.candidates[0].id})).httpStatus,200);
+ sql('USE chinalife_test; UPDATE chinalife_elections SET ends_at=DATE_SUB(NOW(),INTERVAL 1 MINUTE)');
+ const closed=await call(6,'elections.php?city=Shenyang&results=1');const done=closed.data.elections.find(e=>e.office==='governor');
+ assert.equal(done.open,false);assert.equal(done.candidates[0].votes,2);assert.equal(closed.data.results,true);
+ const again=await call(6,'elections.php','POST',{city:'Shenyang',office:'governor',candidate:+gov.candidates[0].id});
+ assert.equal(again.httpStatus,200,again.message);assert.notEqual(again.data.election,done.id);
+});
