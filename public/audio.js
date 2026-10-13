@@ -56,7 +56,7 @@ $('closeAudio').setAttribute('aria-label','Minimize club player');$('closeAudio'
 window.addEventListener('chinalife:update',()=>{if(lastClub!==game.state.place){lastClub=game.state.place;track=venueTrack();startedAt=Date.now();queue=[];align();sync()}if(!game.clubs.includes(game.state.place)){stop(false);if($('audioDialog').open)$('audioDialog').close()}else if(enabled&&unlocked&&!playing&&!document.hidden&&!window.ChinaLifeNativePaused)start()});
 window.addEventListener('chinalife:voice',e=>{duck=e.detail.active;gain()});
 window.addEventListener('chinalife:radio',e=>{radioOn=!!e.detail?.playing;gain();songCheck=0;songTick();renderStatus()});
-window.ChinaLifeAudio={open,start,stop,toggle:toggleClub,get nowPlaying(){return nowPlaying()},setVolume,get volume(){return volume},get nearness(){return nearness()},get playing(){return playing},get track(){return track.id}};
+window.ChinaLifeAudio={open,start,stop,toggle:toggleClub,get nowPlaying(){return nowPlaying()},setVolume,get volume(){return volume},get nearness(){return nearness()},get playing(){return playing},beatPhase(){return playing&&!radioOn?(Date.now()+serverOffset-startedAt)/1000/(60/(track.bpm||122)):null},get track(){return track.id}};
 
 document.addEventListener('pointerdown',event=>{if(event.target?.closest?.('#djToggle,#clubMusicToggle'))return;if(game.clubs.includes(game.state.place)&&enabled&&!playing&&!document.hidden&&!window.ChinaLifeNativePaused)start()},{capture:true});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stop(false);else if(game.clubs.includes(game.state.place)&&enabled&&unlocked)start()});

@@ -1,0 +1,87 @@
+// v9: 007 Club host ChampagnePappi, the neon club dressing and the party HUD.
+// Built once per visit into the venue root; tick() runs from the world loop. No paid AI: canned lines only.
+// Drinks are paid on the server (economy.php action club-drink) and only update money/XP, never the save revision.
+export const DRINKS=[
+ {sku:'pappi-fizz',icon:'🥂',name:'Pappi Fizz',price:120,note:'+10 XP · fun up',fun:15,social:6,alc:15},
+ {sku:'gold-rush',icon:'🍾',name:'Gold Rush',price:300,note:'+25 XP · big fun',fun:25,social:12,alc:22},
+ {sku:'zero-proof',icon:'🍹',name:'Zero Proof',price:40,note:'+5 XP · no alcohol',fun:8,social:4,alc:0},
+ {sku:'water',icon:'💧',name:'Water',price:0,note:'Sobers you up',fun:0,social:0,energy:3,alc:-10}];
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const LINES={
+ welcome:['Welcome to 007, {n}! 🥂','{n}! The party just got better.','Ayyy {n} is in the building!','{n}, you look expensive tonight. 😎'],
+ join:['Yo {n}, welcome in! 🍾','Make some noise for {n}!','{n} just pulled up. Respect.'],
+ banter:['Champagne for the real ones. 🥂','No sad faces in my club.','Hydrate, then celebrate. 💧','Shades on. Inside. Always.','VIP is a mindset… and also ¥500.','Who ordered the vibes? Me. I did.','If you can stand, you can dance.'],
+ dj:['DJ, run it back! 🔊','This DJ is cooking tonight. 🔥','Hands up for the DJ! 🙌','Turn it up, DJ!'],
+ duel:['Dance-off! Hit 💃 in 15 seconds!','Dance-off time! Show me moves. 💃'],
+ toast:['Cheers! 🥂','To money, love and good music!','Glasses up! 🥂'],
+ served:['One {d}, coming right up!','{d} for {n}. Enjoy! 🍾','Good choice, {n}.'],
+ quiet:['It\'s quiet… bring your friends. 📲','Early bird gets the dance floor.']};
+const fill=(t,v)=>t.replace('{n}',v.n||'friend').replace('{d}',v.d||'');
+export function nightClub(c){
+ const {THREE,root,mesh,box,cylinder,label,game}=c,reduced=c.motionReduced,disposers=[];
+ const basic=(color,extra={})=>{const m=new THREE.MeshBasicMaterial({color,...extra});disposers.push(m);return m};
+ const plane=(w,h,mat,x,y,z,ry=0,rx=0)=>{const g=new THREE.PlaneGeometry(w,h);disposers.push(g);const m=new THREE.Mesh(g,mat);m.position.set(x,y,z);m.rotation.set(rx,ry,0);root.add(m);return m};
+ // Neon text panels drawn once on canvas.
+ const neon=(text,w,h,color,x,y,z,ry=0,size=110)=>{const cv=document.createElement('canvas');cv.width=512;cv.height=Math.round(512*h/w);const x2=cv.getContext('2d');x2.fillStyle='rgba(10,6,24,.85)';x2.fillRect(0,0,cv.width,cv.height);x2.shadowColor=color;x2.shadowBlur=24;x2.strokeStyle=color;x2.lineWidth=6;x2.strokeRect(10,10,cv.width-20,cv.height-20);x2.fillStyle='#fff';x2.font='900 '+size+'px system-ui,sans-serif';x2.textAlign='center';x2.textBaseline='middle';x2.fillText(text,256,cv.height/2+4);const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;disposers.push(t);const m=plane(w,h,basic(0xffffff,{map:t,transparent:true}),x,y,z,ry);m.userData.signText=text;return m};
+ // Entrance: neon arch, VIP rope and the bouncer, between the doors and the arrival spots.
+ const pink=basic(0xff3fa4),cyan=basic(0x35e6ff),gold=basic(0xffcf5a);
+ for(const x of [-3.2,3.2]){const p=mesh(new THREE.BoxGeometry(.18,3,.18),0x221532,x,1.5,5.9);p.material=pink;p.userData.privateMaterial=true}
+ {const top=mesh(new THREE.BoxGeometry(6.6,.18,.18),0x221532,0,3,5.9);top.material=cyan;top.userData.privateMaterial=true}
+ neon('007',2.4,.8,'#ff3fa4',0,3.55,5.9,0,120);
+ for(const x of [4.1,5.1,6.1])cylinder(.05,.95,0xd9b24a,x,.48,5.6);box(2,.05,.05,0xb5122b,5.1,.82,5.6);
+ const bouncer=c.person(4.6,4.9,0x111111,0x5b3a29,'Bouncer','host',{skin:0x5b3a29,hair:'cropped',acc:['sunglasses','headphones'],top:{s:'tee',c:0x111111},bottom:{s:'jeans',c:0x161616}});bouncer.rotation.y=Math.PI;
+ // Dance floor: 6×4 tiles in four shared colours that swap on the beat.
+ const floorMats=[0xff3fa4,0x35e6ff,0x8b5cff,0xffcf5a].map(col=>basic(col,{transparent:true,opacity:.55})),tileG=new THREE.PlaneGeometry(1.05,1.05);disposers.push(tileG);const tiles=[];
+ for(let i=0;i<6;i++)for(let j=0;j<4;j++){const t=new THREE.Mesh(tileG,floorMats[(i+j)%4]);t.rotation.x=-Math.PI/2;t.position.set(-3+i*1.1+.55,.15,-1.6+j*1.1+.55);t.userData.k=(i*3+j*5)%4;root.add(t);tiles.push(t)}
+ // Two light beams sweeping from the ceiling.
+ const beamG=new THREE.ConeGeometry(1.1,4.6,14,1,true);disposers.push(beamG);const beams=[0xff3fa4,0x35e6ff].map((col,i)=>{const b=new THREE.Mesh(beamG,basic(col,{transparent:true,opacity:.13,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending}));const pivot=new THREE.Group();pivot.position.set(i?2.6:-2.6,4.9,-.6);b.position.y=-2.3;pivot.add(b);root.add(pivot);return pivot});
+ // Bar in the back-right corner, with a lit shelf of bottles.
+ box(3.4,1.05,.7,0x1a1026,7.2,.53,-4.1);{const top=mesh(new THREE.BoxGeometry(3.5,.06,.8),0x111111,7.2,1.08,-4.1);top.material=gold;top.userData.privateMaterial=true}
+ box(3.4,.06,.35,0x2a1d3a,7.2,1.9,-6.6);for(let i=0;i<9;i++)cylinder(.07,.36,[0x3b8f4a,0xd9b24a,0x7a1f2b][i%3],5.8+i*.35,2.12,-6.6,root,8);
+ neon('BAR',1.6,.55,'#35e6ff',7.2,2.85,-6.75,0,120);
+ label('🍾 Bar',7.2,1.9,-4.1,'interactive',()=>menu());
+ // VIP corner glow.
+ neon('VIP',1.4,.5,'#ffcf5a',-5.2,2.6,-4.4,0,120);plane(3,2.2,basic(0xffcf5a,{transparent:true,opacity:.07,depthWrite:false}),-5.2,.16,-2.8,0,-Math.PI/2);
+ // ChampagnePappi: gold suit, shades, chains, luxury watch and a champagne bottle.
+ const pappi=c.person(7,-3.2,0xd4a843,0x6b4329,'',null,{skin:0x6b4329,hair:'cropped',hairColor:0x111111,acc:['sunglasses','chain','luxwatch'],top:{s:'suit',c:0xd4a843},bottom:{s:'trousers',c:0xf3efe4},shoes:{s:'loafers',c:0xffffff}});
+ const bottle=new THREE.Group();mesh(new THREE.CylinderGeometry(.06,.07,.3,10),0x1f5a35,0,0,0,bottle);mesh(new THREE.CylinderGeometry(.025,.05,.12,8),0xd9b24a,0,.2,0,bottle);pappi.userData.limbs[3].add(bottle);bottle.position.set(0,-.62,.12);
+ mesh(new THREE.TorusGeometry(.17,.022,6,20),0xd9b24a,0,1.36,.1,pappi).rotation.x=Math.PI/2.4;
+ const tag=label('🍾 ChampagnePappi',0,0,0,'npc pappi-name',()=>menu());tag.follow=pappi;
+ const bubble=label('',0,0,0,'say-bubble pappi-say quiet');bubble.follow=pappi;bubble.lift=.45;bubble.el.setAttribute('role','status');
+ let sayTimer=0;function say(text,ms=4200){bubble.el.textContent=text;bubble.el.classList.remove('quiet');bubble.hw=0;clearTimeout(sayTimer);sayTimer=setTimeout(()=>bubble.el.classList.add('quiet'),ms)}
+ const spots=[[7,-3.2],[3.1,.4],[-4.6,-1.2],[2.2,4.4],[6,2.9],[-2.8,3]];let goal=null,wait=2,greeted=false,seen=new Set(),nextBanter=performance.now()+9000,duel=null;
+ // HUD: party meter, emotes and the drink menu.
+ const hud=document.createElement('div');hud.className='club-hud';hud.innerHTML='<div class="club-meter" role="meter" aria-label="Party level" aria-valuemin="0" aria-valuemax="100"><span>🔥</span><i><b></b></i><em>0%</em></div><div class="club-emotes"><button data-ce="dance">💃<span>Dance</span></button><button data-ce="toast">🥂<span>Toast</span></button><button data-ce="hype">🙌<span>Hype</span></button><button data-ce="menu">🍾<span>Drinks</span></button></div>';
+ (document.getElementById('worldUI')||document.body).append(hud);
+ let boost=0;const meter=hud.querySelector('.club-meter'),fillEl=meter.querySelector('b'),pct=meter.querySelector('em');
+ hud.querySelectorAll('[data-ce]').forEach(b=>b.onclick=()=>{const k=b.dataset.ce;if(k==='menu')return menu();if(k==='dance'){c.setEmote('dance');boost+=8;if(duel&&performance.now()<duel){duel=null;boost+=20;say('🏆 '+game.state.name+' wins the dance-off!');game.toast('🏆 You won the dance-off')}}if(k==='toast'){c.setEmote('drink');boost+=5;say(pick(LINES.toast))}if(k==='hype'){c.setEmote('cheer');boost+=6;say(pick(LINES.dj))}});
+ const curtain=document.createElement('div');curtain.className='club-curtain';curtain.innerHTML='<b>007</b>';document.body.append(curtain);requestAnimationFrame(()=>curtain.classList.add('open'));setTimeout(()=>curtain.remove(),1200);
+ function party(){const crowd=c.remotes().length,music=window.ChinaLifeAudio?.playing?25:0;return Math.max(0,Math.min(100,Math.round(15+crowd*12+music+boost)))}
+ let busy=false;const last=new Map();
+ function menu(){const s=game.state,d=game.drunkInfo?.()||{icon:'😊',label:'Sober',value:0};
+  game.showScreen('🍾 Pappi\'s bar','¥'+Math.floor(s.money).toLocaleString()+' · '+d.icon+' '+d.label,'<div class="pappi-menu">'+DRINKS.map(x=>'<button class="choice-action" data-drink="'+x.sku+'"><b>'+x.icon+' '+x.name+' · '+(x.price?'¥'+x.price:'free')+'</b><span>'+x.note+'</span></button>').join('')+'</div><p id="pappiStatus" class="fine-print" role="status">One drink every 90 seconds.</p>');
+  document.querySelectorAll('[data-drink]').forEach(b=>b.onclick=()=>order(DRINKS.find(x=>x.sku===b.dataset.drink)))}
+ async function order(x){const status=document.getElementById('pappiStatus');if(busy||!x)return;if(!(window.ChinaLifeAuth?.request&&window.ChinaLifeCloud?.signedIn)){if(status)status.textContent='Sign in to order.';return}
+  if(x.price>game.state.money){if(status)status.textContent='Not enough money.';return}
+  busy=true;document.querySelectorAll('[data-drink]').forEach(b=>b.disabled=true);
+  try{const r=await window.ChinaLifeAuth.request('/chinalife/economy.php','POST',{action:'club-drink',sku:x.sku});game.applyServerTotals(r.data);const s=game.state;
+   if(!r.data?.cooldown){s.needs.fun=Math.min(100,(s.needs.fun||0)+x.fun);s.needs.social=Math.min(100,(s.needs.social||0)+x.social);if(x.energy)s.needs.energy=Math.min(100,(s.needs.energy||0)+x.energy);s.drunk=Math.max(0,Math.min(95,(s.drunk||0)+x.alc));boost+=x.price>=300?14:x.price?8:2}
+   document.getElementById('activityDialog')?.close();say(fill(pick(LINES.served),{n:s.name,d:x.name}));game.toast(r.data?.cooldown?'⏳ '+(r.message||'Slow down. Try again soon.'):x.icon+' '+x.name+(r.data?.awardedXp?' · +'+r.data.awardedXp+' XP':''));c.setEmote('drink');game.save?.();game.refresh?.()}
+  catch(e){if(status)status.textContent=e.message||'Try again.'}finally{busy=false;document.querySelectorAll('[data-drink]').forEach(b=>b.disabled=false)}}
+ let lastCheck=0,lastBeat=-1;
+ function tick(time,dt){
+  const me=c.getPlayer();
+  if(me&&!greeted){greeted=true;setTimeout(()=>say(fill(pick(LINES.welcome),{n:game.state.name})),900)}
+  // Lights: on the beat while the DJ plays, slow drift otherwise.
+  const phase=window.ChinaLifeAudio?.beatPhase?.(),beat=phase!=null?Math.floor(phase):Math.floor(time/900);
+  if(beat!==lastBeat){lastBeat=beat;for(const t of tiles)t.material=floorMats[(t.userData.k+beat)%4]}
+  if(!reduced()){const sw=Math.sin(time*.0011);beams[0].rotation.z=.5*sw;beams[1].rotation.z=-.5*sw;beams[0].rotation.x=beams[1].rotation.x=.25*Math.cos(time*.0008);const pulse=phase!=null?1-(phase%1):.5;for(const m of floorMats)m.opacity=.35+pulse*.35}
+  // Pappi walks between his spots and pauses to talk.
+  if(goal){const dx=goal[0]-pappi.position.x,dz=goal[1]-pappi.position.z,dist=Math.hypot(dx,dz);if(dist<.08){goal=null;wait=3+Math.random()*4}else{const step=Math.min(dist,dt*1.3);pappi.position.x+=dx/dist*step;pappi.position.z+=dz/dist*step;pappi.rotation.y=Math.atan2(dx,dz);const w=Math.sin(time*.01),[l,r,al,ar]=pappi.userData.limbs;l.rotation.x=w*.5;r.rotation.x=-w*.5;al.rotation.x=-w*.4;ar.rotation.x=-.6}}
+  else{wait-=dt;const [l,r,al]=pappi.userData.limbs;l.rotation.x=r.rotation.x=0;al.rotation.z=reduced()?.3:.4+Math.sin(time*.004)*.35;pappi.position.y=reduced()?0:Math.abs(Math.sin(time*.004))*.05;if(wait<=0){let next;do next=pick(spots);while(next===pappi.userData.spot);pappi.userData.spot=next;goal=next}}
+  if(time-lastCheck>1000){lastCheck=time;boost=Math.max(0,boost-.6);const p=party();fillEl.style.width=p+'%';pct.textContent=p+'%';meter.setAttribute('aria-valuenow',p);meter.classList.toggle('hot',p>=75);
+   const first=!seen.primed;seen.primed=true;for(const r of c.remotes())if(!seen.has(r.id)){seen.add(r.id);if(!first&&r.name)setTimeout(()=>say(fill(pick(LINES.join),{n:r.name})),400)}
+   if(performance.now()>nextBanter){nextBanter=performance.now()+16000+Math.random()*14000;const roll=Math.random();if(roll<.12&&!duel){duel=performance.now()+15000;say(pick(LINES.duel),6000)}else if(roll<.4&&window.ChinaLifeAudio?.playing)say(pick(LINES.dj));else say(pick(c.remotes().length?LINES.banter:[...LINES.banter,...LINES.quiet]))}}}
+ function dispose(){clearTimeout(sayTimer);hud.remove();curtain.remove();for(const d of disposers)d.dispose?.();const out=document.createElement('div');out.className='club-curtain leaving';out.innerHTML='<b>007</b>';document.body.append(out);setTimeout(()=>out.remove(),700)}
+ return {tick,dispose,menu,say,party,pappi,_test:{tiles,greet:()=>greeted,remotes:()=>[...seen]}};
+}

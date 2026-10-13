@@ -37,7 +37,9 @@ if ($method==='GET') {
 cl_rate('economy',30,60);
 $input=cl_body();
 $action=(string)($input['action']??'');
-if (!in_array($action,['job','mission','purchase','accident'],true)) cl_fail('Choose a job, mission or purchase');
+if (!in_array($action,['job','mission','purchase','accident','club-drink'],true)) cl_fail('Choose a job, mission or purchase');
+// v9: ChampagnePappi's bar in 007 Club. Price and XP live here only; one drink per 90 s, XP for the first 8 a day.
+$clubDrinks=['pappi-fizz'=>[120,10],'gold-rush'=>[300,25],'zero-proof'=>[40,5],'water'=>[0,0]];
 
 function economy_here(): array {
     global $uid;
@@ -75,6 +77,23 @@ try {
         cl_store_totals($uid,$game);
         $db->commit();
         json_response('success',$moved+['charged'=>$fee,'ambulance'=>min(300,$fee),'treatment'=>$fee-min(300,$fee),'cooldown'=>false,'duplicate'=>false,'bonus'=>false],'Treated at the hospital.');
+    }
+    if ($action==='club-drink') {
+        $sku=(string)($input['sku']??'');
+        if (!isset($clubDrinks[$sku])) cl_fail('That drink is not on the menu');
+        [, $here]=economy_here();
+        if ($here!=='night') cl_fail('Order at 007 Club',403);
+        if (cl_one('SELECT id FROM chinalife_economy_actions WHERE user_id=? AND action="club-drink" AND created_at>=DATE_SUB(NOW(),INTERVAL 90 SECOND)','i',[$uid])) {$totals=economy_totals($game);$db->commit();json_response('success',$totals+['cooldown'=>true],'One drink every 90 seconds.');}
+        [$price,$xp]=$clubDrinks[$sku];
+        $held=cl_balances_lock($uid);
+        if ($held['coins']<$price) cl_fail('Not enough money',409);
+        $today=cl_one('SELECT COUNT(*) n FROM chinalife_economy_actions WHERE user_id=? AND action="club-drink" AND xp>0 AND ref LIKE ?','is',[$uid,'club-drink:%:'.$day]);
+        if ((int)($today['n']??0)>=8) $xp=0;
+        $moved=cl_move_totals($uid,$game,-$price,$xp);
+        economy_note('club-drink','club-drink:'.$sku.':'.bin2hex(random_bytes(4)).':'.$day,-$price,$xp);
+        cl_store_totals($uid,$game);
+        $db->commit();
+        json_response('success',$moved+['cooldown'=>false,'duplicate'=>false,'bonus'=>false],'Served.');
     }
     if ($action==='job') {
         $job=(string)($input['job']??'');

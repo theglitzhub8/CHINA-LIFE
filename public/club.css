@@ -1,0 +1,25 @@
+/* v9: 007 Club HUD, ChampagnePappi and enter/leave transitions. Compositor-only animations for mobile webviews. */
+.club-hud{position:absolute;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:7;display:grid;gap:8px;justify-items:center;pointer-events:none;width:min(92vw,380px)}
+.club-meter{pointer-events:auto;display:flex;align-items:center;gap:8px;width:100%;padding:6px 12px;border-radius:999px;background:rgb(14 8 30 / .72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgb(255 63 164 / .35);color:#fff;font:800 13px/1 system-ui,sans-serif}
+.club-meter i{flex:1;height:8px;border-radius:99px;background:rgb(255 255 255 / .12);overflow:hidden}
+.club-meter b{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#35e6ff,#8b5cff,#ff3fa4);transition:width .8s ease}
+.club-meter em{font-style:normal;min-width:3ch;text-align:right}
+.club-meter.hot{border-color:#ff3fa4;box-shadow:0 0 18px rgb(255 63 164 / .45)}
+.club-meter.hot span{animation:clubPulse .5s ease-in-out infinite alternate}
+.club-emotes{pointer-events:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:100%}
+.club-emotes button{display:grid;justify-items:center;gap:2px;padding:7px 0 6px;border:1px solid rgb(255 255 255 / .14);border-radius:14px;background:rgb(14 8 30 / .72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#fff;font:700 18px/1 system-ui,sans-serif;transition:transform .12s,background .2s}
+.club-emotes button span{font-size:11px;opacity:.85}
+.club-emotes button:active{transform:scale(.94);background:rgb(255 63 164 / .45)}
+.club-emotes button[data-ce=menu]{background:linear-gradient(135deg,#d4a843,#ff3fa4);border-color:transparent}
+.scene-label.pappi-name{background:linear-gradient(135deg,#ffe08a,#d4a843);color:#2a1700;border:0;font-weight:900;box-shadow:0 0 14px rgb(255 207 90 / .6)}
+.scene-label.pappi-say{background:#14081f;color:#ffe08a;border:1px solid #d4a843}
+.scene-label.pappi-say::after{background:#14081f}
+.scene-label.pappi-say.quiet{display:none!important}
+.pappi-menu{display:grid;gap:8px}
+.club-curtain{position:fixed;inset:0;z-index:50;display:grid;place-items:center;pointer-events:none;background:radial-gradient(circle,#2a0f3d,#07030d 70%);opacity:1;transition:opacity .7s ease .25s}
+.club-curtain b{font:900 clamp(56px,18vw,120px)/1 system-ui,sans-serif;color:#fff;letter-spacing:.06em;text-shadow:0 0 12px #ff3fa4,0 0 32px #ff3fa4,0 0 60px #8b5cff;transform:scale(.9);transition:transform .9s cubic-bezier(.2,1.2,.3,1)}
+.club-curtain.open{opacity:0}.club-curtain.open b{transform:scale(1.08)}
+.club-curtain.leaving{animation:clubLeave .7s ease forwards}
+@keyframes clubLeave{from{opacity:.85}to{opacity:0}}
+@keyframes clubPulse{to{transform:scale(1.25)}}
+@media (prefers-reduced-motion:reduce){.club-curtain,.club-curtain b,.club-meter b{transition:none}.club-curtain.leaving,.club-meter.hot span{animation:none}}
