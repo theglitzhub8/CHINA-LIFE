@@ -85,3 +85,14 @@
 .dash .speed{position:absolute;right:18px;bottom:14px;color:#7df3d9;font:800 18px system-ui;text-shadow:0 0 10px #0bd}
 @media(max-height:670px){.dash{bottom:calc(218px + 64px)}}
 @media(min-width:1000px){.dash{bottom:0}}
+/* hotfix v10a (390×844): walking stays possible with the room panel open, and the club column never meets the audio buttons. */
+html:root body #worldUI.tp-view.dock-open .tp-controls{display:block!important}
+html:root body #worldUI.tp-view.dock-open{--tp-bottom:calc(var(--dock-height,150px) + 12px)}
+html:root body #worldUI.tp-view.dock-open :is(.quick-voice,#quickVoice){bottom:calc(var(--tp-bottom) + 92px)!important}
+html:root body #worldUI.tp-view.dock-open :is(#clubMusicToggle,.radio-fab,.club-music-fab){bottom:calc(var(--tp-bottom) + 146px)!important}
+/* Clubs: music and mic move to the left above the joystick; the action column sits above the jump button. */
+html:root body:has(.club-hud) #worldUI.tp-view:is(.dock-open,:not(.dock-open)) :is(#clubMusicToggle,.club-music-fab,.radio-fab){right:auto!important;left:calc(28px + env(safe-area-inset-left))!important;bottom:calc(var(--tp-bottom) + 116px)!important}
+html:root body:has(.club-hud) #worldUI.tp-view:is(.dock-open,:not(.dock-open)) :is(.quick-voice,#quickVoice){right:auto!important;left:calc(28px + env(safe-area-inset-left))!important;bottom:calc(var(--tp-bottom) + 170px)!important}
+.club-emotes{top:auto;bottom:calc(var(--tp-bottom,150px) + 88px);max-height:calc(100% - var(--tp-bottom,150px) - 88px - 150px - env(safe-area-inset-top));overflow-y:auto;scrollbar-width:none;align-content:end}
+.club-emotes::-webkit-scrollbar{display:none}
+@media(max-height:760px){.club-emotes{gap:5px}.club-emotes button{padding:5px 0 4px;font-size:16px}}
