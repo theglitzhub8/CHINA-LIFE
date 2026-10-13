@@ -70,7 +70,9 @@ export function nightClub(c){
    if(!r.data?.cooldown){s.needs.fun=Math.min(100,(s.needs.fun||0)+x.fun);s.needs.social=Math.min(100,(s.needs.social||0)+x.social);if(x.energy)s.needs.energy=Math.min(100,(s.needs.energy||0)+x.energy);s.drunk=Math.max(0,Math.min(95,(s.drunk||0)+x.alc));boost+=x.price>=300?14:x.price?8:2}
    document.getElementById('activityDialog')?.close();say(r.data?.cooldown?'Easy, tiger. One every 90 seconds. ⏳':fill(pick(LINES.served),{n:s.name,d:x.name}));game.toast(r.data?.cooldown?'⏳ '+(r.message||'Slow down. Try again soon.'):x.icon+' '+x.name+(r.data?.awardedXp?' · +'+r.data.awardedXp+' XP':''));c.setEmote('drink');game.save?.();game.refresh?.()}
   catch(e){if(status)status.textContent=e.message||'Try again.'}finally{busy=false;document.querySelectorAll('[data-drink]').forEach(b=>b.disabled=false)}}
- let lastCheck=0,lastBeat=-1,lastFx=0,stuck=0;
+ let lastCheck=0,lastBeat=-1,lastFx=0,stuck=0,steer=0,straightFor=0;const vel={x:0,z:0};
+ // Heading eases toward the target along the shortest arc and ignores tiny differences.
+ const turn=(target,dt)=>{let d=target-pappi.rotation.y;d=Math.atan2(Math.sin(d),Math.cos(d));if(Math.abs(d)<.03)return;pappi.rotation.y+=d*(1-Math.exp(-dt*7))};
  const clear=(x,z)=>Math.abs(x)<9&&Math.abs(z)<6.5&&!c.obstacles().some(o=>Math.abs(x-o.x)<o.w/2+.15&&Math.abs(z-o.z)<o.d/2+.15)&&!c.bodies().some(b=>b!==pappi&&Math.hypot(b.position.x-x,b.position.z-z)<.55);
  function tick(time,dt){
   const me=c.getPlayer();
@@ -80,10 +82,19 @@ export function nightClub(c){
   if(beat!==lastBeat){lastBeat=beat;for(const t of tiles)t.material=floorMats[(t.userData.k+beat)%4]}
   if(!reduced()&&time-lastFx>66){lastFx=time;if(pappi.userData.glint)pappi.userData.glint.opacity=.5+.45*Math.abs(Math.sin(time*.003));const sw=Math.sin(time*.0011);beams[0].rotation.z=.5*sw;beams[1].rotation.z=-.5*sw;beams[0].rotation.x=beams[1].rotation.x=.25*Math.cos(time*.0008);const pulse=phase!=null?1-(phase%1):.5;for(const m of floorMats)m.opacity=.35+pulse*.35}
   // Pappi walks between his spots and pauses to talk.
-  if(goal){const dx=goal[0]-pappi.position.x,dz=goal[1]-pappi.position.z,dist=Math.hypot(dx,dz);if(dist<.15||stuck>2.5){goal=null;stuck=0;wait=3+Math.random()*4}else{const step=Math.min(dist,dt*1.3);let ux=dx/dist,uz=dz/dist;
-   // Steer: try straight, then 35°, 70° and 105° to either side; stand still if every way is blocked.
-   let moved=false;for(const a of [0,.6,-.6,1.2,-1.2,1.8,-1.8]){const vx=ux*Math.cos(a)-uz*Math.sin(a),vz=ux*Math.sin(a)+uz*Math.cos(a);if(clear(pappi.position.x+vx*.45,pappi.position.z+vz*.45)){pappi.position.x+=vx*step;pappi.position.z+=vz*step;ux=vx;uz=vz;moved=true;break}}if(!moved||Math.abs(ux*dx/dist+uz*dz/dist)<.2)stuck+=dt;pappi.rotation.y=Math.atan2(ux,uz);const w=Math.sin(time*.01),[l,r,al,ar]=pappi.userData.limbs;l.rotation.x=w*.5;r.rotation.x=-w*.5;al.rotation.x=-w*.4;ar.rotation.x=-.6}}
-  else{wait-=dt;const [l,r,al]=pappi.userData.limbs;l.rotation.x=r.rotation.x=0;al.rotation.z=reduced()?.3:.4+Math.sin(time*.004)*.35;pappi.position.y=reduced()?0:Math.abs(Math.sin(time*.004))*.05;if(wait<=0){let next;do next=pick(spots);while(next===pappi.userData.spot);pappi.userData.spot=next;goal=next}}
+  // Walking: one committed steer angle (hysteresis), smoothed velocity and heading, full settle when idle.
+  if(goal){const dx=goal[0]-pappi.position.x,dz=goal[1]-pappi.position.z,dist=Math.hypot(dx,dz);
+   if(dist<.15||stuck>2.5){goal=null;stuck=0;steer=0;wait=3+Math.random()*4}
+   else{const ux=dx/dist,uz=dz/dist,dir=a=>[ux*Math.cos(a)-uz*Math.sin(a),ux*Math.sin(a)+uz*Math.cos(a)],ok=a=>{const [vx,vz]=dir(a);return clear(pappi.position.x+vx*.5,pappi.position.z+vz*.5)};
+    // Keep the current angle while it stays clear; drift back to straight only once straight has been clear for a moment.
+    if(!ok(steer)){const opts=[.6,-.6,1.2,-1.2,1.8,-1.8].sort((a,b)=>Math.abs(a-steer)-Math.abs(b-steer));const f=opts.find(ok);steer=f??steer;straightFor=0;if(f==null)stuck+=dt}
+    else if(steer!==0){straightFor=ok(0)?straightFor+dt:0;if(straightFor>.4){steer=0;straightFor=0}}
+    const [vx,vz]=ok(steer)?dir(steer):[0,0],k=1-Math.exp(-dt*6);vel.x+=(vx*1.2-vel.x)*k;vel.z+=(vz*1.2-vel.z)*k;
+    const sp=Math.hypot(vel.x,vel.z);if(sp>.02){const step=Math.min(sp*dt,dist);pappi.position.x+=vel.x/sp*step;pappi.position.z+=vel.z/sp*step}else stuck+=dt;
+    if(sp>.15)turn(Math.atan2(vel.x,vel.z),dt);
+    const w=Math.sin(time*.01)*Math.min(1,sp/1.2),[l,r,al,ar]=pappi.userData.limbs;l.rotation.x=w*.5;r.rotation.x=-w*.5;al.rotation.x=-w*.4;al.rotation.z=0;ar.rotation.x=-.6;pappi.position.y=0}}
+  else{wait-=dt;vel.x=vel.z=0;const [l,r,al]=pappi.userData.limbs,e=1-Math.exp(-dt*8);l.rotation.x*=1-e;r.rotation.x*=1-e;al.rotation.x*=1-e;al.rotation.z+=((reduced()?.3:.4+Math.sin(time*.003)*.3)-al.rotation.z)*e;pappi.position.y=0;
+   if(wait<=0){let next;do next=pick(spots);while(next===pappi.userData.spot);pappi.userData.spot=next;goal=next}}
   if(time-(dodgeAt||0)>250){dodgeAt=time;dodge()}
   if(time-lastCheck>1000){lastCheck=time;boost=Math.max(0,boost-.6);const p=party();fillEl.style.width=p+'%';pct.textContent=p+'%';meter.setAttribute('aria-valuenow',p);meter.classList.toggle('hot',p>=75);
    const first=!seen.primed;seen.primed=true;for(const r of c.remotes())if(!seen.has(r.id)){seen.add(r.id);if(!first&&r.name)setTimeout(()=>say(fill(pick(LINES.join),{n:r.name})),400)}

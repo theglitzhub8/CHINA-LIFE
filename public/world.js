@@ -11,7 +11,7 @@ import {buildDistricts} from './districts.js'
 import {helicopter} from './helicopter.js?v=20261013w8b';
 import {buildHome,homeExterior} from './home-interiors.js?v=20261013w8';
 import {carModel} from './garage.js';
-import {nightClub} from './club-host.js?v=20261014v9f';
+import {nightClub} from './club-host.js?v=20261014v9g';
 let clubFx=null;
 
 const $=id=>document.getElementById(id),game=window.ChinaLife;
