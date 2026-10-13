@@ -13,10 +13,18 @@ $db=get_db_connection();
 $schema=$db->query("SELECT COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='user_id'")->fetch_assoc();
 $type=strtolower($schema['COLUMN_TYPE']??'');
 if (!preg_match('/^(int|bigint)(\([0-9]+\))? unsigned$/',$type)) throw new RuntimeException('Expected users.user_id to be INT UNSIGNED or BIGINT UNSIGNED. Check its schema before migrating.');
-$sql=file_get_contents(__DIR__.'/migration-all.sql');
-if (str_starts_with($type,'bigint')) $sql=preg_replace('/\bINT UNSIGNED\b/i','BIGINT UNSIGNED',$sql);
-$db->multi_query($sql);
-do {if ($result=$db->store_result()) $result->free();} while ($db->more_results() && $db->next_result());
+$files=[__DIR__.'/migration-all.sql'];
+$extra=glob(__DIR__.'/migration-*.sql') ?: [];
+sort($extra);
+foreach ($extra as $file) if (basename($file)!=='migration-all.sql') $files[]=$file;
+foreach ($files as $file) {
+    $sql=file_get_contents($file);
+    if ($sql===false || trim($sql)==='') continue;
+    if (str_starts_with($type,'bigint')) $sql=preg_replace('/\bINT UNSIGNED\b/i','BIGINT UNSIGNED',$sql);
+    $db->multi_query($sql);
+    do {if ($result=$db->store_result()) $result->free();} while ($db->more_results() && $db->next_result());
+    if ($db->errno) throw new RuntimeException(basename($file).': '.$db->error);
+}
 $columns=[['chinalife_saves','revision','INT UNSIGNED NOT NULL DEFAULT 1'],['chinalife_presence','skin',"CHAR(7) NOT NULL DEFAULT '#8b5c43'"],['chinalife_presence','hair',"VARCHAR(12) NOT NULL DEFAULT 'cropped'"],['chinalife_voice_signals','sender_session',"VARCHAR(80) NOT NULL DEFAULT ''"],['chinalife_presence','activity',"VARCHAR(12) NOT NULL DEFAULT 'idle'"],['chinalife_presence','arrived_at','DATETIME NULL'],['chinalife_restaurants','kind',"VARCHAR(12) NOT NULL DEFAULT 'restaurant'"],['chinalife_restaurants','photos','TEXT NULL'],['chinalife_restaurants','links','TEXT NULL'],['chinalife_restaurants','owner_id','INT UNSIGNED NULL']];
 foreach ($columns as [$table,$column,$definition]) {
     $statement=$db->prepare('SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?');$statement->bind_param('ss',$table,$column);$statement->execute();$exists=$statement->get_result()->fetch_row();$statement->close();

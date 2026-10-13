@@ -96,9 +96,10 @@ if ($action==='player') json_response('success',['player'=>['id'=>(string)$targe
 if ($action==='set_rank') {
     // Moves the player's XP to the start of the chosen rank. Rank rewards are not paid for admin changes.
     $ranks=cl_ranks();$i=$input['rank']??null;if (!is_int($i)||!isset($ranks[$i])) cl_fail('Choose a rank');if ($note==='') cl_fail('Give a reason for the audit log');
-    $db->begin_transaction();$row=cl_one('SELECT game_state FROM chinalife_saves WHERE user_id=? FOR UPDATE','i',[$target]);$game=json_decode($row['game_state'],true,512,JSON_THROW_ON_ERROR);$from=(int)($game['xp']??0);
-    $game['xp']=$ranks[$i]['xp'];$game['rankClaimed']=$i;
-    cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($game,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),$target]);
+    $db->begin_transaction();$game=cl_lock_character((int)$target);$from=(int)($game['xp']??0);
+    $held=cl_balances_lock((int)$target);cl_balance_write((int)$target,$held['coins'],(int)$ranks[$i]['xp']);
+    $game['money']=$held['coins'];$game['xp']=$ranks[$i]['xp'];$game['rankClaimed']=$i;
+    cl_store_character((int)$target,$game);
     admin_log('set_rank',(int)$target,$i,$ranks[$i]['icon'].' '.$ranks[$i]['name'].' (was '.$from.' XP) · '.$note);$db->commit();json_response('success',['xp'=>$ranks[$i]['xp']]);
 }
 if ($action==='award_badge') {

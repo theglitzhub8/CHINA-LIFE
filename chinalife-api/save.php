@@ -11,6 +11,8 @@ function cl_save_result(int $id): array {
 }
 if ($method==='GET') json_response('success',cl_save_result($uid)+['account'=>['id'=>(string)$uid,'username'=>$auth['user_name']??'Hafrik user']]);
 if ($method==='DELETE') {
+    cl_run('DELETE FROM chinalife_economy_actions WHERE user_id=?','i',[$uid]);
+    cl_run('DELETE FROM chinalife_balances WHERE user_id=?','i',[$uid]);
     cl_run('DELETE FROM chinalife_saves WHERE user_id=?','i',[$uid]);json_response('success',['deleted'=>true]);
 }
 cl_rate('save',15,10);$input=cl_body(1048576);$save=$input['save']??null;$revision=$input['revision']??0;
@@ -29,17 +31,23 @@ $stored=cl_one('SELECT game_state,TIMESTAMPDIFF(SECOND,updated_at,NOW()) elapsed
 $storedGame=$stored?json_decode($stored['game_state'],true):[];
 if(($game['transferTotal']??0)!==($storedGame['transferTotal']??0)) {http_response_code(409);json_response('error',cl_save_result($uid),'Refresh your money transfers before saving.');}
 if(($game['sharedXP']??0)!==($storedGame['sharedXP']??0)){http_response_code(409);json_response('error',cl_save_result($uid),'Refresh shared activity rewards before saving.');}
-// XP and money come from the player's device, so growth is capped by real time since the last save.
-// Real play stays far below these limits; edited saves are clamped instead of rejected.
+// Coins, XP and the rank already paid for are server totals. A save may not raise or invent them.
 if ($stored) {
-    $minutes=max(0,(int)$stored['elapsed'])/60;
-    foreach ([['xp',300,30],['money',20000,600]] as [$key,$base,$perMinute]) {
-        $limit=(float)($storedGame[$key]??0)+$base+$perMinute*$minutes;
-        if ((float)$game[$key]>$limit) $game[$key]=(int)floor($limit);
-    }
+    $bal=cl_balances_lock($uid);
+    $game['money']=$bal['coins'];$game['xp']=$bal['xp'];
+    $game['rankClaimed']=(int)($storedGame['rankClaimed']??0);
+} else {
+    $money=(int)$game['money'];$xp=(int)$game['xp'];
+    if ($money<0||$money>5000) $money=3200;
+    if ($xp!==0) $xp=0;
+    $game['money']=$money;$game['xp']=$xp;$game['rankClaimed']=0;
 }
 $gameJson=json_encode($game,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);$characterJson=json_encode($character,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);
 if ($revision===0) $changed=cl_run('INSERT IGNORE INTO chinalife_saves(user_id,character_data,game_state,revision,created_at,updated_at) VALUES(?,?,?,1,NOW(),NOW())','iss',[$uid,$characterJson,$gameJson]);
 else $changed=cl_run('UPDATE chinalife_saves SET character_data=?,game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=? AND revision=?','ssii',[$characterJson,$gameJson,$uid,$revision]);
 if (!$changed) {http_response_code(409);json_response('error',cl_save_result($uid),'A newer account save exists. Load it before saving again.');}
-json_response('success',['saved'=>true,'revision'=>$revision+1,'user_id'=>(string)$uid]);
+if ($revision===0) {
+    cl_run('DELETE FROM chinalife_economy_actions WHERE user_id=?','i',[$uid]);
+    cl_run('INSERT INTO chinalife_balances(user_id,coins,xp,updated_at) VALUES(?,?,?,NOW()) ON DUPLICATE KEY UPDATE coins=VALUES(coins),xp=VALUES(xp),updated_at=NOW()','iii',[$uid,(int)$game['money'],(int)$game['xp']]);
+}
+json_response('success',['saved'=>true,'revision'=>$revision+1,'user_id'=>(string)$uid,'money'=>(int)$game['money'],'xp'=>(int)$game['xp'],'rankClaimed'=>(int)($game['rankClaimed']??0)]);

@@ -147,6 +147,7 @@ async function upload(manual = false) {
     const {name, color, appearance, background, dream, trait} = snapshot;
     const result = await api('/chinalife/save.php', 'POST', {revision:remote.revision ?? 0,save:{character:{name,color,appearance,background,dream,trait},game:snapshot}});
     if (generation !== authEpoch) return false;
+    const totals=result.data||{};if(Number.isFinite(+totals.money)){game.state.money=+totals.money;snapshot.money=+totals.money}if(Number.isFinite(+totals.xp)){game.state.xp=+totals.xp;snapshot.xp=+totals.xp}if(Number.isInteger(totals.rankClaimed)){game.state.rankClaimed=totals.rankClaimed;snapshot.rankClaimed=totals.rankClaimed}
     remote = {state:snapshot,revision:result.data?.revision ?? (remote.revision ?? 0)+1,updatedAt:new Date().toISOString()}; status('Saved to Hafrik.');
     if (manual) game.toast('Character saved to your Hafrik account.');
     if (JSON.stringify(game.state) !== JSON.stringify(snapshot)) scheduleSave();

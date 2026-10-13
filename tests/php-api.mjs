@@ -174,10 +174,11 @@ test('voice relay credentials require an account and fall back to STUN without a
  const r=await call(3,'ice.php');assert.equal(r.httpStatus,200);assert.equal(r.data.turn,false);assert.deepEqual(r.data.iceServers,[{urls:['stun:stun.cloudflare.com:3478']}]);
 });
 
-test('leaderboard ranks saved accounts by XP and reports the caller position',async()=>{
- // Earlier tests may have saved these accounts, so update on top of their current revision.
- for(const [id,xp] of [[10,900],[11,4200]]){const cur=(await call(id,'save.php')).data;const r=await call(id,'save.php','POST',{revision:cur.revision||0,save:{character:{name:'x'},game:{...game(),transferTotal:cur.save?.game?.transferTotal??0,xp}}});assert.equal(r.httpStatus,200,r.message)}
- const board=await call(10,'leaderboard.php');assert.equal(board.httpStatus,200);const order=board.data.players.map(p=>p.id);assert.ok(order.indexOf('11')<order.indexOf('10'));assert.ok(board.data.players.find(p=>p.id==='10').own);assert.ok(board.data.position>=2);
+test('leaderboard ranks server XP only and ignores client totals',async()=>{
+ for(const id of [10,11]){const cur=(await call(id,'save.php')).data;const before=cur.save?.game?.xp??0;const r=await call(id,'save.php','POST',{revision:cur.revision||0,save:{character:{name:'x'},game:{...game(),transferTotal:cur.save?.game?.transferTotal??0,sharedXP:cur.save?.game?.sharedXP??0,xp:before+50000}}});assert.equal(r.httpStatus,200,r.message);assert.equal((await call(id,'save.php')).data.save.game.xp,before)}
+ assert.equal((await call(1,'admin.php','POST',{action:'set_rank',user_id:11,rank:4,note:'Board'})).httpStatus,200);
+ assert.equal((await call(1,'admin.php','POST',{action:'set_rank',user_id:10,rank:1,note:'Board'})).httpStatus,200);
+ const board=await call(10,'leaderboard.php');assert.equal(board.httpStatus,200);const order=board.data.players.map(p=>p.id);assert.ok(order.indexOf('11')<order.indexOf('10'));assert.equal(board.data.players.find(p=>p.id==='11').xp,3500);assert.ok(board.data.players.find(p=>p.id==='10').own);assert.ok(board.data.position>=2);
  assert.equal((await call(null,'leaderboard.php')).httpStatus,401);
 });
 
@@ -210,10 +211,10 @@ test('admin events reward each player once, only at the venue, and end on reques
  await call(1,'admin.php','POST',{action:'end_event',id:Number(ev.id)});assert.ok(!(await call(12,'events.php?city=Shenyang')).data.events.some(e=>e.id===ev.id));
 });
 
-test('save caps XP and money growth by real time so edited saves cannot top the leaderboard',async()=>{
+test('save ignores client coin and XP totals',async()=>{
  const cur=(await call(11,'save.php')).data,before=cur.save.game;
  const r=await call(11,'save.php','POST',{revision:cur.revision,save:{character:{name:'x'},game:{...before,xp:before.xp+999999,money:before.money+99999999}}});assert.equal(r.httpStatus,200);
- const after=(await call(11,'save.php')).data.save.game;assert.ok(after.xp<=before.xp+400,'xp '+after.xp);assert.ok(after.money<=before.money+21000,'money '+after.money);assert.ok(after.xp>before.xp);
+ const after=(await call(11,'save.php')).data.save.game;assert.equal(after.xp,before.xp);assert.equal(after.money,before.money);assert.equal(r.data.money,before.money);assert.equal(r.data.xp,before.xp);
 });
 
 test('the weekly golden envelope pays only the first finder at its venue',async()=>{
@@ -355,10 +356,12 @@ test('admin browses saved players without search and ordinary accounts cannot ac
 test('partner title follows saved gender and server rejects incompatible romantic requests',async()=>{sql("USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (11,12)");for(const id of [11,12])await call(id,'presence.php','POST',presence());assert.equal((await call(11,'activities.php','POST',{action:'invite',kind:'boyfriend',peer:'12'})).httpStatus,409);sql("USE chinalife_test; UPDATE chinalife_saves SET game_state=JSON_SET(game_state,'$.gender','male') WHERE user_id=12");assert.equal((await call(11,'activities.php','POST',{action:'invite',kind:'date',peer:'12'})).httpStatus,409);sql("USE chinalife_test; UPDATE chinalife_saves SET game_state=JSON_SET(game_state,'$.gender','female') WHERE user_id=12");const r=await call(12,'activities.php','POST',{action:'invite',kind:'boyfriend',peer:'11'});assert.equal(r.httpStatus,200);await call(11,'activities.php','POST',{action:'decline',id:r.data.id})});
 test('hidden fortunes award server-configured money once and rich public profiles persist',async()=>{
  sql("USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id=11");assert.equal((await call(11,'fortune.php','POST',{id:'city-founder',reward:999999999})).httpStatus,409);
- sql("USE chinalife_test; UPDATE chinalife_saves SET updated_at=DATE_SUB(NOW(),INTERVAL 1 DAY) WHERE user_id=11");const current=await call(11,'save.php');const g=current.data.save.game;Object.assign(g,{money:8000,gender:'male',ownedHomes:['home-mansion','home-nanhu'],activeHome:'home-mansion',propertyPortfolio:{Shenyang:['apartment','penthouse']},properties:{Shenyang:'penthouse'},upgrades:['piano','safe'],visited:['campus','business','market','university','mall','station'],xp:8000,stats:{activities:120,shifts:25},skills:{...g.skills,Creativity:6,Digital:6,Social:6,Network:6},business:{level:3,orders:40,revenue:10000,lastOrder:1}});
+ sql("USE chinalife_test; UPDATE chinalife_saves SET updated_at=DATE_SUB(NOW(),INTERVAL 1 DAY) WHERE user_id=11");const current=await call(11,'save.php');const g=current.data.save.game;Object.assign(g,{gender:'male',ownedHomes:['home-mansion','home-nanhu'],activeHome:'home-mansion',propertyPortfolio:{Shenyang:['apartment','penthouse']},properties:{Shenyang:'penthouse'},upgrades:['piano','safe'],visited:['campus','business','market','university','mall','station'],stats:{activities:120,shifts:25},skills:{...g.skills,Creativity:6,Digital:6,Social:6,Network:6},business:{level:3,orders:40,revenue:10000,lastOrder:1}});
  assert.equal((await call(11,'save.php','POST',{revision:current.data.revision,save:{character:{},game:g}})).httpStatus,200);
+ assert.equal((await call(1,'admin.php','POST',{action:'set_rank',user_id:11,rank:6,note:'Fortune unlock'})).httpStatus,200);
+ const beforeClaims=(await call(11,'save.php')).data.save.game.money;
  const list=await call(11,'fortune.php');assert.ok(list.data.opportunities.every(o=>o.ready));for(const [id,reward] of [['creator-breakthrough',250000],['community-contract',1000000],['city-founder',2500000]]){const r=await call(11,'fortune.php','POST',{id,reward:1});assert.equal(r.httpStatus,200);assert.equal(r.data.reward,reward);assert.equal((await call(11,'fortune.php','POST',{id})).data.duplicate,true)}
- const loaded=await call(11,'save.php');assert.equal(loaded.data.save.game.money,3758000);assert.equal(loaded.data.save.game.activeHome,'home-mansion');assert.ok((await call(11,'fortune.php')).data.opportunities.every(o=>o.claimed));const profile=(await call(12,'profile.php?peer=11')).data.profile;assert.equal(profile.wealth,'💎 Millionaire');assert.equal(profile.netWorth,null,'other players never see net worth');assert.ok((await call(11,'profile.php')).data.profile.netWorth>1000000,'own net worth is visible');assert.equal(profile.homes.length,4);assert.deepEqual(profile.items,['piano','safe']);assert.equal(profile.game,undefined);assert.equal((await call(null,'profile.php?peer=11')).httpStatus,401);
+ const loaded=await call(11,'save.php');assert.equal(loaded.data.save.game.money,beforeClaims+3750000);assert.equal(loaded.data.save.game.activeHome,'home-mansion');assert.ok((await call(11,'fortune.php')).data.opportunities.every(o=>o.claimed));const profile=(await call(12,'profile.php?peer=11')).data.profile;assert.equal(profile.wealth,'💎 Millionaire');assert.equal(profile.netWorth,null,'other players never see net worth');assert.ok((await call(11,'profile.php')).data.profile.netWorth>1000000,'own net worth is visible');assert.equal(profile.homes.length,4);assert.deepEqual(profile.items,['piano','safe']);assert.equal(profile.game,undefined);assert.equal((await call(null,'profile.php?peer=11')).httpStatus,401);
  for(const id of ['home-campus','home-nanhu','home-hunnan','home-river','home-mansion'])assert.equal((await call(11,'presence.php','POST',presence('Shenyang',id))).httpStatus,200);
 });
 test('hafrik and horlaarsman have admin access alongside configured additional admins',async()=>{sql("USE chinalife_test; INSERT INTO users VALUES(13,'hafrik'),(14,'horlaarsman')");for(const id of [13,14]){assert.equal((await call(id,'admin.php','POST',{action:'stats'})).httpStatus,200);assert.equal((await call(id,'admin.php','POST',{action:'players'})).httpStatus,200)}assert.equal((await call(12,'admin.php','POST',{action:'stats'})).httpStatus,403)});
@@ -863,4 +866,99 @@ test('partner upload quotas reject storage exhaustion before adding photos or so
  sql("USE chinalife_test; UPDATE chinalife_songs SET bytes=524288000 WHERE user_id=12 LIMIT 1");
  const r=await fetch(base+'/api/v4/chinalife/partner.php?action=upload_song&title=Quota&duration=30',{method:'POST',headers:{Authorization:'Bearer test-12','content-type':'audio/mpeg'},body:Buffer.from('ID3testaudio')});
  assert.equal(r.status,409);assert.match((await r.json()).message,/storage limit/);
+});
+
+test('server economy records jobs, night missions and purchases and ignores client totals',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id=5; DELETE FROM chinalife_economy_actions WHERE user_id=5; DELETE FROM chinalife_balances WHERE user_id=5; DELETE FROM chinalife_saves WHERE user_id=5');
+ const created=await call(5,'save.php','POST',{revision:0,save:{character:{},game:{...game(),job:'cafe-job',promotion:1,place:'cafe',money:10000,xp:9000}}});
+ assert.equal(created.httpStatus,200,created.message);
+ assert.equal(created.data.money,3200,'a new character cannot invent a coin total');
+ assert.equal(created.data.xp,0);
+ assert.equal((await call(null,'economy.php')).httpStatus,401);
+ const empty=await call(5,'economy.php','POST',{action:'job',job:'cafe-job',style:'focus'});
+ assert.equal(empty.httpStatus,403,'a shift needs a live presence at work');
+ await call(5,'presence.php','POST',presence('Shenyang','cafe'));
+ const shift=await call(5,'economy.php','POST',{action:'job',job:'cafe-job',style:'focus'});
+ assert.equal(shift.httpStatus,200,shift.message);assert.equal(shift.data.awarded,184);assert.equal(shift.data.awardedXp,25);assert.equal(shift.data.money,3384);assert.equal(shift.data.xp,25);assert.equal(shift.data.duplicate,false);
+ const again=await call(5,'economy.php','POST',{action:'job',job:'cafe-job',style:'steady'});
+ assert.equal(again.httpStatus,200);assert.equal(again.data.duplicate,true);assert.equal(again.data.money,3384);
+ assert.equal((await call(5,'economy.php','POST',{action:'job',job:'teacher',style:'steady'})).httpStatus,409);
+ const saved=(await call(5,'save.php')).data;
+ assert.equal(saved.save.game.money,3384);assert.equal(saved.save.game.xp,25);
+ const inflated=await call(5,'save.php','POST',{revision:saved.revision,save:{character:{},game:{...saved.save.game,money:999999,xp:999999}}});
+ assert.equal(inflated.data.money,3384);assert.equal(inflated.data.xp,25);
+ await call(5,'presence.php','POST',presence('Shenyang','night'));
+ for(const key of ['entry','soft','vibe','dance']){const m=await call(5,'economy.php','POST',{action:'mission',key});assert.equal(m.httpStatus,200,m.message);assert.equal(m.data.bonus,false)}
+ const bonus=await call(5,'economy.php','POST',{action:'mission',key:'work'});
+ assert.equal(bonus.httpStatus,200,bonus.message);assert.equal(bonus.data.bonus,true);assert.equal(bonus.data.awarded,500);assert.equal(bonus.data.awardedXp,100);assert.equal(bonus.data.money,3884);assert.equal(bonus.data.xp,125);
+ assert.equal((await call(5,'economy.php','POST',{action:'mission',key:'work'})).data.duplicate,true);
+ const broke=await call(5,'economy.php','POST',{action:'purchase',sku:'club-owner:night',place:'night'});
+ assert.equal(broke.httpStatus,409);
+ const entry=await call(5,'economy.php','POST',{action:'purchase',sku:'club-entry',place:'night'});
+ assert.equal(entry.httpStatus,200,entry.message);assert.equal(entry.data.money,3824);assert.equal(entry.data.duplicate,false);
+ assert.equal((await call(5,'economy.php','POST',{action:'purchase',sku:'club-entry',place:'night'})).data.duplicate,true);
+ const totals=await call(5,'economy.php');assert.equal(totals.data.money,3824);assert.equal(totals.data.xp,125);
+ const board=await call(5,'leaderboard.php');assert.equal(board.data.players.find(p=>p.id==='5').xp,125);
+});
+
+test('Gist Night shows an anonymous handle, keeps the author for admins, and counts reactions and one poll vote',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (1,5,6)');
+ const posted=await call(5,'gist-night.php','POST',{action:'post',city:'Shenyang',body:'The square is glowing.',poll:{question:'Stay out?',options:['Yes','No']}});
+ assert.equal(posted.httpStatus,200,posted.message);assert.match(posted.data.handle,/^night-[0-9a-f]{6}$/);
+ const pub=await call(6,'gist-night.php?city=Shenyang');const post=pub.data.posts[0];
+ assert.equal(post.handle,posted.data.handle);assert.equal(post.user_id,undefined);assert.equal(post.body,'The square is glowing.');
+ const admin=await call(1,'gist-night.php?city=Shenyang');assert.equal(admin.data.posts[0].user_id,'5');assert.equal(admin.data.admin,true);
+ const react=await call(6,'gist-night.php','POST',{action:'react',city:'Shenyang',id:+post.id,kind:'fire'});
+ assert.equal(react.data.posts[0].reactions.fire,1);assert.equal(react.data.posts[0].mine,'fire');
+ const off=await call(6,'gist-night.php','POST',{action:'react',city:'Shenyang',id:+post.id,kind:'fire'});assert.equal(off.data.posts[0].reactions.fire,0);
+ const vote=await call(6,'gist-night.php','POST',{action:'vote',city:'Shenyang',poll:+post.poll.id,option:0});
+ assert.equal(vote.httpStatus,200,vote.message);assert.equal(vote.data.posts[0].poll.options[0].votes,1);assert.equal(vote.data.posts[0].poll.voted,0);
+ assert.equal((await call(6,'gist-night.php','POST',{action:'vote',city:'Shenyang',poll:+post.poll.id,option:1})).httpStatus,409);
+});
+
+test('City Hall records one vote per player per office per election and publishes results',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (5,6,7); DELETE FROM chinalife_election_votes; DELETE FROM chinalife_elections; DELETE FROM chinalife_politics_candidates WHERE candidate_id IN (5,6)');
+ assert.equal((await call(5,'politics.php','POST',{city:'Shenyang',office:'governor',statement:'Light the square.'})).httpStatus,200);
+ sql("USE chinalife_test; UPDATE chinalife_politics_candidates SET status='approved' WHERE candidate_id=5 AND office='governor'");
+ const before=await call(6,'elections.php?city=Shenyang');const gov=before.data.elections.find(e=>e.office==='governor');
+ assert.equal(gov.candidates[0].name,'user5');assert.equal(gov.candidates[0].votes,0);assert.equal(gov.open,false);
+ const cast=await call(6,'elections.php','POST',{city:'Shenyang',office:'governor',candidate:+gov.candidates[0].id});
+ assert.equal(cast.httpStatus,200,cast.message);assert.equal(cast.data.elections.find(e=>e.office==='governor').candidates[0].votes,1);assert.equal(cast.data.elections.find(e=>e.office==='governor').mine,gov.candidates[0].id);
+ assert.equal((await call(6,'elections.php','POST',{city:'Shenyang',office:'governor',candidate:+gov.candidates[0].id})).httpStatus,409);
+ assert.equal((await call(7,'elections.php','POST',{city:'Shenyang',office:'governor',candidate:+gov.candidates[0].id})).httpStatus,200);
+ sql('USE chinalife_test; UPDATE chinalife_elections SET ends_at=DATE_SUB(NOW(),INTERVAL 1 MINUTE)');
+ const closed=await call(6,'elections.php?city=Shenyang&results=1');const done=closed.data.elections.find(e=>e.office==='governor');
+ assert.equal(done.open,false);assert.equal(done.candidates[0].votes,2);assert.equal(closed.data.results,true);
+ const again=await call(6,'elections.php','POST',{city:'Shenyang',office:'governor',candidate:+gov.candidates[0].id});
+ assert.equal(again.httpStatus,200,again.message);assert.notEqual(again.data.election,done.id);
+});
+
+test('City Mystery accepts clue objects only in route order and only at the venue',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id=5; DELETE FROM chinalife_mystery_finds WHERE user_id=5');
+ assert.equal((await call(5,'mystery.php','POST',{city:'Shenyang',object:'plaza-lantern'})).httpStatus,403);
+ await call(5,'presence.php','POST',presence('Shenyang','plaza'));
+ assert.equal((await call(5,'mystery.php','POST',{city:'Shenyang',object:'park-bench'})).httpStatus,409);
+ const first=await call(5,'mystery.php','POST',{city:'Shenyang',object:'plaza-lantern'});
+ assert.equal(first.httpStatus,200,first.message);assert.equal(first.data.verified,true);assert.match(first.data.clue,/park bench/);assert.equal(first.data.next.object,'park-bench');assert.equal(first.data.next.place,'park');
+ await call(5,'presence.php','POST',presence('Shenyang','park'));
+ const second=await call(5,'mystery.php','POST',{city:'Shenyang',object:'park-bench'});
+ assert.equal(second.data.next.object,'night-poster');assert.equal(second.data.clues.length,2);
+ const route=await call(5,'mystery.php?city=Shenyang');assert.deepEqual(route.data.found,['plaza-lantern','park-bench']);assert.equal(route.data.next.place,'night');
+});
+
+test('Party Night runs a timed dance, takes one vote each and names the winner',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (5,6); DELETE FROM chinalife_party_votes; DELETE FROM chinalife_party_entries; DELETE FROM chinalife_party_rounds');
+ await call(5,'presence.php','POST',presence('Shenyang','night'));await call(6,'presence.php','POST',presence('Shenyang','night'));
+ const joined=await call(5,'party.php','POST',{action:'join',city:'Shenyang',place:'night'});
+ assert.equal(joined.httpStatus,200,joined.message);assert.equal(joined.data.round.phase,'dance');assert.equal(joined.data.round.joined,true);
+ assert.equal((await call(6,'party.php','POST',{action:'join',city:'Shenyang',place:'night'})).httpStatus,200);
+ assert.equal((await call(5,'party.php','POST',{action:'vote',city:'Shenyang',place:'night',dancer:6})).httpStatus,409);
+ sql('USE chinalife_test; UPDATE chinalife_party_rounds SET dance_ends=DATE_SUB(NOW(),INTERVAL 1 SECOND), vote_ends=DATE_ADD(NOW(),INTERVAL 2 MINUTE)');
+ assert.equal((await call(6,'party.php','POST',{action:'vote',city:'Shenyang',place:'night',dancer:6})).httpStatus,409);
+ const vote=await call(5,'party.php','POST',{action:'vote',city:'Shenyang',place:'night',dancer:6});
+ assert.equal(vote.httpStatus,200,vote.message);assert.equal(vote.data.round.entries.find(e=>e.id==='6').votes,1);assert.equal(vote.data.round.mine,'6');
+ assert.equal((await call(5,'party.php','POST',{action:'vote',city:'Shenyang',place:'night',dancer:6})).httpStatus,409);
+ sql('USE chinalife_test; UPDATE chinalife_party_rounds SET vote_ends=DATE_SUB(NOW(),INTERVAL 1 SECOND)');
+ const done=await call(6,'party.php?city=Shenyang&place=night');
+ assert.equal(done.data.round.phase,'closed');assert.equal(done.data.round.winner,'6');assert.match(done.data.round.title,/user6 · Dance Champion/);
 });
