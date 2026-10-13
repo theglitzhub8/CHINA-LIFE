@@ -514,3 +514,36 @@ dialog .activity-panel :is(.quest-card,.dream-card,.gist-card) { margin: 8px 0; 
 #politicsBody .politics-incumbent { display:grid; gap:8px; padding:16px; margin:14px 0; border-radius:16px; background:#0c3f44; color:#fff; overflow-wrap:anywhere; }
 #politicsBody .politics-incumbent small { color:#cde7df; }
 #politicsBody .politics-incumbent p { margin:0; color:#d6eee7; font-size:13px; }
+/* Gossip venue: no online/presence UI in this room */
+.gossip-venue #venueOnline,.gossip-venue #worldOnline,.gossip-venue #onlineCount,.gossip-venue .scene-label.player,.gossip-venue .world-people,.gossip-screen .online-list,.gossip-screen .player-row{display:none!important}
+/* Gossip Night room */
+#activityDialog.gossip-screen{background:#121212;color:#F7FFF7}
+.gossip-screen .activity-panel{background:radial-gradient(120% 70% at 85% 0%,#7a3b1f55,transparent 60%),radial-gradient(90% 60% at 0% 30%,#1F8E9333,transparent 65%),linear-gradient(180deg,#0C3F44 0%,#121212 70%);color:#F7FFF7;min-height:100%;padding-bottom:28px}
+.gossip-screen .activity-panel h2{color:#F7FFF7}.gossip-screen .activity-panel .lead{color:#cfe9e4}.gossip-screen .eyebrow{color:#f2b36d}
+.gossip-room{position:relative;display:grid;gap:12px;margin-top:6px}
+.gossip-drop{width:100%;padding:14px;border-radius:999px;border:0;font-size:16px;font-weight:700;background:linear-gradient(90deg,#f2b36d,#e07a5f);color:#121212;box-shadow:0 6px 20px #e07a5f40}
+.gossip-compose{display:grid;gap:8px;background:#F7FFF70f;border:1px solid #F7FFF726;border-radius:18px;padding:12px}
+.gossip-compose label{font-weight:700;color:#f2b36d}.gossip-compose textarea,.gossip-compose input{width:100%;box-sizing:border-box;border-radius:12px;border:1px solid #F7FFF733;background:#121212;color:#F7FFF7;padding:10px;font:inherit;font-size:15px}
+.gossip-compose small{justify-self:end;color:#9fbcb8;font-size:12px}.gossip-poll-add summary{cursor:pointer;color:#cfe9e4;font-size:14px;padding:4px 0}.gossip-poll-add[open]{display:grid;gap:6px}
+.gossip-compose-actions{display:grid;grid-template-columns:1fr 2fr;gap:8px}.gossip-compose-actions .primary-btn{background:#1F8E93;color:#F7FFF7}
+.gossip-status{margin:0;font-size:13px;color:#a6e0d5;min-height:0}
+.gossip-feed{display:grid;gap:14px}
+.gossip-card{position:relative;background:#F7FFF7;color:#121212;border-radius:20px 20px 20px 6px;padding:12px 14px 10px;box-shadow:0 8px 24px #00000055;margin-right:18px}
+.gossip-card.alt{border-radius:20px 20px 6px 20px;margin:0 0 0 18px;background:#e8f6f4}
+.gossip-card:after{content:"";position:absolute;bottom:-7px;left:14px;border:8px solid transparent;border-top-color:#F7FFF7;border-bottom:0}
+.gossip-card.alt:after{left:auto;right:14px;border-top-color:#e8f6f4}
+.gossip-card header{display:flex;align-items:center;gap:6px;font-size:12px}
+.gossip-tag{background:#0C3F44;color:#F7FFF7;border-radius:999px;padding:3px 9px;font-weight:700}
+.gossip-own{background:#f2b36d;border-radius:999px;padding:3px 8px;font-weight:700}
+.gossip-card time{margin-left:auto;color:#5f7471}
+.gossip-text{font-size:16px;line-height:1.45;margin:8px 0;white-space:pre-wrap;word-break:break-word}
+.gossip-reacts{display:flex;gap:6px}.gossip-reacts button{border:1px solid #0C3F4422;background:#fff;border-radius:999px;padding:5px 10px;font-size:14px;color:#121212}.gossip-reacts button.mine{background:#1F8E93;color:#F7FFF7;border-color:#1F8E93}
+.gossip-poll{display:grid;gap:6px;margin:6px 0 10px}.gossip-poll b{font-size:14px}.gossip-poll small{color:#5f7471;font-size:12px}
+.gossip-poll button{position:relative;overflow:hidden;display:flex;justify-content:space-between;text-align:left;border:1px solid #1F8E9355;background:#fff;border-radius:12px;padding:9px 11px;font-size:14px;color:#121212}
+.gossip-poll button .bar{position:absolute;inset:0 auto 0 0;background:#1F8E9333}.gossip-poll button .txt,.gossip-poll button .pct{position:relative}.gossip-poll button.chosen{border-color:#1F8E93;font-weight:700}.gossip-poll button:disabled{opacity:1}
+.gossip-admin{display:block;margin-top:6px;color:#b4442c;font-size:11px}
+.gossip-empty{text-align:center;display:grid;gap:8px;padding:22px 14px;border:1px dashed #F7FFF740;border-radius:20px;background:#F7FFF70a}
+.gossip-empty>span{font-size:40px}.gossip-empty b{font-size:17px}.gossip-empty p{margin:0;color:#cfe9e4;font-size:14px}
+.gossip-prompt{border:1px solid #1F8E93;background:#0C3F44;color:#F7FFF7;border-radius:14px;padding:10px 12px;font-size:14px;text-align:left}
+.gossip-loading{color:#cfe9e4;text-align:center}
+.gossip-room [hidden]{display:none!important}

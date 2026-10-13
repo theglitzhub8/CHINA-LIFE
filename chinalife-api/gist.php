@@ -17,4 +17,4 @@ $title=trim($title);$body=trim($body);$link=trim($link);
 if($title===''||mb_strlen($title)>100||$body===''||mb_strlen($body)>600)cl_fail('Add a title and message');
 if($link!==''&&!preg_match('#^https://[^\s<>"\x27]{3,290}$#',$link))cl_fail('Links must start with https://');
 cl_run('INSERT INTO chinalife_gist_posts(city,title,body,link,active,starts_at,ends_at,created_by,created_at) VALUES(?,?,?,?,0,NOW(),DATE_ADD(NOW(),INTERVAL 7 DAY),?,NOW())','ssssi',[$city,$title,$body,$link,$uid]);
-json_response('success',['submitted'=>true],'Your gist was sent for admin review.');
+json_response('success',['submitted'=>true],'Your gossip was sent for admin review.');

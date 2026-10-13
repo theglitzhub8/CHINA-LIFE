@@ -28,9 +28,10 @@ function gist_night_feed(string $city): array {
     }
     $out=[];
     foreach ($posts as $post) {
-        $item=['id'=>(string)$post['id'],'handle'=>gist_handle((int)$post['user_id'],$city),'body'=>$post['body'],'at'=>(int)$post['at'],'reactions'=>$reactions[$post['id']]??['like'=>0,'fire'=>0,'laugh'=>0],'mine'=>$mine[$post['id']]??null];
+        $item=['id'=>(string)$post['id'],'tag'=>'Anonymous tip','own'=>(int)$post['user_id']===(int)$uid,'body'=>$post['body'],'at'=>(int)$post['at'],'reactions'=>$reactions[$post['id']]??['like'=>0,'fire'=>0,'laugh'=>0],'mine'=>$mine[$post['id']]??null];
         foreach (['like','fire','laugh'] as $kind) $item['reactions'][$kind]=(int)($item['reactions'][$kind]??0);
-        if ($admin) $item['user_id']=(string)$post['user_id'];
+        // Players only ever see 'Anonymous tip'. Admins can still trace the author.
+        if ($admin) {$item['user_id']=(string)$post['user_id'];$item['handle']=gist_handle((int)$post['user_id'],$city);}
         if (isset($polls[$post['id']])) {
             $poll=$polls[$post['id']];$options=json_decode((string)$poll['options'],true)?:[];
             $item['poll']=['id'=>(string)$poll['id'],'question'=>$poll['question'],'voted'=>array_key_exists($poll['id'],$voted)?$voted[$poll['id']]:null,'options'=>[]];
@@ -53,7 +54,7 @@ if (!in_array($city,cl_open_cities(),true)) cl_fail('Choose an active city');
 if ($action==='post') {
     cl_rate('gist_night',6,3600);
     $body=trim((string)($input['body']??''));
-    if ($body===''||mb_strlen($body)>280) cl_fail('Write a short gist');
+    if ($body===''||mb_strlen($body)>280) cl_fail('Write a short gossip');
     $poll=$input['poll']??null;$clean=null;$question='';
     if ($poll!==null) {
         if (!is_array($poll)) cl_fail('Check the poll');
@@ -65,14 +66,14 @@ if ($action==='post') {
     cl_run('INSERT INTO chinalife_gist_night(user_id,city,body,created_at) VALUES(?,?,?,NOW())','iss',[$uid,$city,$body]);
     $id=(int)cl_one('SELECT LAST_INSERT_ID() id')['id'];
     if ($clean) cl_run('INSERT INTO chinalife_gist_night_polls(post_id,question,options) VALUES(?,?,?)','iss',[$id,$question,json_encode($clean,JSON_UNESCAPED_UNICODE)]);
-    json_response('success',['id'=>(string)$id,'handle'=>gist_handle($uid,$city),'posts'=>gist_night_feed($city)],'Posted to Gist Night.');
+    json_response('success',['id'=>(string)$id,'posts'=>gist_night_feed($city)],'Posted to Gossip Night.');
 }
 if ($action==='react') {
     cl_rate('gist_night_tap',30,60);
     $id=(int)($input['id']??0);$kind=(string)($input['kind']??'');
     if (!in_array($kind,['like','fire','laugh'],true) || !$id) cl_fail('Choose a reaction');
     $post=cl_one('SELECT id,city FROM chinalife_gist_night WHERE id=?','i',[$id]);
-    if (!$post||$post['city']!==$city) cl_fail('That gist is gone',404);
+    if (!$post||$post['city']!==$city) cl_fail('That gossip is gone',404);
     $have=cl_one('SELECT kind FROM chinalife_gist_night_reactions WHERE post_id=? AND user_id=?','ii',[$id,$uid]);
     if ($have&&$have['kind']===$kind) cl_run('DELETE FROM chinalife_gist_night_reactions WHERE post_id=? AND user_id=?','ii',[$id,$uid]);
     elseif ($have) cl_run('UPDATE chinalife_gist_night_reactions SET kind=?,created_at=NOW() WHERE post_id=? AND user_id=?','sii',[$kind,$id,$uid]);
@@ -91,4 +92,4 @@ if ($action==='vote') {
     cl_run('INSERT INTO chinalife_gist_night_votes(poll_id,user_id,option_index,created_at) VALUES(?,?,?,NOW())','iii',[$poll,$uid,$option]);
     json_response('success',['posts'=>gist_night_feed($city)],'Vote recorded.');
 }
-cl_fail('Choose a gist action');
+cl_fail('Choose a gossip action');
