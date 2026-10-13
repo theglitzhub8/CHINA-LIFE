@@ -42,10 +42,12 @@ function hedge(p,x,z,w,d){box(p,w,.9,d,solid(0x3c7a4a),x,.45,z)}
 function topiary(p,x,z){cyl(p,.3,.25,.5,solid(0xd9cbb0),x,.25,z,10);const c=new THREE.Mesh(new THREE.ConeGeometry(.45,1.4,8),solid(0x3c7a4a));c.position.set(x,1.2,z);c.castShadow=true;p.add(c)}
 function fountain(p,x,z){return g3(p,x,z,0,it=>{cyl(it,1.6,1.7,.45,solid(0xe6dccb),0,.23,0,24);const w=cyl(it,1.4,1.4,.06,mat('pool',()=>new THREE.MeshStandardMaterial({color:0x48b7d6,emissive:0x1f7fa3,emissiveIntensity:.35,roughness:.1})),0,.45,0,24);w.castShadow=false;cyl(it,.25,.35,1.2,solid(0xe6dccb),0,.9,0,10);cyl(it,.7,.6,.15,solid(0xe6dccb),0,1.5,0,16);cyl(it,.12,.15,.6,solid(0xe6dccb),0,1.85,0,8)})}
 // Wall with a window opening drawn as frame + glass; walls are thin boxes along the back (-z) and left (-x).
-function walls(p,W,D,h,color,trim=0xd9d0bf,gold=false){box(p,W,h,.2,solid(color),0,h/2,-D/2);box(p,.2,h,D,solid(color),-W/2,h/2,0);box(p,W,.25,.24,solid(trim),0,.13,-D/2+.04);box(p,.24,.25,D,solid(trim),-W/2+.04,.13,0);if(gold){box(p,W,.18,.26,solid(0xc9a24a,.3,.6),0,h-.1,-D/2+.04);box(p,.26,.18,D,solid(0xc9a24a,.3,.6),-W/2+.04,h-.1,0)}}
+function walls(p,W,D,h,color,trim=0xd9d0bf,gold=false){tagNew(p,'homeWall',()=>{box(p,W,h,.2,solid(color),0,h/2,-D/2);box(p,.2,h,D,solid(color),-W/2,h/2,0)});box(p,W,.25,.24,solid(trim),0,.13,-D/2+.04);box(p,.24,.25,D,solid(trim),-W/2+.04,.13,0);if(gold){box(p,W,.18,.26,solid(0xc9a24a,.3,.6),0,h-.1,-D/2+.04);box(p,.26,.18,D,solid(0xc9a24a,.3,.6),-W/2+.04,h-.1,0)}}
 function windowPane(p,x,y,z,ry,w,h,gold=false){return g3(p,x,z,ry,it=>{box(it,w+.2,h+.2,.06,solid(gold?0xc9a24a:0xf4f4f2,.3,gold?.6:0),0,y,0);box(it,w,h,.04,mat('winglass',()=>new THREE.MeshStandardMaterial({color:0xbfe1ef,emissive:0x6fa8c8,emissiveIntensity:.35,roughness:.1})),0,y,.03);box(it,.05,h,.06,solid(gold?0xc9a24a:0xf4f4f2),0,y,.05)})}
 function bathroom(p,x0,z0,w,d,h,frosted=true){const glass=frosted?mat('frost',()=>new THREE.MeshStandardMaterial({color:0xe6f0f2,transparent:true,opacity:.55,roughness:.3})):solid(0xe9e4da);box(p,.12,h,d,glass,x0,h/2,z0+d/2);box(p,w,h,.12,glass,x0+w/2,h/2,z0+d);slabFloor(p,w,d,'marble',x0+w/2,z0+d/2,.13)}
-function slabFloor(p,w,d,style,x,z,y=.11,tile=2.4){slab(p,w,d,style,x,y,z,.04,tile)}
+// v8: floor and wall meshes are tagged so a chosen floor/wallpaper can be painted over them.
+const tagNew=(p,tag,fn)=>{const n=p.children.length;fn();for(let i=n;i<p.children.length;i++)p.children[i].traverse(o=>{if(o.isMesh)o.userData[tag]=true})};
+function slabFloor(p,w,d,style,x,z,y=.11,tile=2.4){tagNew(p,'homeFloor',()=>slab(p,w,d,style,x,y,z,.04,tile))}
 function fixture(p,id,x,z,colors,finish){const a=furnitureModel(id,colors[id]||finish);a.position.set(x,0,z);a.userData.homeFixture=id;p.add(a);if(REG&&!REG[id])REG[id]=a;return a}
 const C=(colors,id,fallback)=>hex(colors[id]||fallback);
 

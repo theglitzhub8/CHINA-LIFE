@@ -12,6 +12,10 @@ $jobs=[
     'coach'=>['place'=>'gym','base'=>300,'xp'=>25],
     'delivery'=>['place'=>'market','base'=>220,'xp'=>25],
     'translator'=>['place'=>'business','base'=>600,'xp'=>25],
+    'roach-farmer'=>['place'=>'roachfarm','base'=>280,'xp'=>25],
+    'roach-manager'=>['place'=>'roachfarm','base'=>480,'xp'=>25],
+    'jianbing'=>['place'=>'market','base'=>240,'xp'=>25],
+    'square-dance'=>['place'=>'park','base'=>210,'xp'=>25],
 ];
 $clubs=['night','youle','ex','rex','orangutan','taxi-club','best-one','cats-eye','silver-knight','blood','skylight','kama','partypier','hooleys','suns'];
 $missions=['entry','soft','vibe','dance','work'];
