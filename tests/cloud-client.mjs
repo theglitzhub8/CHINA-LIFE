@@ -11,7 +11,7 @@ async function setup(options={}){
    const body=JSON.parse(request.body);money=body.save.game.money;revision++;return Response.json({status:'success',data:{revision}});
   }
   if(url.pathname.endsWith('presence.php')){
-   if(request.method==='GET'&&options.defer){options.defer=false;return new Promise(resolve=>pending=()=>resolve(Response.json({status:'success',data:{players:[{id:'2',city:'Shenyang',place:'home',name:'Other'}]}})))}
+   if(request.method!=='DELETE'&&options.defer){options.defer=false;return new Promise(resolve=>pending=()=>resolve(Response.json({status:'success',data:{players:[{id:'2',city:'Shenyang',place:'home',name:'Other'}]}})))}
    return Response.json({status:'success',data:{players:[]}});
   }
  };

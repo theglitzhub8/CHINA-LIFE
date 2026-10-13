@@ -237,7 +237,7 @@ dialog{border-radius:22px}
 /* ---- Clean map: the map gets the screen. Controls appear only when needed. ---- */
 /* Zoom and rotate buttons are gone (pinch and drag replace them); the whole-city button lives in the panel. */
 #worldZoomIn,#worldZoomOut,#worldRotate,#worldFit{display:none!important}
-.map-view #worldEmote{display:none}
+.map-view:not(.tp-walking) #worldEmote{display:none}
 .scene-tools #mapLabelMode{width:38px;min-width:0;padding:0;border-radius:50%;font-size:17px}
 /* City tabs moved into the panel list; filters and search open from the 🔍 button. */
 .map-cities{display:none!important}
@@ -595,3 +595,7 @@ dialog{border-radius:22px}
 .activity-panel:has(.shop-grid) #shopHomes,.activity-panel:has(.shop-grid) #shopArrange{display:inline-flex;width:calc(50% - 5px);box-sizing:border-box;vertical-align:top;min-height:48px;margin:4px 2px;padding:10px;font-size:12px}.activity-panel:has(.shop-grid) #shopHomes span,.activity-panel:has(.shop-grid) #shopArrange span{display:none}@media(max-width:600px){.activity-panel:has(.shop-grid) #productPreview{min-height:150px}.activity-panel:has(.shop-grid) .shop-preview canvas{max-height:150px}.activity-panel:has(.shop-grid) .shop-product{margin:10px 0}}
 
 .furniture-placement{position:absolute;z-index:15;left:50%;top:125px;transform:translateX(-50%);width:min(440px,calc(100% - 32px));box-sizing:border-box;display:flex;align-items:center;gap:8px;background:#fff8e8f5;color:#294745;box-shadow:0 6px 24px #0002;border-radius:16px;padding:12px;font-size:12px}.furniture-placement span{flex:1}.furniture-placement button{background:#28564f;color:white;padding:10px;border-radius:10px;font-size:12px;min-height:40px}
+/* Emote bubble over an avatar (yours or another walker's) */
+.scene-label.emote-bubble{font-size:26px;line-height:1;padding:2px 4px;background:rgba(247,255,247,.92);border:2px solid #1F8E93;border-radius:999px;box-shadow:0 4px 12px rgba(12,63,68,.25);animation:emotePop .35s ease-out}
+@keyframes emotePop{from{scale:.4;opacity:0}to{scale:1;opacity:1}}
+@media (prefers-reduced-motion:reduce){.scene-label.emote-bubble{animation:none}}

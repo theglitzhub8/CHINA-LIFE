@@ -18,7 +18,9 @@ function server() {
       if (failPresence) return Response.json({message:'Unavailable'}, {status:503});
       if (request.method === 'POST') players.set(id,{id,...JSON.parse(request.body)});
       if (request.method === 'DELETE') players.delete(id);
-      return Response.json({status:'success',data:{id,players:[...players.values()].filter(p=>p.city === url.searchParams.get('city'))}});
+      // Like presence.php, a POST reads the city from its body and answers with the same list as GET.
+      const city=request.method==='POST'?JSON.parse(request.body).city:url.searchParams.get('city');
+      return Response.json({status:'success',data:{id,players:[...players.values()].filter(p=>p.city === city)}});
     }
     throw Error('Unexpected API: '+url.pathname);
   }};

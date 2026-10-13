@@ -52,6 +52,17 @@ test('street presence shares walkers in the same city, clears when not walking a
  sql("USE chinalife_test; UPDATE chinalife_presence SET street_at=DATE_SUB(NOW(),INTERVAL 31 SECOND) WHERE user_id=1");r=await call(2,'presence.php?city=Shenyang');assert.equal(r.data.players.find(p=>p.id==='1')?.street,undefined);
  await call(1,'presence.php','POST',{...presence(),street:{x:1,z:1,h:0}});await call(1,'presence.php','POST',presence());r=await call(2,'presence.php?city=Shenyang');assert.equal(r.data.players.find(p=>p.id==='1')?.street,undefined);
 });
+test('light street refresh returns only fresh walkers with their emote, and the full POST still lists everyone',async()=>{
+ await call(3,'presence.php','POST',{...presence(),street:{x:4,z:5,h:0,e:'wave'}});await call(4,'presence.php','POST',presence());
+ let r=await call(5,'presence.php','POST',{...presence(),street:{x:1,z:1,h:0},lite:1});assert.equal(r.httpStatus,200);assert.equal(r.data.lite,true);assert.equal(r.data.players,undefined);
+ const w=r.data.walkers.find(p=>p.id==='3');assert.deepEqual(w.street,{x:4,z:5,h:0,e:'wave'});assert.equal(r.data.walkers.some(p=>p.id==='4'),false);assert.equal(r.data.walkers.some(p=>p.id==='5'),false);
+ r=await call(5,'presence.php','POST',{...presence(),street:{x:1,z:1,h:0}});assert.equal(r.data.lite,undefined);assert.ok(r.data.players.some(p=>p.id==='4'));assert.equal(r.data.players.find(p=>p.id==='3').street.e,'wave');
+ r=await call(5,'presence.php','POST',{...presence(),lite:1});assert.equal(r.data.lite,undefined);assert.ok(Array.isArray(r.data.players));
+ await call(3,'presence.php','POST',{...presence(),street:{x:4,z:5,h:0,e:'<b>'}});r=await call(5,'presence.php','POST',{...presence(),street:{x:1,z:1,h:0},lite:1});assert.equal(r.data.walkers.find(p=>p.id==='3').street.e,undefined);
+ assert.ok(sql("USE chinalife_test; SHOW INDEX FROM chinalife_presence WHERE Key_name='street_city_at'").includes('street_at'));
+ for(const id of [3,4,5])await call(id,'presence.php','DELETE');
+});
+test('new venues are valid rooms',async()=>{for(const place of ['football','gamecenter','court'])assert.equal((await call(6,'presence.php','POST',presence('Shenyang',place))).httpStatus,200);await call(6,'presence.php','DELETE')});
 test('presence preserves appearance, excludes self, separates cities and expires stale players',async()=>{
  for(const id of [1,2])assert.equal((await call(id,'presence.php','POST',presence())).httpStatus,200);
  let r=await call(1,'presence.php?city=Shenyang');assert.equal(r.data.players[0].id,'2');assert.equal(r.data.players[0].skin,'#8b5c43');assert.equal(r.data.players[0].hair,'cap');assert.equal(typeof r.data.players[0].x,'number');assert.equal(typeof r.data.players[0].xp,'number');

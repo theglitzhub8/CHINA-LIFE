@@ -198,7 +198,7 @@ function updateFeed(city){const now=Date.now(),current=new Map(players.filter(p=
 // What you are doing, shared with players in your city (People shows "💃 Dancing at 007 Club").
 const ACTIVITY={basketball:'sport',exercise:'sport',browse:'shop',cook:'cook',dance:'dance',eat:'eat',perform:'music',phone:'chat',talk:'chat',pray:'pray',serve:'work',type:'work',sit:'relax',sleep:'sleep',study:'study',medical:'health'};
 function activityNow(){const w=window.ChinaLifeWorld;if(w?.travelMode)return 'travel';const k=w?.actionKind;if(k&&ACTIVITY[k])return ACTIVITY[k];return w?.walking?'walk':'idle'}
-let presenceAttempt=0,presenceRoom='';
+let presenceAttempt=0,presenceRoom='',presenceFull={room:'',at:0};
 async function refreshPresence(background=false) {
   if (!account || !presence || !game.state.created || document.hidden || polling) return false;
   const generation = epoch, state = game.state, city = state.city, place = state.place, world = window.ChinaLifeWorld, position = world?.roomPosition ?? (world?.view==='venue'?world.position:null);
@@ -207,12 +207,17 @@ async function refreshPresence(background=false) {
   presenceRoom=room;presenceAttempt=Date.now();
   polling = true;
   try {
-    const posted = await api('/chinalife/presence.php', 'POST', {city,place,name:state.name,color:state.color,skin:state.appearance?.skin || '#8b5c43',hair:state.appearance?.hair || 'cropped',x:position?.x || 0,z:position?.z || 0,activity:activityNow(),...(street?{street}:{})});
-    // While walking the streets the POST answer already lists the city's players, so the separate GET is skipped.
-    const result = street ? posted : await api('/chinalife/presence.php', 'GET', {city});
+    // Light refresh while walking: once a full list for this room is under 10 s old, only street positions are asked for.
+    const lite=!!street&&room===presenceFull.room&&Date.now()-presenceFull.at<10000;
+    // The POST answer carries the same player list as GET presence.php, so one request per heartbeat is enough for everyone.
+    const result = await api('/chinalife/presence.php', 'POST', {city,place,name:state.name,color:state.color,skin:state.appearance?.skin || '#8b5c43',hair:state.appearance?.hair || 'cropped',x:position?.x || 0,z:position?.z || 0,activity:activityNow(),...(street?{street,...(lite?{lite:1}:{})}:{})});
     if (generation !== epoch || !presence || game.state.city !== city || game.state.place !== place) return false;
     const data = result.data || result, ownId = data.id ?? account.user_id ?? account.id;
     presenceCheck={lastSuccess:new Date().toISOString(),error:null,serverId:String(ownId)};
+    if(data.lite){const byId=new Map((data.walkers||[]).filter(w=>String(w.id)!==String(ownId)).map(w=>[String(w.id),w]));
+     players=players.map(p=>{const w=byId.get(p.id);byId.delete(p.id);if(w)return {...p,street:w.street};const {street:_,...rest}=p;return rest});
+     for(const w of byId.values())players.push({...w,id:String(w.id),city:w.city||city,x:0,z:0});publish();return true}
+    presenceFull={room,at:Date.now()};
     players = (data.players || []).filter(p => !p.own && String(p.user_id ?? p.id) !== String(ownId)).map(p => ({...p,id:String(p.id),city:p.city || city,name:p.name || p.sim_name,x:Number(p.x) || 0,z:Number(p.z) || 0})); updateFeed(city); publish();
     // Quick phrases: pass on each one once.
     const fresh=(data.gestures||[]).filter(g=>!seenGestures.has(String(g.id))).reverse();fresh.forEach(g=>seenGestures.add(String(g.id)));if(seenGestures.size>300)seenGestures.clear(),(data.gestures||[]).forEach(g=>seenGestures.add(String(g.id)));if(fresh.length)window.dispatchEvent(new CustomEvent('chinalife:gestures',{detail:{me:String(ownId),gestures:fresh}}));
