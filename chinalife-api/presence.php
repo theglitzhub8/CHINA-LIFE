@@ -7,7 +7,9 @@ if ($method === 'DELETE') {
     cl_run('DELETE FROM chinalife_voice_members WHERE user_id=?','i',[$uid]);
     json_response('success',['left'=>true]);
 }
-$input = $method === 'POST' ? cl_body() : $_GET;
+$input = $method === 'POST' ? cl_body() : $_GET;$sx=null;
+// Waves and quick phrases between players walking the same city's streets (stored with place 'street'), last 30 s.
+function cl_street_gestures(string $city,int $uid): array {$g=cl_optional_rows('SELECT g.id,g.sender_id sender,g.target_id target,g.phrase FROM chinalife_gestures g WHERE g.city=? AND g.place="street" AND g.created_at>=DATE_SUB(NOW(),INTERVAL 30 SECOND) AND NOT EXISTS(SELECT 1 FROM chinalife_blocks b WHERE (b.owner_id=? AND b.peer_id=g.sender_id) OR (b.owner_id=g.sender_id AND b.peer_id=?)) ORDER BY g.id DESC LIMIT 20','sii',[$city,$uid,$uid]);foreach($g as &$r){$r['id']=(string)$r['id'];$r['sender']=(string)$r['sender'];$r['target']=$r['target']===null?null:(string)$r['target'];$r['street']=true;}unset($r);return $g;}
 if ($method === 'POST') {
     [$city,$place] = cl_scoped_room($input); cl_rate('presence',30,10);
     // The in-game name is always the player's Hafrik username.
@@ -32,8 +34,8 @@ if ($method === 'POST') {
 if($method==='POST'&&$sx!==null&&!empty($input['lite'])&&!cl_private_place($place)){
  try{$walkers=cl_rows("SELECT p.user_id id,p.name,p.city,p.place,p.color,p.skin,p.hair,p.street_x sx,p.street_z sz,p.street_h sh,p.street_e se FROM chinalife_presence p WHERE p.city=? AND p.street_at>=DATE_SUB(NOW(),INTERVAL 30 SECOND) AND p.user_id<>? AND NOT EXISTS(SELECT 1 FROM chinalife_blocks b WHERE (b.owner_id=? AND b.peer_id=p.user_id) OR (b.owner_id=p.user_id AND b.peer_id=?)) ORDER BY p.street_at DESC LIMIT 60",'siii',[$city,$uid,$uid,$uid]);}
  catch(mysqli_sql_exception $e){if($e->getCode()!==1054)throw $e;$walkers=null;}
- if($walkers!==null){foreach($walkers as &$w){$w['id']=(string)$w['id'];$w['street']=['x'=>round((float)$w['sx'],2),'z'=>round((float)$w['sz'],2),'h'=>round((float)($w['sh']??0),2)];if($w['se'])$w['street']['e']=$w['se'];unset($w['sx'],$w['sz'],$w['sh'],$w['se']);}unset($w);
-  json_response('success',['id'=>(string)$uid,'lite'=>true,'walkers'=>$walkers]);}
+ if($walkers!==null){foreach($walkers as &$w){$w['id']=(string)$w['id'];$w['street']=['x'=>round((float)$w['sx'],2),'z'=>round((float)$w['sz'],2),'h'=>round((float)($w['sh']??0),2)];if($w['se'])$w['street']['e']=$w['se'];unset($w['sx'],$w['sz'],$w['sh'],$w['se']);if(cl_private_place((string)$w['place']))$w['place']='private-home';}unset($w);
+  json_response('success',['id'=>(string)$uid,'lite'=>true,'walkers'=>$walkers,'gestures'=>cl_street_gestures($city,$uid)]);}
 }
 $city = $input['city'] ?? '';
 if (!in_array($city,['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'],true)) cl_fail('Choose a valid city');
@@ -58,4 +60,5 @@ foreach ($rows as &$row) {$vipDay=(int)($row['vip_day']??1);$vipPass=json_decode
 // Quick phrases sent in this room during the last few seconds (blocked players are left out).
 $gestures=$roomPlace===''?[]:cl_rows('SELECT g.id,g.sender_id sender,g.target_id target,g.phrase FROM chinalife_gestures g WHERE g.city=? AND g.place=? AND g.created_at>=DATE_SUB(NOW(),INTERVAL 30 SECOND) AND NOT EXISTS(SELECT 1 FROM chinalife_blocks b WHERE (b.owner_id=? AND b.peer_id=g.sender_id) OR (b.owner_id=g.sender_id AND b.peer_id=?)) ORDER BY g.id DESC LIMIT 30','ssii',[$city,$roomPlace,$uid,$uid]);
 foreach($gestures as &$g){$g['id']=(string)$g['id'];$g['sender']=(string)$g['sender'];$g['target']=$g['target']===null?null:(string)$g['target'];}unset($g);
+if($method==='POST'&&$sx!==null)$gestures=array_merge($gestures,cl_street_gestures($city,$uid));
 json_response('success',['id'=>(string)$uid,'players'=>$rows,'gestures'=>$gestures]);

@@ -198,6 +198,7 @@ function updateFeed(city){const now=Date.now(),current=new Map(players.filter(p=
 // What you are doing, shared with players in your city (People shows "💃 Dancing at 007 Club").
 const ACTIVITY={basketball:'sport',exercise:'sport',browse:'shop',cook:'cook',dance:'dance',eat:'eat',perform:'music',phone:'chat',talk:'chat',pray:'pray',serve:'work',type:'work',sit:'relax',sleep:'sleep',study:'study',medical:'health'};
 function activityNow(){const w=window.ChinaLifeWorld;if(w?.travelMode)return 'travel';const k=w?.actionKind;if(k&&ACTIVITY[k])return ACTIVITY[k];return w?.walking?'walk':'idle'}
+function passGestures(list,ownId){const fresh=(list||[]).filter(g=>!seenGestures.has(String(g.id))).reverse();fresh.forEach(g=>seenGestures.add(String(g.id)));if(seenGestures.size>300)seenGestures.clear(),(list||[]).forEach(g=>seenGestures.add(String(g.id)));if(fresh.length)window.dispatchEvent(new CustomEvent('chinalife:gestures',{detail:{me:String(ownId),gestures:fresh}}))}
 let presenceAttempt=0,presenceRoom='',presenceFull={room:'',at:0};
 async function refreshPresence(background=false) {
   if (!account || !presence || !game.state.created || document.hidden || polling) return false;
@@ -216,11 +217,11 @@ async function refreshPresence(background=false) {
     presenceCheck={lastSuccess:new Date().toISOString(),error:null,serverId:String(ownId)};
     if(data.lite){const byId=new Map((data.walkers||[]).filter(w=>String(w.id)!==String(ownId)).map(w=>[String(w.id),w]));
      players=players.map(p=>{const w=byId.get(p.id);byId.delete(p.id);if(w)return {...p,street:w.street};const {street:_,...rest}=p;return rest});
-     for(const w of byId.values())players.push({...w,id:String(w.id),city:w.city||city,x:0,z:0});publish();return true}
+     for(const w of byId.values())players.push({...w,id:String(w.id),city:w.city||city,x:0,z:0});publish();passGestures(data.gestures,ownId);return true}
     presenceFull={room,at:Date.now()};
     players = (data.players || []).filter(p => !p.own && String(p.user_id ?? p.id) !== String(ownId)).map(p => ({...p,id:String(p.id),city:p.city || city,name:p.name || p.sim_name,x:Number(p.x) || 0,z:Number(p.z) || 0})); updateFeed(city); publish();
     // Quick phrases: pass on each one once.
-    const fresh=(data.gestures||[]).filter(g=>!seenGestures.has(String(g.id))).reverse();fresh.forEach(g=>seenGestures.add(String(g.id)));if(seenGestures.size>300)seenGestures.clear(),(data.gestures||[]).forEach(g=>seenGestures.add(String(g.id)));if(fresh.length)window.dispatchEvent(new CustomEvent('chinalife:gestures',{detail:{me:String(ownId),gestures:fresh}}));
+    passGestures(data.gestures,ownId);
     return true;
   } catch (error) {if(generation===epoch){presenceCheck.error=error.message;status('Shared city: ' + error.message)} return false} finally {polling = false}
 }
