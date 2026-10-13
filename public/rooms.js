@@ -9,9 +9,9 @@ export function dressRoom(c,id){
  if(kind==='gist'){
   // Newsroom: on-air screen with rolling headlines, a pinboard of clues, a tea table and a studio mic.
   const heads=['Who left 007 with two phones?','Landlord raises rent, tenants raise eyebrows','Mystery chef spotted at the market','Campus crush confesses on the radio','Big Laoban buys third scooter'];let k=0;
-  const tv=panel(3.4,1.9,(x,w,h)=>{x.fillStyle='#14121f';x.fillRect(0,0,w,h);x.fillStyle='#e0263b';x.fillRect(0,0,w,64);text(x,'● ON AIR · GOSSIP TV',30,44);text(x,'BREAKING',26,120,{color:'#ffcf5a'});const words=heads[k%heads.length].split(' ');let line='',y=170;for(const wd of words){if((line+wd).length>22){text(x,line,34,y);y+=44;line=''}line+=wd+' '}text(x,line,34,y);x.fillStyle='#e0263b';x.fillRect(0,h-40,w,40);text(x,'Tip us anonymously at the Gossip desk',18,h-14)},1.4,2.3,BACK,0,true);
+  const tv=panel(3.4,1.9,(x,w,h)=>{x.fillStyle='#14121f';x.fillRect(0,0,w,h);x.fillStyle='#e0263b';x.fillRect(0,0,w,64);text(x,'● ON AIR · GOSSIP TV',30,44);text(x,'BREAKING',26,120,{color:'#ffcf5a'});const words=heads[k%heads.length].split(' ');let line='',y=170;for(const wd of words){if((line+wd).length>22){text(x,line,34,y);y+=44;line=''}line+=wd+' '}text(x,line,34,y);x.fillStyle='#e0263b';x.fillRect(0,h-40,w,40);text(x,'Tip us anonymously at the Gossip desk',18,h-14)},-1.6,2.3,BACK,0,true);
   timers.push(setInterval(()=>{k++;tv.userData.paint()},7000));
-  box(3.6,2.1,.06,0x241b2e,1.4,2.3,BACK-.04);
+  box(3.6,2.1,.06,0x241b2e,-1.6,2.3,BACK-.04);
   box(.06,1.6,2.4,0x8a6a45,LEFT+.05,1.7,1.4);for(let i=0;i<6;i++)box(.02,.42,.34,[0xfff4c2,0xffffff,0xbfe3ff][i%3],LEFT+.1,1.3+(i%2)*.6,.6+Math.floor(i/2)*.8);
   for(let i=0;i<3;i++){const s=box(.01,.012,.9,0xd22b2b,LEFT+.12,1.55+i*.15,.9+i*.5);s.rotation.x=.4-i*.4}
   box(2.2,.45,.8,0x7a3b62,-3.8,.25,-3.4);box(2.2,.5,.15,0x7a3b62,-3.8,.6,-3.75);cylinder(.45,.42,0xd9b24a,-3.8,.22,-2.4);
@@ -44,7 +44,7 @@ export function dressRoom(c,id){
  if(kind==='airport'){
   // Terminal: departures board, check-in desks, a luggage belt, gate seats and a big window with a plane.
   const cities=['Beijing','Shanghai','Guangzhou','Shenzhen','Chengdu','Harbin','Lagos','Accra','Nairobi','Dubai'];let off=0;
-  const board=panel(3.6,1.6,(x,w,h)=>{x.fillStyle='#0b0f14';x.fillRect(0,0,w,h);text(x,'DEPARTURES · 出发',24,36,{color:'#ffd34d'});const now=new Date();for(let i=0;i<6;i++){const cty=cities[(i+off)%cities.length],t=new Date(now.getTime()+(i+1)*25*60000),st=i===0?'BOARDING':i===1?'GATE OPEN':'ON TIME';text(x,String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0'),18,72+i*32,{color:'#e8f3ee',weight:600});text(x,'CL'+(100+((i+off)*37)%900)+'  '+cty,18,72+i*32,{color:'#e8f3ee',weight:700,x:110});text(x,st,18,72+i*32,{color:i===0?'#38f59a':'#ffd34d',weight:800,align:'right',x:w-20})}},-2.4,2.6,BACK,0,true);
+  const board=panel(3.6,1.6,(x,w,h)=>{x.fillStyle='#0b0f14';x.fillRect(0,0,w,h);text(x,'DEPARTURES · 出发',24,36,{color:'#ffd34d'});const now=new Date();for(let i=0;i<6;i++){const cty=cities[(i+off)%cities.length],t=new Date(now.getTime()+(i+1)*25*60000),st=i===0?'BOARDING':i===1?'GATE OPEN':'ON TIME';text(x,String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0'),18,72+i*32,{color:'#e8f3ee',weight:600});text(x,'CL'+(100+((i+off)*37)%900)+'  '+cty,18,72+i*32,{color:'#e8f3ee',weight:700,x:110});text(x,st,18,72+i*32,{color:i===0?'#38f59a':'#ffd34d',weight:800,align:'right',x:w-20})}},-3.4,2.6,BACK,0,true);
   timers.push(setInterval(()=>{off++;board.userData.paint()},9000));
   for(const x of [2.2,4,5.8]){box(1.4,1,.6,0x3c5a73,x,.5,BACK+1.1);box(1.5,.06,.7,0xcfd8dc,x,1.03,BACK+1.1);box(.5,.35,.04,0x101820,x,1.3,BACK+.85)}
   box(.8,.4,4.4,0x2b2b2b,LEFT+.6,.2,1.2);for(let i=0;i<4;i++)box(.45,.32,.6,[0x8e44ad,0x16a085,0xd35400,0x2c3e50][i],LEFT+.6,.56,-.4+i*1.1);

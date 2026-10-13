@@ -37,7 +37,7 @@ if ($method==='GET') {
 cl_rate('economy',30,60);
 $input=cl_body();
 $action=(string)($input['action']??'');
-if (!in_array($action,['job','mission','purchase','accident','club-drink','club-spray','school'],true)) cl_fail('Choose a job, mission or purchase');
+if (!in_array($action,['job','mission','purchase','accident','club-drink','club-spray','school','jet'],true)) cl_fail('Choose a job, mission or purchase');
 // v9: ChampagnePappi's bar in 007 Club. Price and XP live here only; one drink per 90 s, XP for the first 8 a day.
 $clubDrinks=['pappi-fizz'=>[120,10],'gold-rush'=>[300,25],'zero-proof'=>[40,5],'water'=>[0,0]];
 
@@ -100,6 +100,25 @@ try {
         cl_store_totals($uid,$game);
         $db->commit();
         json_response('success',$moved+['duplicate'=>false,'bonus'=>false],'Recorded.');
+    }
+    // v10 Stage E: private jet charter. Priced here only: 6000 + 2500 per grid step (rounded to ¥100); from the airport you are at.
+    // One charter a minute; no XP (it is a coin sink). The client then flies and moves the city like a booked flight.
+    if ($action==='jet') {
+        $grid=['China'=>[4,3],'Shenyang'=>[6,1],'Harbin'=>[6,0],'Beijing'=>[4,2],'Shanghai'=>[6,4],'Guangzhou'=>[3,6],'Shenzhen'=>[4,6],'Chengdu'=>[1,4]];
+        $to=(string)($input['to']??'');
+        [$from, $here]=economy_here();
+        if ($here!=='airport') cl_fail('Go to the airport first',403);
+        if (!isset($grid[$to])||!isset($grid[$from])||$to===$from) cl_fail('Choose another city');
+        if (cl_one('SELECT id FROM chinalife_economy_actions WHERE user_id=? AND action="jet" AND created_at>=DATE_SUB(NOW(),INTERVAL 60 SECOND)','i',[$uid])) {$totals=economy_totals($game);$db->commit();json_response('success',$totals+['cooldown'=>true],'One charter a minute.');}
+        $d=hypot($grid[$from][0]-$grid[$to][0],$grid[$from][1]-$grid[$to][1]);
+        $fare=(int)(round((6000+$d*2500)/100)*100);$hours=max(1,(int)ceil($d*.4));
+        $held=cl_balances_lock($uid);
+        if ($held['coins']<$fare) cl_fail('Not enough money',409);
+        $moved=cl_move_totals($uid,$game,-$fare,0);
+        economy_note('jet','jet:'.$from.'>'.$to.':'.bin2hex(random_bytes(4)).':'.$day,-$fare,0);
+        cl_store_totals($uid,$game);
+        $db->commit();
+        json_response('success',$moved+['fare'=>$fare,'hours'=>$hours,'to'=>$to,'cooldown'=>false,'duplicate'=>false,'bonus'=>false],'Wheels up.');
     }
     // v10: money spray in any club. A coin sink (no XP); one every 20 s and ¥20,000 a Beijing day.
     if ($action==='club-spray') {

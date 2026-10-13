@@ -62,3 +62,26 @@
 .host-log p.typing{opacity:.6;font-style:italic}
 .host-chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}.host-chips button{flex:none;border:1px solid #cfe3e1;background:#fff;border-radius:999px;padding:6px 12px;font-size:13px;color:#18776d;font-weight:700}
 .host-form{display:grid;grid-template-columns:1fr auto;gap:8px}.host-form input{border:1px solid #cfe3e1;border-radius:999px;padding:10px 14px;font:inherit}.host-form button{border:0;border-radius:999px;padding:0 18px;background:#18776d;color:#fff;font-weight:800}
+/* v10 Stage E: cabin view and driver's seat. */
+.cabin{--alt:0;position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;gap:12px;padding:calc(env(safe-area-inset-top) + 14px) 16px 90px;background:linear-gradient(#e9eef2,#d7dee4);color:#163240;font:600 14px system-ui,sans-serif;overflow:hidden}
+.cabin.jet{background:linear-gradient(#2a2420,#14110f);color:#f3e6cf}
+.cab-top{display:flex;align-items:center;gap:10px}.cab-top span{flex:1;opacity:.75;font-size:13px}.cab-top button{border:0;border-radius:999px;padding:8px 14px;background:#18776d;color:#fff;font-weight:800}
+.cabin.jet .cab-top button{background:#c9a24a;color:#1b1408}
+.cab-windows{display:flex;justify-content:space-around;gap:10px;padding:14px 6px;border-radius:22px;background:rgba(255,255,255,.55);box-shadow:inset 0 2px 8px #0002}.cabin.jet .cab-windows{background:#3a302a}
+.win{width:72px;height:96px;border-radius:36px;padding:5px;background:#cfd8de;box-shadow:inset 0 0 0 3px #b8c3ca}.cabin.jet .win{background:#5a4a3c;box-shadow:inset 0 0 0 3px #c9a24a66}
+.sky{position:relative;height:100%;border-radius:31px;overflow:hidden;background:linear-gradient(#3d8fe0,#a9dcff)}
+.cloud{position:absolute;width:60px;height:18px;border-radius:20px;background:#fff;opacity:.9;animation:cabCloud 3.2s linear infinite}.cloud.c1{top:28%}.cloud.c2{top:62%;width:40px;animation-duration:2.3s;animation-delay:-1.1s}
+.ground{position:absolute;left:0;right:0;bottom:0;height:calc((1 - var(--alt))*60%);background:repeating-linear-gradient(90deg,#6c9a5b 0 14px,#88ad6e 14px 26px,#9a9a8a 26px 30px);animation:cabGround 1.4s linear infinite;transition:height .6s}
+@keyframes cabCloud{from{transform:translateX(80px)}to{transform:translateX(-80px)}}@keyframes cabGround{to{background-position:-30px 0}}
+.cab-map{display:flex;align-items:center;gap:10px;font-size:12px}.cab-map .track{position:relative;flex:1;height:4px;border-radius:4px;background:#18776d44}.cab-map i{position:absolute;top:-9px;font-style:normal;transform:translateX(-50%);transition:left .3s}
+.cab-perks{display:flex;gap:8px;flex-wrap:wrap}.cab-perks span{padding:6px 10px;border-radius:999px;background:#ffffff14;font-size:12px}
+.cab-seats{display:grid;gap:10px;margin-top:auto}.cab-row{display:flex;justify-content:center;gap:6px}.cab-row i{width:34px;height:40px;border-radius:10px 10px 6px 6px;background:#2f6f9f;box-shadow:inset 0 -6px 0 #0002}.cab-row .aisle{width:34px}
+.cab-row i.lux{width:70px;height:58px;border-radius:18px 18px 10px 10px;background:linear-gradient(#e8d5b0,#bfa274)}
+.ride-toggle{position:absolute;right:10px;top:-40px;border:0;border-radius:999px;padding:8px 13px;background:#fff;color:#18776d;font-weight:800;font-size:12px;box-shadow:0 4px 14px #0003}
+.dash{position:fixed;left:0;right:0;bottom:calc(270px + 64px);height:120px;z-index:5;pointer-events:none;overflow:hidden}
+.dash::before{content:"";position:absolute;left:-10%;right:-10%;bottom:0;height:58px;border-radius:50% 50% 0 0/100% 100% 0 0;background:linear-gradient(#26343b,#121a1e);box-shadow:0 -2px 0 #3d5059}
+.dash .wheel{position:absolute;left:50%;bottom:-120px;width:230px;height:230px;transform:translateX(-50%);border-radius:50%;border:17px solid #1b2328;box-shadow:0 0 0 2px #44565f,inset 0 0 0 2px #44565f}
+.dash .wheel::after{content:"";position:absolute;left:50%;top:50%;width:60%;height:16px;background:#1b2328;transform:translate(-50%,-50%);border-radius:8px}
+.dash .speed{position:absolute;right:18px;bottom:14px;color:#7df3d9;font:800 18px system-ui;text-shadow:0 0 10px #0bd}
+@media(max-height:670px){.dash{bottom:calc(218px + 64px)}}
+@media(min-width:1000px){.dash{bottom:0}}

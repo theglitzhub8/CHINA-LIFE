@@ -1,0 +1,13 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
+const php=readFileSync(new URL('../chinalife-api/economy.php',import.meta.url),'utf8');
+const block=(a,b)=>php.slice(php.indexOf(`if ($action==='${a}')`),php.indexOf(b));
+test('school rewards are capped, ledgered and use cl_store_totals',()=>{const s=block('school',"// v10: money spray");
+ assert.match(s,/'school:'\.\$kind\.':'\.\(\$kind==='class'\?\$subject:'hw'\)\.':'\.\$day/,'class per subject per day, homework per day');
+ assert.match(s,/school:exam:'\.\$bj->format\('o-\\WW'\)/,'exam once per ISO week');
+ assert.match(s,/economy_seen\('school',\$ref\)/);assert.match(s,/economy_note\('school'/);assert.match(s,/cl_store_totals/);assert.doesNotMatch(s,/cl_store_character/);
+ assert.match(s,/max\(0,min\(100/,'score clamped');assert.match(s,/\$score>=60\?40:0/);assert.match(s,/\$score>=60\?80:0/);assert.match(s,/\[800,120\]/);
+ assert.match(s,/Go to a classroom first/);});
+test('private jet is server-priced, airport-only, rate-limited and ledgered',()=>{const s=block('jet',"// v10: money spray");
+ assert.match(s,/6000\+\$d\*2500/);assert.match(s,/\$here!=='airport'/);assert.match(s,/INTERVAL 60 SECOND/);assert.match(s,/Not enough money',409/);assert.match(s,/economy_note\('jet'/);assert.match(s,/cl_store_totals/);assert.doesNotMatch(s,/cl_store_character/);
+ assert.doesNotMatch(s,/\$input\['(fare|price|amount)'\]/,'client never sends a price');});
+test('client jet quote mirrors the server formula',()=>{const g=readFileSync(new URL('../public/game.js',import.meta.url),'utf8');assert.match(g,/Math\.round\(\(6000\+d\*2500\)\/100\)\*100/);assert.match(g,/action:'jet',to\}/)});
