@@ -18,6 +18,14 @@ Every server-side money change goes through the ledger (`chinalife_economy_actio
 
 # Changelog
 
+## world-v10: shipped Wed 14 Oct 2026, ~03:06 China time (founder-approved, outside the Friday slot)
+- A: room panel opens when you enter; voting centre wall board and ballot panel with candidate photos.
+- B: themed clubs; money spray (¥100/500/2000, 20 s cooldown, ¥20k/day cap, server ledger) with money rain; the voting card starts folded.
+- C: Hafrik hosts Amara, Kwame, Fatou, Tunde and Zainab with canned chat (no paid AI calls).
+- D: themed gossip room, hospital, school, restaurant and airport; school day with timetable, classes, homework, Friday exams and grades (server-capped rewards); furniture moved off club dance floors.
+- E: cabin view on flights, server-priced private jet (¥6,000 + ¥2,500 per grid step, airport only, 1 a minute), driver's-seat camera in your own car.
+- No schema changes. Backup and chinalife DB dump: /root/backups/worldv10-20261013-190616 (server time).
+
 ## world-v9: shipped Wed 14 Oct 2026, ~01:30 China time (founder-approved, outside the Friday slot)
 - 🍾 **ChampagnePappi** hosts 007 Club: gold suit, big shades, chains and a bottle. He walks the club avoiding furniture and guests, greets you and new arrivals by name, hypes the DJ and calls dance-offs.
 - 🥂 **Pappi's bar**: Pappi Fizz ¥120 (+10 XP), Gold Rush ¥300 (+25 XP), Zero Proof ¥40 (+5 XP), Water free. Paid on the server (`club-drink`, in the ledger); one drink per 90 s, XP for the first 8 a day.
