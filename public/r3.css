@@ -1,0 +1,47 @@
+/* R3 · onboarding coach, Next step pill, one-page phone, sheet drag */
+/* One pill replaces the chip stack */
+html:root body #worldUI .world-side>*:not(#r3Next){display:none!important}
+html:root body #worldUI.tp-view .world-side #r3Next.next-step:not([hidden]),html:root body #worldUI .world-side #r3Next.next-step:not([hidden]){display:flex!important;visibility:visible!important;opacity:1!important}
+html:root body #worldUI .next-step{align-items:center;gap:8px;max-width:calc(100vw - 32px - 56px);min-height:40px;padding:0 12px 0 10px;border:0;border-radius:999px;background:rgba(12,63,68,.92);color:#F7FFF7;font:600 15px/20px var(--io-font);box-shadow:var(--io-float);backdrop-filter:blur(12px)}
+html:root body #worldUI .next-step[hidden]{display:none!important}
+html:root body #worldUI .next-step span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html:root body #worldUI .next-step>.ic:first-child{width:20px;height:20px;color:#7fd6d9}
+html:root body #worldUI .next-step .chev{opacity:.6;width:16px;height:16px}
+html:root body #worldUI.dock-full .next-step{visibility:hidden}
+/* Coach card: sits under the top bar, one step at a time */
+html:root body .coach-card{position:absolute;z-index:40;left:16px;right:72px;top:calc(max(8px,env(safe-area-inset-top)) + 56px);padding:14px 16px 12px;border-radius:var(--r-card);background:#F7FFF7;color:var(--io-ink);box-shadow:0 8px 28px rgba(12,63,68,.28);animation:coachIn .35s cubic-bezier(.2,.9,.25,1.1)}
+html:root body .coach-card b{display:block;font:var(--t-head)}
+html:root body .coach-card p{margin:2px 0 10px;font:var(--t-sub);color:var(--io-ink-2)}
+html:root body .coach-dots{display:flex;gap:4px;margin-bottom:8px}
+html:root body .coach-dots i{flex:1;height:3px;border-radius:2px;background:rgba(12,63,68,.12)}
+html:root body .coach-dots i.done{background:var(--io-java)}
+html:root body .coach-dots i.now{background:linear-gradient(90deg,var(--io-java) 50%,rgba(12,63,68,.12) 50%)}
+html:root body .coach-actions{display:flex;justify-content:flex-end;gap:8px}
+html:root body .coach-actions button{min-height:36px;padding:0 14px;border-radius:var(--r-btn);border:0;background:rgba(12,63,68,.06);color:var(--io-ink);font:600 15px/20px var(--io-font)}
+html:root body .coach-actions button.primary{background:var(--io-java);color:#fff}
+html:root body #worldUI.dock-full .coach-card{display:none}
+html:root body .coach-spot{z-index:6;box-shadow:0 0 0 3px #F7FFF7,0 0 0 6px var(--io-java)!important;border-radius:999px}
+html:root body #worldUI .world-nav .coach-spot{border-radius:12px!important}
+@media (prefers-reduced-motion:no-preference){html:root body .coach-spot{animation:coachPulse 1.4s ease-in-out infinite}}
+@keyframes coachPulse{50%{box-shadow:0 0 0 3px #F7FFF7,0 0 0 10px rgba(31,142,147,.35)}}
+@keyframes coachIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+html:root body:has(.coach-card) #worldUI .next-step{display:none!important}
+/* One-page phone: 10 apps, no page dots or dock */
+html:root body #phoneDialog .r3-apps .phone-apps{display:grid!important;grid-template-columns:repeat(4,1fr);gap:20px 8px;padding:8px 4px}
+html:root body #phoneDialog .r3-apps .phone-app{display:grid;justify-items:center;gap:6px;background:none;border:0;color:#fff;font:500 12px/16px var(--io-font)}
+html:root body #phoneDialog .r3-apps .phone-app b{position:relative;display:block}
+html:root body #phoneDialog .r3-apps .phone-app img{width:56px;height:56px;border-radius:14px;background:rgba(255,255,255,.92);padding:6px;box-sizing:border-box}
+html:root body #phoneDialog .r3-phone .phone-widgets{grid-template-columns:repeat(3,1fr)!important}
+/* Folder screens: inset grouped rows */
+html:root body .r3-list{margin:8px 0;border-radius:var(--r-card);background:#fff;overflow:hidden;box-shadow:0 1px 0 var(--io-sep)}
+html:root body .r3-row{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 16px;border:0;border-bottom:1px solid var(--io-sep);background:none;color:var(--io-ink);font:var(--t-body);text-align:left}
+html:root body .r3-row:last-child{border-bottom:0}
+html:root body .r3-row img{width:32px;height:32px;border-radius:8px}
+html:root body .r3-row b{flex:1;font:var(--t-body)}
+html:root body .r3-row em{font-style:normal;color:var(--io-ink-3);font-size:22px}
+html:root body .r3-row .app-badge{position:static}
+/* While the finger drags the sheet, no easing */
+html:root body #worldUI.sheet-dragging .venue-card{transition:none!important;overflow:hidden}
+html:root body #worldUI .venue-card{transition:max-height .32s cubic-bezier(.2,.9,.25,1.05),height .32s cubic-bezier(.2,.9,.25,1.05)}
+html:root body .app-badge{font-size:12px!important;min-width:20px;height:20px;line-height:20px}
+html:root body #worldUI.map-view .coach-card{top:auto;bottom:calc(var(--io-tab) + 150px)}
