@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/common.php';
-cl_methods(['GET','POST']);
+cl_methods(['GET','POST']);cl_election_winners_sync();
 $offices=['governor','deputy-governor','city-councillor','student-representative'];
 
 function election_board(string $city, array $offices): array {

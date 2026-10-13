@@ -199,3 +199,7 @@ dialog.accident-dialog{width:min(360px,calc(100vw - 32px));border:0;border-radiu
 .pv6-friends{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}.pv6-friends button{flex:none;display:grid;justify-items:center;gap:3px;background:none;border:0;font-size:11px;color:var(--hk-ink);max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0}
 .pv6-friends button span{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800}
 .pv6-empty{margin:0;font-size:13px;color:var(--hk-muted)}
+/* v7: widget captions wrap to two lines instead of being cut off */
+#phoneDialog .phone-widget small:last-child,.phone-widget small:last-child{white-space:normal!important;display:-webkit-box!important;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-overflow:clip!important;line-height:1.2;font-size:10.5px!important;word-break:normal}
+.pw-event b{white-space:normal!important;display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.phone-widgets .phone-widget{height:auto!important;min-height:104px}

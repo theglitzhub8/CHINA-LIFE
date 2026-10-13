@@ -316,3 +316,18 @@ function cl_rank_status(int $userId): array {
 }
 
 require_once __DIR__.'/hafrik-features.php';
+
+// Record winners of finished elections once (ties go to the earliest candidate). Safe to call often:
+// only ended elections without a stored winner are looked at, and a missing table is ignored.
+function cl_election_winners_sync(): void {
+    try {
+        cl_run("INSERT IGNORE INTO chinalife_election_winners(election_id,user_id,city,office,votes,decided_at)
+            SELECT e.id,c.candidate_id,e.city,e.office,t.n,NOW() FROM chinalife_elections e
+            JOIN (SELECT v.election_id,v.candidate_id,COUNT(*) n FROM chinalife_election_votes v GROUP BY v.election_id,v.candidate_id) t ON t.election_id=e.id
+            JOIN chinalife_politics_candidates c ON c.id=t.candidate_id
+            LEFT JOIN chinalife_election_winners w ON w.election_id=e.id
+            WHERE w.election_id IS NULL AND e.ends_at<NOW()
+            AND NOT EXISTS (SELECT 1 FROM (SELECT election_id,candidate_id,COUNT(*) n FROM chinalife_election_votes GROUP BY election_id,candidate_id) b
+                WHERE b.election_id=t.election_id AND (b.n>t.n OR (b.n=t.n AND b.candidate_id<t.candidate_id)))",'',[]);
+    } catch (Throwable $e) {}
+}
