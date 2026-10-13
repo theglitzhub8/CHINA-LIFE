@@ -1,0 +1,77 @@
+/* ChinaLife UI theme layer (Phase 1). Visual only: tokens, type, buttons, cards, HUD, nav, modals.
+   Loaded last so it can unify earlier stylesheets without touching game logic. */
+@font-face{font-family:'Hafrik Work Sans';font-style:normal;font-weight:500 700;font-display:swap;src:url(assets/fonts/WorkSans-latin.woff2) format('woff2')}
+:root{
+  --hk-java:#1F8E93;--hk-java-strong:#17767A;--hk-java-soft:#E3F3F2;
+  --hk-cyprus:#0C3F44;--hk-honeydew:#F7FFF7;--hk-black:#121212;
+  --hk-ink:#0C3F44;--hk-muted:#4C6E70;--hk-line:rgba(12,63,68,.12);
+  --hk-surface:#FFFFFF;--hk-canvas:#F7FFF7;
+  --hk-r-sm:10px;--hk-r-md:14px;--hk-r-lg:20px;--hk-r-xl:28px;
+  --hk-s1:4px;--hk-s2:8px;--hk-s3:12px;--hk-s4:16px;--hk-s5:24px;
+  --hk-tap:44px;
+  --hk-shadow-1:0 2px 8px rgba(12,63,68,.08);--hk-shadow-2:0 12px 32px rgba(12,63,68,.18);
+  --hk-font:'Hafrik Readex','Readex Pro',system-ui,-apple-system,sans-serif;
+  --hk-head:'Hafrik Work Sans','Work Sans','Hafrik Readex',system-ui,sans-serif;
+  /* map older tokens onto the brand palette */
+  --teal:var(--hk-java);--navy:var(--hk-cyprus);--ink:var(--hk-ink);--muted:var(--hk-muted);--line:var(--hk-line);--paper:var(--hk-canvas);
+  --ui-ink:var(--hk-ink);--ui-muted:var(--hk-muted);--ui-accent:var(--hk-java);--ui-accent-2:var(--hk-cyprus);--ui-line:var(--hk-line);--ui-radius:var(--hk-r-md);
+  --world-ink:var(--hk-ink);--world-green:var(--hk-java)
+}
+html body,html body :is(button,input,select,textarea){font-family:var(--hk-font)}
+html body{color:var(--hk-ink)}
+html body :focus-visible{outline:2px solid var(--hk-java);outline-offset:2px}
+
+/* Modals and sheets */
+html body #activityDialog,html body #cloudDialog,html body #helpDialog,html body #sharedDialog,html body #socialDialog,html body #onboarding{border-radius:var(--hk-r-xl);border:1px solid var(--hk-line);box-shadow:var(--hk-shadow-2)}
+html body #activityDialog:not(.gossip-screen):not(.phone-workspace-panel):not(.cantaball-screen){background:var(--hk-canvas);color:var(--hk-ink)}
+html body dialog::backdrop{background:rgba(12,63,68,.45);backdrop-filter:blur(6px)}
+html body .activity-panel>h2,html body #cloudContent h2,html body dialog h2{font-family:var(--hk-head);font-weight:700;font-size:22px;line-height:1.2;letter-spacing:-.01em;color:inherit}
+html body dialog h3{font-family:var(--hk-head);font-weight:600;font-size:16px;margin-top:var(--hk-s4)}
+html body .eyebrow{font-family:var(--hk-font);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--hk-java)}
+html body .activity-panel .lead{font-size:15px;line-height:1.5;color:var(--hk-muted)}
+html body :is(.fine-print,.map-note,.politics-note){font-size:13px;line-height:1.45;color:var(--hk-muted)}
+html body dialog .close-x{width:var(--hk-tap);height:var(--hk-tap);border-radius:50%;background:var(--hk-surface);color:var(--hk-cyprus);border:1px solid var(--hk-line);box-shadow:var(--hk-shadow-1)}
+
+/* Buttons */
+html body .primary-btn{min-height:48px;border-radius:var(--hk-r-md);background:var(--hk-java);color:var(--hk-honeydew);border:0;font-weight:600;font-size:15px;box-shadow:0 4px 14px rgba(31,142,147,.28)}
+html body .primary-btn:hover{background:var(--hk-java-strong)}
+html body .primary-btn:disabled{opacity:.5;box-shadow:none}
+html body .soft-btn{min-height:var(--hk-tap);border-radius:var(--hk-r-md);background:var(--hk-surface);color:var(--hk-cyprus);border:1.5px solid rgba(31,142,147,.35);font-weight:600;font-size:14px}
+html body .soft-btn:hover{background:var(--hk-java-soft)}
+html body :is(.shop-tabs,.politics-office-tabs,.store-cats,.collection-filters) button{min-height:40px;border-radius:999px;font-weight:600}
+html body :is(.shop-tabs,.politics-office-tabs,.store-cats,.collection-filters) button.active{background:var(--hk-cyprus);color:var(--hk-honeydew)}
+
+/* Cards and list rows */
+html body :is(.choice-action,.quest-card,.shop-card,.store-card,.pulse-card,.studio-contract,.dream-card){background:var(--hk-surface);border:1px solid var(--hk-line);border-radius:var(--hk-r-md);box-shadow:var(--hk-shadow-1);color:var(--hk-ink)}
+html body .choice-action{min-height:56px;padding:var(--hk-s3) var(--hk-s4);margin-top:var(--hk-s2)}
+html body .choice-action b{font-weight:600;font-size:15px}
+html body .choice-action span{font-size:13px;color:var(--hk-muted)}
+html body .choice-action:hover{background:var(--hk-java-soft);border-color:rgba(31,142,147,.4)}
+html body .name-input{min-height:var(--hk-tap);border-radius:var(--hk-r-md);border:1.5px solid var(--hk-line);background:var(--hk-surface);font-size:16px}
+html body .name-input:focus{border-color:var(--hk-java)}
+html body .politics-hero{background:linear-gradient(150deg,var(--hk-cyprus),#0a3236);color:var(--hk-honeydew);border-radius:var(--hk-r-lg)}
+
+/* HUD bar */
+html body #worldUI .hud-bar{background:rgba(12,63,68,.92);color:var(--hk-honeydew);border:1px solid rgba(247,255,247,.12);border-radius:var(--hk-r-lg);box-shadow:var(--hk-shadow-2);backdrop-filter:blur(12px)}
+html body #worldUI .hud-bar :is(.time-chip,.hud-online,#worldClock,#worldMood){color:var(--hk-honeydew)}
+html body #worldUI .hud-bar .hud-divider{background:rgba(247,255,247,.25)}
+html body #worldUI .hud-bar .money-chip{color:var(--hk-honeydew)}
+html body #worldUI .hud-bar .money-chip>span{background:var(--hk-java)!important;color:var(--hk-honeydew)}
+html body #worldUI .hud-bar .money-chip *{color:inherit}
+html body #worldUI .hud-bar .hud-online{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Bottom navigation */
+html body #worldUI .world-nav{background:var(--hk-cyprus);border:1px solid rgba(247,255,247,.1);border-radius:var(--hk-r-lg);box-shadow:var(--hk-shadow-2);padding:6px}
+html body #worldUI .world-nav button{min-height:52px;color:rgba(247,255,247,.72);font-size:11px;font-weight:600;border-radius:var(--hk-r-md);background:transparent}
+html body #worldUI .world-nav button.active{background:var(--hk-java);color:var(--hk-honeydew)}
+html body #worldUI .world-nav svg{width:22px;height:22px}
+
+/* Gossip room: same tokens, night-lounge mode */
+html body #activityDialog.gossip-screen{background:var(--hk-black);border-color:rgba(31,142,147,.35)}
+html body .gossip-screen .eyebrow{color:var(--hk-java)}
+html body .gossip-screen .activity-panel>h2{color:var(--hk-honeydew)}
+html body .gossip-screen .close-x{background:rgba(247,255,247,.08);color:var(--hk-honeydew);border-color:rgba(247,255,247,.18);box-shadow:none}
+html body .gossip-drop{background:var(--hk-java);color:var(--hk-honeydew);min-height:52px;border-radius:var(--hk-r-md);box-shadow:0 0 0 1px rgba(247,255,247,.08),0 8px 28px rgba(31,142,147,.45);font-family:var(--hk-head);font-weight:600}
+html body .gossip-card{border-radius:var(--hk-r-lg)}
+html body #worldUI .world-nav button:hover{background:rgba(247,255,247,.08)}
+html body #worldUI .world-nav button.active:hover{background:var(--hk-java)}
