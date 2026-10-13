@@ -18,8 +18,8 @@ Every server-side money change goes through the ledger (`chinalife_economy_actio
 
 # Changelog
 
-## Next release: world-v8 (proposed for Fri 16 Oct 2026, 20:00)
-- 🚁 An advert helicopter circles the city towing a banner that rotates live ads, partner venues and "Your ad here".
+## world-v8: shipped Tue 13 Oct 2026, ~23:55 China time (founder-approved early release, outside the Friday slot)
+- 🚁 An advert helicopter circles the city towing a banner that rotates live ads, partner venues and "Your ad here". It is big and lit at night, and labels under the banner fade so it stays readable.
 - 🎓 Jobs you aren't qualified for show your level and a **Get skilled** button that takes you to the nearest place that trains that skill.
 - 🎨 **Floors & wallpaper** for your home: 8 floors and 8 wallpapers (Panda party, Lucky dragon red, Big Laoban gold…). Preview for free, buy once, use in all your homes. Saved on the server.
 - 🪳 **Golden Roach Farm** opens on the outskirts, with tours, cockroach naming, roach-protein snacks and investor pitches. New jobs: Cockroach farm hand, Cockroach farm shift manager, Jianbing cart chef, Square dance auntie DJ.

@@ -218,3 +218,4 @@ dialog.has-phone-back{padding-top:34px!important}
 .hs-swatch b{font-size:11px;line-height:1.15;text-align:center}.hs-swatch small{color:var(--hk-muted);font-size:10.5px}
 .hs-swatch.on{border-color:var(--hk-java)}.hs-swatch.previewing{border-color:#e8453c;box-shadow:0 0 0 3px rgba(232,69,60,.18)}
 .hs-swatch.previewing small::after{content:' · tap to buy';color:#e8453c}
+.under-heli{opacity:.12!important;transition:opacity .3s}

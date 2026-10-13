@@ -2,7 +2,8 @@
 // redrawn only when the advert rotates (every 20 s). Adverts come from live admin ads, then partner
 // venues, then the "advertise here" house ad.
 import * as THREE from './vendor/three.module.js';
-const M=c=>new THREE.MeshLambertMaterial({color:c});
+// Lit-looking even at night: a strong emissive share of the base colour.
+const M=c=>new THREE.MeshLambertMaterial({color:c,emissive:c,emissiveIntensity:.55});
 function adTexts(){const out=[];for(const a of (window.ChinaLifeCloud?.ads||[]))if(a&&a.title)out.push({t:String(a.title).slice(0,34),s:String(a.sponsor||'').slice(0,30)});
  for(const r of (Array.isArray(window.ChinaLife?.partnerRestaurants)?window.ChinaLife.partnerRestaurants:[]).slice(0,6))if(r?.name)out.push({t:String(r.name).slice(0,34),s:'Partner on Hafrik'});
  const wa=window.ChinaLifeCatalog?.advertising?.whatsapp;out.push({t:'YOUR AD HERE',s:wa?'WhatsApp '+wa:'Advertise on ChinaLife'});return out}
@@ -24,7 +25,9 @@ export function helicopter(layout){
  const draw=()=>{ads=adTexts();idx=(idx+1)%ads.length;const a=ads[idx],c=cv.getContext('2d');c.fillStyle='#fff7e0';c.fillRect(0,0,512,128);c.fillStyle='#e8453c';c.fillRect(0,0,512,10);c.fillRect(0,118,512,10);c.fillStyle='#0c3f44';c.textAlign='center';c.font='800 46px sans-serif';c.fillText(a.t,256,64,490);c.font='600 26px sans-serif';c.fillStyle='#1f8e93';c.fillText(a.s,256,104,490);tex.needsUpdate=true};
  const xs=layout?.xs||[-60,60],zs=layout?.zs||[-60,60];const cx=(Math.min(...xs)+Math.max(...xs))/2,cz=(Math.min(...zs)+Math.max(...zs))/2;
  const rx=Math.max(30,(Math.max(...xs)-Math.min(...xs))*.42),rz=Math.max(24,(Math.max(...zs)-Math.min(...zs))*.42);
- g.scale.setScalar(2.2);
+ g.scale.setScalar(3.2);
+ // Navigation lights and a belly spotlight glow so it reads at night.
+ for(const [x,z,c] of [[0,1.15,0xff3030],[0,-1.15,0x30ff60],[-3.95,0,0xffffff]]){const l=new THREE.Mesh(new THREE.SphereGeometry(.16,6,4),new THREE.MeshBasicMaterial({color:c}));l.position.set(x,.1,z);g.add(l)}
  return {group:g,banner,update(t){if(t-shownAt>20){shownAt=t;draw()}const a=t*.05;g.position.set(cx+Math.cos(a)*rx,26+Math.sin(t*.7)*.6,cz+Math.sin(a)*rz);
   // Face along the direction of travel (derivative of the ellipse).
   g.rotation.y=Math.atan2(-Math.cos(a)*rz,-Math.sin(a)*rx);rotor.rotation.y=t*25;tr.rotation.x=t*30},get ad(){return ads[idx]}};
