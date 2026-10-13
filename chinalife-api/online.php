@@ -6,4 +6,4 @@ cl_methods(['GET']);cl_rate('online',20,60);
 $rows=cl_rows('SELECT city,COUNT(*) n FROM chinalife_presence WHERE seen_at>=DATE_SUB(NOW(),INTERVAL 60 SECOND) GROUP BY city');
 $cities=[];$online=0;foreach ($rows as $row) {$cities[$row['city']]=(int)$row['n'];$online+=(int)$row['n'];}
 $players=(int)cl_one('SELECT COUNT(*) n FROM chinalife_saves')['n'];
-json_response('success',['online'=>$online,'cities'=>$cities,'players'=>$players]);
+cl_reply(['online'=>$online,'cities'=>$cities,'players'=>$players]);

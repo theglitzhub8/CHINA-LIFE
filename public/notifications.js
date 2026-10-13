@@ -20,7 +20,14 @@ async function pollMessages(){
  }catch(error){console.debug('Message notification check:',error.message)}finally{polling=false}
 }
 window.addEventListener('chinalife:cloudready',()=>{generation++;cursor=null;accountId='';banner.hidden=true;pollMessages()});
-setInterval(pollMessages,1000);window.ChinaLifeNotifications={poll:pollMessages};pollMessages();
+// R1: adaptive polling. 5 s after activity (a message, a room change, chat open), doubling to 20 s when quiet; paused while hidden.
+let delay=5000,timer=0,lastRoom='';
+function schedule(ms){clearTimeout(timer);timer=setTimeout(tickPoll,ms)}
+async function tickPoll(){if(document.hidden)return;const room=game.state.city+':'+game.state.place,before=cursor;if(room!==lastRoom){lastRoom=room;delay=5000}
+ await pollMessages();const busy=cursor!==before&&before!==null||!!document.querySelector('#socialDialog[open],#sharedDialog[open]');delay=busy?5000:Math.min(20000,delay*2);schedule(delay)}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){delay=5000;schedule(0)}else clearTimeout(timer)});
+window.addEventListener('chinalife:activity',()=>{delay=5000;schedule(300)});
+window.ChinaLifeNotifications={poll:pollMessages,kick:()=>{delay=5000;schedule(0)}};schedule(0);
 
 // Persistent admin notices use their own overlay so chat/event toasts cannot replace them.
 const notice=document.createElement('section');notice.hidden=true;notice.setAttribute('role','alertdialog');notice.setAttribute('aria-modal','true');notice.setAttribute('aria-label','Admin announcement');notice.style.cssText='position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.65);padding:24px;overflow:auto';

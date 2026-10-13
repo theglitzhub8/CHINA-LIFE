@@ -11,8 +11,10 @@ let ads=[],adsKey='';const adImage=a=>HAFRIK_API+'/chinalife/ad-image.php?id='+e
 async function gesture(to,phrase){if(!account||!presence)throw Error('Join the shared city first.');const s=game.state,r=await api('/chinalife/gestures.php','POST',{city:s.city,place:s.place,to:to==null?null:String(to),phrase});const id=String((r.data||r).id||'');if(id)seenGestures.add(id);return true}
 let presenceCheck={lastSuccess:null,error:null,serverId:null};
 let message = 'Sign in with Hafrik to save across devices.', liveToken = storage.getItem(TOKEN_KEY) || '';
+const FEED_PARTS={'/chinalife/online.php':'online','/chinalife/events.php':'events','/chinalife/golden.php':'golden','/chinalife/activities.php':'activities'},feedCache={};
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(path, method = 'GET', data) {
+  {const part=FEED_PARTS[path];if(part){if(method==='GET'){const c=feedCache[part];if(c&&Date.now()-c.at<65000&&c.city===game.state.city&&!(part==='activities'&&document.querySelector('#sharedDialog[open]')))return {status:'success',data:c.data}}else delete feedCache[part]}}
   const visit=window.ChinaLifeHomeVisits?.current;if(visit&&/\/chinalife\/(presence|messages|notifications|voice|voice-signal|gestures)\.php/.test(path)&&visit.city===game.state.city&&visit.place===game.state.place){if(method==='GET'){path+=(path.includes('?')?'&':'?')+'homeOwner='+encodeURIComponent(visit.owner)}else if(data)data={...data,homeOwner:visit.owner}}
   const query = method === 'GET' && data ? new URLSearchParams(data).toString() : '';
   const passwordLogin=path==='/auth/login.php'||path==='/chinalife/register.php';
@@ -138,10 +140,15 @@ async function logout() {
   authEpoch++; await leave(); auto = false; clearTimeout(timer); liveToken = ''; storage.setItem(TOKEN_KEY, ''); storage.setItem(PROFILE_KEY, '');
   account = null; remote = {state:null}; game.setAccount(null); notify(); status('Disconnected. Your account character is kept.'); show();
 }
-function scheduleSave() {clearTimeout(timer); timer = setTimeout(() => upload(), 1500)}
+// R1: save at most once a minute, only when the state changed; flush when the page is hidden or closed.
+let lastUpload=0;
+function unchanged(){try{return !!remote.state&&JSON.stringify(game.state)===JSON.stringify(remote.state)}catch{return false}}
+function scheduleSave() {clearTimeout(timer); const wait=Math.max(1500, 60000-(Date.now()-lastUpload)); timer = setTimeout(() => {if(!unchanged())upload()}, wait)}
+function flushSave(){if(!account||!auto||loading||!game.state.created||unchanged())return;clearTimeout(timer);upload()}
+addEventListener('pagehide',flushSave);document.addEventListener('visibilitychange',()=>{if(document.hidden)flushSave()});
 async function upload(manual = false) {
   if (!account || !auto || loading || busy || !game.state.created) return false;
-  const generation = authEpoch, snapshot = JSON.parse(JSON.stringify(game.state)); busy = true;
+  const generation = authEpoch, snapshot = JSON.parse(JSON.stringify(game.state)); busy = true; lastUpload = Date.now();
   try {
     const {name, color, appearance, background, dream, trait} = snapshot;
     const result = await api('/chinalife/save.php', 'POST', {revision:remote.revision ?? 0,save:{character:{name,color,appearance,background,dream,trait},game:snapshot}});
@@ -208,7 +215,7 @@ let presenceAttempt=0,presenceRoom='',presenceFull={room:'',at:0};
 async function refreshPresence(background=false) {
   if (!account || !presence || !game.state.created || document.hidden || polling) return false;
   const generation = epoch, state = game.state, city = state.city, place = state.place, world = window.ChinaLifeWorld, position = world?.roomPosition ?? (world?.view==='venue'?world.position:null);
-  const street=world?.street?.()||null,room=generation+':'+city+':'+place+(street?':street':''),interval=street?2000:players.some(p=>p.city===city&&p.place===place)?5000:15000;
+  const street=world?.street?.()||null,room=generation+':'+city+':'+place+(street?':street':''),interval=street&&(world?.streetPeerIds?.()||[]).length?4000:20000; // R1: 20 s heartbeat; room changes send at once; 4 s only while walking with other players
   if(background&&room===presenceRoom&&Date.now()-presenceAttempt<interval)return true;
   presenceRoom=room;presenceAttempt=Date.now();
   polling = true;
@@ -287,7 +294,7 @@ async function presenceHeartbeat() {
   return presence ? refreshPresence(true) : join();
 }
 setInterval(presenceHeartbeat, 1000);
-setInterval(syncTransfers,15000);
+setInterval(syncTransfers,60000); // R1: was 15 s; own transfers and economy actions still sync at once
 // Players online per city and in total, for the top bar, travel and rank screens.
 let online=null;
 async function refreshOnline(){if(!account||document.hidden)return;try{const result=await api('/chinalife/online.php'),data=result.data||result;online={online:data.online||0,cities:data.cities||{},players:data.players||0};window.dispatchEvent(new CustomEvent('chinalife:online',{detail:online}))}catch{}}
@@ -307,6 +314,9 @@ setInterval(refreshEvents,45000);window.addEventListener('chinalife:cloudready',
 let golden=null;
 async function refreshGolden(){if(!account||document.hidden)return;try{const result=await api('/chinalife/golden.php'),data=result.data||result;const changed=JSON.stringify(data)!==JSON.stringify(golden);golden=data;if(changed)window.dispatchEvent(new CustomEvent('chinalife:golden',{detail:golden}))}catch{}}
 async function claimGolden(){const result=await api('/chinalife/golden.php','POST',{});await refreshGolden();await syncTransfers();return result.data||result}
-setInterval(refreshGolden,60000);window.addEventListener('chinalife:cloudready',refreshGolden);
+setInterval(refreshGolden,60000);
+// R1: one feed request a minute fills the cache that the online, events, golden and shared-activity readers use.
+async function refreshFeed(){if(!account||document.hidden||!game.state.created)return;const city=game.state.city;try{const r=await api('/chinalife/feed.php','GET',{city}),d=r.data||r,at=Date.now();for(const k of Object.keys(d||{}))if(d[k]&&!d[k].error)feedCache[k]={at,data:d[k],city}}catch{}}
+setInterval(refreshFeed,55000);window.addEventListener('chinalife:cloudready',refreshFeed);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshFeed()});window.addEventListener('chinalife:cloudready',refreshGolden);
 window.ChinaLifeCloud.ready = initialize().then(ok => {if (!account && !(inApp()&&(appWaiting||loading))) show(); return ok});
 await window.ChinaLifeCloud.ready;

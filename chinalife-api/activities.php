@@ -19,7 +19,7 @@ if($method==='GET') {
  foreach($rows as &$r){$r['id']=(string)$r['id'];$r['inviter_id']=(string)$r['inviter_id'];$r['invitee_id']=(string)$r['invitee_id'];$r['started_ms']=$r['started_ms']===null?null:(int)$r['started_ms'];$r['expires_ms']=(int)$r['expires_ms'];$r['ready_a']=(bool)$r['ready_a'];$r['ready_b']=(bool)$r['ready_b'];}unset($r);
  $relationships=cl_rows('SELECT a.id,a.kind,a.inviter_id,a.invitee_id,u.user_name inviter_name,v.user_name invitee_name FROM chinalife_shared_activities a JOIN users u ON u.user_id=a.inviter_id JOIN users v ON v.user_id=a.invitee_id WHERE (a.inviter_id=? OR a.invitee_id=?) AND a.kind IN ("girlfriend","boyfriend") AND a.status="completed" AND NOT EXISTS(SELECT 1 FROM chinalife_blocks b WHERE (b.owner_id=a.inviter_id AND b.peer_id=a.invitee_id) OR (b.owner_id=a.invitee_id AND b.peer_id=a.inviter_id))','ii',[$uid,$uid]);
  foreach($relationships as &$r){foreach(['id','inviter_id','invitee_id'] as $k)$r[$k]=(string)$r[$k];}unset($r);
- json_response('success',['catalog'=>$catalog,'activities'=>$rows,'relationships'=>$relationships,'serverTime'=>(int)round(microtime(true)*1000)]);
+ cl_reply(['catalog'=>$catalog,'activities'=>$rows,'relationships'=>$relationships,'serverTime'=>(int)round(microtime(true)*1000)]);
 }
 cl_rate('shared_activity',30,60);$input=cl_body();$action=$input['action']??'';
 if($action==='invite') {

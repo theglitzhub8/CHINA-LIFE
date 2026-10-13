@@ -32,7 +32,11 @@ $auth = auth_user($db);
 $uid = (int)($auth['user_id'] ?? 0);
 if ($uid <= 0) cl_fail('Unauthorized', 401);
 $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+// R1: feed.php runs several GET endpoints in one request. Inside it, replies and failures are thrown instead of printed.
+final class ClFeedResult extends Exception {public function __construct(public string $state, public mixed $payload, public int $httpStatus = 200, string $message = '') {parent::__construct($message);}}
+function cl_reply(mixed $data): void {if (defined('CL_FEED')) throw new ClFeedResult('success', $data); json_response('success', $data);}
 function cl_fail(string $message, int $status = 400): never {
+    if (defined('CL_FEED')) throw new ClFeedResult('error', null, $status, $message);
     http_response_code($status); json_response('error', null, $message); exit;
 }
 function cl_methods(array $allowed): void {
@@ -235,11 +239,17 @@ function cl_music_storage(): array {
     $url=rtrim((string)($cfg['url']??(($https?'https':'http').'://'.($_SERVER['HTTP_HOST']??'hafrik.com').'/chinalife-music')),'/').'/';
     return [$dir,$url];
 }
+// R1: stream the AAC copy (about 20× smaller) when one sits next to the original upload; originals stay as the backup.
+function cl_song_file(string $dir, string $file): string {
+    if (!preg_match('/^[0-9a-f]{16}\.wav$/',$file)) return $file;
+    $aac=substr($file,0,-4).'.m4a';
+    return is_file($dir.'/'.$aac)?$aac:$file;
+}
 // Approved songs for ChinaLife Radio and club DJ booths: this city's artists first, then everyone else's.
 function cl_songs(string $city, bool $all=false): array {
-    [,$url]=cl_music_storage();
+    [$dir,$url]=cl_music_storage();
     $rows=cl_rows('SELECT s.id,s.title,s.file,s.duration,s.active,s.user_id,s.created_at,r.id listing,r.name artist,r.city,r.photos,u.user_name username FROM chinalife_songs s LEFT JOIN chinalife_restaurants r ON r.id=s.listing_id LEFT JOIN users u ON u.user_id=s.user_id WHERE '.($all?'s.listing_id IS NOT NULL':'s.active=1 AND r.active=1').' ORDER BY (r.city=?) DESC,s.created_at DESC LIMIT 300','s',[$city]);
-    foreach ($rows as &$r){$photos=json_decode((string)($r['photos']??''),true)?:[];$r=['id'=>$r['id'],'title'=>$r['title'],'artist'=>(string)($r['artist']??''),'listing'=>(string)($r['listing']??''),'city'=>(string)($r['city']??''),'cover'=>$photos[0]??'','duration'=>(int)$r['duration'],'url'=>$url.$r['file'],'active'=>(bool)$r['active'],'username'=>$r['username'],'created_at'=>$r['created_at']];}unset($r);
+    foreach ($rows as &$r){$photos=json_decode((string)($r['photos']??''),true)?:[];$r=['id'=>$r['id'],'title'=>$r['title'],'artist'=>(string)($r['artist']??''),'listing'=>(string)($r['listing']??''),'city'=>(string)($r['city']??''),'cover'=>$photos[0]??'','duration'=>(int)$r['duration'],'url'=>$url.cl_song_file($dir,(string)$r['file']),'active'=>(bool)$r['active'],'username'=>$r['username'],'created_at'=>$r['created_at']];}unset($r);
     return $rows;
 }
 function cl_ads(string $city, bool $all=false): array {

@@ -7,7 +7,7 @@ const CL_GOLDEN_REWARD=50000;
 $week=gmdate('o-\WW');$venues=['market','cafe','african','hotel','night','blood','skylight','campus','academy','gym','park','mall','plaza','business','station','church'];
 $place=$venues[crc32('golden'.$week)%count($venues)];
 $winner=fn()=>cl_one('SELECT g.user_id,u.user_name name FROM chinalife_golden g JOIN users u ON u.user_id=g.user_id WHERE g.week=?','s',[$week]);
-if ($method==='GET') {$w=$winner();json_response('success',['week'=>$week,'place'=>$place,'reward'=>CL_GOLDEN_REWARD,'found_by'=>$w['name']??null,'mine'=>$w&&(int)$w['user_id']===$uid]);}
+if ($method==='GET') {$w=$winner();cl_reply(['week'=>$week,'place'=>$place,'reward'=>CL_GOLDEN_REWARD,'found_by'=>$w['name']??null,'mine'=>$w&&(int)$w['user_id']===$uid]);}
 cl_rate('golden',10,60);
 if (!cl_one('SELECT 1 FROM chinalife_presence WHERE user_id=? AND city IN ("China","Shenyang") AND place=? AND seen_at>=DATE_SUB(NOW(),INTERVAL 60 SECOND)','is',[$uid,$place])) cl_fail('Look for the golden envelope in the right venue',409);
 $db->begin_transaction();
