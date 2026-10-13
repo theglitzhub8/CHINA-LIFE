@@ -1,4 +1,4 @@
-import {GRID,BASE_POSITIONS,cityMap} from './map-data.js';
+import {GRID,BASE_POSITIONS,cityMap} from './map-data.js?v=20261013d';
 // Fictional neighbourhoods, with a connected street network in every city. All city specifics live in map-data.js.
 export function cityLayout(name,content){
  const map=cityMap(name),{north,coastal}=map,positions={...BASE_POSITIONS};

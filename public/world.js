@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
-import {buildingModel,interiorModel,furnitureModel} from './models.js';
-import {cityLayout,streetRoute} from './city-layout.js';
+import {buildingModel,interiorModel,furnitureModel} from './models.js?v=20261013d';
+import {cityLayout,streetRoute} from './city-layout.js?v=20261013d';
 import {safeRoomEntry,walkingPath,activityMotion} from './movement.js';
 import {entryPosition,roomPosition} from './presence-layout.js';
 import {chineseResidential,chineseCityDetails,chineseVenueDetails} from './china-city.js';
@@ -8,7 +8,7 @@ import {skyline,vehicles,moveVehicle,car,jet,airfield} from './skyline.js';
 import {characterModel,npcLook} from './characters.js';
 import {buildCityCentre,centreBlocked,CENTRE} from './district-centre.js';
 import {buildDistricts} from './districts.js';
-import {buildHome,homeExterior} from './home-interiors.js';
+import {buildHome,homeExterior} from './home-interiors.js?v=20261013d';
 import {carModel} from './garage.js';
 
 const $=id=>document.getElementById(id),game=window.ChinaLife;

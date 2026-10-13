@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import {mat,solid,glow,box,cyl,slab,facade,roof} from './city-kit.js';
-import {furnitureModel} from './models.js';
+import {furnitureModel} from './models.js?v=20261013d';
 import {carModel} from './garage.js';
 // Homes that feel like what they cost. Each tier has its own size, materials, rooms and furniture: a compact
 // rental studio, a city apartment, a townhouse with a patio, a villa with a pool deck, a skyline penthouse with a

@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import {furnitureModel,buildingModel} from './models.js';
+import {furnitureModel,buildingModel} from './models.js?v=20261013d';
 import {characterModel} from './characters.js';
 import {carModel} from './garage.js';
 // Store and shop previews: furniture, homes, the avatar trying on clothes, and cars.
