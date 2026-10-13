@@ -37,7 +37,7 @@ if ($method==='GET') {
 cl_rate('economy',30,60);
 $input=cl_body();
 $action=(string)($input['action']??'');
-if (!in_array($action,['job','mission','purchase','accident','club-drink','club-spray'],true)) cl_fail('Choose a job, mission or purchase');
+if (!in_array($action,['job','mission','purchase','accident','club-drink','club-spray','school'],true)) cl_fail('Choose a job, mission or purchase');
 // v9: ChampagnePappi's bar in 007 Club. Price and XP live here only; one drink per 90 s, XP for the first 8 a day.
 $clubDrinks=['pappi-fizz'=>[120,10],'gold-rush'=>[300,25],'zero-proof'=>[40,5],'water'=>[0,0]];
 
@@ -77,6 +77,29 @@ try {
         cl_store_totals($uid,$game);
         $db->commit();
         json_response('success',$moved+['charged'=>$fee,'ambulance'=>min(300,$fee),'treatment'=>$fee-min(300,$fee),'cooldown'=>false,'duplicate'=>false,'bonus'=>false],'Treated at the hospital.');
+    }
+    // v10: school day. Class: once per subject a day, at a classroom. Homework: once a day, anywhere.
+    // Exam: once per ISO week, at a classroom. Client scores only pick the tier; the caps keep it cheap.
+    if ($action==='school') {
+        $kind=(string)($input['kind']??'');$subject=(string)($input['subject']??'');$score=max(0,min(100,(int)($input['score']??0)));
+        if (!in_array($kind,['class','homework','exam'],true)) cl_fail('Choose a class, homework or the exam');
+        if ($kind==='class' && !in_array($subject,['tones','vocab','characters','dialogues','review'],true)) cl_fail('Choose a class');
+        if ($kind!=='homework') {
+            [, $here]=economy_here();
+            $rooms=['campus','ef','university','liaoning','dongbei','academy','medical','aerospace','technology','normal','ligong','jianzhu','agricultural','pharmaceutical','chemical','tcm','medical-college','engineering','gafa','gdpu','gdufe','gdufs','gdut','gmu','gzhu','gzsport','gzucm','scau','scnu','smu'];
+            if (!in_array($here,$rooms,true)) cl_fail('Go to a classroom first',403);
+        }
+        $bj=new DateTime('now',new DateTimeZone('Asia/Shanghai'));
+        $ref=$kind==='exam'?'school:exam:'.$bj->format('o-\WW'):'school:'.$kind.':'.($kind==='class'?$subject:'hw').':'.$day;
+        if (economy_seen('school',$ref)) {$totals=economy_totals($game);$db->commit();json_response('success',$totals,'Already recorded.');}
+        if ($kind==='class') {$coins=$score>=60?40:0;$xp=$score>=60?15:5;}
+        elseif ($kind==='homework') {$coins=$score>=60?80:0;$xp=$score>=60?25:5;}
+        else {[$coins,$xp]=$score>=90?[800,120]:($score>=75?[500,90]:($score>=60?[300,60]:[0,20]));}
+        $moved=cl_move_totals($uid,$game,$coins,$xp);
+        economy_note('school',$ref,$moved['awarded'],$xp);
+        cl_store_totals($uid,$game);
+        $db->commit();
+        json_response('success',$moved+['duplicate'=>false,'bonus'=>false],'Recorded.');
     }
     // v10: money spray in any club. A coin sink (no XP); one every 20 s and ¥20,000 a Beijing day.
     if ($action==='club-spray') {

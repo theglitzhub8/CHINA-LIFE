@@ -50,7 +50,13 @@ export function themedClub(c,id){
   if(!reduced()&&time-lastFx>66){lastFx=time;beam.rotation.z=.45*Math.sin(time*.0011);beam.rotation.x=.25*Math.cos(time*.0008);const pulse=phase!=null?1-(phase%1):.5;for(const m of floorMats)m.opacity=.3+pulse*.35}
   if(time-lastCheck>1000){lastCheck=time;boost=Math.max(0,boost-.6);hud.setParty(Math.round(15+c.remotes().length*12+(window.ChinaLifeAudio?.playing?25:0)+boost))}}
  function dispose(){hud.remove();curtain.remove();for(const d of disposers)d.dispose?.()}
- return {tick,dispose,keep:[...tiles,beam],theme};
+ // Nudge room furniture that ends up on the dance floor out to the nearer side (runs after the room is built).
+ function settle(){const fx0=-3.05,fx1=3.05,fz0=-1.7,fz1=3.3,skip=new Set([...tiles,beam]),box3=new THREE.Box3();
+  for(const o of [...root.children]){if(skip.has(o)||o.userData.limbs||o.isLight||o.userData.treasure)continue;box3.setFromObject(o);if(box3.isEmpty())continue;const sx=box3.max.x-box3.min.x,sz=box3.max.z-box3.min.z,h=box3.max.y-box3.min.y;
+   if(sx>4||sz>4||h<.2||box3.min.y>1.6)continue;if(box3.max.x<=fx0||box3.min.x>=fx1||box3.max.z<=fz0||box3.min.z>=fz1)continue;
+   const left=box3.max.x-fx0+.15,right=fx1-box3.min.x+.15,dx=left<right?-left:right;o.position.x+=dx;
+   for(const ob of c.obstacles())if(ob.x>=box3.min.x-.01&&ob.x<=box3.max.x+.01&&ob.z>=box3.min.z-.01&&ob.z<=box3.max.z+.01)ob.x+=dx}}
+ return {tick,dispose,settle,keep:[...tiles,beam],theme};
 }
 // The club HUD: party meter + Dance / Toast / Spray (and Drinks in 007).
 export function hudFor(c,{drinks,onDrinks,onSpray,onEmote}){

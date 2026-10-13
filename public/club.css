@@ -36,3 +36,29 @@
 .vote-ava img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .vote-list button{border:0;border-radius:999px;padding:5px 12px;font-size:13px;background:#18776d;color:#fff;font-weight:800}
 .vote-list em{font-style:normal;font-size:12px;font-weight:700;color:#18776d}.vote-list p{margin:6px 4px;font-size:13px;color:#527a83}
+/* v10: school day. */
+.school h3{margin:14px 0 8px;font-size:15px}
+.school-tt{display:grid;gap:6px}
+.school-tt button,.school-row button{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:8px;padding:10px 12px;border:1px solid #d8e7e7;border-radius:14px;background:#f6fbfb;text-align:left;font:inherit;color:#143640}
+.school-tt button span{font-weight:800;color:#527a83;font-size:13px}.school-tt button em{font-style:normal;font-size:12px;font-weight:800;color:#18776d}
+.school-tt button.now{border-color:#18776d;background:#e6f5f2;box-shadow:0 0 0 2px #18776d22}
+.school-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.school-row button{grid-template-columns:1fr;gap:2px}.school-row button span{font-size:12px;color:#527a83}.school-row button.done{opacity:.7}
+.school-grades{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.school-grades div{display:grid;justify-items:center;gap:2px;padding:8px 4px;border-radius:12px;background:#f6fbfb;text-align:center}
+.school-grades b{font-size:22px}.school-grades span{font-size:11px;font-weight:700}.school-grades small{font-size:11px;color:#527a83}
+.g-A{color:#18a058}.g-B{color:#2e86c1}.g-C{color:#d4a017}.g-D{color:#d35400}.g-F{color:#c0392b}.g-n{color:#9fb6bb}
+.school-q p{font-size:16px;line-height:1.4;margin:4px 0 12px}.school-q p small{display:block;color:#527a83;font-size:13px;margin:4px 0}
+.school-q .zh,.school-q .zh b{font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif}.school-q b.zh{font-size:26px}
+.school-q .choice-action.right{border-color:#18a058;background:#e8f8ef}.school-q .choice-action.wrong{border-color:#c0392b;background:#fdecea}
+/* v10: Hafrik host personas. */
+.scene-label.hafrik-host{background:#fff;color:#0f4c45;border:1.5px solid #18776d;font-weight:800}
+.scene-label.hafrik-host::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#22c55e;margin-right:5px;vertical-align:1px;box-shadow:0 0 0 2px #22c55e33}
+.host-online{color:#16a34a;font-weight:800}
+.host-chat{display:grid;gap:10px}
+.host-log{display:grid;gap:6px;max-height:42vh;overflow:auto;padding:4px}
+.host-log p{margin:0;max-width:82%;padding:8px 12px;border-radius:16px;font-size:14px;line-height:1.35}
+.host-log p.h{background:#eef6f5;color:#143640;border-bottom-left-radius:4px}
+.host-log p.me{justify-self:end;background:#18776d;color:#fff;border-bottom-right-radius:4px}
+.host-log p.typing{opacity:.6;font-style:italic}
+.host-chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}.host-chips button{flex:none;border:1px solid #cfe3e1;background:#fff;border-radius:999px;padding:6px 12px;font-size:13px;color:#18776d;font-weight:700}
+.host-form{display:grid;grid-template-columns:1fr auto;gap:8px}.host-form input{border:1px solid #cfe3e1;border-radius:999px;padding:10px 14px;font:inherit}.host-form button{border:0;border-radius:999px;padding:0 18px;background:#18776d;color:#fff;font-weight:800}

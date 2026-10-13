@@ -1,4 +1,4 @@
-import {sprayMenu} from './club-fx.js?v=20261014b1';
+import {sprayMenu} from './club-fx.js?v=20261014d1';
 // v9: 007 Club host ChampagnePappi, the neon club dressing and the party HUD.
 // Built once per visit into the venue root; tick() runs from the world loop. No paid AI: canned lines only.
 // Drinks are paid on the server (economy.php action club-drink) and only update money/XP, never the save revision.
