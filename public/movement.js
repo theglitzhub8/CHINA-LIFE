@@ -1,3 +1,8 @@
+// Recover saved or initial positions covered by furniture without moving valid entries.
+export function safeRoomEntry(entry,obstacles,bounds){
+ const valid=Math.abs(entry.x)<=bounds.x&&Math.abs(entry.z)<=bounds.z&&!obstacles.some(o=>Math.abs(entry.x-o.x)<o.w/2+.08&&Math.abs(entry.z-o.z)<o.d/2+.08);
+ return valid?entry:(walkingPath(entry,entry,obstacles,bounds)[0]||{x:0,z:0});
+}
 // Walking uses a half-metre navigation grid with clearance around furniture.
 export function walkingPath(start,end,obstacles,bounds={x:6,z:4},step=.4){
  const cols=Math.floor(bounds.x*2/step)+1,rows=Math.floor(bounds.z*2/step)+1;

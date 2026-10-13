@@ -1,0 +1,516 @@
+/* Responsive interface layer; city geometry, lighting and labels are unchanged. */
+#worldUI {
+  --ui-ink: #252729;
+  --ui-muted: #777a7e;
+  --view-gap: 10px;
+  --view-edge: 12px;
+  --view-bottom: max(10px, env(safe-area-inset-bottom));
+  --dock-height: 170px;
+  --nav-height: 58px;
+  --dock-width: min(440px, calc(100% - 24px));
+}
+#worldUI .hud-bar { background: #fff; border-color: #ffffff90; box-shadow: 0 4px 14px #00000010; backdrop-filter: none; -webkit-backdrop-filter: none; }
+#worldUI .world-caption > button { background: #fff; color: #383b3e; backdrop-filter: none; -webkit-backdrop-filter: none; }
+#worldUI .world-dock {
+  left: 50%; right: auto; transform: translateX(-50%); bottom: var(--view-bottom);
+  width: var(--dock-width); max-height: none; gap: var(--view-gap); overflow: visible;
+}
+#worldUI .venue-card {
+  position: relative; box-sizing: border-box; border-radius: 24px;
+  padding: 16px 14px 8px; background: #fffffff5;
+  border: 1px solid #ffffffa8; box-shadow: 0 10px 35px #0000001a;
+  max-height: min(36dvh, 340px); overflow-y: auto; overscroll-behavior: contain;
+}
+#worldUI:is(.map-view,.home-view):not(.dock-open) .venue-card { padding: 6px 12px; border-radius: 22px; }
+#worldUI .venue-card::before, #placeSheet::before {
+  content: ''; width: 34px; height: 4px; position: absolute; top: 6px;
+  left: calc(50% - 17px); border-radius: 99px; background: #d9d9db; pointer-events: none;
+}
+#worldUI .venue-heading { min-width: 0; gap: 9px; }
+#worldUI:not(.dock-open) .venue-card {
+  padding: 6px 12px; border-radius: 22px; max-height: none; overflow: hidden;
+}
+#worldUI:not(.dock-open) .venue-card::before { display: none; }
+#worldUI:not(.dock-open) #worldVenueMore { display: none; }
+#worldUI:not(.dock-open) .venue-card :is(.destination-search,.venue-heading p,.venue-say,.world-activities,.venue-social-controls) { display: none; }
+#worldUI:not(.dock-open) .venue-heading { cursor: pointer; }
+#worldUI:is(.map-view,.home-view) .venue-heading::after { display: none; }
+#worldUI #panelToggle { flex: none; width: 44px; height: 44px; border-radius: 50%; background: transparent; color: #66747b; font-size: 20px; padding: 0; }
+#worldUI #panelToggle:hover { background: #f0f2f3; }
+#worldUI .venue-heading > div:not(.venue-icon) { min-width: 0; flex: 1; }
+#worldUI .venue-heading h1 { font-size: 15px; letter-spacing: -.3px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#worldUI .venue-heading p { color: #777a7e; font-size: 11px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#worldUI:is(.map-view,.home-view):not(.dock-open) .venue-heading p { display: none; }
+#worldUI .venue-icon { width: 30px; height: 30px; flex: none; font-size: 17px; background: #f1f1f2; color: #343739; border-radius: 50%; }
+#worldUI #worldVenueMore { width: 44px; height: 44px; flex: none; }
+#worldUI:is(.map-view,.home-view) .venue-heading::after { padding: 0; font-size: 16px; }
+.destination-search { display: none; }
+#worldUI.map-view .destination-search {
+  box-sizing: border-box; display: flex; align-items: center; gap: 10px;
+  width: 100%; min-height: 44px; margin: 0 0 6px; padding: 9px 14px;
+  border-radius: 99px; border: 1px solid #dfdfe1; background: #fff; color: #252729;
+  box-shadow: 0 2px 10px #00000008; text-align: left;
+}
+.destination-search span { font-size: 16px; font-weight: 750; letter-spacing: -.3px; }
+.destination-search svg { flex: none; width: 20px; height: 20px; }
+.destination-search small { margin-left: auto; color: #777a7e; font-size: 11px; }
+#worldUI .world-nav {
+  margin: 0 auto; width: min(100%, 360px); box-sizing: border-box;
+  padding: 4px; border-radius: 99px; background: #ffffffe0;
+  border: 1px solid #ffffffb0; box-shadow: 0 5px 20px #00000016;
+  backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+}
+#worldUI .world-nav button { border-radius: 99px; min-height: 46px; padding: 4px 0; color: #303234; font-size: 11px; gap: 3px; }
+#worldUI .world-nav button span { height: 20px; }
+#worldUI .world-nav button svg { width: 20px; height: 20px; }
+#worldUI .world-nav button.active { background: #e6e5e3; color: #202224; }
+#worldUI .scene-tools { right: var(--view-edge); gap: 7px; }
+#worldUI .scene-tools button, #worldUI .scene-tools #mapLabelMode {
+  width: 44px; height: 44px; min-width: 44px; min-height: 44px; border-radius: 50%;
+  background: #ffffffe6; color: #252729; border: 1px solid #ffffff90;
+  box-shadow: 0 4px 16px #00000016; font-size: 18px;
+}
+#worldUI.map-view.search-open .map-controls {
+  right: 72px; max-height: max(80px, calc(100dvh - var(--dock-height) - 160px));
+  overflow-y: auto; overscroll-behavior: contain;
+}
+#worldUI .world-activities button { border-radius: 99px; min-height: 44px; background: #f6f6f6; color: #343739; border-color: #e4e4e6; }
+#worldUI .venue-say { border-radius: 99px; background: #f5f5f5; min-height: 44px; }
+#worldUI .venue-chat-button { border-radius: 16px; background: #f4f4f4; color: #343739; min-height: 44px; }
+#placeSheet.place-sheet {
+  width: var(--dock-width); bottom: calc(var(--view-bottom) + var(--nav-height) + var(--view-gap));
+  border-radius: 24px; background: #fffffff5; padding: 24px 16px 16px;
+  max-height: min(48dvh, 420px); overflow-y: auto; overscroll-behavior: contain;
+}
+#activityDialog.travel-sheet { border-radius: 24px; background: #fffffff5; bottom: calc(max(10px, env(safe-area-inset-bottom)) + 66px); max-height: 58dvh; overflow-y: auto; }
+/* The measured dock height keeps travel, audio and notifications above either panel state. */
+#worldUI .action-status {
+  box-sizing: border-box; left: 12px; right: 72px; transform: none; width: auto;
+  bottom: calc(var(--view-bottom) + var(--dock-height) + 12px);
+  border-radius: 18px; padding: 10px; background: #fffffff5; color: #252729;
+  box-shadow: 0 8px 25px #0000001a; gap: 8px;
+}
+#worldUI .action-status b { font-size: 13px; }
+#worldUI .action-status small { font-size: 11px; }
+#worldUI .action-status progress { accent-color: #bba467; height: 4px; }
+#worldUI .action-status > button { background: #eeeeef; color: #343739; min-width: 44px; min-height: 44px; padding: 6px; }
+#worldUI .quick-voice { right: var(--view-edge); bottom: calc(var(--view-bottom) + var(--dock-height) + 12px); width: 44px; height: 44px; font-size: 20px; }
+#worldUI .radio-fab { right: var(--view-edge); bottom: calc(var(--view-bottom) + var(--dock-height) + 64px); }
+#worldUI .quick-talk { right: 64px; bottom: calc(var(--view-bottom) + var(--dock-height) + 12px); max-width: calc(100% - 80px); }
+#worldUI.action-running .quick-talk { bottom: calc(var(--view-bottom) + var(--dock-height) + 100px); }
+#toast { bottom: calc(max(10px, env(safe-area-inset-bottom)) + var(--dock-height, 196px) + 12px); max-width: calc(100% - 24px); }
+#worldUI :is(.destination-search, .world-nav button, .scene-tools button):focus-visible { outline: 3px solid #12907b; outline-offset: 3px; }
+@media (hover: hover) { #worldUI .world-nav button:hover { background: #eeeded; } }
+@media (max-width: 999px) {
+  #worldUI.compact-controls .scene-tools { flex-direction: row; top: max(96px, calc(env(safe-area-inset-top) + 92px)); }
+  #worldUI.compact-controls.search-open .map-controls { top: max(152px, calc(env(safe-area-inset-top) + 148px)); right: 12px; }
+  #worldUI.compact-controls .quick-voice { top: max(96px, calc(env(safe-area-inset-top) + 92px)); left: 10px; right: auto; bottom: auto; }
+  #worldUI.compact-controls .radio-fab { top: max(96px, calc(env(safe-area-inset-top) + 92px)); left: 62px; right: auto; bottom: auto; }
+  #worldUI.compact-controls .action-status { right: 12px; }
+  #worldUI.compact-controls .radio-fab { width: 44px; min-width: 44px; height: 44px; padding: 2px; grid-template-columns: 1fr; border-radius: 50%; box-sizing: border-box; }
+  #worldUI.compact-controls .radio-cover { width: 36px; height: 36px; }
+  #worldUI.compact-controls .radio-fab :is(.radio-now,.radio-mini,.radio-line) { display: none; }
+}
+@media (max-width: 600px) {
+  #worldUI .world-hud { left: 10px; right: 10px; }
+  #worldUI .hud-bar .time-chip { padding: 0 6px; gap: 5px; font-size: 12px; }
+  #worldUI #worldMood { font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
+  #worldUI .hud-bar .money-chip { flex: none; padding-left: 6px; font-size: 13px; gap: 6px; }
+  #worldUI .money-chip > span { width: 32px; height: 32px; }
+  #worldUI .world-caption { max-width: calc(100% - 24px); gap: 6px; }
+  #worldUI .world-caption > button { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #worldUI .world-caption span { font-size: 11px; padding: 4px 8px; }
+  #worldUI .destination-search small { display: none; }
+  #worldUI .radio-fab, #worldUI .radio-fab.has-song { width: 44px; min-width: 44px; height: 44px; padding: 2px; grid-template-columns: 1fr; border-radius: 50%; box-sizing: border-box; }
+  #worldUI .radio-cover { width: 36px; height: 36px; }
+  #worldUI .radio-fab :is(.radio-now,.radio-mini,.radio-line) { display: none; }
+}
+@media (max-width: 360px) {
+  #worldUI { --view-edge: 8px; --dock-width: calc(100% - 16px); }
+  #worldUI #worldMood, #worldUI .hud-bar .hud-divider { display: none; }
+  #worldUI .venue-card { padding-left: 10px; padding-right: 10px; }
+  #worldUI .venue-heading h1 { font-size: 14px; }
+}
+@media (max-height: 500px) and (max-width: 500px) {
+  #worldUI .venue-card { max-height: 30dvh; }
+}
+@media (min-width: 601px) {
+  #worldUI .action-status { left: 50%; right: auto; transform: translateX(-50%); width: 360px; }
+  #worldUI .radio-fab { bottom: calc(var(--view-bottom) + var(--dock-height) + 96px); }
+}
+@media (min-width: 1000px) {
+  #worldUI { --dock-width: 400px; --view-bottom: max(16px, env(safe-area-inset-bottom)); }
+  #worldUI .world-dock { left: auto; right: 16px; transform: none; }
+  #placeSheet.place-sheet { left: auto; right: 16px; transform: none; }
+  #worldUI .action-status { left: 16px; right: auto; transform: none; width: min(360px, calc(100% - 460px)); bottom: var(--view-bottom); }
+  #worldUI .quick-voice { right: 432px; bottom: var(--view-bottom); }
+  #worldUI .radio-fab { right: 432px; bottom: calc(var(--view-bottom) + 56px); max-width: min(260px, calc(100vw - 460px)); }
+  #worldUI .quick-talk { right: 488px; bottom: var(--view-bottom); }
+  #worldUI.action-running .quick-talk { bottom: calc(var(--view-bottom) + 112px); }
+}
+@media (max-height: 500px) and (min-width: 501px) {
+  #worldUI { --dock-width: min(340px, 46vw); --view-bottom: max(8px, env(safe-area-inset-bottom)); --view-gap: 6px; }
+  #worldUI .world-dock { left: auto; right: max(10px, env(safe-area-inset-right)); transform: none; }
+  #worldUI .venue-card { max-height: calc(100dvh - 170px); padding: 16px 12px 8px; }
+  #worldUI .destination-search small { display: none; }
+  #worldUI .scene-tools { left: max(10px, env(safe-area-inset-left)); right: auto; flex-direction: row; top: max(98px, calc(env(safe-area-inset-top) + 90px)); }
+  #worldUI .world-side { max-height: calc(100dvh - 200px); overflow-y: auto; }
+  #worldUI .action-status { left: 64px; right: calc(var(--dock-width) + 24px); transform: none; width: auto; bottom: var(--view-bottom); }
+  #worldUI .action-status > span { display: none; }
+  #worldUI .action-status small { display: none; }
+  #worldUI .quick-voice { left: 10px; right: auto; bottom: var(--view-bottom); }
+  #worldUI .radio-fab { left: 10px; right: auto; bottom: calc(var(--view-bottom) + 84px); max-width: calc(100vw - var(--dock-width) - 30px); }
+  #worldUI .quick-talk, #worldUI.action-running .quick-talk { left: 64px; right: auto; bottom: calc(var(--view-bottom) + 112px); max-width: calc(100vw - var(--dock-width) - 88px); }
+  #placeSheet.place-sheet { left: auto; right: 10px; transform: none; max-height: calc(100dvh - 150px); }
+  #worldUI.map-view.search-open .map-controls { top: max(148px, calc(env(safe-area-inset-top) + 140px)); right: calc(var(--dock-width) + 20px); left: 10px; max-height: calc(100dvh - 180px); overflow-y: auto; }
+}
+
+/* In-game screens share a bounded panel size, rather than filling the device. */
+dialog {
+  box-sizing: border-box; width: min(480px, calc(100% - 24px));
+  max-width: calc(100% - 24px); max-height: min(680px, 74dvh);
+  border-radius: 22px; overflow-y: auto; overscroll-behavior: contain;
+}
+dialog .activity-panel { padding: 20px 16px 16px; min-width: 0; }
+dialog .activity-panel h2 { font: 800 20px/1.25 Manrope, system-ui, sans-serif; letter-spacing: -.35px; padding-right: 32px; }
+dialog .activity-panel .lead { font-size: 13px; line-height: 1.45; margin: 8px 0 14px; }
+dialog .choice-action { box-sizing: border-box; min-height: 44px; padding: 10px 12px; margin: 6px 0; gap: 4px; border-radius: 13px; }
+dialog .choice-action b { font-size: 13px; line-height: 1.35; }
+dialog .choice-action span { font-size: 12px; line-height: 1.4; }
+dialog :is(.primary-btn,.soft-btn,.ghost-btn) { min-height: 44px; font-size: 13px; padding: 10px 13px; }
+dialog :is(input,select,textarea) { box-sizing: border-box; max-width: 100%; font-size: 16px; }
+dialog :is(.close-x,.social-close,.social-back,.ai-x,.radio-x) { width: 44px; height: 44px; flex: none; }
+dialog :is(.social-empty,.chat-notice,.quest-card,.dream-card,.gist-card,.politics-office) { padding: 12px; border-radius: 14px; }
+dialog :is(.social-empty,.gist-card) h3 { font-size: 16px; margin: 4px 0 7px; }
+dialog :is(.social-empty,.gist-card) p { font-size: 13px; line-height: 1.45; }
+#socialDialog {
+  width: min(440px, calc(100% - 24px)); max-width: calc(100% - 24px);
+  height: min(600px, 70dvh); max-height: 70dvh; margin: auto;
+  border-radius: 22px; padding: 0; overflow: hidden;
+}
+#socialDialog .social-shell { height: 100%; min-width: 0; min-height: 0; }
+#socialDialog .social-heading { padding: 9px 12px; gap: 8px; flex: none; }
+#socialDialog .social-heading::before { display: none; }
+#socialDialog .social-heading h2 { font-size: 17px; line-height: 1.25; }
+#socialDialog .social-heading p { font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
+#socialDialog .social-tabs { padding: 5px 8px; gap: 2px; flex: none; }
+#socialDialog .social-tabs button { min-height: 44px; padding: 4px 0; font-size: 11px; }
+#socialDialog .social-tabs button span { font-size: 16px; }
+#socialDialog .social-body { padding: 10px 12px; min-width: 0; }
+#socialDialog :is(.chat-row,.player-card) { box-sizing: border-box; gap: 8px; padding: 8px 10px; margin-bottom: 5px; border-radius: 13px; min-width: 0; font-size: 13px; }
+#socialDialog .chat-row b, #socialDialog .player-copy b { font-size: 13px; }
+#socialDialog .chat-row small, #socialDialog .player-copy small { font-size: 11px; line-height: 1.4; }
+#socialDialog :is(.chat-row,.player-card) .player-avatar { width: 36px; height: 36px; font-size: 14px; }
+#socialDialog .player-avatar.large { width: 56px; height: 56px; font-size: 22px; }
+#socialDialog .player-actions { flex-wrap: wrap; }
+#socialDialog .player-actions button { min-height: 44px; padding: 6px 9px; font-size: 12px; }
+#socialDialog .social-section, #socialDialog .online-summary { margin: 8px 0; font-size: 12px; }
+#socialDialog .nearby-map { height: min(160px, 20dvh); width: 100%; margin-bottom: 8px; border-radius: 14px; }
+#socialDialog .chat-compose { flex: none; padding: 8px 10px; gap: 6px; }
+#socialDialog .chat-compose input { min-width: 0; }
+#socialDialog #socialFeedback { flex: none; font-size: 12px; margin: 0; padding: 4px 12px; }
+#phoneDialog {
+  box-sizing: border-box; width: min(420px, calc(100% - 24px)); max-width: calc(100% - 24px);
+  height: min(620px, 72dvh); max-height: 72dvh; margin: auto; padding: 0;
+  border: 0; border-radius: 24px; background: #f6f1ea; overflow: hidden;
+}
+#phoneDialog .phone-frame {
+  box-sizing: border-box; width: 100%; height: 100%; min-height: 0; max-height: 100%;
+  padding: 10px 12px 12px; border-radius: 24px; overflow: hidden;
+}
+#phoneDialog .phone-frame::before { display: none; }
+#phoneDialog .phone-status { flex: none; padding: 4px 48px 8px 2px; font-size: 12px; min-height: 34px; align-items: center; box-sizing: border-box; }
+#phoneDialog .phone-island, #phoneDialog .phone-signal { display: none; }
+#phoneDialog .close-x { top: 6px; right: 8px; width: 44px; height: 44px; background: #ebe4da; color: #2b241f; z-index: 6; box-shadow: none; }
+#phoneDialog #phoneContent { min-height: 0; min-width: 0; overflow-x: hidden; overflow-y: auto; }
+#phoneDialog .cl-phone { gap: 9px; padding: 0 0 8px; }
+#phoneDialog .cl-hero { border-radius: 18px; padding: 10px 12px; }
+#phoneDialog .cl-hero-top, #phoneDialog .cl-date { font-size: 11px; }
+#phoneDialog .cl-greet { font-size: 18px; margin-top: 6px; }
+#phoneDialog .cl-date { margin-bottom: 8px; }
+#phoneDialog .cl-hero .phone-widget { padding: 8px; border-radius: 12px; }
+#phoneDialog .phone-role > span { font-size: 20px; }
+#phoneDialog .phone-role b { font-size: 13px; }
+#phoneDialog .phone-role small { font-size: 11px; line-height: 1.3; }
+#phoneDialog .phone-money b { font-size: 17px; }
+#phoneDialog .cl-pill { min-height: 44px; font-size: 12px; padding: 8px 11px; }
+#phoneDialog .cl-search { min-height: 44px; padding: 9px 12px; }
+#phoneDialog .cl-group h4 { font-size: 10px; margin: 2px 3px 6px; }
+#phoneDialog .cl-phone :is(.phone-apps,.phone-dock) { padding: 9px 6px; gap: 9px 4px; border-radius: 16px; }
+#phoneDialog .cl-phone .phone-app { min-width: 0; min-height: 60px; gap: 4px; }
+#phoneDialog .cl-phone .phone-app b { width: 40px; height: 40px; border-radius: 12px; font-size: 20px; }
+#phoneDialog .cl-phone .phone-app span { font-size: 10px; overflow-wrap: anywhere; }
+#phoneDialog .cl-phone .phone-dock .phone-app span { font-size: 10px; }
+@media (max-width: 600px) {
+  #socialDialog, #phoneDialog {
+    position: fixed; inset: auto 0 calc(max(10px, env(safe-area-inset-bottom)) + 66px);
+    margin: 0 auto; width: calc(100% - 24px); max-width: 440px;
+    max-height: min(70dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 100px));
+  }
+  #socialDialog { height: min(560px, 70dvh); }
+  #phoneDialog { height: min(600px, 70dvh); }
+}
+@media (max-width: 360px) {
+  #socialDialog .player-card { flex-wrap: wrap; }
+  #socialDialog .player-actions { margin-left: 44px; }
+  #phoneDialog .cl-hero .phone-widgets { grid-template-columns: 1fr 1fr; }
+  #phoneDialog .phone-role { gap: 5px; }
+}
+@media (max-height: 500px) {
+  dialog { max-height: calc(100dvh - 24px); }
+  #socialDialog, #phoneDialog {
+    inset: 10px; margin: auto; width: min(600px, calc(100% - 24px));
+    height: calc(100dvh - 24px); max-height: calc(100dvh - 24px);
+  }
+  #socialDialog .nearby-map { height: 100px; }
+  #phoneDialog .cl-phone :is(.phone-apps,.phone-dock) { grid-template-columns: repeat(6, 1fr); }
+  #phoneDialog .cl-hero { padding: 8px 10px; }
+}
+/* Keep menu close controls outside the scrolling content. */
+#activityDialog, #cloudDialog, #voiceDialog, #audioDialog { overflow: hidden; }
+#activityContent, #cloudContent, #voiceContent, #audioContent {
+  max-height: min(680px, 74dvh); overflow-y: auto; overscroll-behavior: contain;
+}
+#socialDialog .social-body p, #socialDialog .message-text { font-size: 13px; line-height: 1.45; }
+#socialDialog :is(.social-actions,.profile-primary,.profile-more,.social-pills,.quick-replies) button { min-height: 44px; font-size: 12px; }
+#socialDialog .online-strip .player-avatar { width: 36px; height: 36px; }
+#socialDialog .profile-hero h3 { font-size: 18px; overflow-wrap: anywhere; }
+@media (max-height: 500px) {
+  #activityContent, #cloudContent, #voiceContent, #audioContent { max-height: calc(100dvh - 24px); }
+}
+dialog .activity-panel :is(p,li) { font-size: 13px; line-height: 1.5; }
+dialog .activity-panel h3 { font-size: 16px; line-height: 1.35; }
+dialog .activity-panel :is(.quest-card,.dream-card,.gist-card) { margin: 8px 0; }
+.politics-ranking { margin-top: 12px; }
+.politics-ranking h4 { font-size: 13px; margin: 0 0 8px; }
+.politics-ranking table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
+.politics-ranking th, .politics-ranking td { text-align: left; padding: 8px 4px; border-bottom: 1px solid #e3e9ed; overflow-wrap: anywhere; }
+.politics-ranking :is(th,td):first-child { width: 44px; }
+.politics-ranking :is(th,td):last-child { width: 48px; text-align: right; }
+.politics-ranking meter { display: block; width: 100%; height: 10px; margin-top: 4px; accent-color: #147d72; }
+.cantaball-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+#cantaballFrame iframe { display: block; width: 100%; height: min(480px, 52dvh); border: 0; border-radius: 14px; background: #2a2622; }
+@media (max-height: 500px) { #cantaballFrame iframe { height: calc(100dvh - 155px); min-height: 140px; } }
+#activityDialog.cantaball-screen #activityContent { height: min(680px, 74dvh); }
+#activityDialog.cantaball-screen .activity-panel { height: 100%; display: flex; flex-direction: column; padding: 14px 12px 12px; gap: 8px; }
+#activityDialog.cantaball-screen .activity-panel > :is(.eyebrow,.lead) { display: none; }
+#activityDialog.cantaball-screen h2 { margin: 0; padding-right: 44px; min-height: 32px; }
+.cantaball-card { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 8px; }
+.cantaball-tools { flex: none; }
+#activityDialog .cantaball-tools :is(button,a) { display: grid; place-items: center; min-width: 0; min-height: 44px; padding: 8px; font-size: 12px; flex: 1; margin: 0; text-align: center; }
+#activityDialog #cantaballStatus { font-size: 10px; margin: 0; flex: none; }
+#cantaballFrame { flex: 1; min-height: 0; }
+#cantaballFrame iframe { height: 100%; min-height: 0; }
+@media (max-height: 500px) { #activityDialog.cantaball-screen #activityContent { height: calc(100dvh - 24px); } }
+/* Gist composer: readable fields, optional link and a safe preview. */
+.gist-compose { display: grid; gap: 10px; }
+.gist-compose-note { display: grid; gap: 4px; padding: 12px; background: #edf5f2; border-radius: 14px; }
+.gist-compose-note > span { font-weight: 800; font-size: 13px; }
+.gist-compose-note small { font-size: 11px; color: #627b76; }
+.gist-compose > label { display: flex; justify-content: space-between; margin: 4px 0 -4px; font-size: 13px; font-weight: 800; }
+.gist-compose label small { font-weight: 500; font-size: 11px; color: #74847f; }
+.gist-compose :is(input,textarea) { width: 100%; min-width: 0; border: 1px solid #dce5e1; border-radius: 12px; padding: 12px; background: #fbfcfb; color: #163631; font: 16px/1.5 Manrope,system-ui,sans-serif; }
+.gist-compose textarea { resize: vertical; min-height: 130px; max-height: 240px; }
+.gist-compose :is(input,textarea):focus { outline: 2px solid #258b79; outline-offset: 2px; }
+.gist-link { border: 1px solid #e2e9e5; padding: 12px; border-radius: 12px; }
+.gist-link summary { cursor: pointer; font-weight: 700; font-size: 13px; }
+.gist-link summary small { color: #74847f; font-weight: 400; }
+.gist-link label { display: block; margin: 10px 0 6px; font-size: 12px; }
+.gist-link > small { display: block; margin-top: 6px; color: #74847f; font-size: 11px; }
+#gistPreview[hidden] { display: none; }
+#gistPreview p { white-space: pre-wrap; overflow-wrap: anywhere; }
+#gistUserStatus:empty { display: none; }
+#gistUserStatus { padding: 10px; border-radius: 12px; background: #edf5f2; }
+.gist-compose-footer { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 0; }
+.gist-compose-footer button { flex: 1; }
+/* Minimized music always uses the idle button footprint, even with a song. */
+#worldUI .radio-fab, #worldUI .radio-fab.has-song { width: 44px; min-width: 44px; height: 44px; padding: 2px; grid-template-columns: 1fr; border-radius: 50%; box-sizing: border-box; transition: box-shadow .18s ease; }
+#worldUI .radio-fab .radio-cover { width: 36px; height: 36px; }
+#worldUI .radio-fab :is(.radio-now,.radio-mini,.radio-line) { display: none; }
+#worldUI .radio-fab.playing { box-shadow: 0 0 0 3px #79ceb866,0 4px 14px #10233333; }
+.club-music-fab { position: absolute; left: var(--view-edge); bottom: calc(var(--view-bottom) + var(--dock-height) + 10px); width: 44px; height: 44px; z-index: 10; border-radius: 50%; background: #ffffffef; color: #163c37; font-size: 18px; box-shadow: 0 4px 14px #10233333; }
+.club-music-fab[hidden], #worldUI.map-view .club-music-fab { display: none; }
+#worldUI.action-running .club-music-fab { bottom: calc(var(--view-bottom) + var(--dock-height) + 100px); }
+#radioDialog, #audioDialog { width: min(420px,calc(100% - 24px)); max-width: calc(100% - 24px); max-height: min(660px,72dvh); border-radius: 24px; padding: 0; background: #f8faf8; }
+#radioDialog { overflow-y: auto; }
+#audioContent { max-height: min(660px,72dvh); }
+#radioDialog[open], #audioDialog[open] { animation: music-player-in .18s ease-out; }
+@keyframes music-player-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+#radioDialog .radio-hero, #audioDialog .dj-hero { padding: 14px; background: linear-gradient(145deg,#103d39,#1d665b); }
+#radioDialog .radio-head { align-items: center; padding: 0; margin-bottom: 10px; }
+#radioDialog .radio-head b { font-size: 13px; }
+#radioDialog .radio-x { background: #ffffff20; color: white; font-size: 25px; }
+#radioDialog .radio-player { grid-template-columns: 72px minmax(0,1fr); gap: 12px; margin: 12px 0; }
+#radioDialog .radio-art, #audioDialog .dj-art { width: 72px; height: 72px; border-radius: 16px; }
+#radioDialog .radio-meta > b { font-size: 18px; line-height: 1.3; }
+#radioDialog .radio-controls { gap: 8px; }
+#radioDialog .radio-controls button { min-width: 44px; min-height: 44px; }
+#radioDialog .radio-main { width: 52px; height: 52px; font-size: 22px; }
+#radioDialog .radio-vol { min-width: 0; max-width: 90px; }
+#radioDialog :is(.radio-tabs,.radio-list,.radio-artists) { padding-left: 12px; padding-right: 12px; }
+#radioDialog .radio-tabs button, #audioDialog .dj-tabs button { min-height: 44px; font-size: 12px; padding: 8px 12px; }
+#radioDialog .radio-list button { padding: 8px; gap: 9px; }
+#radioDialog .radio-thumb, #audioDialog .dj-thumb { width: 40px; height: 40px; border-radius: 12px; }
+#radioDialog .radio-row b, #audioDialog .dj-q b { font-size: 13px; }
+#radioDialog .radio-row small, #audioDialog .dj-q small { font-size: 11px; }
+#radioDialog .radio-note { font-size: 11px; padding: 10px 12px; }
+#audioDialog .dj-hero > .eyebrow { display: block; padding-right: 40px; font-size: 10px; line-height: 1.5; }
+#audioDialog .dj-now { grid-template-columns: 72px minmax(0,1fr); gap: 12px; margin: 12px 0; }
+#audioDialog .dj-meta h3 { font-size: 18px; }
+#audioDialog .dj-actions { gap: 8px; }
+#audioDialog .dj-actions .volume-control { min-width: 100px; }
+#audioDialog .dj-tabs { padding: 8px 12px; }
+#audioDialog .dj-panel { padding: 8px 12px; }
+#audioDialog .dj-card { grid-template-columns: 40px minmax(0,1fr) auto; gap: 8px; }
+@media (max-height: 500px) { #radioDialog,#audioDialog,#audioContent { max-height: calc(100dvh - 24px); } }
+@media (prefers-reduced-motion: reduce) { #radioDialog[open],#audioDialog[open] { animation: none; } }
+#radioDialog .radio-controls { flex-wrap: wrap; justify-content: center; }
+#radioDialog .radio-vol { width: 100%; max-width: none; margin: 2px 0 0; justify-content: center; }
+#radioDialog .radio-vol input { width: min(160px,70%); }
+#radioDialog .radio-search { min-width: 0; }
+#radioDialog .radio-search input { min-width: 0; }
+#radioDialog .radio-artistname { overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) { .radio-eq i { animation: none; height: 8px; } }
+
+/* Keep the radio sheet centered at every viewport size. */
+#radioDialog { margin: auto; inset: 0; }
+#radioDialog .radio-hero { border-radius: 24px 24px 0 0; }
+.club-people { display: grid; gap: 10px; }
+.club-people article { padding: 12px; border-radius: 14px; background: #edf5f2; }
+.club-people article > div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.club-people button { min-height: 44px; }
+
+#radioDialog .radio-hero { overflow: hidden; }
+
+/* Journey and discovery panels; city map styles remain unchanged. */
+.chapter-hero{padding:18px;border-radius:18px;background:linear-gradient(135deg,#123e46,#176d69);color:#fff;margin:8px 0 16px}
+.chapter-hero h3{font-size:clamp(20px,3vw,26px);margin:8px 0}.chapter-hero p{color:#e1efed;font-size:13px}.chapter-hero progress{width:100%;accent-color:#f6cf77;height:8px}
+.chapter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:10px}.chapter-grid .quest-card{margin:0!important;display:flex;flex-direction:column;min-width:0}.chapter-grid .quest-card .choice-action{margin-top:auto}.chapter-grid .quest-card h3{font-size:17px;margin:8px 0}.chapter-grid .quest-card p{font-size:13px}.chapter-grid .eyebrow{font-size:10px;letter-spacing:.08em;color:#18776d}
+.hunt-key{display:flex;gap:12px;padding:14px;border:1px solid #ead7a0;background:#fff7de;border-radius:15px;margin:12px 0}.hunt-key>span{font-size:28px}.hunt-key p{margin:6px 0 0;font-size:13px}.hunt-secrets{margin-top:18px}.hunt-secrets summary{cursor:pointer;font-weight:600;padding:12px 0}
+
+.scene-label.hq-staff-label{white-space:pre-line;max-width:180px;font-size:10px;line-height:1.3;text-overflow:clip;padding:6px 9px;text-align:center}
+
+/* Venue details are available on demand without covering the room. */
+#worldUI:not(.map-view).venue-details-collapsed .world-side :is(.event-chip,.objective-chip,.mini-needs){display:none!important}
+
+@media(max-width:600px){#worldOnline.hud-wide{display:inline!important;font-size:10px;white-space:nowrap}#worldMood{display:none!important}.time-chip{gap:6px!important}#worldOnline{overflow:hidden;text-overflow:ellipsis}}
+
+#worldUI:not(.map-view) #worldClean{background:#fff0ba;color:#443214;border:1px solid #e1b447;padding:9px 14px;font-weight:800;font-size:12px;box-shadow:0 3px 12px #604e2526;min-height:40px}
+#worldUI.venue-details-collapsed:not(.map-view) #worldClean{animation:rewards-invite 2s ease-in-out 3}
+@keyframes rewards-invite{50%{box-shadow:0 0 0 5px #f5cd6140,0 3px 12px #604e2526}}
+@media(prefers-reduced-motion:reduce){#worldUI.venue-details-collapsed:not(.map-view) #worldClean{animation:none}}
+
+/* Civic Hall: scoped to the Politics dialog, without changing the city map. */
+#politicsBody { color: #0c3f44; gap: 16px; font-family: 'Readex Pro', sans-serif; }
+#politicsBody .politics-hero { background: #0c3f44; border-radius: 22px; padding: 20px; flex-wrap: wrap; }
+#politicsBody .politics-hero p { line-height: 1.6; }
+#politicsBody .politics-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+#politicsBody .politics-actions button { min-height: 48px; padding: 12px; }
+#politicsBody .politics-note { margin: 0; line-height: 1.7; }
+#politicsBody .politics-office { background: #edf7f5; border: 1px solid #cfe3df; border-radius: 22px; padding: 16px; }
+#politicsBody .politics-office header { align-items: flex-start; margin-bottom: 16px; }
+#politicsBody .politics-office header small { display: block; line-height: 1.6; }
+#politicsBody .politics-candidate { display: grid; gap: 14px; padding: 18px; margin: 12px 0; border: 1px solid #d9e7e3; border-radius: 16px; background: #fff; }
+#politicsBody .politics-candidate-info { min-width: 0; }
+#politicsBody .politics-candidate-info small { color: #567a79; display: block; margin-bottom: 8px; }
+#politicsBody .politics-candidate-info b { display: block; font-size: 17px; overflow-wrap: anywhere; }
+#politicsBody .politics-candidate-info p { font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; margin-bottom: 0; }
+#politicsBody .politics-candidate-actions { display: grid; gap: 8px; }
+#politicsBody .politics-candidate-actions button { width: 100%; min-height: 46px; white-space: normal; padding: 12px; border-radius: 12px; }
+#politicsBody .politics-vote { background: #1f8e93; color: #fff; border: 0; font-weight: 600; }
+#politicsBody .politics-vote:disabled { background: #e2edeb; color: #567a79; cursor: default; }
+#politicsBody .politics-ranking { border-top: 1px solid #cfe3df; padding-top: 12px; overflow-x: auto; }
+#politicsBody .politics-ranking td { overflow-wrap: anywhere; }
+#politicsBody [aria-label="Shared campaign"] { border-color: #1f8e93; box-shadow: 0 0 0 2px #1f8e931a; }
+@media (max-width: 380px) { #politicsBody .politics-actions { grid-template-columns: 1fr; } #politicsBody .politics-office { padding: 12px; } }
+
+/* Phone workspaces: City Guide and in-game Admin only. */
+#activityDialog.phone-workspace-panel { --pw-canvas: #edf7f5; --pw-surface: #fff; --pw-ink: #0c3f44; --pw-border: #cfe1de; --pw-muted: #587675; --pw-soft: #deefeb; background: var(--pw-canvas); color: var(--pw-ink); font-family: 'Readex Pro', sans-serif; }
+.phone-workspace-panel .activity-panel { padding: 28px 20px; }
+.phone-workspace-panel .eyebrow { color: #1f8e93; }
+.phone-workspace-panel .lead { color: var(--pw-muted); line-height: 1.65; }
+.phone-workspace-panel h2 { font-size: 27px; letter-spacing: -.7px; }
+.phone-workspace { display: grid; gap: 18px; container-type: inline-size; container-name: phone-workspace; }
+.phone-workspace .workspace-hero { background: #0c3f44; color: #fff; padding: 22px; border-radius: 22px; }
+.phone-workspace .workspace-kicker { display: block; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; opacity: .75; }
+.phone-workspace .workspace-hero h3 { color: inherit; margin: 12px 0 8px; font-size: 23px; }
+.phone-workspace .workspace-hero p { font-size: 13px; line-height: 1.7; margin: 0 0 12px; color: #d2e9e6; }
+.phone-workspace .workspace-hero small { font-size: 11px; color: #b9ded8; }
+.phone-workspace .workspace-muted { font-size: 12px; color: var(--pw-muted); margin: 0; }
+.phone-workspace .guide-search-label { display: grid; gap: 8px; font-size: 12px; font-weight: 600; }
+.phone-workspace input:not([type=checkbox]),.phone-workspace select,.phone-workspace textarea { width: 100%; box-sizing: border-box; min-height: 48px; border: 1px solid var(--pw-border); border-radius: 12px; background: var(--pw-surface); color: var(--pw-ink); padding: 12px; font: inherit; font-size: 13px; }
+.phone-workspace textarea { min-height: 100px; }
+.phone-workspace input:focus-visible,.phone-workspace button:focus-visible,.phone-workspace a:focus-visible { outline: 3px solid #1f8e93; outline-offset: 3px; }
+.phone-workspace .guide-categories { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 10px; }
+.phone-workspace .guide-categories button { flex: 0 0 auto; min-height: 44px; border: 1px solid var(--pw-border); border-radius: 99px; background: var(--pw-surface); color: var(--pw-ink); padding: 10px 14px; font-size: 12px; }
+.phone-workspace .guide-categories button.active { background: #0c3f44; color: #fff; border-color: var(--pw-ink); }
+.phone-workspace .guide-categories small { opacity: .65; margin-left: 4px; }
+.phone-workspace .guide-results { display: grid; gap: 12px; }
+.phone-workspace .guide-row { display: flex; align-items: center; gap: 14px; width: 100%; margin: 0; padding: 14px; border: 1px solid var(--pw-border); border-radius: 18px; background: var(--pw-surface); color: var(--pw-ink); text-align: left; }
+.phone-workspace .guide-row img,.phone-workspace .partner-noimg { flex: 0 0 64px; width: 64px; height: 72px; object-fit: cover; border-radius: 12px; background: var(--pw-canvas); display: grid; place-items: center; font-size: 28px; }
+.phone-workspace .guide-place-copy { min-width: 0; flex: 1; display: grid; gap: 6px; }
+.phone-workspace .guide-place-copy b { font-size: 15px; overflow-wrap: anywhere; }
+.phone-workspace .guide-place-copy small { font-size: 11px; color: var(--pw-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.phone-workspace .guide-place-copy .guide-kind { color: #1f8e93; font-size: 10px; }
+.phone-workspace .guide-row i { color: #1f8e93; font-size: 21px; font-style: normal; }
+.phone-workspace .guide-cta { display: grid; gap: 12px; padding: 22px; border: 1px solid var(--pw-border); border-radius: 22px; background: var(--pw-soft); }
+.phone-workspace .guide-cta b { font-size: 18px; }
+.phone-workspace .guide-cta>span:not(.workspace-kicker) { font-size: 13px; line-height: 1.7; color: var(--pw-muted); }
+.phone-workspace .primary-btn { background: #1f8e93; color: #fff; border: 0; min-height: 46px; border-radius: 12px; padding: 12px 16px; }
+.phone-workspace .soft-btn { background: var(--pw-soft); color: var(--pw-ink); border: 1px solid var(--pw-border); min-height: 44px; border-radius: 12px; }
+.phone-workspace .workspace-empty { text-align: center; background: var(--pw-surface); padding: 24px 18px; border-radius: 18px; border: 1px solid var(--pw-border); }
+.phone-workspace .workspace-empty>span { font-size: 32px; color: #1f8e93; }
+.phone-workspace .workspace-empty p { color: var(--pw-muted); font-size: 13px; line-height: 1.7; }
+.phone-workspace .admin-section-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.phone-workspace .admin-section-grid button { display: grid; align-content: start; gap: 8px; background: var(--pw-surface); color: var(--pw-ink); border: 1px solid var(--pw-border); border-radius: 16px; padding: 16px; min-height: 112px; text-align: left; }
+.phone-workspace .admin-section-grid button.active { border-color: #1f8e93; background: var(--pw-soft); }
+.phone-workspace .admin-section-grid button>span { font-size: 22px; }
+.phone-workspace .admin-section-grid b { font-size: 13px; overflow-wrap: anywhere; }
+.phone-workspace .admin-section-grid small { font-size: 10px; line-height: 1.6; color: var(--pw-muted); }
+.phone-workspace .admin-navigation { background: var(--pw-surface); border: 1px solid var(--pw-border); padding: 16px; border-radius: 16px; }
+.phone-workspace .admin-navigation summary { cursor: pointer; min-height: 28px; font-size: 13px; font-weight: 600; }
+.phone-workspace .admin-navigation[open] .admin-section-grid { margin-top: 14px; }
+.phone-workspace #adminBody { display: grid; gap: 12px; min-width: 0; }
+.phone-workspace .admin-stats { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.phone-workspace .admin-stats>div { display: grid; gap: 8px; padding: 16px; border: 1px solid var(--pw-border); border-radius: 16px; background: var(--pw-surface); }
+.phone-workspace .admin-stats b { color: var(--pw-ink); font-size: 24px; }
+.phone-workspace .admin-stats small { color: var(--pw-muted); font-size: 11px; }
+.phone-workspace .admin-player { display: grid; gap: 12px; background: var(--pw-surface); border: 1px solid var(--pw-border); padding: 16px; border-radius: 16px; min-width: 0; }
+.phone-workspace .admin-player>div { display: grid; gap: 8px; min-width: 0; }
+.phone-workspace .admin-player small,.phone-workspace .admin-player b { overflow-wrap: anywhere; }
+.phone-workspace .admin-form { display: grid; gap: 12px; padding: 16px; background: var(--pw-surface); border: 1px solid var(--pw-border); border-radius: 16px; margin: 0; }
+.phone-workspace .admin-check { display: flex; align-items: center; gap: 12px; min-height: 52px; margin: 0; padding: 12px 14px; border: 1px solid var(--pw-border); border-radius: 12px; background: var(--pw-surface); font-size: 13px; line-height: 1.5; }
+.phone-workspace input[type=checkbox] { flex: 0 0 22px; width: 22px; height: 22px; accent-color: #1f8e93; }
+.phone-workspace .journal-item { background: var(--pw-surface); border: 1px solid var(--pw-border); border-radius: 12px; margin: 0; padding: 14px; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.phone-workspace .social-actions { flex-wrap: wrap; }
+@container phone-workspace (min-width:560px) { .phone-workspace .guide-results { grid-template-columns: repeat(2,minmax(0,1fr)); } .phone-workspace .admin-section-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
+
+:root[data-hafrik-theme="dark"] #activityDialog.phone-workspace-panel { --pw-canvas: #0d1416; --pw-surface: #152023; --pw-ink: #f2f7f7; --pw-border: #30474a; --pw-muted: #c2d5d2; --pw-soft: #0a2e33; }
+
+/* Election controls stay inside the Politics screen. */
+#politicsBody .politics-office-tabs { display:flex; gap:8px; overflow-x:auto; padding:4px 0 12px; }
+#politicsBody .politics-office-tabs button { flex:0 0 auto; white-space:nowrap; }
+#politicsBody .politics-office-tabs [aria-pressed="true"] { background:#18776d; color:#fff; }
+#politicsBody .politics-search { display:grid; gap:8px; margin:12px 0 20px; }
+#politicsBody .politics-vote-share { display:grid; grid-template-columns:minmax(60px,1fr) auto; align-items:center; gap:12px; margin-top:14px; font-size:12px; color:#567a79; }
+#politicsBody .politics-vote-share meter { width:100%; accent-color:#18776d; }
+#politicsBody [hidden] { display:none !important; }
+
+.community-life { color:#0c3f44; font-family:'Readex Pro',sans-serif; display:grid; gap:16px; }
+.community-life .life-heading { padding:18px; border-radius:20px; background:#0c3f44; color:#fff; }
+.community-life .life-heading span { font-size:11px; letter-spacing:.12em; }
+.community-life .life-heading p { margin:8px 0 0; color:#d6eee7; }
+.community-life .life-card { background:#f1f8f5; border:1px solid #d1e4dc; border-radius:20px; padding:18px; overflow-wrap:anywhere; }
+.community-life .life-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.community-life label { display:grid; gap:8px; margin:12px 0; }
+.community-life :is(input,select,textarea) { width:100%; padding:12px; border:1px solid #b8d2c7; border-radius:12px; font:inherit; box-sizing:border-box; background:#fff; color:#0c3f44; }
+.community-life textarea { min-height:100px; }
+.community-life button { min-height:44px; border-radius:12px; white-space:normal; }
+.community-life .primary-btn { background:#18776d; color:#fff; }
+.community-life button:disabled { opacity:.55; }
+.community-life progress { width:100%; accent-color:#18776d; }
+.community-life blockquote { border-left:3px solid #a77533; margin:12px 0; padding:8px 12px; background:#fff; border-radius:8px; }
+
+#politicsBody .politics-incumbent { display:grid; gap:8px; padding:16px; margin:14px 0; border-radius:16px; background:#0c3f44; color:#fff; overflow-wrap:anywhere; }
+#politicsBody .politics-incumbent small { color:#cde7df; }
+#politicsBody .politics-incumbent p { margin:0; color:#d6eee7; font-size:13px; }

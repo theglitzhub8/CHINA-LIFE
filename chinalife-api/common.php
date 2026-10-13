@@ -63,9 +63,16 @@ function cl_one(string $sql, string $types = '', array $values = []): ?array {re
 function cl_run(string $sql, string $types = '', array $values = []): int {
     $statement = cl_query($sql, $types, $values); $changed = $statement->affected_rows; $statement->close(); return $changed;
 }
+// Optional release tables must not stop the shared city while a CLI migration is pending.
+function cl_optional_rows(string $sql,string $types='',array $values=[]): array {
+    try{return cl_rows($sql,$types,$values);}catch(mysqli_sql_exception $e){if($e->getCode()!==1146)throw $e;error_log('ChinaLife optional schema pending: '.$e->getMessage());return [];}
+}
+function cl_optional_run(string $sql,string $types='',array $values=[]): void {
+    try{cl_run($sql,$types,$values);}catch(mysqli_sql_exception $e){if($e->getCode()!==1146)throw $e;error_log('ChinaLife optional schema pending: '.$e->getMessage());}
+}
 function cl_room(array $input): array {
-    $cities = ['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];
-    $places = ['home','ef','cafe','market','campus','gym','business','mall','park','night','station','african','church','plaza','gist','airport','university','liaoning','dongbei','blood','skylight','academy','hotel','palace','zhongjie','medical','aerospace','technology','normal','ligong','jianzhu','agricultural','pharmaceutical','chemical','tcm','medical-college','engineering','youle','ex','rex','orangutan','taxi-club','best-one','cats-eye','silver-knight','black-sheep','tank','home-campus','home-nanhu','home-hunnan','home-river','home-mansion','cantontower','cantonfair','baima','consulates','hospital','shamian','beijingroad','kama','partypier','bingsheng','bosphorus','gdufs','scnu','gzhu','smu','scau','gmu','gdut','gzucm','gdufe','gdpu','gafa','gzsport','hooleys','suns','tigerprawn','gzrestaurant','rosewood','ritz','shangrila','langham','grandview','parccentral','teemall','k11','shahe','guihuagang','baiyunmountain','chenclan','chimelong','sysmemorial','pearlcruise','polyexpo','sourcing','gzeast','gzrailway','baiyunstation','provincial','unitedfamily','gmuhospital','nanfang','haizhulake','tianhepark','liwanlake','childrenspark','ersha'];
+    $cities = ['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];
+    $places = ['hq','voting','home','ef','cafe','market','campus','gym','business','mall','park','night','station','african','church','plaza','gist','airport','university','liaoning','dongbei','blood','skylight','academy','hotel','palace','zhongjie','medical','aerospace','technology','normal','ligong','jianzhu','agricultural','pharmaceutical','chemical','tcm','medical-college','engineering','youle','ex','rex','orangutan','taxi-club','best-one','cats-eye','silver-knight','black-sheep','tank','home-campus','home-nanhu','home-hunnan','home-river','home-mansion','cantontower','cantonfair','baima','consulates','hospital','shamian','beijingroad','kama','partypier','bingsheng','bosphorus','gdufs','scnu','gzhu','smu','scau','gmu','gdut','gzucm','gdufe','gdpu','gafa','gzsport','hooleys','suns','tigerprawn','gzrestaurant','rosewood','ritz','shangrila','langham','grandview','parccentral','teemall','k11','shahe','guihuagang','baiyunmountain','chenclan','chimelong','sysmemorial','pearlcruise','polyexpo','sourcing','gzeast','gzrailway','baiyunstation','provincial','unitedfamily','gmuhospital','nanfang','haizhulake','tianhepark','liwanlake','childrenspark','ersha'];
     $city = $input['city'] ?? ''; $place = $input['place'] ?? '';
     if (!in_array($city, $cities, true) || !in_array($place, $places, true)) cl_fail('Choose a valid city and venue');
     return [$city, $place];
@@ -85,38 +92,6 @@ function cl_peer(mixed $value): int {
 }
 // Quick phrases players can send each other (see gestures.php); the text for each lives in social.js.
 function cl_gesture_phrases(): array {return ['hello','mic','how','friends','dance','drink','thanks','where','nice','bye'];}
-// Change counters per player (performance Batch 1): bumped whenever something that player must see changes, so
-// the game asks for details only when a counter moves. $what: messages | activities | visits.
-function cl_bump(array $users, string $what): void {
-    if (!in_array($what,['messages','activities','visits'],true)) return;
-    // A counter is only a wake-up hint: it must never fail the message, invite or visit that caused it.
-    try {foreach (array_unique(array_map('intval',$users)) as $u) if ($u>0) cl_run("INSERT INTO chinalife_inbox(user_id,$what,updated_at) VALUES(?,1,NOW()) ON DUPLICATE KEY UPDATE $what=$what+1,updated_at=NOW()",'i',[$u]);} catch (Throwable $e) {}
-}
-// Batch 1 rollout switch: polling-config.json lives only on the server (deploys never overwrite it) and is read on every
-// request, so a change applies at once. Missing or invalid file means legacy for everyone.
-// {"mode":"legacy"} everyone on the old polling (kill switch) · {"mode":"adaptive"} everyone on the new polling
-// {"mode":"testers","testers":["hafrik","123"],"percent":0} listed usernames or user ids, plus that share of other players.
-function cl_polling_mode(int $uid, string $username = ''): string {
-    $c=json_decode((string)@file_get_contents(__DIR__.'/polling-config.json'),true);
-    $mode=is_array($c)?($c['mode']??'legacy'):'legacy';
-    if ($mode==='adaptive') return 'adaptive';
-    if ($mode!=='testers') return 'legacy';
-    $testers=array_map(fn($t)=>strtolower(trim((string)$t)),is_array($c['testers']??null)?$c['testers']:[]);
-    if (in_array((string)$uid,$testers,true) || ($username!=='' && in_array(strtolower($username),$testers,true))) return 'adaptive';
-    $percent=max(0,min(100,(int)($c['percent']??0)));
-    return $percent>0 && crc32('chinalife-poll:'.$uid)%100<$percent ? 'adaptive' : 'legacy';
-}
-// Everything the game needs to decide what to fetch: my counters, my save revision, the newest message in my room.
-function cl_inbox(int $uid, string $city, string $roomPlace): array {
-    global $auth;
-    // Legacy players get only the mode: no extra queries, exactly the old cost.
-    $mode=cl_polling_mode($uid,(string)($auth['user_name']??''));if ($mode==='legacy') return ['mode'=>'legacy'];
-    // Without the inbox table (migration not run yet) the counters cannot be trusted, so clients are told to keep the old fast polling.
-    try {$box=cl_one('SELECT messages,activities,visits FROM chinalife_inbox WHERE user_id=?','i',[$uid])?:['messages'=>0,'activities'=>0,'visits'=>0];} catch (Throwable $e) {return ['mode'=>'legacy'];}
-    $rev=cl_one('SELECT revision FROM chinalife_saves WHERE user_id=?','i',[$uid]);
-    $room=$roomPlace===''?null:cl_one('SELECT MAX(id) id FROM chinalife_messages WHERE city=? AND place=? AND recipient_id IS NULL AND created_at>=DATE_SUB(NOW(),INTERVAL 1 DAY)','ss',[$city,$roomPlace]);
-    return ['messages'=>(int)$box['messages'],'activities'=>(int)$box['activities'],'visits'=>(int)$box['visits'],'revision'=>(int)($rev['revision']??0),'room'=>(string)($room['id']??'0'),'mode'=>$mode];
-}
 function cl_blocked(int $a, int $b): bool {
     return cl_one('SELECT owner_id FROM chinalife_blocks WHERE (owner_id=? AND peer_id=?) OR (owner_id=? AND peer_id=?)', 'iiii', [$a,$b,$b,$a]) !== null;
 }
@@ -171,11 +146,11 @@ function cl_credit(int $userId, int $amount): int {
     cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($game,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),$userId]);
     return $money;
 }
-// Cities players can travel to; Shenyang is always open. Admins change the list from the panel.
+// Admin controls starting cities and travel destinations. Existing saves retain their city.
 function cl_open_cities(): array {
     $row=cl_one("SELECT value FROM chinalife_settings WHERE name='open_cities'");
     $list=$row?json_decode($row['value'],true):null;
-    return array_values(array_unique(array_merge(['Shenyang'],is_array($list)?$list:[])));
+    return is_array($list)&&count($list)?array_values(array_unique(array_intersect($list,['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin']))):['China'];
 }
 // Player ranks (XP ladder) are configured by admins. They are game status only and never grant admin access.
 function cl_default_ranks(): array {
@@ -198,7 +173,9 @@ function cl_ranks(): array {
 }
 // Partner restaurants are added by admins per city. Ordering opens their own WeChat, WhatsApp or order link.
 function cl_restaurants(string $city, bool $all=false): array {
-    $rows=cl_rows('SELECT r.id,r.city,r.name,r.icon,r.district,r.description,r.menu,r.order_link,r.wechat_id,r.whatsapp,r.active,r.kind,r.photos,r.links,COALESCE(p.near,\'\') near FROM chinalife_restaurants r LEFT JOIN chinalife_restaurant_places p ON p.restaurant_id=r.id WHERE r.city=?'.($all?'':' AND r.active=1').' ORDER BY r.name LIMIT 200','s',[$city]);
+    $cities=$city==='China'&&!$all?array_values(array_unique(array_merge(['China'],array_diff(CL_CITIES,cl_open_cities())))):[$city];
+    $marks=implode(',',array_fill(0,count($cities),'?'));
+    $rows=cl_rows("SELECT r.id,r.city,r.name,r.icon,r.district,r.description,r.menu,r.order_link,r.wechat_id,r.whatsapp,r.active,r.kind,r.photos,r.links,COALESCE(p.near,'') near FROM chinalife_restaurants r LEFT JOIN chinalife_restaurant_places p ON p.restaurant_id=r.id WHERE r.city IN ($marks)".($all?'':' AND r.active=1')." ORDER BY r.name LIMIT 200",str_repeat('s',count($cities)),$cities);
     foreach ($rows as &$r) {$r['id']=(string)$r['id'];$r['kind']=$r['kind']?:'restaurant';$r['photos']=json_decode((string)($r['photos']??''),true)?:[];$r['links']=json_decode((string)($r['links']??''),true)?:[];$r['menu']=json_decode($r['menu'],true)?:[];$r['active']=(bool)$r['active'];}unset($r);
     return $rows;
 }
@@ -233,7 +210,7 @@ function cl_image(mixed $dataUrl, int $maxBytes=2097152, int $minW=200, int $min
     if ($info[0]<$minW||$info[1]<$minH||$info[0]>4096||$info[1]>4096) cl_fail('Use an image between '.$minW.'×'.$minH.' and 4096×4096 pixels');
     return [$bytes,$mime,(int)$info[0],(int)$info[1]];
 }
-const CL_CITIES=['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];
+const CL_CITIES=['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];
 const CL_PARTNER_KINDS=['restaurant','shop','service','creator','club','artist','event','ad'];
 // Partner applications from partners.html. Every field is checked here; what is stored is exactly what goes into the game
 // on approval. Photos must be images this account uploaded. Returns [city, title, data].
@@ -278,7 +255,7 @@ function cl_partner_data(string $kind, array $in, int $owner, bool $admin=false)
 function cl_valid_restaurant(array $input): array {
     $name=trim((string)($input['name']??''));$icon=trim((string)($input['icon']??''))?:'🍽';$district=trim((string)($input['district']??''));$description=trim((string)($input['description']??''));
     $link=trim((string)($input['order_link']??''));$wechat=trim((string)($input['wechat_id']??''));$whatsapp=preg_replace('/[^0-9]/','',(string)($input['whatsapp']??''));
-    if (!in_array($input['city']??'',['Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'],true)) cl_fail('Choose a city');
+    if (!in_array($input['city']??'',['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'],true)) cl_fail('Choose a city');
     if ($name===''||mb_strlen($name)>80||mb_strlen($icon)>8||mb_strlen($district)>80||mb_strlen($description)>300) cl_fail('Give the restaurant a name (up to 80 characters)');
     if ($link!==''&&!preg_match('#^(https://|weixin://)[^\s<>"]{3,290}$#',$link)) cl_fail('Order links must start with https:// or weixin://');
     if ($wechat!==''&&!preg_match('/^[A-Za-z][-_A-Za-z0-9]{5,39}$/',$wechat)) cl_fail('Enter a valid WeChat ID (6 to 40 letters, numbers, - or _)');
@@ -297,3 +274,5 @@ function cl_rank_status(int $userId): array {
     $s=cl_one('SELECT UNIX_TIMESTAMP(until)*1000 until_ms,reason FROM chinalife_rank_suspensions WHERE user_id=? AND until>NOW()','i',[$userId]);
     return ['badges'=>$badges,'rankSuspendedUntil'=>$s?(int)$s['until_ms']:null,'rankSuspendedReason'=>$s['reason']??null];
 }
+
+require_once __DIR__.'/hafrik-features.php';

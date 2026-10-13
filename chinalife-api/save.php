@@ -9,7 +9,15 @@ function cl_save_result(int $id): array {
     if (!is_array($game)||!is_array($character)) cl_fail('Saved game data is corrupted',500);
     return ['exists'=>true,'save'=>['game'=>$game,'character'=>$character],'revision'=>(int)$row['revision'],'updated_at'=>$row['updated_at'],'created_at'=>$row['created_at']];
 }
-if ($method==='GET') json_response('success',cl_save_result($uid)+['account'=>['id'=>(string)$uid,'username'=>$auth['user_name']??'Hafrik user']]);
+if ($method==='GET') {
+    $picture=is_string($auth['user_picture']??null)?trim($auth['user_picture']):'';
+    $avatar=null;
+    if($picture!==''&&!preg_match('~(?:blank_profile|default-avatar)~i',$picture)){
+        $url=function_exists('fix_url')?fix_url($picture):(preg_match('~^https?://~i',$picture)?$picture:'https://s3.ap-northeast-1.wasabisys.com/hafriksocial/uploads/'.preg_replace('~^uploads/~','',ltrim($picture,'/')));
+        if(is_string($url)&&filter_var($url,FILTER_VALIDATE_URL)&&strtolower(parse_url($url,PHP_URL_SCHEME)??'')==='https'&&!parse_url($url,PHP_URL_USER)&&!parse_url($url,PHP_URL_PASS))$avatar=$url;
+    }
+    json_response('success',cl_save_result($uid)+['account'=>['id'=>(string)$uid,'username'=>$auth['user_name']??'Hafrik user','avatar'=>$avatar]]);
+}
 if ($method==='DELETE') {
     cl_run('DELETE FROM chinalife_saves WHERE user_id=?','i',[$uid]);json_response('success',['deleted'=>true]);
 }
@@ -27,6 +35,14 @@ foreach (['money','xp','day','hour'] as $key) if (!is_numeric($game[$key]??null)
 foreach (['energy','hunger','hygiene','bladder','fun','social'] as $key) if (!is_numeric($game['needs'][$key]??null)||$game['needs'][$key]<0||$game['needs'][$key]>100) cl_fail('Invalid character needs');
 $stored=cl_one('SELECT game_state,TIMESTAMPDIFF(SECOND,updated_at,NOW()) elapsed FROM chinalife_saves WHERE user_id=?','i',[$uid]);
 $storedGame=$stored?json_decode($stored['game_state'],true):[];
+if(!$stored&&!in_array($game['city'],cl_open_cities(),true))cl_fail('Choose an available starting city',403);
+// Daily rewards are awarded by daily.php, never by an uploaded save.
+$game['lastVisit']=$storedGame['lastVisit']??'';$game['streak']=$storedGame['streak']??0;
+// Advance the saved day only at Beijing midnight, using the stored calendar anchor.
+$clockDay=intdiv(time()+8*3600,86400);$anchor=(int)($storedGame['chinaDay']??$clockDay);if($anchor<=0||$anchor>$clockDay)$anchor=$clockDay;
+$game['day']=$stored?(int)($storedGame['day']??1)+max(0,$clockDay-$anchor):1;
+$game['chinaDay']=$clockDay;$game['hour']=intdiv(time()+8*3600,60)%1440;
+
 if(($game['transferTotal']??0)!==($storedGame['transferTotal']??0)) {http_response_code(409);json_response('error',cl_save_result($uid),'Refresh your money transfers before saving.');}
 if(($game['sharedXP']??0)!==($storedGame['sharedXP']??0)){http_response_code(409);json_response('error',cl_save_result($uid),'Refresh shared activity rewards before saving.');}
 // XP and money come from the player's device, so growth is capped by real time since the last save.
