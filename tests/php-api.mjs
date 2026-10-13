@@ -945,3 +945,20 @@ test('City Mystery accepts clue objects only in route order and only at the venu
  assert.equal(second.data.next.object,'night-poster');assert.equal(second.data.clues.length,2);
  const route=await call(5,'mystery.php?city=Shenyang');assert.deepEqual(route.data.found,['plaza-lantern','park-bench']);assert.equal(route.data.next.place,'night');
 });
+
+test('Party Night runs a timed dance, takes one vote each and names the winner',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (5,6); DELETE FROM chinalife_party_votes; DELETE FROM chinalife_party_entries; DELETE FROM chinalife_party_rounds');
+ await call(5,'presence.php','POST',presence('Shenyang','night'));await call(6,'presence.php','POST',presence('Shenyang','night'));
+ const joined=await call(5,'party.php','POST',{action:'join',city:'Shenyang',place:'night'});
+ assert.equal(joined.httpStatus,200,joined.message);assert.equal(joined.data.round.phase,'dance');assert.equal(joined.data.round.joined,true);
+ assert.equal((await call(6,'party.php','POST',{action:'join',city:'Shenyang',place:'night'})).httpStatus,200);
+ assert.equal((await call(5,'party.php','POST',{action:'vote',city:'Shenyang',place:'night',dancer:6})).httpStatus,409);
+ sql('USE chinalife_test; UPDATE chinalife_party_rounds SET dance_ends=DATE_SUB(NOW(),INTERVAL 1 SECOND), vote_ends=DATE_ADD(NOW(),INTERVAL 2 MINUTE)');
+ assert.equal((await call(6,'party.php','POST',{action:'vote',city:'Shenyang',place:'night',dancer:6})).httpStatus,409);
+ const vote=await call(5,'party.php','POST',{action:'vote',city:'Shenyang',place:'night',dancer:6});
+ assert.equal(vote.httpStatus,200,vote.message);assert.equal(vote.data.round.entries.find(e=>e.id==='6').votes,1);assert.equal(vote.data.round.mine,'6');
+ assert.equal((await call(5,'party.php','POST',{action:'vote',city:'Shenyang',place:'night',dancer:6})).httpStatus,409);
+ sql('USE chinalife_test; UPDATE chinalife_party_rounds SET vote_ends=DATE_SUB(NOW(),INTERVAL 1 SECOND)');
+ const done=await call(6,'party.php?city=Shenyang&place=night');
+ assert.equal(done.data.round.phase,'closed');assert.equal(done.data.round.winner,'6');assert.match(done.data.round.title,/user6 · Dance Champion/);
+});
