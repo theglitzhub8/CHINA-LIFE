@@ -900,3 +900,18 @@ test('server economy records jobs, night missions and purchases and ignores clie
  const totals=await call(5,'economy.php');assert.equal(totals.data.money,3824);assert.equal(totals.data.xp,125);
  const board=await call(5,'leaderboard.php');assert.equal(board.data.players.find(p=>p.id==='5').xp,125);
 });
+
+test('Gist Night shows an anonymous handle, keeps the author for admins, and counts reactions and one poll vote',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (1,5,6)');
+ const posted=await call(5,'gist-night.php','POST',{action:'post',city:'Shenyang',body:'The square is glowing.',poll:{question:'Stay out?',options:['Yes','No']}});
+ assert.equal(posted.httpStatus,200,posted.message);assert.match(posted.data.handle,/^night-[0-9a-f]{6}$/);
+ const pub=await call(6,'gist-night.php?city=Shenyang');const post=pub.data.posts[0];
+ assert.equal(post.handle,posted.data.handle);assert.equal(post.user_id,undefined);assert.equal(post.body,'The square is glowing.');
+ const admin=await call(1,'gist-night.php?city=Shenyang');assert.equal(admin.data.posts[0].user_id,'5');assert.equal(admin.data.admin,true);
+ const react=await call(6,'gist-night.php','POST',{action:'react',city:'Shenyang',id:+post.id,kind:'fire'});
+ assert.equal(react.data.posts[0].reactions.fire,1);assert.equal(react.data.posts[0].mine,'fire');
+ const off=await call(6,'gist-night.php','POST',{action:'react',city:'Shenyang',id:+post.id,kind:'fire'});assert.equal(off.data.posts[0].reactions.fire,0);
+ const vote=await call(6,'gist-night.php','POST',{action:'vote',city:'Shenyang',poll:+post.poll.id,option:0});
+ assert.equal(vote.httpStatus,200,vote.message);assert.equal(vote.data.posts[0].poll.options[0].votes,1);assert.equal(vote.data.posts[0].poll.voted,0);
+ assert.equal((await call(6,'gist-night.php','POST',{action:'vote',city:'Shenyang',poll:+post.poll.id,option:1})).httpStatus,409);
+});
