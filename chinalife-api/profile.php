@@ -13,4 +13,15 @@ $money=$bal?(int)$bal['coins']:(int)($g['money']??0);$xp=$bal?(int)$bal['xp']:(i
 $netWorth=max(0,$money)+$value;
 // Other players only ever see a status badge, never the balance or net worth.
 $title=$netWorth>=1000000000?'🏆 Billionaire':($netWorth>=10000000?'👑 Big Laoban':($netWorth>=1000000?'💎 Millionaire':($netWorth>=100000?'💰 Rising Baller':'🌱 Building a life')));$own=$id===$uid;
-json_response('success',['profile'=>['id'=>(string)$id,'name'=>$row['name'],'gender'=>in_array($g['gender']??null,['male','female'],true)?$g['gender']:null,'xp'=>$xp,'wealth'=>$title,'netWorth'=>$own?$netWorth:null,'homes'=>$homes,'items'=>$items,'badges'=>cl_rank_status($id)['badges']]]);
+// v6 profile stats. Every extra is optional so a missing table never breaks the profile.
+$one=function(string $q,string $t,array $v){$r=cl_optional_rows($q,$t,$v);return $r?(int)array_values($r[0])[0]:0;};
+$friendsN=$one("SELECT COUNT(*) n FROM chinalife_friends WHERE (first_id=? OR second_id=?) AND status='accepted'",'ii',[$id,$id]);
+$dance=$one('SELECT COUNT(*) n FROM chinalife_party_rounds WHERE winner_id=?','i',[$id]);
+$offices=$one('SELECT COUNT(*) n FROM chinalife_elections e WHERE e.ends_at<NOW() AND (SELECT c.candidate_id FROM chinalife_election_votes v JOIN chinalife_politics_candidates c ON c.id=v.candidate_id WHERE v.election_id=e.id GROUP BY v.candidate_id ORDER BY COUNT(*) DESC,v.candidate_id LIMIT 1)=?','i',[$id]);
+$visited=max(count(array_unique(array_filter((array)($g['visited']??[]),'is_string'))),$one('SELECT COUNT(*) n FROM chinalife_life_visits WHERE user_id=?','i',[$id]));
+$recent=array_map(fn($r)=>['place'=>(string)$r['place'],'city'=>(string)$r['city'],'at'=>(int)$r['at']],cl_optional_rows('SELECT city,place,UNIX_TIMESTAMP(MAX(created_at))*1000 at FROM chinalife_life_visits WHERE user_id=? GROUP BY city,place ORDER BY at DESC LIMIT 5','i',[$id]));
+$flist=array_map(fn($r)=>['id'=>(string)$r['id'],'name'=>(string)$r['name'],'color'=>(string)($r['color']??'#246fa7')],cl_optional_rows("SELECT u.user_id id,u.user_name name,p.color FROM chinalife_friends f JOIN users u ON u.user_id=IF(f.first_id=?,f.second_id,f.first_id) LEFT JOIN chinalife_presence p ON p.user_id=u.user_id WHERE (f.first_id=? OR f.second_id=?) AND f.status='accepted' ORDER BY f.created_at DESC LIMIT 8",'iii',[$id,$id,$id]));
+$pres=cl_one('SELECT city,place,(seen_at>=DATE_SUB(NOW(),INTERVAL 20 SECOND)) online FROM chinalife_presence WHERE user_id=?','i',[$id]);
+$hasHome=!empty($g['ownedHomes'])||!empty($g['properties'])||!empty($g['propertyPortfolio']);
+$extra=['city'=>(string)($pres['city']??($g['city']??'')),'online'=>(bool)($pres['online']??false),'role'=>is_string($g['background']??null)?$g['background']:null,'days'=>max(1,(int)($g['day']??1)),'stats'=>['friends'=>$friendsN,'venues'=>$visited,'dance'=>$dance,'offices'=>$offices],'recent'=>$recent,'friends'=>$flist,'coins'=>$own?$money:null,'hasHome'=>$hasHome,'own'=>$own];
+json_response('success',['profile'=>$extra+['id'=>(string)$id,'name'=>$row['name'],'gender'=>in_array($g['gender']??null,['male','female'],true)?$g['gender']:null,'xp'=>$xp,'wealth'=>$title,'netWorth'=>$own?$netWorth:null,'homes'=>$homes,'items'=>$items,'badges'=>cl_rank_status($id)['badges']]]);

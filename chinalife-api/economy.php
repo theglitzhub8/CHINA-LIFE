@@ -33,7 +33,7 @@ if ($method==='GET') {
 cl_rate('economy',30,60);
 $input=cl_body();
 $action=(string)($input['action']??'');
-if (!in_array($action,['job','mission','purchase'],true)) cl_fail('Choose a job, mission or purchase');
+if (!in_array($action,['job','mission','purchase','accident'],true)) cl_fail('Choose a job, mission or purchase');
 
 function economy_here(): array {
     global $uid;
@@ -59,6 +59,19 @@ $day=cl_beijing_day();
 $db->begin_transaction();
 try {
     $game=cl_lock_character($uid);
+    // Street accident: ambulance ¥300 + treatment ¥500 = ¥800, taken from the server ledger and never below ¥0.
+    // One accident per 10 minutes; a repeat inside the cooldown is free (the player is still recovering).
+    if ($action==='accident') {
+        $walk=cl_optional_rows('SELECT city FROM chinalife_presence WHERE user_id=? AND street_at>=DATE_SUB(NOW(),INTERVAL 30 SECOND)','i',[$uid]);
+        if (!$walk) cl_fail('Accidents only happen on the street',403);
+        if (cl_one('SELECT id FROM chinalife_economy_actions WHERE user_id=? AND action="accident" AND created_at>=DATE_SUB(NOW(),INTERVAL 10 MINUTE)','i',[$uid])) {$totals=economy_totals($game);$db->commit();json_response('success',$totals+['charged'=>0,'cooldown'=>true],'Still recovering.');}
+        $held=cl_balances_lock($uid);$fee=max(0,min(800,$held['coins']));
+        $moved=cl_move_totals($uid,$game,-$fee,0);
+        economy_note('accident','accident:'.time(),-$fee,0);
+        cl_store_character($uid,$game);
+        $db->commit();
+        json_response('success',$moved+['charged'=>$fee,'ambulance'=>min(300,$fee),'treatment'=>$fee-min(300,$fee),'cooldown'=>false,'duplicate'=>false,'bonus'=>false],'Treated at the hospital.');
+    }
     if ($action==='job') {
         $job=(string)($input['job']??'');
         $style=($input['style']??'')==='focus'?'focus':'steady';

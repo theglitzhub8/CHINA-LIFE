@@ -85,3 +85,26 @@ setInterval(()=>{mapButton();const b=$('liveMapBtn');if(b)b.hidden=!$('navMap')?
 // v5: the camera toggle joins the right-hand tool column; brighter streets at night while walking.
 setInterval(()=>{const t=$('tpToggle'),col=document.querySelector('.scene-tools');if(t&&col&&t.parentElement!==col)col.append(t);
  const ui=$('worldUI');if(!ui)return;const vp=$('worldViewport');if(vp&&!vp.querySelector('.night-glow')){const g=document.createElement('div');g.className='night-glow';vp.append(g)}const lit=W()?.lighting?.();ui.classList.toggle('night-walk',!!W()?.streetWalking?.()&&lit&&lit.sun!=null&&lit.sun<1.2)},800);
+
+// ---------- v6: hold-to-jog ----------
+function jogButton(){const ui=$('worldUI');if(!ui||$('tpJog'))return;const b=document.createElement('button');b.id='tpJog';b.type='button';b.className='tp-jog';b.innerHTML='🏃<small>Hold to jog</small>';b.setAttribute('aria-label','Hold to jog');
+ const on=e=>{e.preventDefault();W()?.setJog?.(true);b.classList.add('on')},off=()=>{W()?.setJog?.(false);b.classList.remove('on')};
+ b.addEventListener('pointerdown',on);['pointerup','pointercancel','pointerleave'].forEach(t=>b.addEventListener(t,off));ui.append(b)}
+addEventListener('keydown',e=>{if(e.key==='Shift')W()?.setJog?.(true)});addEventListener('keyup',e=>{if(e.key==='Shift')W()?.setJog?.(false)});
+setInterval(()=>{jogButton();const b=$('tpJog');if(b)b.hidden=!W()?.streetWalking?.()},700);
+
+// ---------- v6: accidents ----------
+const HURT_KEY='chinalife-hurt-until';
+const hurtUntil=()=>{try{return +localStorage.getItem(HURT_KEY)||0}catch{return 0}};
+window.ChinaLifeAccident={blocked:()=>Date.now()<hurtUntil()};
+addEventListener('chinalife:accident',async()=>{
+ let fee=null,cool=false;
+ try{const r=await A().request('/chinalife/economy.php','POST',{action:'accident'});const d=r.data||r;game.applyServerTotals?.(d);fee=d.charged;cool=!!d.cooldown}catch(e){fee=null}
+ try{localStorage.setItem(HURT_KEY,String(Date.now()+90000))}catch{}
+ let d=$('accidentDialog');if(!d){d=document.createElement('dialog');d.id='accidentDialog';d.className='accident-dialog';document.body.append(d)}
+ d.innerHTML='<div class="acc-icon">🚑</div><h2>You were injured</h2><p>A car knocked you down. An ambulance is taking you to the hospital.</p><div class="acc-bill">'+(fee==null?'<span>The hospital could not be reached. You were treated for free.</span>':cool?'<span>You were already treated recently. No charge this time.</span>':'<span>Ambulance</span><b>¥'+Math.min(300,fee)+'</b><span>Treatment</span><b>¥'+Math.max(0,fee-300)+'</b><span class="t">Total</span><b class="t">¥'+fee+'</b>')+'</div><small>Use the zebra crossings: cars stop for you there.</small><button class="primary-btn" id="accGo">🚑 Go to hospital</button>';
+ d.showModal();
+ $('accGo').onclick=()=>{d.close();W()?.recover?.();W()?.setCityWalk?.(false);const hosp=(game.placesIn?game.placesIn(game.state.city):game.locations).find(p=>p[0]==='hospital')?'hospital':'cityhospital';
+  const arrive=()=>{if(hosp&&game.walkIn?.(hosp))W()?.venue?.(hosp);game.toast?.('🩺 You are recovering. Take it easy for a minute.')};
+  if(hosp&&W()?.journey)W().journey({from:game.state.place,to:hosp,mode:'cab',label:'🚑 Ambulance to hospital'},arrive);else arrive()};
+});

@@ -168,3 +168,34 @@ html body .tp-enter{max-width:min(250px,calc(100% - 140px))!important;bottom:cal
 #worldUI.night-walk #worldViewport canvas{filter:brightness(2.1) contrast(1.08) saturate(1.15)!important}
 .night-glow{position:absolute;inset:0;pointer-events:none;z-index:1;display:none;mix-blend-mode:screen;background:radial-gradient(42% 30% at 50% 60%,rgba(255,210,140,.34),rgba(255,190,120,.12) 55%,transparent 75%),radial-gradient(30% 22% at 12% 30%,rgba(255,220,160,.16),transparent 70%),radial-gradient(30% 22% at 88% 34%,rgba(255,220,160,.16),transparent 70%),linear-gradient(180deg,rgba(40,70,140,.18),transparent 40%)}
 #worldUI.night-walk .night-glow{display:block}
+/* v6: jog button, accident screen, pedestrian lines */
+.tp-jog{position:absolute;left:calc(40px + env(safe-area-inset-left));bottom:calc(var(--tp-bottom,150px) + 130px);z-index:8;width:64px;height:64px;border-radius:50%;border:2px solid rgba(255,255,255,.7);background:rgba(12,63,68,.75);color:#fff;font-size:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;touch-action:none;user-select:none;-webkit-user-select:none}
+.tp-jog small{font:600 8px var(--hk-font);margin-top:3px}.tp-jog.on{background:var(--hk-java);transform:scale(.94)}.tp-jog[hidden]{display:none}
+dialog.accident-dialog{width:min(360px,calc(100vw - 32px));border:0;border-radius:var(--hk-r-xl);padding:24px 20px 18px;text-align:center;font-family:var(--hk-font);color:var(--hk-ink);animation:lmIn .25s}
+.accident-dialog .acc-icon{font-size:52px;animation:accShake .5s 2}.accident-dialog h2{margin:6px 0 4px;font:700 22px var(--hk-head);color:#b3261e}
+.accident-dialog p{margin:0 0 12px;color:var(--hk-muted);font-size:14px}.accident-dialog small{display:block;color:var(--hk-muted);margin:10px 0}
+.acc-bill{display:grid;grid-template-columns:1fr auto;gap:6px 12px;text-align:left;background:var(--hk-canvas);border:1px solid var(--hk-line);border-radius:var(--hk-r-md);padding:12px 14px;font-size:14px}
+.acc-bill .t{font-weight:700;border-top:1px solid var(--hk-line);padding-top:6px}.accident-dialog .primary-btn{width:100%;min-height:48px;border-radius:999px}
+@keyframes accShake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.scene-label.ped-line{max-width:220px;white-space:normal;font-size:12px}
+/* v6 profile */
+.pv6{font-family:var(--hk-font);color:var(--hk-ink);display:grid;gap:12px}
+.pv6-head{display:flex;gap:12px;align-items:center;background:linear-gradient(135deg,var(--hk-cyprus),#0f5b60);color:#fff;border-radius:var(--hk-r-lg);padding:14px}
+.pv6-avatar{position:relative;flex:none;width:60px;height:60px;border-radius:50%;display:grid;place-items:center;font:800 26px var(--hk-head);color:#fff;border:3px solid var(--hk-java)}
+.pv6-avatar i{position:absolute;right:1px;bottom:1px;width:13px;height:13px;border-radius:50%;background:#2ecc71;border:2px solid #fff}
+.pv6-id{flex:1;min-width:0}.pv6-id h3{margin:0;font:800 19px var(--hk-head);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pv6-id p{margin:2px 0 6px;font-size:13px;opacity:.9;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.pv6-role{background:var(--hk-java);color:var(--hk-cyprus);border-radius:999px;padding:1px 8px;font-weight:700;font-size:12px}
+.pv6-rank{display:flex;align-items:center;gap:6px;font-size:12px}.pv6-rank span{font-weight:800}
+.pv6-bar{flex:1;height:7px;border-radius:9px;background:rgba(255,255,255,.25);overflow:hidden}.pv6-bar i{display:block;height:100%;background:var(--hk-java)}
+.pv6-coins{flex:none;align-self:flex-start;background:var(--hk-honeydew);color:var(--hk-cyprus);font-weight:800;border-radius:999px;padding:4px 10px;font-size:13px}
+.pv6-badges{display:flex;flex-wrap:wrap;gap:6px}.pv6-badges span{background:var(--hk-honeydew);color:var(--hk-cyprus);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}
+.pv6-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.pv6-stat{background:var(--hk-surface,#fff);border:1px solid var(--hk-line);border-radius:var(--hk-r-md);padding:8px 2px;text-align:center;min-width:0}
+.pv6-stat b{display:block;font:800 17px var(--hk-head);color:var(--hk-cyprus)}.pv6-stat span{display:block;font-size:10.5px;color:var(--hk-muted);line-height:1.2}
+.pv6-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.pv6-actions button{min-height:var(--hk-tap,44px)}
+.pv6-h{margin:4px 0 0;font:800 14px var(--hk-head);color:var(--hk-cyprus)}
+.pv6-recent{list-style:none;margin:0;padding:0;display:grid;gap:4px}.pv6-recent li{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:7px 10px;background:var(--hk-canvas);border-radius:var(--hk-r-sm)}.pv6-recent small{color:var(--hk-muted);white-space:nowrap;flex:none}
+.pv6-friends{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}.pv6-friends button{flex:none;display:grid;justify-items:center;gap:3px;background:none;border:0;font-size:11px;color:var(--hk-ink);max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0}
+.pv6-friends button span{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800}
+.pv6-empty{margin:0;font-size:13px;color:var(--hk-muted)}
