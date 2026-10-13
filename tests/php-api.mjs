@@ -932,3 +932,16 @@ test('City Hall records one vote per player per office per election and publishe
  const again=await call(6,'elections.php','POST',{city:'Shenyang',office:'governor',candidate:+gov.candidates[0].id});
  assert.equal(again.httpStatus,200,again.message);assert.notEqual(again.data.election,done.id);
 });
+
+test('City Mystery accepts clue objects only in route order and only at the venue',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id=5; DELETE FROM chinalife_mystery_finds WHERE user_id=5');
+ assert.equal((await call(5,'mystery.php','POST',{city:'Shenyang',object:'plaza-lantern'})).httpStatus,403);
+ await call(5,'presence.php','POST',presence('Shenyang','plaza'));
+ assert.equal((await call(5,'mystery.php','POST',{city:'Shenyang',object:'park-bench'})).httpStatus,409);
+ const first=await call(5,'mystery.php','POST',{city:'Shenyang',object:'plaza-lantern'});
+ assert.equal(first.httpStatus,200,first.message);assert.equal(first.data.verified,true);assert.match(first.data.clue,/park bench/);assert.equal(first.data.next.object,'park-bench');assert.equal(first.data.next.place,'park');
+ await call(5,'presence.php','POST',presence('Shenyang','park'));
+ const second=await call(5,'mystery.php','POST',{city:'Shenyang',object:'park-bench'});
+ assert.equal(second.data.next.object,'night-poster');assert.equal(second.data.clues.length,2);
+ const route=await call(5,'mystery.php?city=Shenyang');assert.deepEqual(route.data.found,['plaza-lantern','park-bench']);assert.equal(route.data.next.place,'night');
+});
