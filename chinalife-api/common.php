@@ -159,17 +159,57 @@ function cl_is_admin(): bool {
     return in_array(strtolower((string)($auth['user_name']??'')),$admins,true);
 }
 function cl_admin(): void {if (!cl_is_admin()) cl_fail('Admin only',403);}
-// Adds money to a saved character the same way transfers do, so an open game picks it up.
-// Call inside a transaction.
-function cl_credit(int $userId, int $amount): int {
+function cl_beijing_day(): string {return (new DateTimeImmutable('now', new DateTimeZone('Asia/Shanghai')))->format('Y-m-d');}
+// Coins and XP live in chinalife_balances. The first row is copied from the saved character;
+// after that, only server actions (jobs, missions, purchases, transfers, grants) move them.
+function cl_balances_lock(int $userId): array {
+    cl_run('INSERT IGNORE INTO chinalife_balances(user_id,coins,xp,updated_at) SELECT user_id, CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(game_state,\'$.money\')),\'0\') AS SIGNED), GREATEST(0, CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(game_state,\'$.xp\')),\'0\') AS SIGNED)), NOW() FROM chinalife_saves WHERE user_id=?','i',[$userId]);
+    cl_run('INSERT IGNORE INTO chinalife_balances(user_id,coins,xp,updated_at) VALUES(?,0,0,NOW())','i',[$userId]);
+    $row=cl_one('SELECT coins,xp FROM chinalife_balances WHERE user_id=? FOR UPDATE','i',[$userId]);
+    if (!$row) cl_fail('Could not read the saved balance',500);
+    return ['coins'=>(int)$row['coins'],'xp'=>(int)$row['xp']];
+}
+function cl_balance_write(int $userId, int $coins, int $xp): void {
+    if ($coins>1000000000||$coins<-10000000||$xp<0||$xp>10000000) cl_fail('That would put the balance out of range',409);
+    cl_run('UPDATE chinalife_balances SET coins=?,xp=?,updated_at=NOW() WHERE user_id=?','iii',[$coins,$xp,$userId]);
+}
+function cl_lock_character(int $userId): array {
     $row=cl_one('SELECT game_state FROM chinalife_saves WHERE user_id=? FOR UPDATE','i',[$userId]);
     if (!$row) cl_fail('That player has no saved character yet',404);
     $game=json_decode($row['game_state'],true,512,JSON_THROW_ON_ERROR);
-    $money=(int)($game['money']??0)+$amount;
-    if ($money>1000000000||$money<-10000000) cl_fail('That would put the balance out of range',409);
-    $game['money']=$money;$game['transferTotal']=(int)($game['transferTotal']??0)+$amount;
+    if (!is_array($game)) cl_fail('Saved game data is corrupted',500);
+    return $game;
+}
+function cl_store_character(int $userId, array $game): void {
     cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($game,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),$userId]);
-    return $money;
+}
+// Rank-up yuan is paid here, once, when server XP crosses a threshold.
+function cl_rank_bonus(array &$game, int $xp): int {
+    $ranks=cl_ranks();$claimed=(int)($game['rankClaimed']??0);$now=0;
+    foreach ($ranks as $i=>$r) if ($xp>=(int)$r['xp']) $now=$i;
+    if ($now<=$claimed) return 0;
+    $bonus=0;for ($i=$claimed+1;$i<=$now;$i++) $bonus+=(int)($ranks[$i]['reward']??0);
+    $game['rankClaimed']=$now;return $bonus;
+}
+// Moves the ledger, then copies the new totals onto the character. Call inside a transaction
+// after cl_lock_character. Rank bonus is included in the coin delta when XP rises.
+function cl_move_totals(int $userId, array &$game, int $coinDelta, int $xpDelta): array {
+    $bal=cl_balances_lock($userId);
+    $xp=max(0,$bal['xp']+$xpDelta);
+    $bonus=$xpDelta>0?cl_rank_bonus($game,$xp):0;
+    $coins=$bal['coins']+$coinDelta+$bonus;
+    cl_balance_write($userId,$coins,$xp);
+    $game['money']=$coins;$game['xp']=$xp;
+    return ['money'=>$coins,'xp'=>$xp,'awarded'=>$coinDelta+$bonus,'awardedXp'=>$xpDelta,'rankClaimed'=>(int)($game['rankClaimed']??0)];
+}
+// Adds money to a saved character the same way transfers do, so an open game picks it up.
+// Call inside a transaction. The amount is applied to the server ledger, not to a client total.
+function cl_credit(int $userId, int $amount): int {
+    $game=cl_lock_character($userId);
+    $bal=cl_move_totals($userId,$game,$amount,0);
+    $game['transferTotal']=(int)($game['transferTotal']??0)+$amount;
+    cl_store_character($userId,$game);
+    return $bal['money'];
 }
 // Cities players can travel to; Shenyang is always open. Admins change the list from the panel.
 function cl_open_cities(): array {

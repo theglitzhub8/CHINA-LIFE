@@ -83,7 +83,7 @@ try{
    shared_present($row);
    $saves=cl_rows('SELECT user_id,game_state FROM chinalife_saves WHERE user_id IN (?,?) ORDER BY user_id FOR UPDATE','ii',[(int)$row['inviter_id'],(int)$row['invitee_id']]);
    if(count($saves)!==2)cl_fail('Both characters must still be saved',409);
-   foreach($saves as $save){$g=json_decode($save['game_state'],true,512,JSON_THROW_ON_ERROR);if(($g['money']??0)+$spec['money']>1000000000||($g['xp']??0)+$spec['xp']>10000000)cl_fail('Reward limit reached',409);$g['money']+=$spec['money'];$g['xp']+=$spec['xp'];$g['transferTotal']=($g['transferTotal']??0)+$spec['money'];$g['sharedXP']=($g['sharedXP']??0)+$spec['xp'];cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($g,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),(int)$save['user_id']]);}
+   foreach($saves as $save){$g=json_decode($save['game_state'],true,512,JSON_THROW_ON_ERROR);$moved=cl_move_totals((int)$save['user_id'],$g,(int)$spec['money'],(int)$spec['xp']);$g['transferTotal']=($g['transferTotal']??0)+$spec['money'];$g['sharedXP']=($g['sharedXP']??0)+$spec['xp'];cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($g,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),(int)$save['user_id']]);unset($moved);}
    cl_run('UPDATE chinalife_shared_activities SET status="completed",completed_at=NOW() WHERE id=?','i',[$id]);
   }else cl_fail('Choose a valid activity action');
  }
