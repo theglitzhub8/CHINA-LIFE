@@ -1,3 +1,4 @@
+import {sprayMenu} from './club-fx.js?v=20261014b1';
 // v9: 007 Club host ChampagnePappi, the neon club dressing and the party HUD.
 // Built once per visit into the venue root; tick() runs from the world loop. No paid AI: canned lines only.
 // Drinks are paid on the server (economy.php action club-drink) and only update money/XP, never the save revision.
@@ -53,10 +54,10 @@ export function nightClub(c){
  let sayTimer=0;function say(text,ms=4200){bubble.el.textContent=text;bubble.el.classList.remove('quiet');bubble.hw=0;clearTimeout(sayTimer);sayTimer=setTimeout(()=>bubble.el.classList.add('quiet'),ms)}
  const spots=[[7,-3.2],[3.1,.4],[-4.6,-1.2],[-7.2,5.6],[6,2.9],[-2.8,3]];let goal=null,wait=2,greeted=false,seen=new Set(),nextBanter=performance.now()+9000,duel=null;
  // HUD: party meter, emotes and the drink menu.
- const hud=document.createElement('div');hud.className='club-hud';hud.innerHTML='<div class="club-meter" role="meter" aria-label="Party level" aria-valuemin="0" aria-valuemax="100"><span>🔥</span><i><b></b></i><em>0%</em></div><div class="club-emotes"><button data-ce="dance">💃<span>Dance</span></button><button data-ce="toast">🥂<span>Toast</span></button><button data-ce="hype">🙌<span>Hype</span></button><button data-ce="menu">🍾<span>Drinks</span></button></div>';
+ const hud=document.createElement('div');hud.className='club-hud';hud.innerHTML='<div class="club-meter" role="meter" aria-label="Party level" aria-valuemin="0" aria-valuemax="100"><span>🔥</span><i><b></b></i><em>0%</em></div><div class="club-emotes"><button data-ce="dance">💃<span>Dance</span></button><button data-ce="toast">🥂<span>Toast</span></button><button data-ce="hype">🙌<span>Hype</span></button><button data-ce="spray">💸<span>Spray</span></button><button data-ce="menu">🍾<span>Drinks</span></button></div>';
  (document.getElementById('worldUI')||document.body).append(hud);
  let boost=0;const meter=hud.querySelector('.club-meter'),fillEl=meter.querySelector('b'),pct=meter.querySelector('em');
- hud.querySelectorAll('[data-ce]').forEach(b=>b.onclick=()=>{const k=b.dataset.ce;if(k==='menu')return menu();if(k==='dance'){c.setEmote('dance');boost+=8;if(duel&&performance.now()<duel){duel=null;boost+=20;say('🏆 '+game.state.name+' wins the dance-off!');game.toast('🏆 You won the dance-off')}}if(k==='toast'){c.setEmote('drink');boost+=5;say(pick(LINES.toast))}if(k==='hype'){c.setEmote('cheer');boost+=6;say(pick(LINES.dj))}});
+ hud.querySelectorAll('[data-ce]').forEach(b=>b.onclick=()=>{const k=b.dataset.ce;if(k==='menu')return menu();if(k==='spray')return sprayMenu(c,a=>{boost+=a>=2000?20:a>=500?12:6;say(a>=2000?'Big money! Make it rain! 💸':'Spray on the dance floor! 💸')});if(k==='dance'){c.setEmote('dance');boost+=8;if(duel&&performance.now()<duel){duel=null;boost+=20;say('🏆 '+game.state.name+' wins the dance-off!');game.toast('🏆 You won the dance-off')}}if(k==='toast'){c.setEmote('drink');boost+=5;say(pick(LINES.toast))}if(k==='hype'){c.setEmote('cheer');boost+=6;say(pick(LINES.dj))}});
  const curtain=document.createElement('div');curtain.className='club-curtain';curtain.innerHTML='<b>007</b>';document.body.append(curtain);requestAnimationFrame(()=>curtain.classList.add('open'));setTimeout(()=>curtain.remove(),1200);
  function party(){const crowd=c.remotes().length,music=window.ChinaLifeAudio?.playing?25:0;return Math.max(0,Math.min(100,Math.round(15+crowd*12+music+boost)))}
  let busy=false;const last=new Map();

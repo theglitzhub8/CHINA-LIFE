@@ -25,7 +25,8 @@ export function votingCentre(c){
  const safeDraw=()=>{try{draw()}catch{}};
  draw();
  const panel=document.createElement('section');panel.className='vote-panel';panel.setAttribute('aria-label','Election');(document.getElementById('worldUI')||document.body).append(panel);
- let open=true;
+ // Start folded when the room panel is open so the two never cover the room together.
+ let open=!document.getElementById('worldUI')?.classList.contains('dock-open');
  function renderPanel(){const list=rows(),voted=data?.voted_offices||[],openOffices=Object.keys(data?.elections||{});const ends=Object.values(data?.elections||{}).map(e=>Number(e.closes_ms)).filter(Boolean).sort((a,b)=>a-b)[0];
   const left=ends?Math.max(0,Math.ceil((ends-Date.now())/60000)):0;
   panel.innerHTML='<button class="vote-head" aria-expanded="'+open+'"><b>🗳 '+(openOffices.length?'Election week':'Polls closed')+'</b><small>'+(ends?'Closes in '+Math.floor(left/1440)+'d '+Math.floor(left%1440/60)+'h':'Results')+' · '+voted.length+'/'+openOffices.length+' voted</small><i>'+(open?'▾':'▸')+'</i></button>'

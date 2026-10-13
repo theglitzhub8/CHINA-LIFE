@@ -37,7 +37,7 @@ if ($method==='GET') {
 cl_rate('economy',30,60);
 $input=cl_body();
 $action=(string)($input['action']??'');
-if (!in_array($action,['job','mission','purchase','accident','club-drink'],true)) cl_fail('Choose a job, mission or purchase');
+if (!in_array($action,['job','mission','purchase','accident','club-drink','club-spray'],true)) cl_fail('Choose a job, mission or purchase');
 // v9: ChampagnePappi's bar in 007 Club. Price and XP live here only; one drink per 90 s, XP for the first 8 a day.
 $clubDrinks=['pappi-fizz'=>[120,10],'gold-rush'=>[300,25],'zero-proof'=>[40,5],'water'=>[0,0]];
 
@@ -77,6 +77,24 @@ try {
         cl_store_totals($uid,$game);
         $db->commit();
         json_response('success',$moved+['charged'=>$fee,'ambulance'=>min(300,$fee),'treatment'=>$fee-min(300,$fee),'cooldown'=>false,'duplicate'=>false,'bonus'=>false],'Treated at the hospital.');
+    }
+    // v10: money spray in any club. A coin sink (no XP); one every 20 s and ¥20,000 a Beijing day.
+    if ($action==='club-spray') {
+        $amount=(int)($input['amount']??0);
+        if (!in_array($amount,[100,500,2000],true)) cl_fail('Choose a spray amount');
+        [$sprayCity, $here]=economy_here();
+        if (!in_array($here,$clubs,true)) cl_fail('Spray money inside a club',403);
+        if (cl_one('SELECT id FROM chinalife_economy_actions WHERE user_id=? AND action="club-spray" AND created_at>=DATE_SUB(NOW(),INTERVAL 20 SECOND)','i',[$uid])) {$totals=economy_totals($game);$db->commit();json_response('success',$totals+['cooldown'=>true],'One spray every 20 seconds.');}
+        $spent=cl_one('SELECT COALESCE(-SUM(coins),0) n FROM chinalife_economy_actions WHERE user_id=? AND action="club-spray" AND ref LIKE ?','is',[$uid,'club-spray:%:'.$day]);
+        if ((int)($spent['n']??0)+$amount>20000) cl_fail('Daily spray limit reached (¥20,000)',429);
+        $held=cl_balances_lock($uid);
+        if ($held['coins']<$amount) cl_fail('Not enough money',409);
+        $moved=cl_move_totals($uid,$game,-$amount,0);
+        economy_note('club-spray','club-spray:'.$here.':'.bin2hex(random_bytes(4)).':'.$day,-$amount,0);
+        $room=cl_one('SELECT city,place FROM chinalife_presence WHERE user_id=?','i',[$uid]);if($room)cl_run('INSERT INTO chinalife_gestures(sender_id,target_id,city,place,phrase) VALUES(?,?,?,?,"spray")','iiss',[$uid,$uid,$room['city'],$room['place']]);
+        cl_store_totals($uid,$game);
+        $db->commit();
+        json_response('success',$moved+['cooldown'=>false,'duplicate'=>false,'bonus'=>false],'Money rain!');
     }
     if ($action==='club-drink') {
         $sku=(string)($input['sku']??'');

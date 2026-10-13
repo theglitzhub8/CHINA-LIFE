@@ -18,7 +18,7 @@
 .scene-label.pappi-say.quiet{display:none!important}
 .pappi-menu{display:grid;gap:8px}
 .club-curtain{position:fixed;inset:0;z-index:50;display:grid;place-items:center;pointer-events:none;background:radial-gradient(circle,#2a0f3d,#07030d 70%);opacity:1;transition:opacity .7s ease .25s}
-.club-curtain b{font:900 clamp(56px,18vw,120px)/1 system-ui,sans-serif;color:#fff;letter-spacing:.06em;text-shadow:0 0 12px #ff3fa4,0 0 32px #ff3fa4,0 0 60px #8b5cff;transform:scale(.9);transition:transform .9s cubic-bezier(.2,1.2,.3,1)}
+.club-curtain b{font:900 clamp(56px,18vw,120px)/1 system-ui,sans-serif;color:#fff;letter-spacing:.06em;text-shadow:0 0 12px var(--neon,#ff3fa4),0 0 32px var(--neon,#ff3fa4),0 0 60px #8b5cff;transform:scale(.9);transition:transform .9s cubic-bezier(.2,1.2,.3,1)}
 .club-curtain.open{opacity:0}.club-curtain.open b{transform:scale(1.08)}
 .club-curtain.leaving{animation:clubLeave .7s ease forwards}
 @keyframes clubLeave{from{opacity:.85}to{opacity:0}}

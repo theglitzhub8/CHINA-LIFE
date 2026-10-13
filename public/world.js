@@ -11,8 +11,9 @@ import {buildDistricts} from './districts.js'
 import {helicopter} from './helicopter.js?v=20261013w8b';
 import {buildHome,homeExterior} from './home-interiors.js?v=20261013w8';
 import {carModel} from './garage.js';
-import {nightClub} from './club-host.js?v=20261014v9g';
-import {votingCentre} from './voting-centre.js?v=20261014a2';
+import {nightClub} from './club-host.js?v=20261014b1';
+import {themedClub} from './club-fx.js?v=20261014b1';
+import {votingCentre} from './voting-centre.js?v=20261014b1';
 let clubFx=null;
 
 const $=id=>document.getElementById(id),game=window.ChinaLife;
@@ -292,7 +293,7 @@ const atDoor=residence&&!window.ChinaLifeHomeVisits?.current&&game.pendingDelive
 // Contacts and venue NPCs never spawn in a private home. Only the owner and
 // explicitly accepted home guests can appear there.
 if(id==='gist'){sign('SEE LATEST GOSSIP',0,2.5,-4.6);label('🤫 Gossip',0,2,-4.4,'interactive',game.gist)}
-const people=residence?[]:game.contacts.filter(c=>c[2]===id);people.forEach((c,i)=>actors.push(person(-2+i*2,1,0x4875a0,0xa77751,c[1],c[0])));if(!residence&&!['home','park','station','gym','hq','night'].includes(id)){actors.push(person(2,-4.3,0xc79056,0xbc8b6c,id==='cafe'?'Café host':id==='market'?'Market vendor':id==='night'?'Open mic host':game.clubs.includes(id)?'Club host':'Venue host','host'))}if(game.clubs.includes(id)){// Roped-off VIP corner: gold sofas behind brass posts.
+const people=residence?[]:game.contacts.filter(c=>c[2]===id);people.forEach((c,i)=>actors.push(person(-2+i*2,1,0x4875a0,0xa77751,c[1],c[0])));if(!residence&&!['home','park','station','gym','hq'].includes(id)&&!game.clubs.includes(id)){actors.push(person(2,-4.3,0xc79056,0xbc8b6c,id==='cafe'?'Café host':id==='market'?'Market vendor':id==='night'?'Open mic host':game.clubs.includes(id)?'Club host':'Venue host','host'))}if(game.clubs.includes(id)){// Roped-off VIP corner: gold sofas behind brass posts.
  for(const x of [-6.4,-5,-3.8])cylinder(.05,.9,0xc9a24a,x,.45,-1.9);box(2.6,.04,.04,0xb5322b,-5.1,.8,-1.9);box(2.2,.45,.8,0xd4a843,-5.3,.25,-3.3);box(2.2,.5,.15,0xd4a843,-5.3,.6,-3.65);label('🥂 VIP lounge',-5.2,1.7,-2.6,'interactive',()=>game.clubAccess(id));
  const clubStyle=game.cityContent.clubs.find(c=>c.id===id)||game.cityPlace?.(id);const look=clubStyle?[0x172333,clubStyle.accent]:{night:[0x314456,0x776aff],blood:[0x1c0b0c,0xff4a2a],skylight:[0x1b2440,0xffc26b]}[id];
  // SKYLIGHT is open air: a wooden deck, glass railings and the city skyline below the roof.
@@ -310,7 +311,7 @@ const people=residence?[]:game.contacts.filter(c=>c[2]===id);people.forEach((c,i
  if(['vip','lounge'].includes(style))for(const x of [-4,4]){box(2,.5,1.2,accent,x,.3,2);cylinder(.45,.5,0x29414c,x,.3,.5)}
  if(style==='electronic')for(const x of [-5,-3,3,5])mesh(new THREE.BoxGeometry(.12,2.6,.08),accent,x,1.5,-4.7);
 }
-buildClubMusicScreen(id);scene.background=new THREE.Color(look[0]);const party=new THREE.PointLight(look[1],15,15);party.position.set(1,3,-1);root.add(party);actors.push(person(-4,2,0xb55070,0x875641,'','guest'));actors.push(person(4,1.5,0x72948b,0xe2b895,'','guest'));if(id==='night')try{clubFx=nightClub({THREE,root,mesh,box,cylinder,label,person,game,motionReduced,setEmote,getPlayer:()=>player,obstacles:()=>obstacles,bodies:()=>[player,...actors].filter(Boolean),remotes:()=>[...remotePlayers.keys()].map(k=>({id:k,name:(window.ChinaLifeCloud?.players||[]).find(p=>String(p.id)===k)?.name||''}))})}catch(e){console.warn('club host',e)}}
+buildClubMusicScreen(id);scene.background=new THREE.Color(look[0]);const party=new THREE.PointLight(look[1],15,15);party.position.set(1,3,-1);root.add(party);actors.push(person(-4,2,0xb55070,0x875641,'','guest'));actors.push(person(4,1.5,0x72948b,0xe2b895,'','guest'));try{const clubCtx={THREE,root,mesh,box,cylinder,label,person,game,motionReduced,setEmote,getPlayer:()=>player,obstacles:()=>obstacles,bodies:()=>[player,...actors].filter(Boolean),remotes:()=>[...remotePlayers.keys()].map(k=>({id:k,name:(window.ChinaLifeCloud?.players||[]).find(p=>String(p.id)===k)?.name||''}))};clubFx=id==='night'?nightClub(clubCtx):themedClub(clubCtx,id)}catch(e){console.warn('club host',e)}}
 for(const ad of game.catalog.ads||[])if(ad.venues.includes(id))adPlacement(ad,4.3,outdoor?-4.3:-4.77,!outdoor);root.add(chineseVenueDetails(id,game.state.city));const savedEntry=venuePositions.get(positionKey(game.state.city,id))||entryPosition(identity());const entry=residence?safeRoomEntry(savedEntry,obstacles,roomBounds):savedEntry;venueCity=game.state.city;venueIdentity=identity();player=person(entry.x,entry.z,game.state.color,0x8b5c43,game.state.name||'You');target.copy(player.position);updateRemote(window.ChinaLifeCloud?.scenePlayers||window.ChinaLifeCloud?.players||visiblePlayers);updateCamera();$('sceneGuide').textContent='Tap the floor to walk · drag to rotate · meet a character';syncHUD()}
 function updateCamera(){const w=viewport.clientWidth,h=viewport.clientHeight;if(!w||!h||!renderer||!camera)return;const aspect=w/h;camera.left=-scale*aspect;camera.right=scale*aspect;camera.top=scale;camera.bottom=-scale;const look=view==='map'?mapFocus.clone():new THREE.Vector3(0,.7,0);look.y=view==='map'?0:.7;const distance=view==='map'?Math.max(160,scale*2):32;camera.near=.1;camera.far=view==='map'?Math.max(600,distance*3):200;camera.position.set(Math.sin(yaw)*distance,distance,Math.cos(yaw)*distance).add(look);camera.lookAt(look);camera.updateProjectionMatrix();
  // Resizing the canvas reallocates its buffers, so only do it when the size or resolution really changed.
