@@ -42,6 +42,16 @@ test('save revision prevents lost updates and isolates accounts',async()=>{
  r=await call(1,'save.php','POST',{revision:1,save:{character:{},game:{...game(),money:4000}}});assert.equal(r.data.revision,2);
  assert.equal((await call(1,'save.php','POST',{save:{character:{},game:[]}})).httpStatus,400);
 });
+test('street presence shares walkers in the same city, clears when not walking and expires after 30 seconds',async()=>{
+ assert.equal((await call(1,'presence.php','POST',{...presence(),street:{x:12.5,z:-40,h:1.2}})).httpStatus,200);
+ let r=await call(2,'presence.php','POST',presence());assert.equal(r.httpStatus,200);let a=r.data.players.find(p=>p.id==='1');assert.deepEqual(a.street,{x:12.5,z:-40,h:1.2});
+ assert.equal((await call(2,'presence.php','POST',presence('Beijing'))).data.players.some(p=>p.id==='1'),false);
+ assert.equal((await call(1,'presence.php','POST',{...presence(),street:{x:5000,z:0,h:0}})).httpStatus,400);
+ assert.equal((await call(1,'presence.php','POST',{...presence(),street:{x:'a',z:0,h:0}})).httpStatus,400);
+ await call(1,'presence.php','POST',{...presence('Shenyang','home'),street:{x:3,z:4,h:0}});r=await call(2,'presence.php','POST',presence());a=r.data.players.find(p=>p.id==='1');assert.equal(a.place,'private-home');assert.deepEqual(a.street,{x:3,z:4,h:0});
+ sql("USE chinalife_test; UPDATE chinalife_presence SET street_at=DATE_SUB(NOW(),INTERVAL 31 SECOND) WHERE user_id=1");r=await call(2,'presence.php?city=Shenyang');assert.equal(r.data.players.find(p=>p.id==='1')?.street,undefined);
+ await call(1,'presence.php','POST',{...presence(),street:{x:1,z:1,h:0}});await call(1,'presence.php','POST',presence());r=await call(2,'presence.php?city=Shenyang');assert.equal(r.data.players.find(p=>p.id==='1')?.street,undefined);
+});
 test('presence preserves appearance, excludes self, separates cities and expires stale players',async()=>{
  for(const id of [1,2])assert.equal((await call(id,'presence.php','POST',presence())).httpStatus,200);
  let r=await call(1,'presence.php?city=Shenyang');assert.equal(r.data.players[0].id,'2');assert.equal(r.data.players[0].skin,'#8b5c43');assert.equal(r.data.players[0].hair,'cap');assert.equal(typeof r.data.players[0].x,'number');assert.equal(typeof r.data.players[0].xp,'number');

@@ -202,13 +202,14 @@ let presenceAttempt=0,presenceRoom='';
 async function refreshPresence(background=false) {
   if (!account || !presence || !game.state.created || document.hidden || polling) return false;
   const generation = epoch, state = game.state, city = state.city, place = state.place, world = window.ChinaLifeWorld, position = world?.roomPosition ?? (world?.view==='venue'?world.position:null);
-  const room=generation+':'+city+':'+place,interval=players.some(p=>p.city===city&&p.place===place)?5000:15000;
+  const street=world?.street?.()||null,room=generation+':'+city+':'+place+(street?':street':''),interval=street?2000:players.some(p=>p.city===city&&p.place===place)?5000:15000;
   if(background&&room===presenceRoom&&Date.now()-presenceAttempt<interval)return true;
   presenceRoom=room;presenceAttempt=Date.now();
   polling = true;
   try {
-    await api('/chinalife/presence.php', 'POST', {city,place,name:state.name,color:state.color,skin:state.appearance?.skin || '#8b5c43',hair:state.appearance?.hair || 'cropped',x:position?.x || 0,z:position?.z || 0,activity:activityNow()});
-    const result = await api('/chinalife/presence.php', 'GET', {city});
+    const posted = await api('/chinalife/presence.php', 'POST', {city,place,name:state.name,color:state.color,skin:state.appearance?.skin || '#8b5c43',hair:state.appearance?.hair || 'cropped',x:position?.x || 0,z:position?.z || 0,activity:activityNow(),...(street?{street}:{})});
+    // While walking the streets the POST answer already lists the city's players, so the separate GET is skipped.
+    const result = street ? posted : await api('/chinalife/presence.php', 'GET', {city});
     if (generation !== epoch || !presence || game.state.city !== city || game.state.place !== place) return false;
     const data = result.data || result, ownId = data.id ?? account.user_id ?? account.id;
     presenceCheck={lastSuccess:new Date().toISOString(),error:null,serverId:String(ownId)};
@@ -274,7 +275,7 @@ async function presenceHeartbeat() {
   if(!presence&&presenceRoom===epoch+':'+game.state.city+':'+game.state.place&&Date.now()-presenceAttempt<15000)return false;
   return presence ? refreshPresence(true) : join();
 }
-setInterval(presenceHeartbeat, 2500);
+setInterval(presenceHeartbeat, 1000);
 setInterval(syncTransfers,15000);
 // Players online per city and in total, for the top bar, travel and rank screens.
 let online=null;
