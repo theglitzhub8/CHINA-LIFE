@@ -81,9 +81,13 @@ if ($action==='post') {
     }
     // Admins post from the same composer; their posts carry the official Hafrik tag unless they choose anonymous.
     $official=cl_is_admin()&&($input['official']??true)!==false?1:0;
-    cl_run('INSERT INTO chinalife_gist_night(user_id,city,body,official,created_at) VALUES(?,?,?,?,NOW())','issi',[$uid,$city,$body,$official]);
-    $id=(int)cl_one('SELECT LAST_INSERT_ID() id')['id'];
-    if ($clean) cl_run('INSERT INTO chinalife_gist_night_polls(post_id,question,options) VALUES(?,?,?)','iss',[$id,$question,json_encode($clean,JSON_UNESCAPED_UNICODE)]);
+    // Each city has its own feed. An official admin post can optionally go to every open city (one copy per city).
+    $targets=$official&&($input['all_cities']??false)===true?cl_open_cities():[$city];
+    foreach ($targets as $target) {
+        cl_run('INSERT INTO chinalife_gist_night(user_id,city,body,official,created_at) VALUES(?,?,?,?,NOW())','issi',[$uid,$target,$body,$official]);
+        $newId=(int)cl_one('SELECT LAST_INSERT_ID() id')['id'];if ($target===$city) $id=$newId;
+        if ($clean) cl_run('INSERT INTO chinalife_gist_night_polls(post_id,question,options) VALUES(?,?,?)','iss',[$newId,$question,json_encode($clean,JSON_UNESCAPED_UNICODE)]);
+    }
     json_response('success',['id'=>(string)$id,'posts'=>gist_night_feed($city)],($official?'Posted as Hafrik.':'Tip dropped.'));
 }
 if ($action==='react') {
