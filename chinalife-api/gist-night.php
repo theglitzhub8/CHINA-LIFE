@@ -9,8 +9,8 @@ function gist_handle(int $userId, string $city): string {
 function gist_night_feed(string $city): array {
     global $uid;
     $admin=cl_is_admin();
-    $posts=cl_rows('SELECT id,user_id,body,UNIX_TIMESTAMP(created_at)*1000 at FROM chinalife_gist_night WHERE city=? ORDER BY id DESC LIMIT 40','s',[$city]);
-    if (!$posts) return [];
+    $posts=cl_rows('SELECT id,user_id,body,official,UNIX_TIMESTAMP(created_at)*1000 at FROM chinalife_gist_night WHERE city=? ORDER BY id DESC LIMIT 40','s',[$city]);
+    if (!$posts) return gist_legacy_posts($city,$admin);
     $ids=array_map(fn($p)=>(int)$p['id'],$posts);
     $in=implode(',',array_fill(0,count($ids),'?'));
     $types=str_repeat('i',count($ids));
@@ -28,7 +28,8 @@ function gist_night_feed(string $city): array {
     }
     $out=[];
     foreach ($posts as $post) {
-        $item=['id'=>(string)$post['id'],'tag'=>'Anonymous tip','own'=>(int)$post['user_id']===(int)$uid,'body'=>$post['body'],'at'=>(int)$post['at'],'reactions'=>$reactions[$post['id']]??['like'=>0,'fire'=>0,'laugh'=>0],'mine'=>$mine[$post['id']]??null];
+        $official=(int)$post['official']===1;
+        $item=['id'=>(string)$post['id'],'tag'=>$official?'Hafrik':'Anonymous tip','official'=>$official,'own'=>(int)$post['user_id']===(int)$uid,'body'=>$post['body'],'at'=>(int)$post['at'],'reactions'=>$reactions[$post['id']]??['like'=>0,'fire'=>0,'laugh'=>0],'mine'=>$mine[$post['id']]??null];
         foreach (['like','fire','laugh'] as $kind) $item['reactions'][$kind]=(int)($item['reactions'][$kind]??0);
         // Players only ever see 'Anonymous tip'. Admins can still trace the author.
         if ($admin) {$item['user_id']=(string)$post['user_id'];$item['handle']=gist_handle((int)$post['user_id'],$city);}
@@ -37,6 +38,21 @@ function gist_night_feed(string $city): array {
             $item['poll']=['id'=>(string)$poll['id'],'question'=>$poll['question'],'voted'=>array_key_exists($poll['id'],$voted)?$voted[$poll['id']]:null,'options'=>[]];
             foreach (array_values($options) as $i=>$text) $item['poll']['options'][]=['text'=>$text,'votes'=>(int)($counts[$poll['id']][$i]??0)];
         }
+        $out[]=$item;
+    }
+    $out=array_merge($out,gist_legacy_posts($city,$admin));
+    // Official Hafrik posts are pinned on top; everything else is newest first.
+    usort($out,fn($a,$b)=>[(int)!empty($b['official']),$b['at']]<=>[(int)!empty($a['official']),$a['at']]);
+    return $out;
+}
+// Approved posts from the old city board (gist.php) are read into the same feed as anonymous tips.
+// They keep their author in chinalife_gist_posts.created_by, so admins can still trace them.
+function gist_legacy_posts(string $city, bool $admin): array {
+    $out=[];
+    foreach (cl_rows('SELECT id,title,body,link,created_by,UNIX_TIMESTAMP(created_at)*1000 at FROM chinalife_gist_posts WHERE (city=? OR city="") AND active=1 ORDER BY id DESC LIMIT 20','s',[$city]) as $row) {
+        $text=trim($row['title']."\n".$row['body'].($row['link']!==''?"\n".$row['link']:''));
+        $item=['id'=>'board-'.$row['id'],'legacy'=>true,'tag'=>'Anonymous tip','official'=>false,'own'=>false,'body'=>$text,'at'=>(int)$row['at'],'reactions'=>['like'=>0,'fire'=>0,'laugh'=>0],'mine'=>null];
+        if ($admin) $item['user_id']=(string)$row['created_by'];
         $out[]=$item;
     }
     return $out;
@@ -63,10 +79,12 @@ if ($action==='post') {
         $clean=[];
         foreach ($options as $option) {if (!is_string($option)) cl_fail('Check the poll');$option=trim($option);if ($option===''||mb_strlen($option)>40) cl_fail('Check the poll');$clean[]=$option;}
     }
-    cl_run('INSERT INTO chinalife_gist_night(user_id,city,body,created_at) VALUES(?,?,?,NOW())','iss',[$uid,$city,$body]);
+    // Admins post from the same composer; their posts carry the official Hafrik tag unless they choose anonymous.
+    $official=cl_is_admin()&&($input['official']??true)!==false?1:0;
+    cl_run('INSERT INTO chinalife_gist_night(user_id,city,body,official,created_at) VALUES(?,?,?,?,NOW())','issi',[$uid,$city,$body,$official]);
     $id=(int)cl_one('SELECT LAST_INSERT_ID() id')['id'];
     if ($clean) cl_run('INSERT INTO chinalife_gist_night_polls(post_id,question,options) VALUES(?,?,?)','iss',[$id,$question,json_encode($clean,JSON_UNESCAPED_UNICODE)]);
-    json_response('success',['id'=>(string)$id,'posts'=>gist_night_feed($city)],'Posted to Gossip Night.');
+    json_response('success',['id'=>(string)$id,'posts'=>gist_night_feed($city)],($official?'Posted as Hafrik.':'Tip dropped.'));
 }
 if ($action==='react') {
     cl_rate('gist_night_tap',30,60);

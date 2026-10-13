@@ -547,3 +547,7 @@ dialog .activity-panel :is(.quest-card,.dream-card,.gist-card) { margin: 8px 0; 
 .gossip-prompt{border:1px solid #1F8E93;background:#0C3F44;color:#F7FFF7;border-radius:14px;padding:10px 12px;font-size:14px;text-align:left}
 .gossip-loading{color:#cfe9e4;text-align:center}
 .gossip-room [hidden]{display:none!important}
+.gossip-card.official{background:#F7FFF7;border:2px solid #1F8E93;border-radius:20px;margin:0}.gossip-card.official:after{display:none}
+.gossip-tag.official{background:#1F8E93}.gossip-pin{font-size:11px;color:#0C3F44;font-weight:700}
+.gossip-official{display:flex;gap:8px;align-items:center;font-size:14px;color:#F7FFF7}.gossip-official input{width:auto}
+.gossip-text a{color:#1F8E93;word-break:break-all}
