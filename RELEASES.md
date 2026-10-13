@@ -18,6 +18,11 @@ Every server-side money change goes through the ledger (`chinalife_economy_actio
 
 # Changelog
 
+## world-v9: shipped Wed 14 Oct 2026, ~01:30 China time (founder-approved, outside the Friday slot)
+- 🍾 **ChampagnePappi** hosts 007 Club: gold suit, big shades, chains and a bottle. He walks the club avoiding furniture and guests, greets you and new arrivals by name, hypes the DJ and calls dance-offs.
+- 🥂 **Pappi's bar**: Pappi Fizz ¥120 (+10 XP), Gold Rush ¥300 (+25 XP), Zero Proof ¥40 (+5 XP), Water free. Paid on the server (`club-drink`, in the ledger); one drink per 90 s, XP for the first 8 a day.
+- 🪩 Neon club: 007 entrance arch with a bouncer and rope, beat-synced dance floor and light beams, neon bar and VIP, party meter, Dance/Toast/Hype buttons, smooth enter and leave fades.
+
 ## world-v8: shipped Tue 13 Oct 2026, ~23:55 China time (founder-approved early release, outside the Friday slot)
 - 🚁 An advert helicopter circles the city towing a banner that rotates live ads, partner venues and "Your ad here". It is big and lit at night, and labels under the banner fade so it stays readable.
 - 🎓 Jobs you aren't qualified for show your level and a **Get skilled** button that takes you to the nearest place that trains that skill.

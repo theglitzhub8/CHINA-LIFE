@@ -46,6 +46,8 @@ export function nightClub(c){
  const pappi=c.person(7,-3.2,0xd4a843,0x6b4329,'',null,{skin:0x6b4329,hair:'cropped',hairColor:0x111111,acc:['sunglasses','chain','luxwatch'],top:{s:'suit',c:0xd4a843},bottom:{s:'trousers',c:0xf3efe4},shoes:{s:'loafers',c:0xffffff}});
  const bottle=new THREE.Group();mesh(new THREE.CylinderGeometry(.06,.07,.3,10),0x1f5a35,0,0,0,bottle);mesh(new THREE.CylinderGeometry(.025,.05,.12,8),0xd9b24a,0,.2,0,bottle);pappi.userData.limbs[3].add(bottle);bottle.position.set(0,-.62,.12);
  mesh(new THREE.TorusGeometry(.17,.022,6,20),0xd9b24a,0,1.36,.1,pappi).rotation.x=Math.PI/2.4;
+ {const shades=mesh(new THREE.BoxGeometry(.36,.1,.05),0x050505,0,1.775,.2,pappi);shades.castShadow=false;mesh(new THREE.BoxGeometry(.4,.025,.04),0xd9b24a,0,1.83,.2,pappi);
+  const glintG=new THREE.PlaneGeometry(.07,.025);disposers.push(glintG);const glintM=basic(0xffffff,{transparent:true,opacity:.9});for(const x of [-.11,.06]){const gl=new THREE.Mesh(glintG,glintM);gl.position.set(x,1.79,.227);gl.rotation.z=.5;pappi.add(gl)}pappi.userData.glint=glintM}
  const tag=label('🍾 ChampagnePappi',0,0,0,'pappi-name',()=>menu());tag.follow=pappi;
  const bubble=label('',0,0,0,'say-bubble pappi-say quiet');bubble.follow=pappi;bubble.lift=.45;bubble.el.setAttribute('role','status');
  let sayTimer=0;function say(text,ms=4200){bubble.el.textContent=text;bubble.el.classList.remove('quiet');bubble.hw=0;clearTimeout(sayTimer);sayTimer=setTimeout(()=>bubble.el.classList.add('quiet'),ms)}
@@ -68,20 +70,25 @@ export function nightClub(c){
    if(!r.data?.cooldown){s.needs.fun=Math.min(100,(s.needs.fun||0)+x.fun);s.needs.social=Math.min(100,(s.needs.social||0)+x.social);if(x.energy)s.needs.energy=Math.min(100,(s.needs.energy||0)+x.energy);s.drunk=Math.max(0,Math.min(95,(s.drunk||0)+x.alc));boost+=x.price>=300?14:x.price?8:2}
    document.getElementById('activityDialog')?.close();say(r.data?.cooldown?'Easy, tiger. One every 90 seconds. ⏳':fill(pick(LINES.served),{n:s.name,d:x.name}));game.toast(r.data?.cooldown?'⏳ '+(r.message||'Slow down. Try again soon.'):x.icon+' '+x.name+(r.data?.awardedXp?' · +'+r.data.awardedXp+' XP':''));c.setEmote('drink');game.save?.();game.refresh?.()}
   catch(e){if(status)status.textContent=e.message||'Try again.'}finally{busy=false;document.querySelectorAll('[data-drink]').forEach(b=>b.disabled=false)}}
- let lastCheck=0,lastBeat=-1;
+ let lastCheck=0,lastBeat=-1,lastFx=0,stuck=0;
+ const clear=(x,z)=>Math.abs(x)<9&&Math.abs(z)<6.5&&!c.obstacles().some(o=>Math.abs(x-o.x)<o.w/2+.15&&Math.abs(z-o.z)<o.d/2+.15)&&!c.bodies().some(b=>b!==pappi&&Math.hypot(b.position.x-x,b.position.z-z)<.55);
  function tick(time,dt){
   const me=c.getPlayer();
   if(me&&!greeted){greeted=true;setTimeout(()=>say(fill(pick(LINES.welcome),{n:game.state.name})),900)}
   // Lights: on the beat while the DJ plays, slow drift otherwise.
   const phase=window.ChinaLifeAudio?.beatPhase?.(),beat=phase!=null?Math.floor(phase):Math.floor(time/900);
   if(beat!==lastBeat){lastBeat=beat;for(const t of tiles)t.material=floorMats[(t.userData.k+beat)%4]}
-  if(!reduced()){const sw=Math.sin(time*.0011);beams[0].rotation.z=.5*sw;beams[1].rotation.z=-.5*sw;beams[0].rotation.x=beams[1].rotation.x=.25*Math.cos(time*.0008);const pulse=phase!=null?1-(phase%1):.5;for(const m of floorMats)m.opacity=.35+pulse*.35}
+  if(!reduced()&&time-lastFx>66){lastFx=time;if(pappi.userData.glint)pappi.userData.glint.opacity=.5+.45*Math.abs(Math.sin(time*.003));const sw=Math.sin(time*.0011);beams[0].rotation.z=.5*sw;beams[1].rotation.z=-.5*sw;beams[0].rotation.x=beams[1].rotation.x=.25*Math.cos(time*.0008);const pulse=phase!=null?1-(phase%1):.5;for(const m of floorMats)m.opacity=.35+pulse*.35}
   // Pappi walks between his spots and pauses to talk.
-  if(goal){const dx=goal[0]-pappi.position.x,dz=goal[1]-pappi.position.z,dist=Math.hypot(dx,dz);if(dist<.08){goal=null;wait=3+Math.random()*4}else{const step=Math.min(dist,dt*1.3);pappi.position.x+=dx/dist*step;pappi.position.z+=dz/dist*step;pappi.rotation.y=Math.atan2(dx,dz);const w=Math.sin(time*.01),[l,r,al,ar]=pappi.userData.limbs;l.rotation.x=w*.5;r.rotation.x=-w*.5;al.rotation.x=-w*.4;ar.rotation.x=-.6}}
+  if(goal){const dx=goal[0]-pappi.position.x,dz=goal[1]-pappi.position.z,dist=Math.hypot(dx,dz);if(dist<.15||stuck>2.5){goal=null;stuck=0;wait=3+Math.random()*4}else{const step=Math.min(dist,dt*1.3);let ux=dx/dist,uz=dz/dist;
+   // Steer: try straight, then 35°, 70° and 105° to either side; stand still if every way is blocked.
+   let moved=false;for(const a of [0,.6,-.6,1.2,-1.2,1.8,-1.8]){const vx=ux*Math.cos(a)-uz*Math.sin(a),vz=ux*Math.sin(a)+uz*Math.cos(a);if(clear(pappi.position.x+vx*.45,pappi.position.z+vz*.45)){pappi.position.x+=vx*step;pappi.position.z+=vz*step;ux=vx;uz=vz;moved=true;break}}if(!moved||Math.abs(ux*dx/dist+uz*dz/dist)<.2)stuck+=dt;pappi.rotation.y=Math.atan2(ux,uz);const w=Math.sin(time*.01),[l,r,al,ar]=pappi.userData.limbs;l.rotation.x=w*.5;r.rotation.x=-w*.5;al.rotation.x=-w*.4;ar.rotation.x=-.6}}
   else{wait-=dt;const [l,r,al]=pappi.userData.limbs;l.rotation.x=r.rotation.x=0;al.rotation.z=reduced()?.3:.4+Math.sin(time*.004)*.35;pappi.position.y=reduced()?0:Math.abs(Math.sin(time*.004))*.05;if(wait<=0){let next;do next=pick(spots);while(next===pappi.userData.spot);pappi.userData.spot=next;goal=next}}
+  if(time-(dodgeAt||0)>250){dodgeAt=time;dodge()}
   if(time-lastCheck>1000){lastCheck=time;boost=Math.max(0,boost-.6);const p=party();fillEl.style.width=p+'%';pct.textContent=p+'%';meter.setAttribute('aria-valuenow',p);meter.classList.toggle('hot',p>=75);
    const first=!seen.primed;seen.primed=true;for(const r of c.remotes())if(!seen.has(r.id)){seen.add(r.id);if(!first&&r.name)setTimeout(()=>say(fill(pick(LINES.join),{n:r.name})),400)}
    if(performance.now()>nextBanter){nextBanter=performance.now()+16000+Math.random()*14000;const roll=Math.random();if(roll<.12&&!duel){duel=performance.now()+15000;say(pick(LINES.duel),6000)}else if(roll<.4&&window.ChinaLifeAudio?.playing)say(pick(LINES.dj));else say(pick(c.remotes().length?LINES.banter:[...LINES.banter,...LINES.quiet]))}}}
+ let dodgeAt=0;const emoteBar=hud.querySelector('.club-emotes');function dodge(){const e=bubble.el;if(e.classList.contains('quiet')){e.style.marginLeft='';return}const b=e.getBoundingClientRect(),r=emoteBar.getBoundingClientRect(),cur=parseFloat(e.style.marginLeft)||0;const over=b.right-cur-(r.left-10);e.style.marginLeft=(b.bottom>r.top&&b.top<r.bottom&&over>0)?(-over)+'px':''}
  function dispose(){if(window.ChinaLifeClubHost?.pappi===pappi)window.ChinaLifeClubHost=null;clearTimeout(sayTimer);hud.remove();curtain.remove();for(const d of disposers)d.dispose?.();const out=document.createElement('div');out.className='club-curtain leaving';out.innerHTML='<b>007</b>';document.body.append(out);setTimeout(()=>out.remove(),700)}
- const api={keep:[pappi,bouncer,...tiles,...beams],tick,dispose,menu,say,party,pappi,me:()=>c.getPlayer()};window.ChinaLifeClubHost=api;return api;
+ const api={_obs:()=>c.obstacles(),keep:[pappi,bouncer,...tiles,...beams],tick,dispose,menu,say,party,pappi,me:()=>c.getPlayer()};window.ChinaLifeClubHost=api;return api;
 }
