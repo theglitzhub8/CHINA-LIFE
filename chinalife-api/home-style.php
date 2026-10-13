@@ -30,7 +30,7 @@ try{
     if($cost>0){$bal=cl_balances_lock($uid);if($bal['coins']<$cost)cl_fail('You need ¥'.number_format($cost).' for this style',409);
         $moved=cl_move_totals($uid,$game,-$cost,0);
         foreach($buy as [$sid,$price]){cl_run('INSERT INTO chinalife_home_style_unlocks(user_id,style,created_at) VALUES(?,?,NOW())','is',[$uid,$sid]);cl_run('INSERT INTO chinalife_economy_actions(user_id,action,ref,coins,xp,created_at) VALUES(?,?,?,?,0,NOW())','issi',[$uid,'homestyle','homestyle:'.$sid,-$price]);}
-        cl_store_character($uid,$game);}
+        cl_store_totals($uid,$game);}
     cl_run('INSERT INTO chinalife_home_styles(user_id,home_key,floor,wall,updated_at) VALUES(?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE floor=VALUES(floor),wall=VALUES(wall),updated_at=NOW()','isss',[$uid,$key,$floor,$wall]);
     $db->commit();
 }catch(Throwable $e){$db->rollback();throw $e;}

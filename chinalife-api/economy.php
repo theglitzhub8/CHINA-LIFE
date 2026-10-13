@@ -72,7 +72,7 @@ try {
         $held=cl_balances_lock($uid);$fee=max(0,min(800,$held['coins']));
         $moved=cl_move_totals($uid,$game,-$fee,0);
         economy_note('accident','accident:'.time(),-$fee,0);
-        cl_store_character($uid,$game);
+        cl_store_totals($uid,$game);
         $db->commit();
         json_response('success',$moved+['charged'=>$fee,'ambulance'=>min(300,$fee),'treatment'=>$fee-min(300,$fee),'cooldown'=>false,'duplicate'=>false,'bonus'=>false],'Treated at the hospital.');
     }
@@ -96,7 +96,7 @@ try {
         if (economy_seen('job',$ref)) {$totals=economy_totals($game);$db->commit();json_response('success',$totals,'Already recorded today.');}
         $moved=cl_move_totals($uid,$game,$pay,$xp);
         economy_note('job',$ref,$moved['awarded'],$xp);
-        cl_store_character($uid,$game);
+        cl_store_totals($uid,$game);
         $db->commit();
         json_response('success',$moved+['duplicate'=>false,'bonus'=>false],'Shift recorded.');
     }
@@ -116,7 +116,7 @@ try {
         if (count(array_intersect_key(array_flip($missions),$done))===count($missions) && !economy_seen('mission','mission:bonus:'.$day)) {
             $moved=cl_move_totals($uid,$game,500,100);
             economy_note('mission','mission:bonus:'.$day,$moved['awarded'],100);
-            cl_store_character($uid,$game);
+            cl_store_totals($uid,$game);
             $bonus=true;
         }
         $db->commit();
@@ -146,7 +146,7 @@ try {
     if ($price>0 && $held['coins']<$price) cl_fail('Not enough money',409);
     $moved=cl_move_totals($uid,$game,-$price,$gain);
     economy_note('purchase',$ref,-$price,$gain);
-    cl_store_character($uid,$game);
+    cl_store_totals($uid,$game);
     $db->commit();
     json_response('success',$moved+['duplicate'=>false,'bonus'=>false],'Purchase recorded.');
 } catch (Throwable $e) {

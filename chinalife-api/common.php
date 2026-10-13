@@ -155,6 +155,12 @@ function cl_lock_character(int $userId): array {
     if (!is_array($game)) cl_fail('Saved game data is corrupted',500);
     return $game;
 }
+// Server economy actions only move ledger mirrors (money, xp, rankClaimed). They must not bump the save
+// revision, or the player's next device save is rejected as "a newer save was found". save.php re-reads
+// coins and XP from the ledger anyway, so leaving the revision alone loses nothing.
+function cl_store_totals(int $userId, array $game): void {
+    cl_run("UPDATE chinalife_saves SET game_state=JSON_SET(game_state,'$.money',?,'$.xp',?,'$.rankClaimed',?) WHERE user_id=?",'iiii',[(int)($game['money']??0),(int)($game['xp']??0),(int)($game['rankClaimed']??0),$userId]);
+}
 function cl_store_character(int $userId, array $game): void {
     cl_run('UPDATE chinalife_saves SET game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=?','si',[json_encode($game,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),$userId]);
 }

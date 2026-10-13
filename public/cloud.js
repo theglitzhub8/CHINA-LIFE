@@ -154,12 +154,17 @@ async function upload(manual = false) {
   } catch (error) {
     if (generation !== authEpoch) return false;
     if (error.status === 409 && reconcileTransfers({state:error.data?.save?.game,revision:error.data?.revision})) {scheduleSave();return false}
+    // A server economy action (job, purchase, accident, home style) only changed ledger totals: take the newer
+    // revision and the server totals, then save again, instead of showing "A newer save was found".
+    if (error.status === 409 && ledgerOnlyChange(error.data?.save?.game)) {const g=error.data.save.game;remote={state:g,revision:error.data?.revision ?? 0,updatedAt:error.data?.updated_at};if(Number.isFinite(+g.money))game.state.money=+g.money;if(Number.isFinite(+g.xp))game.state.xp=Math.max(game.state.xp,+g.xp);if(Number.isInteger(g.rankClaimed))game.state.rankClaimed=Math.max(game.state.rankClaimed||0,g.rankClaimed);scheduleSave();return false}
     if (error.status === 409) {auto = false; remote = {state:error.data?.save?.game || null,revision:error.data?.revision ?? 0}; status('A newer account save exists. Open your account and load it to continue saving.'); show()}
     else if (error.status === 401) {auto = false; account = null; liveToken = ''; storage.setItem(TOKEN_KEY, ''); presence = false; players = []; publish(); notify(); status('Your Hafrik session expired. Connect again to save.'); show()}
     else {status('Account save failed: ' + error.message); if (auto) {clearTimeout(timer);timer=setTimeout(()=>upload(),10000)}}
     if (manual) game.toast(message); return false;
   } finally {busy = false}
 }
+const LEDGER_KEYS=new Set(['money','xp','rankClaimed','day','hour','chinaDay','lastVisit','streak']);
+function ledgerOnlyChange(server){const mine=remote?.state;if(!server||!mine||typeof server!=='object')return false;if((server.transferTotal||0)!==(mine.transferTotal||0)||(server.sharedXP||0)!==(mine.sharedXP||0))return false;for(const k of new Set([...Object.keys(server),...Object.keys(mine)])){if(LEDGER_KEYS.has(k))continue;if(JSON.stringify(server[k])!==JSON.stringify(mine[k]))return false}return true}
 function reconcileTransfers(saved) {
   if(account&&String(saved.account?.id)===String(account.user_id??account.id))account.avatar=saved.account.avatar??null;
   const delta=(saved.state?.transferTotal||0)-(remote.state?.transferTotal||0);
