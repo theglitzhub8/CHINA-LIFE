@@ -124,3 +124,43 @@ dialog.live-map[open]{display:flex;flex-direction:column;animation:lmIn .25s eas
 @media(max-height:710px){#phoneDialog .phone-apps{grid-auto-rows:84px!important}#phoneDialog .pw4>*{min-height:84px}}
 #phoneDialog .phone-dock .phone-app span{-webkit-line-clamp:1}
 .sc-quick[hidden]{display:none}
+/* ===== World v5: clean iPhone-style phone ===== */
+#phoneDialog .phone-frame{background:radial-gradient(120% 80% at 10% 0%,#7fd1c7 0%,transparent 55%),radial-gradient(120% 90% at 100% 100%,#3b6fb6 0%,transparent 60%),linear-gradient(160deg,#1f8e93 0%,#2a5d8f 55%,#26375f 100%)!important}
+#phoneDialog #phoneWallpaper,#phoneDialog .phone-wallpaper{display:none!important}
+#phoneDialog .ios-phone{grid-template-rows:20px auto minmax(0,1fr) 14px 36px 100px!important;padding:6px 16px 22px!important;gap:10px!important}
+#phoneDialog .phone-home-heading h3{font:600 12px var(--hk-font);letter-spacing:.08em;opacity:.8}
+#phoneDialog .phone-widgets.pw4{grid-template-columns:1.2fr 1fr 1fr;gap:10px}
+#phoneDialog .pw4>*{min-height:96px;border-radius:22px;border:0;background:rgba(255,255,255,.2)!important;backdrop-filter:blur(24px) saturate(1.4);-webkit-backdrop-filter:blur(24px) saturate(1.4);box-shadow:0 1px 0 rgba(255,255,255,.25) inset;padding:11px 12px}
+#phoneDialog .pw4 .pw-role{display:none!important}
+#phoneDialog .pw4 .pw-clock b{font:300 34px/1 -apple-system,'SF Pro Display',var(--hk-head);letter-spacing:-.01em}
+#phoneDialog .pw4 .phone-widget small{font:500 11px/1.25 -apple-system,var(--hk-font);opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#phoneDialog .pw4 .phone-widget b{font:600 17px/1.15 -apple-system,var(--hk-head)}
+#phoneDialog .pw4 .pw-event b{font-size:14px}
+#phoneDialog .phone-apps{grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-auto-rows:94px!important;gap:6px 6px!important;align-content:start}
+#phoneDialog .phone-app{gap:5px!important;justify-content:flex-start}
+#phoneDialog .phone-app b{width:56px!important;height:56px!important;border-radius:14px!important;border:0!important;background:rgba(255,255,255,.92)!important;box-shadow:0 2px 6px rgba(0,0,0,.18)!important}
+#phoneDialog .phone-app b img{width:38px;height:38px}
+#phoneDialog .phone-app span{font:500 11px/1.2 -apple-system,var(--hk-font)!important;color:#fff!important;text-shadow:0 1px 2px rgba(0,0,0,.35);max-width:78px!important;min-height:0!important;display:block!important;-webkit-line-clamp:unset!important;overflow:visible!important;white-space:normal!important;word-break:normal;overflow-wrap:anywhere;text-align:center}
+#phoneDialog .phone-dock .phone-app span{-webkit-line-clamp:unset!important}
+#phoneDialog .cl-for-you{margin:0;padding:10px 8px 6px!important;border-radius:30px!important;border:0!important;background:rgba(255,255,255,.22)!important;backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px)}
+#phoneDialog .phone-dock{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+#phoneDialog #phoneSearch{justify-self:center;width:118px;height:30px;padding:0 12px;border-radius:999px;border:0;background:rgba(255,255,255,.24);color:#fff;font:500 13px -apple-system,var(--hk-font);text-align:center;transition:width .2s}
+#phoneDialog #phoneSearch::placeholder{color:rgba(255,255,255,.85)}
+#phoneDialog #phoneSearch:focus{width:100%;text-align:left;outline:none}
+#phoneDialog .phone-page-controls button{width:7px;height:7px;background:rgba(255,255,255,.45)}
+#phoneDialog .phone-page-controls button[aria-current=true]{width:7px;background:#fff}
+/* ===== World v5: street HUD layout ===== */
+#worldUI.tp-walking .street-chip{left:12px;transform:none;top:calc(118px + env(safe-area-inset-top));max-width:calc(100% - 80px)}
+html body #worldUI.map-view.tp-walking .tp-walk{top:calc(222px + env(safe-area-inset-top));left:12px;right:auto;min-height:40px;padding:0 14px;font-size:13px;background:#fff;color:var(--hk-ink);box-shadow:var(--hk-shadow-1)}
+#worldUI.tp-walking .live-map-btn{top:calc(172px + env(safe-area-inset-top))}
+.scene-tools .tp-toggle{position:static!important;width:44px;height:44px;margin:0}
+#worldUI.tp-walking #mapLabelMode{display:none}
+html body .tp-enter{max-width:min(240px,calc(100% - 150px))!important;bottom:calc(var(--tp-bottom) + 132px)}
+#worldUI.search-open .street-chip,#worldUI.search-open .live-map-btn,#worldUI.search-open .tp-walk,#worldUI.search-open .tp-enter{display:none!important}
+#worldUI.night-walk #worldViewport canvas{filter:brightness(1.4) contrast(1.05) saturate(1.1)}
+html body .tp-enter{max-width:min(250px,calc(100% - 140px))!important;bottom:calc(var(--tp-bottom) + 196px)!important}
+#phoneDialog .phone-dock,#phoneDialog .cl-for-you .phone-dock{background:none!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;padding:0!important}
+#phoneDialog .pw4 .pw-clock small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#phoneDialog .pw4 button:focus,#phoneDialog .pw4 button:focus-visible{outline:none!important;box-shadow:0 1px 0 rgba(255,255,255,.25) inset!important}
+#worldUI.night-walk #worldViewport canvas{filter:brightness(1.6) contrast(1.05) saturate(1.1)}
+#phoneDialog .pw4 .pw-clock small{font-size:10px!important;letter-spacing:-.01em}

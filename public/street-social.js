@@ -81,3 +81,7 @@ window.ChinaLifeLiveMap={open:liveMap};
 // A "Live map" button on the city map screen.
 function mapButton(){const ui=$('worldUI');if(!ui||$('liveMapBtn'))return;const b=document.createElement('button');b.id='liveMapBtn';b.type='button';b.className='live-map-btn';b.innerHTML='<span>🗺️</span>Live map';b.setAttribute('aria-label','Open the live city map');b.onclick=liveMap;ui.append(b)}
 setInterval(()=>{mapButton();const b=$('liveMapBtn');if(b)b.hidden=!$('navMap')?.classList.contains('active')},700);addEventListener('load',()=>setTimeout(mapButton,1500));
+
+// v5: the camera toggle joins the right-hand tool column; brighter streets at night while walking.
+setInterval(()=>{const t=$('tpToggle'),col=document.querySelector('.scene-tools');if(t&&col&&t.parentElement!==col)col.append(t);
+ const ui=$('worldUI');if(!ui)return;const lit=W()?.lighting?.();ui.classList.toggle('night-walk',!!W()?.streetWalking?.()&&lit&&lit.sun!=null&&lit.sun<1.2)},800);
