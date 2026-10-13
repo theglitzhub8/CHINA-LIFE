@@ -1,0 +1,149 @@
+/* R2 · Hafrik iOS design system. Loaded last; overrides only, no layout logic lives here. */
+:root{--io-java:#1F8E93;--io-ink:#0C3F44;--io-canvas:#F7FFF7;--io-night:#121212;--io-ok:#2FB36D;--io-warn:#F2A93B;--io-bad:#E5484D;
+ --io-ink-2:rgba(12,63,68,.64);--io-ink-3:rgba(12,63,68,.40);--io-sep:rgba(12,63,68,.12);
+ --io-font:'Hafrik Readex','Readex Pro',-apple-system,'SF Pro Text',system-ui,sans-serif;
+ --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;--s7:40px;
+ --r-btn:10px;--r-card:14px;--r-sheet:20px;--r-pill:999px;
+ --io-float:0 4px 16px rgba(12,63,68,.18);--io-sheet:0 -8px 32px rgba(12,63,68,.18);
+ --io-tab:calc(49px + max(8px,env(safe-area-inset-bottom)));
+ /* type scale: size/line-height/weight */
+ --t-large:700 34px/41px var(--io-font);--t-t1:700 28px/34px var(--io-font);--t-t2:700 22px/28px var(--io-font);--t-t3:600 20px/25px var(--io-font);
+ --t-head:600 17px/22px var(--io-font);--t-body:400 17px/22px var(--io-font);--t-callout:400 16px/21px var(--io-font);--t-sub:400 15px/20px var(--io-font);
+ --t-foot:400 13px/18px var(--io-font);--t-cap:500 12px/16px var(--io-font)}
+html:root body{font-family:var(--io-font);-webkit-font-smoothing:antialiased}
+html:root body :is(button,input,select,textarea){font-family:var(--io-font)}
+/* Minimum readable size: nothing under 12px (see the 12px list near the end) */
+/* ---- Icons ---- */
+.ic{width:24px;height:24px;flex:none;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ic.sm{width:18px;height:18px}
+
+/* ---- Top bar: one 44px row ---- */
+html:root body #worldUI .world-hud{top:max(8px,env(safe-area-inset-top));left:var(--s4);right:var(--s4);width:auto;transform:none}
+html:root body #worldUI .world-hud>.hud-bar{height:44px;min-height:44px;padding:0 4px 0 20px;border-radius:var(--r-pill);background:rgba(12,63,68,.92);box-shadow:var(--io-float);gap:var(--s2);justify-content:space-between}
+html:root body #worldUI .hud-bar .brand-chip{display:none!important}
+html:root body #worldUI .hud-bar>*{min-height:36px}
+html:root body #worldUI .hud-bar .time-chip{display:grid;justify-items:start;border-radius:0!important;min-width:0;flex:1 1 auto;grid-template-columns:auto;align-content:center;gap:0;padding:0;font:var(--t-head);font-size:15px;line-height:18px;overflow:hidden}
+html:root body #worldUI .hud-bar .time-chip :is(.hud-divider,#worldMood,#worldOnline){display:none!important}
+html:root body #worldUI .hud-bar #worldCity{all:unset;cursor:pointer;display:flex;align-items:center;gap:2px;font:var(--t-cap);color:rgba(247,255,247,.72);white-space:nowrap}
+html:root body #worldUI .hud-bar #worldCity .ic{width:14px;height:14px}
+html:root body #worldUI .hud-bar #worldCity #worldDay{all:unset;font:inherit}
+html:root body #worldUI .hud-bar .hud-right{display:flex;align-items:center;gap:var(--s1);margin-left:auto}
+html:root body #worldUI .hud-bar #cloudButton{all:unset;cursor:pointer;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:var(--io-canvas)}
+html:root body #worldUI .hud-bar #cloudButton #cloudStatus{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+html:root body #worldUI .hud-bar #cloudButton.guest{width:auto;padding:0 10px;background:var(--io-java);border-radius:var(--r-pill);font:var(--t-cap);font-weight:600}
+html:root body #worldUI .hud-bar #cloudButton.guest #cloudStatus{position:static;width:auto;height:auto;clip:auto}
+html:root body #worldUI .hud-bar .money-chip{background:none!important;border:0!important;box-shadow:none!important;min-height:36px;border-radius:999px;display:flex;align-items:center;gap:6px;padding:0 4px 0 var(--s2);font:var(--t-head)}
+html:root body #worldUI .hud-bar .money-chip b{background:none!important;color:var(--io-canvas)!important;font:var(--t-head)!important;padding:0!important;box-shadow:none!important}
+html:root body #worldUI .hud-bar .money-chip>span{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:0}
+html:root body #worldUI .world-caption{display:none!important}
+
+/* ---- Side chips & right-edge scene buttons ---- */
+html:root body #worldUI .world-side{top:calc(max(8px,env(safe-area-inset-top)) + 56px);left:var(--s4)}
+html:root body #worldUI .world-side :is(.event-chip,.objective-chip,.clean-button){border-radius:var(--r-pill);min-height:36px;padding:6px 12px;font:var(--t-foot);font-weight:600;box-shadow:var(--io-float)}
+html:root body #worldUI .scene-tools{top:calc(max(8px,env(safe-area-inset-top)) + 56px);right:var(--s4)}
+html:root body #worldUI :is(.scene-tools button,#tpToggle,#quickVoice,.quick-voice,.radio-fab,#clubMusicToggle,.club-music-fab){width:44px!important;height:44px!important;min-width:44px;border-radius:50%!important;padding:0!important;box-shadow:var(--io-float)}
+html:root body #worldUI :is(.scene-tools button,#tpToggle,#quickVoice,.quick-voice,.radio-fab,#clubMusicToggle,.club-music-fab):has(.ic){font-size:0!important}
+html:root body #worldUI :is(.scene-tools button,#tpToggle,#quickVoice,.quick-voice,.radio-fab,#clubMusicToggle,.club-music-fab,.tp-jump,#worldVenueMore,#panelToggle)[hidden]{display:none!important}
+html:root body #worldUI :is(.scene-tools button,#tpToggle,#quickVoice,.quick-voice,.radio-fab,#clubMusicToggle,.club-music-fab) .ic{width:24px;height:24px;display:block;margin:auto}
+
+/* ---- Docked 4-tab bar ---- */
+html:root body #worldUI .world-dock{left:0!important;right:0!important;bottom:0!important;width:auto!important;transform:none!important;gap:var(--s2)}
+html:root body #worldUI .world-dock>.venue-card{margin:0 var(--s3)}
+html:root body #worldUI .world-nav{border-radius:0!important;border:0!important;border-top:1px solid rgba(247,255,247,.08)!important;box-shadow:none!important;background:rgba(12,63,68,.96)!important;backdrop-filter:blur(20px);padding:4px var(--s2) max(8px,env(safe-area-inset-bottom))!important;min-height:var(--io-tab);gap:0!important}
+html:root body #worldUI .world-nav button{min-height:49px!important;padding:4px 0 0!important;gap:2px!important;border-radius:0!important;background:none!important;font:var(--t-cap)!important;font-size:12px!important;color:rgba(247,255,247,.6)!important}
+html:root body #worldUI .world-nav button.active{color:#7fd6d9!important;background:none!important}
+html:root body #worldUI .world-nav button.active svg path{fill:rgba(127,214,217,.22)}
+html:root body #worldUI .world-nav svg{width:28px!important;height:28px!important;stroke-width:1.8}
+html:root body #worldUI .world-nav button:hover{background:none!important}
+
+/* ---- Controls: 88px joystick, 56px jump ---- */
+html:root body #worldUI .tp-stick{width:88px!important;height:88px!important;left:calc(var(--s4) + env(safe-area-inset-left))!important}
+html:root body #worldUI .tp-knob{width:36px!important;height:36px!important}
+html:root body #worldUI .tp-jump{width:56px!important;height:56px!important;right:calc(var(--s4) + env(safe-area-inset-right))!important;bottom:calc(var(--tp-bottom) + 16px)!important;display:grid;place-items:center;font-size:0!important;box-shadow:var(--io-float)}
+html:root body #worldUI .tp-jump .ic{width:26px;height:26px}
+
+/* ---- Room sheet detents: peek / half / near-full ---- */
+html:root body #worldUI .venue-card{border-radius:var(--r-sheet)!important;box-shadow:var(--io-sheet);background:var(--io-canvas)}
+html:root body #worldUI .venue-card::before{content:'';display:block;width:36px;height:5px;border-radius:3px;background:rgba(12,63,68,.22);margin:0 auto 8px}
+html:root body #worldUI .venue-card .venue-icon{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:rgba(31,142,147,.12);color:var(--io-java);font-size:18px}
+html:root body #worldUI .venue-card h1#worldVenueTitle{font:var(--t-t3)!important;color:var(--io-ink)}
+html:root body #worldUI .venue-card #worldVenueSub{font:var(--t-foot)!important;color:var(--io-ink-2)}
+html:root body #worldUI :is(#worldVenueMore,#panelToggle){width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:rgba(12,63,68,.06);color:var(--io-ink)}
+html:root body #worldUI :is(#worldVenueMore,#panelToggle):has(.ic){font-size:0!important}
+html:root body #worldUI.dock-full .venue-card{max-height:calc(92vh - var(--io-tab))!important;height:calc(92vh - var(--io-tab));overflow-y:auto}
+html:root body #worldUI.dock-open:not(.dock-full) .venue-card{max-height:calc(50vh - 24px);overflow-y:auto}
+html:root body #worldUI .venue-card :is(#worldActivities button,.world-activities>*){border-radius:var(--r-card)}
+html:root body #worldUI #venueSay{border-radius:var(--r-btn);font:var(--t-sub);min-height:44px}
+html:root body #worldUI .venue-chat-button{min-height:44px;border-radius:var(--r-card);font:var(--t-sub);font-weight:600;display:flex;align-items:center;gap:var(--s2)}
+html:root body #worldUI .venue-chat-button .ic{width:20px;height:20px;color:var(--io-java)}
+
+/* ---- Modal sheets (phone, people, activities…) ---- */
+html:root body dialog:is(#activityDialog,#phoneDialog,#helpDialog,#sharedDialog,#audioDialog,#voiceDialog,#socialDialog,#cloudDialog)[open]{position:fixed;inset:auto 0 0 0!important;margin:0!important;width:100%!important;max-width:100%!important;height:92vh!important;max-height:92vh!important;border-radius:var(--r-sheet) var(--r-sheet) 0 0!important;border:0!important;box-shadow:var(--io-sheet);background:var(--io-canvas);color:var(--io-ink);transform:none!important;animation:ioSheetIn .32s cubic-bezier(.2,.9,.25,1.05)}
+html:root body dialog.ios-half[open]{height:50vh!important}
+html:root body dialog[open]::backdrop{background:rgba(12,63,68,.32);backdrop-filter:blur(2px)}
+html:root body dialog.ios-sheet::before{content:'';position:absolute;top:6px;left:50%;width:36px;height:5px;margin-left:-18px;border-radius:3px;background:rgba(12,63,68,.22);z-index:3}
+@keyframes ioSheetIn{from{transform:translateY(40px)!important;opacity:.4}to{transform:none;opacity:1}}
+/* one close: a single × top-right */
+html:root body dialog .ios-close{position:absolute!important;top:12px!important;right:12px!important;left:auto!important;width:30px!important;height:30px!important;min-width:30px;border-radius:50%!important;border:0!important;padding:0!important;display:grid!important;place-items:center;background:rgba(12,63,68,.08)!important;color:var(--io-ink-2)!important;font-size:0!important;box-shadow:none!important;z-index:20}
+html:root body dialog .ios-close .ic{width:16px;height:16px;stroke-width:2.6}
+html:root body dialog .phone-back{position:absolute!important;top:10px!important;left:8px!important;font-size:0!important;width:44px;height:34px;border:0!important;background:none!important;color:var(--io-java)!important;display:flex;align-items:center;justify-content:center;z-index:20;box-shadow:none!important}
+html:root body dialog .phone-back .ic{width:28px;height:28px}
+/* large titles */
+html:root body dialog[open]:not(#phoneDialog) :is(h1,.sheet-title,.social-heading h2,#socialTitle){font:var(--t-large)!important;letter-spacing:.2px;color:var(--io-ink)}
+html:root body dialog[open]:not(#phoneDialog) h2{font:var(--t-t2);color:var(--io-ink)}
+html:root body dialog[open]:not(#phoneDialog) h3{font:var(--t-head);color:var(--io-ink)}
+html:root body dialog[open]:not(#phoneDialog) p{font-size:15px;line-height:20px}
+html:root body dialog[open]:not(#phoneDialog) small{font-size:13px;line-height:18px}
+html:root body dialog[open] .eyebrow{font:var(--t-foot)!important;text-transform:none!important;letter-spacing:0!important;color:var(--io-ink-2)!important}
+html:root body dialog[open] .ios-titled{padding-top:var(--s6)!important}
+html:root body dialog[open] :is(button.primary,.primary-btn,.btn-primary){background:var(--io-java)!important;color:#fff!important;border-radius:var(--r-btn)!important;min-height:44px;font:var(--t-head)!important}
+/* the phone becomes a full sheet: no drawn bezel, notch or fake status bar */
+html:root body #phoneDialog[open]{background:#183e42!important;padding:0!important;overflow:hidden}
+html:root body #phoneDialog .phone-frame{width:100%!important;height:100%!important;max-height:none!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+html:root body #phoneDialog .phone-frame::after{display:none!important}
+html:root body #phoneDialog :is(.phone-island,.phone-signal){display:none!important}
+html:root body #phoneDialog .phone-status{opacity:0;pointer-events:none}
+html:root body #phoneDialog .ios-close{background:rgba(247,255,247,.18)!important;color:#fff!important}
+html:root body #phoneDialog .phone-app img{width:56px;height:56px;border-radius:14px}
+html:root body #phoneDialog .phone-app{font:var(--t-cap)!important}
+html:root body #phoneDialog .phone-back{color:#fff!important}
+/* ---- Club: one Party button ---- */
+html:root body .club-emotes{gap:var(--s2)!important;width:56px!important;right:var(--s4)!important;max-height:none!important;overflow:visible!important}
+html:root body .club-emotes>button:not(.party-toggle){display:none!important}
+html:root body .club-emotes.open>button{display:grid!important;animation:ioFan .22s cubic-bezier(.2,.9,.25,1.2) both}
+html:root body .club-emotes button{width:56px;padding:0!important;height:auto;min-height:56px;justify-items:center;align-content:center;gap:2px;background:transparent!important;border:0!important;backdrop-filter:none!important;font:var(--t-cap)!important;color:#fff}
+html:root body .club-emotes button>.ic{width:44px;height:44px;padding:10px;border-radius:50%;background:rgba(18,18,18,.78);border:1px solid rgba(255,255,255,.16);box-sizing:border-box;box-shadow:var(--io-float)}
+html:root body .club-emotes button>span{font-size:12px!important;text-shadow:0 1px 3px rgba(0,0,0,.6);opacity:1!important}
+html:root body .club-emotes .party-toggle>.ic{background:linear-gradient(135deg,#1F8E93,#ff3fa4);border-color:transparent}
+html:root body .club-emotes.open .party-toggle>.ic{background:var(--io-night)}
+@keyframes ioFan{from{opacity:0;transform:translateY(12px) scale(.8)}to{opacity:1;transform:none}}
+html:root body .club-hud .club-meter{top:auto!important;bottom:calc(var(--tp-bottom,150px) + 20px)!important;width:150px!important;padding:6px 10px!important;font:var(--t-foot)!important;font-weight:700!important}
+
+html:root body:has(#clubMusicToggle) #worldUI .radio-fab{display:none!important}
+/* ---- Scene labels: 12px pill, decluttered ---- */
+html:root body #sceneLabels .scene-label{font:600 12px/16px var(--io-font)!important;padding:4px 10px!important;border-radius:var(--r-pill)!important;background:rgba(247,255,247,.92);color:var(--io-ink);box-shadow:0 2px 8px rgba(12,63,68,.16)}
+html:root body #sceneLabels .scene-label.ios-cull{visibility:hidden!important}
+html:root body #worldUI.map-view #sceneLabels .scene-label .ic{width:14px;height:14px;margin-right:2px}
+
+/* ---- Press & spring (reduced-motion aware) ---- */
+@media (prefers-reduced-motion:no-preference){
+ html:root body :is(button,[role=button],.tp-jump){transition:transform .38s cubic-bezier(.34,1.56,.64,1),background-color .12s,color .12s}
+ html:root body :is(button,[role=button]):active:not(:disabled){transform:scale(.96);transition:transform .08s ease-out}
+ html:root body .tp-jump:active{transform:scale(.9)!important}
+}
+@media (prefers-reduced-motion:reduce){
+ html:root body *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+/* ---- 12px floor for the places that were smaller ---- */
+html:root body #worldUI .world-side small,html:root body #worldUI .venue-chat-button span,html:root body #worldUI .tp-jog small,html:root body #worldUI small,
+html:root body #phoneDialog :is(.pw-clock small,.pw-clock span,.phone-widget small,.phone-app span),html:root body #socialDialog .social-tabs button{font-size:12px!important;line-height:16px}
+html:root body #worldUI .tp-jog{font-size:12px}
+/* Party fans out as a 3×2 grid above itself (Party stays bottom-right), clear of the top bar and side tools */
+html:root body .club-emotes.open{grid-template-columns:repeat(3,56px)!important;width:184px!important;column-gap:8px!important;row-gap:8px!important}
+/* Near-full detent covers the scene: hide the floating scene controls behind it */
+html:root body #worldUI.dock-full :is(.world-side,.scene-tools,.tp-controls,.club-hud,#quickVoice,.quick-voice,.radio-fab,#clubMusicToggle,#tpToggle,#tpWalk,#tpEnter,.tp-jog){visibility:hidden!important}
+html:root body #worldUI.dock-full .world-dock{z-index:30}
+html:root body #worldUI.dock-full .venue-card{display:flex!important;flex-direction:column}
+html:root body #worldUI.dock-full .venue-card>*{flex:none}
+html:root body #worldUI .venue-chat-button{white-space:nowrap;overflow:hidden}
+html:root body #worldUI .venue-chat-button span{overflow:hidden;text-overflow:ellipsis;margin-left:auto;color:var(--io-ink-2)}
