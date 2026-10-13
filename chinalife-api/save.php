@@ -56,7 +56,11 @@ if ($stored) {
     $bal=cl_balances_lock($uid);
     $minutes=max(0,(int)$stored['elapsed'])/60;
     $coinCap=$bal['coins']+20000+600*$minutes;$xpCap=$bal['xp']+300+30*$minutes;
-    $money=(int)floor(min((float)$game['money'],$coinCap));$xp=(int)floor(min((float)$game['xp'],$xpCap));
+    // Device earnings are capped per rolling hour, not per save, so repeated saves cannot each add ¥20,000.
+    $recent=cl_one("SELECT COALESCE(SUM(coins),0) n FROM chinalife_economy_actions WHERE user_id=? AND action='device' AND created_at>=DATE_SUB(NOW(),INTERVAL 1 HOUR)",'i',[$uid]);
+    $room=max(0,20000-(int)($recent['n']??0));$coinCap=min($coinCap,$bal['coins']+$room);
+    $money=(int)floor(min((float)$game['money'],$coinCap));
+    if ($money>$bal['coins']) cl_run('INSERT INTO chinalife_economy_actions(user_id,action,ref,coins,xp,created_at) VALUES(?,?,?,?,0,NOW())','issi',[$uid,'device','device:'.microtime(true).':'.random_int(0,999999),$money-$bal['coins']]);$xp=(int)floor(min((float)$game['xp'],$xpCap));
     if ($money<-10000000) $money=-10000000;
     if ($xp<$bal['xp']) $xp=$bal['xp'];
     $ranks=cl_ranks();$reached=0;foreach ($ranks as $i=>$r) if ($xp>=(int)$r['xp']) $reached=$i;
