@@ -18,6 +18,14 @@ Every server-side money change goes through the ledger (`chinalife_economy_actio
 
 # Changelog
 
+## R1 (r1-load): shipped Wed 14 Oct 2026, ~05:21 China time (founder-approved, outside the Friday slot)
+- Lighter on the server: notifications are checked every 5–20 s and pause while the tab is hidden; presence every 20 s; saves at most once a minute and only when something changed; voice and home-visit checks run only while in use; one combined feed call a minute.
+- Music streams as AAC (.m4a, 225 MB down to 11 MB) with year-long caching. The .wav originals are kept.
+- The page loads 4 cached bundles instead of about 20 files.
+- Switched off for now, with flags only (no data removed): politics, police, court, Cantaball, spaces, journal, cloud, City openings, marketplace, AI, tasks and Hafrik Events apps; park, game centre, roach farm, K11, party pier, ex, orangutan and three campuses. The voting centre is view-only.
+- Staging, per player over 5 min: 509 → 113 requests, 691 → 261 KB.
+- Backup: /root/backups/r1-20261013-212058 (server time).
+
 ## world-v10a hotfix: shipped Wed 14 Oct 2026, ~03:34 China time (founder-approved)
 - The joystick and jump button stay visible above the open room panel, so you can always walk.
 - Clubs: the action column sits above the jump button; music and mic move to the left above the joystick. No overlaps at 390×844 with the panel open or closed.
