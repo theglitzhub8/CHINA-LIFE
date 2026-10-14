@@ -9,7 +9,7 @@ function empties(root=document){root.querySelectorAll('.r4-empty:not([data-io])'
  // Tasks with nothing done yet, and a Learning Hub with every course at 0%.
  const panel=$('activityContent');if(!panel||panel.querySelector('.r4-empty'))return;const t=panel.innerText||'';
  if(/\b0\s*\/\s*4\b/.test(t)&&/task/i.test(t)){panel.querySelector('.activity-panel>p,.activity-panel h2')?.insertAdjacentHTML('afterend','<div class="r4-empty" data-r4-icon="clock" data-io="1"><span class="r4-empty-ic">'+I('clock')+'</span><p>Start with today’s 4 quick tasks.</p><div><button class="r4-go" data-r4-show="1">Show me</button></div></div>')}
- else if(/learning hub|courses/i.test(t)&&/\b0%/.test(t)&&!/[1-9]\d?%/.test(t)){panel.querySelector('.activity-panel>p,.activity-panel h2')?.insertAdjacentHTML('afterend','<div class="r4-empty" data-r4-icon="book" data-io="1"><span class="r4-empty-ic">'+I('book')+'</span><p>Lesson 1 takes 2 minutes.</p><div><button class="r4-go" data-r4-start="1">Start</button></div></div>')}}
+ else if(/learning hub|courses/i.test(t)&&/no courses|no lessons|nothing (here|yet)/i.test(t)&&!/\d+% complete/i.test(t)){panel.querySelector('.activity-panel>p,.activity-panel h2')?.insertAdjacentHTML('afterend','<div class="r4-empty" data-r4-icon="book" data-io="1"><span class="r4-empty-ic">'+I('book')+'</span><p>Lesson 1 takes 2 minutes.</p><div><button class="r4-go" data-r4-start="1">Start</button></div></div>')}}
 document.addEventListener('click',e=>{const b=e.target.closest?.('[data-r4-go],#r4MoveIn,[data-r4-show],[data-r4-start]');if(!b)return;e.preventDefault();e.stopPropagation();
  if(b.id==='r4MoveIn')return G()?.chooseHome?.();
  if(b.dataset.r4Show){const first=$('activityContent').querySelector('.r4-empty ~ * button, .today-list > *, [data-task]');first?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'});return}
@@ -83,7 +83,9 @@ function wireMap(){const nav=$('navMap');if(!nav||!nav.onclick||nav.onclick.__r4
 orig.call(nav,e);setTimeout(()=>{const ui=$('worldUI');if(ui?.classList.contains('map-view')&&!ui.classList.contains('dock-open'))$('panelToggle')?.click()},350)};f.__r4=true;nav.onclick=f}
 
 /* ---------- Wiring ---------- */
-function tick(){empties();tip();titles();sheetify();wireMap()}
+// R4e: some Hafrik course titles arrive with literal UTF-8 escapes (\xe2\x80\x94). Decode them on screen only; the data is untouched.
+const ESC=/(?:\\x[0-9a-f]{2})+/gi;function unesc(){document.querySelectorAll('dialog[open]').forEach(d=>{if(!/\\x[0-9a-f]{2}/i.test(d.textContent))return;const w=document.createTreeWalker(d,NodeFilter.SHOW_TEXT);let n;while((n=w.nextNode()))if(ESC.test(n.nodeValue)){ESC.lastIndex=0;n.nodeValue=n.nodeValue.replace(ESC,m=>{try{return new TextDecoder().decode(new Uint8Array(m.split('\\x').slice(1).map(h=>parseInt(h,16))))}catch{return m}})}ESC.lastIndex=0})}
+function tick(){unesc();empties();tip();titles();sheetify();wireMap()}
 function boot(){if(!G()?.state){setTimeout(boot,300);return}tick();
  new MutationObserver(()=>soon(tick)).observe(document.body,{subtree:false,childList:true,attributes:true,attributeFilter:['class'],attributeOldValue:false});
  ['worldUI','activityContent','socialBody','phoneContent','worldVenueTitle'].map($).filter(Boolean).forEach(n=>new MutationObserver(()=>soon(tick)).observe(n,{childList:true,subtree:n.id!=='worldUI',...(n.id==='worldUI'?{attributes:true,attributeFilter:['class']}:{})}));

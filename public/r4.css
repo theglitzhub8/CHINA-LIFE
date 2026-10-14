@@ -176,3 +176,7 @@ html:root body .r4-where ul.r4-pop li small{display:none}
 html:root body .r4-where ul.r4-res li button{min-height:48px}
 html:root body .r4-where .r4-fullmap{margin-top:8px;min-height:40px;font-size:15px;background:none;color:#1d6fd8;box-shadow:none}
 html:root body .r4-where .r4-x{top:12px;right:12px}
+/* R4e · one theme: the game always renders light, even when the phone or the Hafrik app is in dark mode */
+:root,html:root body{color-scheme:light only!important}
+html:root body dialog{color:#0C3F44}
+html:root body dialog :is(button,input,select,textarea){color-scheme:light only}
