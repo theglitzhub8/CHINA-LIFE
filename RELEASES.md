@@ -98,3 +98,9 @@ Every server-side money change goes through the ledger (`chinalife_economy_actio
 - API (staging only; see deploy/r4b-api.md): a short-TTL cache for online, leaderboard and Hafrik map pins (APCu is not installed, so it uses /dev/shm files), plus feed.php skipping the catalog.
 - Deploy notes: the front end and API went live together. The first front-end write missed 2 renamed bundles, so the page failed to load for about 2 minutes (11:00–11:02 CST). I restored index.html from backup, redeployed with --no-renames, and the smoke test passed.
 - The cache runs from /tmp/chinalife-cache (open_basedir blocks /dev/shm). Checked live: MISS, then HIT. partners.css and partners.html were left untouched (they differ from the repo by design).
+
+## R4c · floating layout (r4-polish 7617b65), LIVE 2026-10-14 11:20 CST, backup /root/backups/r4c-20261014-032009
+- "Where to?" is now a compact floating card above the tab bar: search, a horizontal row of popular places, max 40% height, game visible.
+- Every sheet, the phone and the room card keep 12px margins plus safe areas and are rounded on all sides. The tab bar is narrower (max 340px).
+- Deploy: live md5 matched 4745df7; the new styles bundle was added and the old ones kept; all 4 referenced bundles returned 200 before index.html was switched.
+- Smoke test: 0 overlaps, saves 200, no modal, no music 403, no JS errors or 4xx/5xx; load 1.2.
