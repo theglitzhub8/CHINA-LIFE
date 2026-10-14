@@ -87,7 +87,7 @@ Every server-side money change goes through the ledger (`chinalife_economy_actio
 - Club music sync now runs every 15 s (5 s with the DJ booth open, instantly on a room change) instead of every 2.5 s. Club idle traffic drops from 57 to 17 requests/min. The music 403 fix is unchanged.
 - Tests: tests/r4.mjs (6 tests). npm test: 158 pass / 131 fail (the 131 failures predate this work).
 
-## R4b · founder redesign (branch r4-polish, built, not deployed)
+## R4b · founder redesign (r4-polish 4745df7) — LIVE 2026-10-14 11:00 CST, backup /root/backups/r4-20261014-025907
 - Street: one small chip plus two round icon buttons (Live map, Map view) in a single row.
 - Every sheet and the phone: 85% height with the game visible above, a close button, swipe down to close, and Back closes the top sheet.
 - Map opens a "Where to?" picker first (search plus popular places, then rides); "Open the city map" is still there.
@@ -96,3 +96,5 @@ Every server-side money change goes through the ledger (`chinalife_economy_actio
 - Floating glass tab bar with a gradient active pill; glassier room sheet and HUD.
 - Also: iOS action sheets (block, end relationship, clear AI chat, purchases of ¥1,000+), one music timer (15 s, 5 s with the DJ booth open, paused when hidden), the feed skips the 15 KB activity catalog when unchanged, and controls fade during a sheet drag.
 - API (staging only; see deploy/r4b-api.md): a short-TTL cache for online, leaderboard and Hafrik map pins (APCu is not installed, so it uses /dev/shm files), plus feed.php skipping the catalog.
+- Deploy notes: the front end and API went live together. The first front-end write missed 2 renamed bundles, so the page failed to load for about 2 minutes (11:00–11:02 CST). I restored index.html from backup, redeployed with --no-renames, and the smoke test passed.
+- The cache runs from /tmp/chinalife-cache (open_basedir blocks /dev/shm). Checked live: MISS, then HIT. partners.css and partners.html were left untouched (they differ from the repo by design).
