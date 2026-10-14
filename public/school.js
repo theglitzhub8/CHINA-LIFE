@@ -1,66 +1,18 @@
-// v10: a school day on top of the existing Chinese course. Timetable on Beijing time, five subjects with
-// generated quizzes (HSK 1–2 vocabulary, tones, characters, dialogues, review), daily homework, a weekly exam
-// and grades. Rewards are paid by the server (economy.php action school): once per class a day, homework once a
-// day, the exam once a week. Scores and grades live in the save (state.school).
-(()=>{
-const game=new Proxy({},{get:(_,k)=>window.ChinaLife?.[k]});
-const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-// HSK 1–2 style vocabulary by topic: [characters, pinyin, English].
-const V={
- numbers:[['一','yī','one'],['二','èr','two'],['三','sān','three'],['四','sì','four'],['五','wǔ','five'],['六','liù','six'],['七','qī','seven'],['八','bā','eight'],['九','jiǔ','nine'],['十','shí','ten'],['百','bǎi','hundred'],['千','qiān','thousand']],
- time:[['今天','jīntiān','today'],['明天','míngtiān','tomorrow'],['昨天','zuótiān','yesterday'],['早上','zǎoshang','morning'],['晚上','wǎnshang','evening'],['现在','xiànzài','now'],['点','diǎn','o’clock'],['分钟','fēnzhōng','minute'],['星期','xīngqī','week'],['年','nián','year'],['月','yuè','month'],['时候','shíhou','time, moment']],
- family:[['爸爸','bàba','dad'],['妈妈','māma','mum'],['哥哥','gēge','older brother'],['姐姐','jiějie','older sister'],['弟弟','dìdi','younger brother'],['妹妹','mèimei','younger sister'],['儿子','érzi','son'],['女儿','nǚ’ér','daughter'],['朋友','péngyou','friend'],['孩子','háizi','child']],
- food:[['米饭','mǐfàn','rice'],['面条','miàntiáo','noodles'],['饺子','jiǎozi','dumplings'],['茶','chá','tea'],['水','shuǐ','water'],['咖啡','kāfēi','coffee'],['苹果','píngguǒ','apple'],['鸡蛋','jīdàn','egg'],['菜','cài','dish, vegetables'],['好吃','hǎochī','tasty'],['饿','è','hungry'],['喝','hē','to drink']],
- places:[['学校','xuéxiào','school'],['医院','yīyuàn','hospital'],['饭店','fàndiàn','restaurant'],['机场','jīchǎng','airport'],['商店','shāngdiàn','shop'],['家','jiā','home'],['公司','gōngsī','company'],['火车站','huǒchēzhàn','train station'],['宾馆','bīnguǎn','hotel'],['教室','jiàoshì','classroom']],
- verbs:[['去','qù','to go'],['来','lái','to come'],['吃','chī','to eat'],['看','kàn','to look, watch'],['听','tīng','to listen'],['说','shuō','to speak'],['读','dú','to read'],['写','xiě','to write'],['买','mǎi','to buy'],['坐','zuò','to sit, take (a bus)'],['睡觉','shuìjiào','to sleep'],['工作','gōngzuò','to work'],['学习','xuéxí','to study'],['喜欢','xǐhuan','to like'],['想','xiǎng','to want, think']],
- adjectives:[['大','dà','big'],['小','xiǎo','small'],['多','duō','many'],['少','shǎo','few'],['好','hǎo','good'],['冷','lěng','cold'],['热','rè','hot'],['贵','guì','expensive'],['便宜','piányi','cheap'],['快','kuài','fast'],['慢','màn','slow'],['漂亮','piàoliang','pretty']],
- travel:[['飞机','fēijī','plane'],['出租车','chūzūchē','taxi'],['地铁','dìtiě','subway'],['公共汽车','gōnggòng qìchē','bus'],['票','piào','ticket'],['路','lù','road'],['左边','zuǒbian','left side'],['右边','yòubian','right side'],['前面','qiánmiàn','in front'],['远','yuǎn','far'],['近','jìn','near']],
- shopping:[['钱','qián','money'],['块','kuài','yuan (spoken)'],['多少','duōshao','how many, how much'],['衣服','yīfu','clothes'],['手机','shǒujī','mobile phone'],['东西','dōngxi','thing'],['颜色','yánsè','colour'],['红色','hóngsè','red'],['白色','báisè','white'],['黑色','hēisè','black']],
- health:[['身体','shēntǐ','body, health'],['医生','yīshēng','doctor'],['病','bìng','illness'],['药','yào','medicine'],['眼睛','yǎnjing','eye'],['头','tóu','head'],['累','lèi','tired'],['休息','xiūxi','to rest'],['运动','yùndòng','sport, exercise'],['跑步','pǎobù','to run']],
- weather:[['天气','tiānqì','weather'],['下雨','xià yǔ','to rain'],['雪','xuě','snow'],['晴','qíng','sunny'],['阴','yīn','cloudy'],['风','fēng','wind']]};
-const ALL=Object.values(V).flat();
-const RAD=[['氵','water','河 (river), 洗 (wash), 海 (sea)'],['口','mouth','吃 (eat), 喝 (drink), 叫 (call)'],['木','tree, wood','林 (woods), 桌 (table), 椅 (chair)'],['亻','person','你 (you), 他 (he), 们 (plural)'],['女','woman','妈 (mum), 姐 (sister), 好 (good)'],['讠','speech','说 (speak), 话 (words), 语 (language)'],['扌','hand','打 (hit), 找 (look for), 拿 (take)'],['忄','heart, feeling','忙 (busy), 快 (fast), 情 (feeling)'],['日','sun, day','明 (bright), 早 (early), 时 (time)'],['月','moon, flesh','朋 (friend), 期 (period), 脑 (brain)'],['钅','metal','钱 (money), 银 (silver), 铁 (iron)'],['饣','food','饭 (meal), 饿 (hungry), 饺 (dumpling)'],['足','foot','跑 (run), 跳 (jump), 路 (road)'],['艹','grass','茶 (tea), 菜 (vegetable), 花 (flower)']];
-const DIALOGUES=[['你好！你叫什么名字？','Hi! What’s your name?','我叫小明。','My name is Xiaoming.'],['你是哪国人？','Where are you from?','我是尼日利亚人。','I’m Nigerian.'],['这个多少钱？','How much is this?','二十块。','Twenty yuan.'],['你想喝什么？','What would you like to drink?','我想喝茶。','I’d like tea.'],['现在几点？','What time is it?','现在三点半。','It’s half past three.'],['你去哪儿？','Where are you going?','我去学校。','I’m going to school.'],['你身体怎么样？','How are you feeling?','我很好，谢谢。','I’m well, thanks.'],['明天天气怎么样？','What’s the weather tomorrow?','明天下雨。','It will rain tomorrow.'],['地铁站在哪儿？','Where is the subway station?','在前面，右边。','Ahead, on the right.'],['你喜欢吃什么？','What do you like to eat?','我喜欢吃饺子。','I like dumplings.'],['你工作吗？','Do you work?','我是学生，不工作。','I’m a student; I don’t work.'],['我们几点见？','What time shall we meet?','晚上七点见。','See you at seven tonight.']];
-const TONE_NAME=['','1st (flat ˉ)','2nd (rising ˊ)','3rd (dip ˇ)','4th (falling ˋ)'];
-const toneOf=py=>{for(const ch of py.normalize('NFD'))if(ch==='\u0304')return 1;else if(ch==='\u0301')return 2;else if(ch==='\u030c')return 3;else if(ch==='\u0300')return 4;return 0};
-const pick=a=>a[Math.floor(Math.random()*a.length)],shuffle=a=>a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(v=>v[1]);
-const opts=(right,pool,n=4)=>shuffle([right,...shuffle(pool.filter(x=>x!==right)).slice(0,n-1)]);
-function question(subject){
- if(subject==='tones'){const w=pick(ALL.filter(w=>!w[1].includes(' ')&&[...w[0]].length===1&&toneOf(w[1])));const t=toneOf(w[1]);return {q:'Which tone is <b class="zh">'+w[0]+'</b> <i>'+w[1]+'</i>?',a:TONE_NAME[t],o:[1,2,3,4].map(i=>TONE_NAME[i])}}
- if(subject==='characters'){if(Math.random()<.5){const r=pick(RAD);return {q:'What does the radical <b class="zh">'+r[0]+'</b> mean? <small>'+r[2]+'</small>',a:r[1],o:opts(r[1],RAD.map(x=>x[1]))}}const w=pick(ALL.filter(w=>[...w[0]].length===1));return {q:'Which character means “'+w[2]+'”?',a:w[0],o:opts(w[0],ALL.filter(x=>[...x[0]].length===1).map(x=>x[0])),zh:true}}
- if(subject==='dialogues'){const d=pick(DIALOGUES);return {q:'<b class="zh">'+d[0]+'</b><small>'+d[1]+'</small>Best reply?',a:d[2],o:opts(d[2],DIALOGUES.map(x=>x[2])),zh:true}}
- if(subject==='vocab'){const w=pick(ALL);return Math.random()<.5?{q:'<b class="zh">'+w[0]+'</b> <i>'+w[1]+'</i> means…',a:w[2],o:opts(w[2],ALL.map(x=>x[2]))}:{q:'How do you say “'+w[2]+'”?',a:w[0]+' · '+w[1],o:opts(w[0]+' · '+w[1],ALL.map(x=>x[0]+' · '+x[1])),zh:true}}
- return question(pick(['tones','characters','dialogues','vocab']))}
-// Timetable on Beijing time. The exam opens on Fridays; homework any time after the first class.
-const SUBJECTS={tones:['🎵','Tones · 声调'],vocab:['📚','Vocabulary · 词汇'],characters:['✍️','Characters · 汉字'],dialogues:['💬','Dialogues · 对话'],review:['🔁','Review quiz · 复习'],course:['🇨🇳','Chinese course · 课程']};
-const PERIODS=[['08:00','tones'],['09:00','vocab'],['10:00','characters'],['11:00','dialogues'],['14:00','course'],['15:00','review']];
-const bj=()=>{const d=new Date(Date.now()+(new Date().getTimezoneOffset()+480)*60000);return d};
-function timetable(){const h=bj().getHours();return PERIODS.map(([time,s],i)=>{const start=+time.slice(0,2),next=+(PERIODS[i+1]?.[0].slice(0,2)||start+1);return {time,subject:s,icon:SUBJECTS[s][0],name:SUBJECTS[s][1],now:h>=start&&h<next}})}
-function sch(){const s=game.state;s.school=s.school&&typeof s.school==='object'?s.school:{};s.school.scores??={};s.school.exams??=[];s.school.done??={};return s.school}
-const today=()=>{const d=bj();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
-const week=()=>{const d=bj(),t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);const y=new Date(Date.UTC(t.getUTCFullYear(),0,1));return t.getUTCFullYear()+'-W'+String(Math.ceil(((t-y)/864e5+1)/7)).padStart(2,'0')};
-const letter=p=>p>=90?'A':p>=80?'B':p>=70?'C':p>=60?'D':'F';
-function grades(){const s=sch();return Object.keys(SUBJECTS).filter(k=>k!=='course').map(k=>{const a=s.scores[k]||[];const avg=a.length?Math.round(a.reduce((n,x)=>n+x,0)/a.length):null;return {k,avg,grade:avg==null?'–':letter(avg)}})}
-const inClass=()=>game.isClassroom?.(game.state.place);
-function open(){const s=sch(),tt=timetable(),g=grades(),d=today(),lastExam=s.exams.at(-1),isFri=bj().getDay()===5;
- game.showScreen('🏫 School day','Beijing time · '+(inClass()?'in class':'go to a classroom to attend'),
- '<div class="school"><h3>Today</h3><div class="school-tt">'+tt.map(p=>'<button data-class="'+p.subject+'" class="'+(p.now?'now':'')+'"><span>'+p.time+'</span><b>'+p.icon+' '+esc(p.name)+'</b><em>'+(s.done[d+':'+p.subject]?'✓ done':p.now?'now':'')+'</em></button>').join('')+'</div>'
- +'<div class="school-row"><button data-hw class="'+(s.done[d+':homework']?'done':'')+'"><b>📝 Homework</b><span>'+(s.done[d+':homework']?'✓ Handed in today':'8 mixed questions · any time')+'</span></button><button data-exam class="'+(s.done[week()+':exam']?'done':'')+'"><b>🧪 Weekly exam</b><span>'+(s.done[week()+':exam']?'✓ Score '+lastExam?.pct+'% ('+letter(lastExam?.pct||0)+')':isFri?'20 questions · Friday is exam day':'Opens on Friday')+'</span></button></div>'
- +'<h3>Grades</h3><div class="school-grades">'+g.map(x=>'<div><b class="g-'+x.grade.replace('–','n')+'">'+x.grade+'</b><span>'+SUBJECTS[x.k][0]+' '+esc(SUBJECTS[x.k][1].split(' · ')[0])+'</span><small>'+(x.avg==null?'no scores':x.avg+'%')+'</small></div>').join('')+'</div>'
- +(s.exams.length?'<p class="fine-print">Exams: '+s.exams.slice(-4).map(e=>e.week+' '+e.pct+'%').join(' · ')+'</p>':'')+'</div>');
- document.querySelectorAll('[data-class]').forEach(b=>b.onclick=()=>{const k=b.dataset.class;if(k==='course')return game.chinese?.();if(!inClass())return game.toast('Go to a classroom to attend.');quiz(k,5,'class')});
- document.querySelector('[data-hw]').onclick=()=>quiz('mixed',8,'homework');
- document.querySelector('[data-exam]').onclick=()=>{if(!inClass())return game.toast('Sit the exam in a classroom.');if(!isFri)return game.toast('The exam opens on Friday.');quiz('mixed',20,'exam')}}
-function quiz(subject,n,kind){const qs=Array.from({length:n},()=>question(subject==='review'?'mixed':subject));let i=0,right=0;
- const show=()=>{const q=qs[i];game.showScreen((kind==='exam'?'🧪 Exam':kind==='homework'?'📝 Homework':SUBJECTS[subject][0]+' '+SUBJECTS[subject][1])+' · '+(i+1)+'/'+n,right+' correct so far','<div class="school-q"><p>'+q.q+'</p>'+q.o.map((o,j)=>'<button class="choice-action'+(q.zh?' zh':'')+'" data-o="'+j+'"><b>'+esc(o)+'</b></button>').join('')+'</div>');
-  document.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{const ok=q.o[+b.dataset.o]===q.a;if(ok)right++;b.classList.add(ok?'right':'wrong');if(!ok)[...document.querySelectorAll('[data-o]')].find(x=>q.o[+x.dataset.o]===q.a)?.classList.add('right');document.querySelectorAll('[data-o]').forEach(x=>x.disabled=true);setTimeout(()=>{i++;i<n?show():finish()},ok?500:1100)})};
- const finish=async()=>{const pct=Math.round(right*100/n),s=sch(),d=today();const key=kind==='exam'?week()+':exam':kind==='homework'?d+':homework':d+':'+subject;
-  if(kind!=='homework'||true){const k=kind==='class'?subject:'review';(s.scores[k]??=[]).push(pct);s.scores[k]=s.scores[k].slice(-10)}if(kind==='exam')s.exams.push({week:week(),pct});
-  let paid='';if(!s.done[key]&&window.ChinaLifeAuth?.request&&window.ChinaLifeCloud?.signedIn){try{const r=await window.ChinaLifeAuth.request('/chinalife/economy.php','POST',{action:'school',kind,subject:kind==='class'?subject:kind,score:pct});game.applyServerTotals(r.data);if(!r.data?.duplicate)paid=(r.data.awarded>0?' · +¥'+r.data.awarded:'')+(r.data.awardedXp?' · +'+r.data.awardedXp+' XP':'')}catch(e){paid=' · '+e.message}}
-  s.done[key]=true;s.done=Object.fromEntries(Object.entries(s.done).slice(-60));game.save?.();game.refresh?.();
-  game.showScreen(pct>=60?'🎉 '+pct+'% · '+letter(pct):'📖 '+pct+'% · '+letter(pct),right+' of '+n+' correct'+paid,'<button class="choice-action" id="schoolBack"><b>Back to school day</b></button>');document.getElementById('schoolBack').onclick=open};
- show()}
-// Save validation: keep only well-formed scores, exams and done keys.
-function validate(v){if(!v||typeof v!=='object')return null;const pct=x=>Number.isFinite(+x)?Math.max(0,Math.min(100,Math.round(+x))):null;const scores={};for(const k of Object.keys(SUBJECTS))if(Array.isArray(v.scores?.[k]))scores[k]=v.scores[k].map(pct).filter(x=>x!=null).slice(-10);const exams=Array.isArray(v.exams)?v.exams.filter(e=>/^\d{4}-W\d{2}$/.test(e?.week)).map(e=>({week:e.week,pct:pct(e.pct)??0})).slice(-20):[];const done={};for(const [k,val] of Object.entries(v.done||{}).slice(-60))if(/^[0-9W-]+:[a-z]+$/.test(k)&&val===true)done[k]=true;return {scores,exams,done}}
-window.ChinaLifeSchool={validate,open,timetable,grades,question,_v:V};
-})();
+// R5 (not deployed): daily class attendance for Student characters. Status comes from the server once per load and after
+// marking (no polling); rewards and the visa hold are applied server-side in attendance.php.
+(()=>{const $=id=>document.getElementById(id),G=()=>window.ChinaLife,C=()=>window.ChinaLifeCloud;
+const campus=p=>['campus','ef','university','liaoning','dongbei','academy'].includes(p)||/univ|campus/.test(String(p||''));
+let st=null,busy=false,chip=null,loaded=false;
+const student=()=>G()?.state?.created&&G().state.background==='Student';
+const copy=s=>!s?'':s.status==='risk'?'Visa at risk. Attend '+s.recoverLeft+' more day'+(s.recoverLeft===1?'':'s')+' in a row to clear it and get your '+s.held+' XP back.':s.status==='warning'?'Visa warning: you missed '+s.missed+' classes this week. Go to campus today.':s.today?'You’re in class today. See you tomorrow.':'Go to campus today to mark attendance. +'+s.reward.xp+' XP · ¥'+s.reward.coins;
+async function load(){if(loaded||!student()||!C()?.attendance)return;loaded=true;try{st=await C().attendance(false);if(st?.event==='risk')G().toast?.('⚠️ Visa at risk: '+st.held+' XP held until you attend 3 days in a row.');else if(st?.status==='warning'){const k='chinalife-visa-warn',d=new Date().toDateString();if(localStorage.getItem(k)!==d){localStorage.setItem(k,d);G().toast?.('⚠️ '+copy(st))}}}catch{}render()}
+async function mark(){if(busy)return;busy=true;render();try{const r=await C().attendance(true);st=r;G().toast?.(r.event==='recovered'?'✅ Present. Visa back in good standing, '+r.xp+' XP returned.':'✅ Present. +'+r.xp+' XP · ¥'+r.coins)}catch(e){G().toast?.(e.message||'Couldn’t mark attendance.')}busy=false;render();window.dispatchEvent(new CustomEvent('chinalife:attendance'))}
+function render(){const s=G()?.state,show=student()&&st&&!st.today&&campus(s?.place)&&!document.querySelector('dialog[open]');
+ if(!show){chip?.remove();chip=null;return}
+ if(!chip){chip=document.createElement('div');chip.className='r5-attend';chip.setAttribute('role','status');($('worldUI')||document.body).appendChild(chip)}
+ chip.innerHTML='<span class="r5-ic">🎓</span><p><b>Class today</b><small>+'+st.reward.xp+' XP · ¥'+st.reward.coins+(st.status!=='ok'?' · '+(st.status==='risk'?'visa at risk':'visa warning'):'')+'</small></p><button type="button"'+(busy?' disabled':'')+'>'+(busy?'…':'I’m here')+'</button>';chip.querySelector('button').onclick=mark}
+function card(){if(!student())return '';if(!st)return '<section class="r5-card"><span class="r5-ic">🎓</span><div><b>Class attendance</b><small>Sign in to track your school days.</small></div></section>';
+ return '<section class="r5-card '+st.status+'"><span class="r5-ic">'+(st.status==='ok'?'🎓':'⚠️')+'</span><div><b>'+(st.today?'Present today':'Class attendance')+' · '+st.streak+'-day streak</b><small>'+copy(st)+'</small></div></section>'}
+window.ChinaLifeSchool={card,load,mark,get status(){return st}};
+window.addEventListener('chinalife:cloudready',()=>setTimeout(load,1500));window.addEventListener('chinalife:update',()=>{load();render()});
+setTimeout(load,4000);document.addEventListener('close',()=>setTimeout(render,50),true);})();

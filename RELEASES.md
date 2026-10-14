@@ -115,3 +115,10 @@ Every server-side money change goes through the ledger (`chinalife_economy_actio
 - Light theme forced (color-scheme: light only, plus a meta tag), so dark-mode phones and the Hafrik app no longer show faint text or black cards.
 - Literal \xe2\x80\x94-style escapes in course titles are decoded on screen (the data is untouched).
 - Smoke test: saves 200, no modal, no music 403, no JS errors or 4xx/5xx, 0 overlaps.
+
+## R5 · class attendance and Learning Hub rebuild (branch r5-school, built, not deployed)
+- New API attendance.php (GET status, POST mark present). Student characters only; one Beijing day = one school day. Presence must be on a campus. Reward +15 XP and ¥30, once a day, server-side through cl_move_totals.
+- Soft rules: the first 2 days never count. 2 misses in 7 days = visa warning. 3+ misses = visa at risk, with 50 XP held once and returned after 3 school days in a row. GET writes nothing unless a hold or recovery happens.
+- Client: school.js (an "I'm here" card at campus, status loaded once per load with no polling); ChinaLifeCloud.attendance.
+- Learning Hub rebuilt in hafrik-hub.js: attendance card, Continue learning with progress, Chinese lesson and practice tiles, search, course cards with colourful tiles and progress bars, and a single empty state.
+- Deploy: attendance.php (new file, owner from common.php) plus the front-end bundles.

@@ -180,3 +180,33 @@ html:root body .r4-where .r4-x{top:12px;right:12px}
 :root,html:root body{color-scheme:light only!important}
 html:root body dialog{color:#0C3F44}
 html:root body dialog :is(button,input,select,textarea){color-scheme:light only}
+/* R5 · Learning Hub (rebuilt) and class attendance */
+html:root body .lh{display:grid;gap:12px}
+html:root body .lh-continue{display:grid;grid-template-columns:56px 1fr;gap:14px;align-items:center;text-align:left;padding:16px;border:0;border-radius:22px;background:linear-gradient(135deg,#0C3F44,#1F8E93);color:#F7FFF7;box-shadow:0 10px 26px rgba(12,63,68,.3)}
+html:root body .lh-continue small{display:block;font:600 12px/16px var(--io-font);letter-spacing:.04em;text-transform:uppercase;opacity:.8}
+html:root body .lh-continue b{display:block;font:700 17px/22px var(--io-font);margin:2px 0 8px}
+html:root body .lh-continue em{display:block;font:400 13px/18px var(--io-font);font-style:normal;opacity:.85;margin-top:6px}
+html:root body .lh-continue .lh-bar{background:rgba(255,255,255,.25)}html:root body .lh-continue .lh-bar i{background:#fff}
+html:root body .lh-tile{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;font-size:24px;box-shadow:0 4px 10px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.45)}
+html:root body .lh-continue .lh-tile{width:56px;height:56px;font-size:28px}
+html:root body .lh-h{margin:6px 2px 0;font:700 20px/26px var(--io-font);color:#0C3F44}
+html:root body .lh-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+html:root body .lh-mini{display:grid;justify-items:start;gap:4px;padding:14px;border:0;border-radius:18px;background:#fff;box-shadow:0 2px 12px rgba(12,63,68,.08);text-align:left;color:#0C3F44}
+html:root body .lh-mini b{font:600 16px/20px var(--io-font);margin-top:6px}html:root body .lh-mini small{font:400 13px/18px var(--io-font);color:#527a83}
+html:root body .lh-search input{width:100%;box-sizing:border-box;min-height:44px;border:0;border-radius:12px;background:rgba(12,63,68,.07);padding:0 14px;font:400 17px/22px var(--io-font);color:#0C3F44}
+html:root body .lh-list{display:grid;gap:10px}
+html:root body .lh-course{display:grid;grid-template-columns:48px 1fr 14px;gap:12px;align-items:center;text-align:left;padding:12px 14px;border:0;border-radius:18px;background:#fff;box-shadow:0 2px 12px rgba(12,63,68,.08);color:#0C3F44}
+html:root body .lh-copy b{display:block;font:600 16px/20px var(--io-font);margin-bottom:8px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+html:root body .lh-copy small{display:block;font:400 13px/18px var(--io-font);color:#527a83;margin-top:6px}
+html:root body .lh-chev{font-size:22px;color:#9bb3b6}
+html:root body .lh-bar{display:block;height:6px;border-radius:3px;background:rgba(12,63,68,.1);overflow:hidden}html:root body .lh-bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#1F8E93,#3fd0c9)}
+html:root body .lh-empty{margin:4px 2px;font:400 15px/20px var(--io-font);color:#527a83}
+html:root body .lh-pager{display:flex;gap:8px;justify-content:center}html:root body .lh-pager button{min-height:40px;padding:0 16px;border:0;border-radius:20px;background:rgba(12,63,68,.07);color:#1F8E93;font:600 15px/20px var(--io-font)}
+html:root body .r5-card{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:center;padding:12px 14px;border-radius:18px;background:#e9f8f4;color:#0C3F44}
+html:root body .r5-card.warning{background:#fff4dc}html:root body .r5-card.risk{background:#ffe6e2}
+html:root body .r5-card b{display:block;font:600 15px/20px var(--io-font)}html:root body .r5-card small{display:block;font:400 13px/18px var(--io-font);color:#43666b}
+html:root body .r5-ic{font-size:26px;display:grid;place-items:center}
+html:root body .r5-attend{position:absolute;z-index:39;left:calc(16px + env(safe-area-inset-left));right:calc(72px + env(safe-area-inset-right));top:calc(max(8px,env(safe-area-inset-top)) + 112px);display:flex;align-items:center;gap:10px;padding:10px 10px 10px 12px;border-radius:20px;background:rgba(247,255,247,.88);backdrop-filter:blur(20px);box-shadow:0 10px 30px rgba(12,63,68,.28);color:#0C3F44}
+html:root body .r5-attend p{flex:1;margin:0}html:root body .r5-attend b{display:block;font:600 15px/20px var(--io-font)}html:root body .r5-attend small{display:block;font:400 13px/18px var(--io-font);color:#43666b}
+html:root body .r5-attend button{min-height:40px;padding:0 14px;border:0;border-radius:20px;background:linear-gradient(145deg,#3fd0c9,#1F8E93 55%,#0C3F44);color:#fff;font:600 15px/20px var(--io-font)}
+html:root body:has(.r5-attend) #worldUI .world-side #r3Next.next-step:not([hidden]){visibility:hidden!important}
