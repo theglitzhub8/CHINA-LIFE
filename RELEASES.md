@@ -86,3 +86,13 @@ Every server-side money change goes through the ledger (`chinalife_economy_actio
 - Banner toast at the top (2.5 s), collapsing large titles, 12px minimum for People names.
 - Club music sync now runs every 15 s (5 s with the DJ booth open, instantly on a room change) instead of every 2.5 s. Club idle traffic drops from 57 to 17 requests/min. The music 403 fix is unchanged.
 - Tests: tests/r4.mjs (6 tests). npm test: 158 pass / 131 fail (the 131 failures predate this work).
+
+## R4b · founder redesign (branch r4-polish, built, not deployed)
+- Street: one small chip plus two round icon buttons (Live map, Map view) in a single row.
+- Every sheet and the phone: 85% height with the game visible above, a close button, swipe down to close, and Back closes the top sheet.
+- Map opens a "Where to?" picker first (search plus popular places, then rides); "Open the city map" is still there.
+- Joystick on the right; jump, mic, music and Party on the left.
+- Colourful gradient tiles for the phone apps, the right-side buttons and the ride list (walk, bike, metro, bus, cab, DiDi).
+- Floating glass tab bar with a gradient active pill; glassier room sheet and HUD.
+- Also: iOS action sheets (block, end relationship, clear AI chat, purchases of ¥1,000+), one music timer (15 s, 5 s with the DJ booth open, paused when hidden), the feed skips the 15 KB activity catalog when unchanged, and controls fade during a sheet drag.
+- API (staging only; see deploy/r4b-api.md): a short-TTL cache for online, leaderboard and Hafrik map pins (APCu is not installed, so it uses /dev/shm files), plus feed.php skipping the catalog.

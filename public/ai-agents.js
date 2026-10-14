@@ -58,7 +58,7 @@ function draw(typing=false){const a=agent;if(!a)return;const hello=a.hello.repla
  dialog.querySelector('.ai-x').onclick=()=>dialog.close();$('residentGo').onclick=()=>{dialog.close();game.travel?.(a.place)};const t=$('aiThread');t.scrollTop=t.scrollHeight;
  dialog.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>run(b.dataset.act));
  dialog.querySelectorAll('[data-chip]').forEach(b=>b.onclick=()=>send(b.dataset.chip));
- const f=$('aiForm');if(f)f.onsubmit=e=>{e.preventDefault();send($('aiInput').value)};const clear=dialog.querySelector('.ai-clear');if(clear)clear.onclick=async()=>{if(!confirm('Clear your chat with '+a.name+'?'))return;try{await api('DELETE');messages=[];draw()}catch(e){game.toast?.(e.message)}};
+ const f=$('aiForm');if(f)f.onsubmit=e=>{e.preventDefault();send($('aiInput').value)};const clear=dialog.querySelector('.ai-clear');if(clear)clear.onclick=async()=>{if(!await window.ChinaLifeSheet.confirm({title:'Clear your chat with '+a.name+'?',message:'This can’t be undone.',ok:'Clear chat',destructive:true}))return;try{await api('DELETE');messages=[];draw()}catch(e){game.toast?.(e.message)}};
  if(!typing&&$('aiInput')&&!busy)setTimeout(()=>$('aiInput')?.focus(),50)}
 async function send(text){text=String(text||'').trim();if(!text||busy||!agent)return;busy=true;messages.push({role:'user',content:text});draw(true);
  try{const r=await api('POST',{message:text,context:context()});messages.push({role:'assistant',content:r.reply});remaining=r.remaining;window.ChinaLifeSound?.play?.('message');

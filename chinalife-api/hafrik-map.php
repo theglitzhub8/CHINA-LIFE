@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__.'/common.php';cl_methods(['GET','POST']);
+require_once __DIR__.'/common.php';require_once __DIR__.'/cache-lib.php';cl_methods(['GET','POST']);
 function cl_hafrik_source(string $source): array {
     return match($source) {
         'business'=>['pages','page_id','page_title','page_name','page_description','page_admin','1=1','page_location'],
@@ -38,10 +38,11 @@ if ($method==='POST') {
     if(!$canEdit)cl_fail('Only the listing owner or an administrator can place this listing',403);
     cl_rate('hafrik_place',20,60);$active=($in['active']??true)?1:0;
     cl_run('INSERT INTO chinalife_hafrik_places(source,source_id,city,near,active,updated_by,updated_at) VALUES(?,?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE city=VALUES(city),near=VALUES(near),active=VALUES(active),updated_by=VALUES(updated_by),updated_at=NOW()','sissii',[$source,$id,$city,$near,$active,$uid]);
-    json_response('success',['city'=>$city,'near'=>$near,'active'=>(bool)$active]);
+    cl_cache_forget('hafrik-map:');json_response('success',['city'=>$city,'near'=>$near,'active'=>(bool)$active]);
 }
 $city=$_GET['city']??'Shenyang';if(!is_string($city)||!in_array($city,cl_open_cities(),true))cl_fail('Choose an open ChinaLife city');
-$features=cl_hafrik_features();$items=[];$unavailable=[];if(!$features['map'])json_response('success',['items'=>[],'unavailable'=>[],'city'=>$city,'features'=>$features]);
+$out=cl_cache('hafrik-map:'.$city,60,static function() use ($city):array{
+$features=cl_hafrik_features();$items=[];$unavailable=[];if(!$features['map'])return ['items'=>[],'unavailable'=>[],'city'=>$city,'features'=>$features];
 foreach(['business','space','event','course'] as $source){
     if(!$features[$source])continue;
     [$table,$pk,$title,$slug,$description,$owner,$visible,$location]=cl_hafrik_source($source);
@@ -60,4 +61,5 @@ foreach(['business','space','event','course'] as $source){
         foreach($rows as $r)if(cl_hafrik_city((string)$r['location'])===$city)$items[]=cl_hafrik_item($source,$r,$city,$source==='business'?'mall':'plaza');
     }
 }
-json_response('success',['items'=>$items,'unavailable'=>$unavailable,'city'=>$city,'features'=>$features]);
+return ['items'=>$items,'unavailable'=>$unavailable,'city'=>$city,'features'=>$features];});
+json_response('success',$out);

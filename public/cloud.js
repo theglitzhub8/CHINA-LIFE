@@ -316,7 +316,7 @@ async function refreshGolden(){if(!account||document.hidden)return;try{const res
 async function claimGolden(){const result=await api('/chinalife/golden.php','POST',{});await refreshGolden();await syncTransfers();return result.data||result}
 setInterval(refreshGolden,60000);
 // R1: one feed request a minute fills the cache that the online, events, golden and shared-activity readers use.
-async function refreshFeed(){if(!account||document.hidden||!game.state.created)return;const city=game.state.city;try{const r=await api('/chinalife/feed.php','GET',{city}),d=r.data||r,at=Date.now();for(const k of Object.keys(d||{}))if(d[k]&&!d[k].error)feedCache[k]={at,data:d[k],city}}catch{}}
+let feedCat=null,feedCatHash='';async function refreshFeed(){if(!account||document.hidden||!game.state.created)return;const city=game.state.city;try{const r=await api('/chinalife/feed.php','GET',feedCatHash&&feedCat?{city,catalog:feedCatHash}:{city}),d=r.data||r,at=Date.now();const ac=d&&d.activities;if(ac&&!ac.error){if(ac.catalog){feedCat=ac.catalog;feedCatHash=ac.catalogHash||''}else if(feedCat)ac.catalog=feedCat}for(const k of Object.keys(d||{}))if(d[k]&&!d[k].error)feedCache[k]={at,data:d[k],city}}catch{}}
 setInterval(refreshFeed,55000);window.addEventListener('chinalife:cloudready',refreshFeed);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshFeed()});window.addEventListener('chinalife:cloudready',refreshGolden);
 window.ChinaLifeCloud.ready = initialize().then(ok => {if (!account && !(inApp()&&(appWaiting||loading))) show(); return ok});
 await window.ChinaLifeCloud.ready;

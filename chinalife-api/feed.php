@@ -17,5 +17,7 @@ foreach ($parts as $part) {
         error_log('ChinaLife feed '.$part.': '.$e->getMessage());$out[$part]=['error'=>'Unavailable','status'=>500];
     }
 }
+// R4b: the shared-activity catalog (~15 KB) is sent only when it changed; the client echoes its hash as ?catalog=.
+if (isset($out['activities']['catalog'])) {$h=substr(md5(json_encode($out['activities']['catalog'])),0,10);$out['activities']['catalogHash']=$h;if (($_GET['catalog']??'')===$h) {unset($out['activities']['catalog']);}}
 header('Cache-Control: private, no-store');
 json_response('success',$out);

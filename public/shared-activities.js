@@ -40,7 +40,7 @@ async function open(id=null,name='',kind=null){await window.ChinaLifeCloud?.read
 async function act(action,data={}){
  if(busy)return;busy=true;note('');try{
   if(action==='people'){dialog.close();await window.ChinaLifeSocial.open('people');return}
-  const s=active();if(action==='end-relationship'&&!confirm('End this relationship?'))return;if(action==='travel'){if(game.state.city!==s.city)return note('Travel to '+s.city+' to meet your teammate.');dialog.close();game.travel(s.place);return}
+  const s=active();if(action==='end-relationship'&&!await window.ChinaLifeSheet.confirm({title:'End this relationship?',message:'You’ll both go back to being friends.',ok:'End relationship',destructive:true}))return;if(action==='travel'){if(game.state.city!==s.city)return note('Travel to '+s.city+' to meet your teammate.');dialog.close();game.travel(s.place);return}
   if(!await window.ChinaLifeCloud.upload())return note('Save your character before joining. Check your Hafrik connection.');
   await window.ChinaLifeCloud.refresh();
   await api('POST',action==='invite'?{action,peer,kind:data.kind}:{action,id:action==='end-relationship'?data.id:s.id,...(action==='choose'?{choice:data.choice}:{})});

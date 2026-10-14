@@ -34,3 +34,122 @@ html:root body dialog.r4-scrolled .r4-inline-title{height:44px;line-height:44px;
 html:root body:has(.r4-tip:not(.inline)) #worldUI .world-side #r3Next.next-step:not([hidden]),html:root body:has(.r4-tip:not(.inline)) #worldUI .scene-label{visibility:hidden!important}
 html:root body #socialDialog #socialFeedback:empty{min-height:0!important;padding:0!important}
 html:root body #socialDialog .ppl-faces button>span:not(.player-avatar){font-size:12px!important;line-height:16px}
+/* R4b: the frozen controls fade out while the sheet is dragged, so they never sit on sheet content */
+html:root body #worldUI :is(.tp-controls,.tp-jog,#quickVoice,.quick-voice,.radio-fab,#clubMusicToggle){transition:opacity .15s ease}
+html:root body #worldUI.sheet-dragging :is(.tp-controls,.tp-jog,#quickVoice,.quick-voice,.radio-fab,#clubMusicToggle){opacity:0!important;pointer-events:none!important}
+/* R4b: action sheet */
+html:root body dialog.r4-sheet{position:fixed;inset:auto 0 0 0;margin:0 auto;width:min(100%,440px);max-width:none;max-height:none;padding:0 8px max(8px,env(safe-area-inset-bottom));border:0;background:none;box-shadow:none;overflow:visible;animation:r4SheetUp .32s cubic-bezier(.2,.9,.25,1.05)}
+html:root body dialog.r4-sheet::backdrop{background:rgba(0,0,0,.4);animation:r4Fade .2s}
+html:root body dialog.r4-sheet.out{animation:r4SheetDown .18s ease-in forwards}
+html:root body .r4-sheet-group,html:root body .r4-sheet-cancel{display:block;width:100%;border-radius:14px;background:rgba(250,250,250,.97);backdrop-filter:blur(20px);overflow:hidden}
+html:root body .r4-sheet-head{padding:14px 16px;text-align:center;border-bottom:1px solid rgba(60,60,67,.18)}
+html:root body .r4-sheet-head b{display:block;font:600 13px/18px var(--io-font);color:#6b6b70}
+html:root body .r4-sheet-head p{margin:4px 0 0;font:400 13px/18px var(--io-font);color:#6b6b70}
+html:root body .r4-sheet button{min-height:56px;width:100%;border:0;background:none;font:400 20px/24px var(--io-font);color:#0a7d83}
+html:root body .r4-sheet button.destructive{color:#e5332a}
+html:root body .r4-sheet .r4-sheet-cancel{margin-top:8px;font-weight:600}
+html:root body .r4-sheet button:active{background:rgba(0,0,0,.06)}
+@keyframes r4SheetUp{from{transform:translateY(100%)}to{transform:none}}
+@keyframes r4SheetDown{to{transform:translateY(110%)}}
+@keyframes r4Fade{from{opacity:0}}
+@media (prefers-reduced-motion:reduce){html:root body dialog.r4-sheet{animation:none!important}}
+html:root body .r4-sheet button.r4-sheet-cancel{background:rgba(250,250,250,.97)!important;border:0!important;box-shadow:none!important;outline:none}
+html:root body .r4-sheet button:focus-visible{outline:2px solid #0a7d83;outline-offset:-2px}
+
+/* ================= R4b · founder redesign: vibrant, glassy, lively ================= */
+:root{--r4-glass:rgba(247,255,247,.72);--r4-glass-dark:rgba(12,63,68,.62);--r4-g-java:linear-gradient(145deg,#3fd0c9,#1F8E93 55%,#0C3F44);--r4-g-pink:linear-gradient(145deg,#ff8ac8,#ff3fa4 60%,#c2187a);--r4-g-sun:linear-gradient(145deg,#ffe066,#ffb627 60%,#f08a00);--r4-g-sky:linear-gradient(145deg,#7cc7ff,#2f7cf6 60%,#1d4fd8);--r4-g-lime:linear-gradient(145deg,#b7f774,#42c35a 60%,#1f8b3c);--r4-g-violet:linear-gradient(145deg,#c9a2ff,#8b5cf6 60%,#5b2bd6);--r4-g-coral:linear-gradient(145deg,#ffb199,#ff6b4a 60%,#e0402a);--r4-g-ink:linear-gradient(145deg,#5d7a80,#2c4a50 60%,#0C3F44);--r4-shadow:0 10px 30px rgba(12,63,68,.28),0 2px 6px rgba(12,63,68,.18)}
+/* 2 · sheets and the phone never fully cover the game: 85% max with a visible game edge */
+html:root body dialog:is(#activityDialog,#phoneDialog,#helpDialog,#sharedDialog,#audioDialog,#voiceDialog,#socialDialog,#cloudDialog,#aiDialog,#radioDialog,#liveMapDialog,.r4-where)[open]{height:85vh!important;max-height:85vh!important;border-radius:28px 28px 0 0!important;box-shadow:0 -12px 40px rgba(12,63,68,.35)!important;transition:transform .25s cubic-bezier(.2,.9,.25,1.05)}
+html:root body dialog.ios-half[open]{height:50vh!important}
+html:root body dialog[open]::backdrop{background:rgba(12,63,68,.28)!important;backdrop-filter:blur(3px)}
+html:root body dialog.r4-swiping{transition:none!important}
+html:root body dialog .r4-x{position:absolute;top:12px;right:12px;z-index:30;width:32px;height:32px;border-radius:50%;border:0;display:grid;place-items:center;background:rgba(12,63,68,.1);color:#0C3F44;font:600 16px/1 var(--io-font);padding:0}
+html:root body dialog .r4-grab{position:absolute;top:0;left:0;right:0;height:22px;z-index:29;touch-action:none}
+/* 1 · street: one small chip */
+html:root body #worldUI .street-chip{max-width:min(250px,calc(100% - 140px))!important;min-height:36px!important;padding:6px 12px!important;border-radius:999px!important;background:var(--r4-glass)!important;backdrop-filter:blur(18px) saturate(1.6);box-shadow:var(--r4-shadow)!important;border:1px solid rgba(255,255,255,.6)!important}
+html:root body #worldUI .street-chip small{display:none!important}
+html:root body #worldUI .street-chip b{font:600 13px/18px var(--io-font)!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+html:root body #worldUI :is(#liveMapBtn,#tpWalk){position:relative;width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;max-width:40px!important;padding:0!important;font-size:12px!important;color:transparent!important;overflow:hidden!important;white-space:nowrap;border-radius:50%!important;background:var(--r4-g-sky)!important;border:0!important;box-shadow:var(--r4-shadow)!important;color:#fff!important}
+html:root body #worldUI #liveMapBtn span{position:absolute;inset:0;display:grid;place-items:center;font-size:18px!important;margin:0!important;color:#000}
+html:root body #worldUI #tpWalk::before{content:'🗺️';position:absolute;inset:0;display:grid;place-items:center;font-size:18px;color:#000}
+html:root body #worldUI #liveMapBtn{background:var(--r4-g-pink)!important}
+/* 4 · joystick right, actions left */
+html:root body #worldUI .tp-stick{left:auto!important;right:calc(16px + env(safe-area-inset-right))!important}
+html:root body #worldUI .tp-jog{left:auto!important;right:calc(28px + env(safe-area-inset-right))!important}
+html:root body #worldUI .tp-jump{right:auto!important;left:calc(16px + env(safe-area-inset-left))!important}
+html:root body #worldUI.tp-view :is(.quick-voice,#quickVoice){right:auto!important;left:calc(21px + env(safe-area-inset-left))!important;bottom:calc(var(--tp-bottom) + 88px)!important}
+html:root body #worldUI.tp-view :is(.radio-fab,.club-music-fab,#clubMusicToggle){right:auto!important;left:calc(21px + env(safe-area-inset-left))!important;bottom:calc(var(--tp-bottom) + 142px)!important}
+html:root body:has(.club-hud) #worldUI.tp-view:is(.dock-open,:not(.dock-open)) :is(#clubMusicToggle,.club-music-fab,.radio-fab){left:calc(21px + env(safe-area-inset-left))!important;bottom:calc(var(--tp-bottom) + 152px)!important}
+html:root body:has(.club-hud) #worldUI.tp-view:is(.dock-open,:not(.dock-open)) :is(.quick-voice,#quickVoice){left:calc(21px + env(safe-area-inset-left))!important;bottom:calc(var(--tp-bottom) + 206px)!important}
+html:root body .club-emotes{right:auto!important;left:calc(16px + env(safe-area-inset-left))!important;bottom:calc(var(--tp-bottom,150px) + 84px)!important}
+/* 5 · lively filled icon tiles */
+html:root body #worldUI .scene-tools>button,html:root body #worldUI .world-side>button:not(#r3Next){border-radius:14px!important;border:0!important;color:#fff!important;background:var(--r4-g-java)!important;box-shadow:var(--r4-shadow)!important}
+html:root body #worldUI .scene-tools>button .ic{stroke:#fff!important;color:#fff!important}
+html:root body #worldUI .scene-tools>#worldEmote{background:var(--r4-g-sun)!important}
+html:root body #worldUI .scene-tools>button:nth-of-type(n+6){background:var(--r4-g-sky)!important}
+html:root body #worldUI :is(#quickVoice,.quick-voice){background:var(--r4-g-violet)!important;color:#fff!important;border:0!important;box-shadow:var(--r4-shadow)!important}
+html:root body #worldUI :is(.radio-fab,.club-music-fab,#clubMusicToggle){background:var(--r4-g-coral)!important;color:#fff!important;border:0!important;box-shadow:var(--r4-shadow)!important}
+html:root body #worldUI .tp-jump{background:var(--r4-g-java)!important;border:2px solid rgba(255,255,255,.8)!important;box-shadow:var(--r4-shadow)!important}
+html:root body #worldUI .tp-stick{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.35),rgba(12,63,68,.35))!important;backdrop-filter:blur(8px);border:2px solid rgba(255,255,255,.7)!important;box-shadow:var(--r4-shadow)!important}
+html:root body .phone-app>b{border-radius:14px!important;box-shadow:0 6px 14px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.5)!important;background:var(--r4-g-java)!important;overflow:visible}
+html:root body .phone-app:nth-child(8n+2)>b{background:var(--r4-g-sky)!important}
+html:root body .phone-app:nth-child(8n+3)>b{background:var(--r4-g-sun)!important}
+html:root body .phone-app:nth-child(8n+4)>b{background:var(--r4-g-ink)!important}
+html:root body .phone-app:nth-child(8n+5)>b{background:var(--r4-g-pink)!important}
+html:root body .phone-app:nth-child(8n+6)>b{background:var(--r4-g-lime)!important}
+html:root body .phone-app:nth-child(8n+7)>b{background:var(--r4-g-coral)!important}
+html:root body .phone-app:nth-child(8n)>b{background:var(--r4-g-violet)!important}
+html:root body .phone-app>b img{filter:drop-shadow(0 2px 3px rgba(0,0,0,.25))}
+/* ride list: each mode gets a colourful tile */
+html:root body #activityDialog.travel-sheet .choice-action{display:grid!important;grid-template-columns:44px 1fr;column-gap:12px;align-items:center;border-radius:18px!important;box-shadow:0 4px 14px rgba(12,63,68,.1)!important}
+html:root body #activityDialog.travel-sheet .choice-action::before{content:'🚶';grid-row:1/3;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:24px;background:var(--r4-g-lime);box-shadow:0 4px 10px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.5)}
+html:root body #activityDialog.travel-sheet .choice-action>*{grid-column:2}
+html:root body #bikeTravel::before{content:'🚲'!important;background:var(--r4-g-sun)!important}
+html:root body #metroTravel::before{content:'🚇'!important;background:var(--r4-g-sky)!important}
+html:root body #busTravel::before{content:'🚌'!important;background:var(--r4-g-coral)!important}
+html:root body #cabTravel::before{content:'🚕'!important;background:var(--r4-g-sun)!important}
+html:root body #didiEconomyTravel::before{content:'🚗'!important;background:var(--r4-g-pink)!important}
+html:root body #didiPremiumTravel::before{content:'🚘'!important;background:var(--r4-g-violet)!important}
+html:root body #activityDialog.travel-sheet .choice-action[id^=car]::before,html:root body #activityDialog.travel-sheet .choice-action[id*=Car]::before{content:'🏎️';background:var(--r4-g-java)}
+/* 6 · floating glass tab bar */
+html:root body #worldUI .world-nav{left:12px!important;right:12px!important;bottom:max(10px,env(safe-area-inset-bottom))!important;width:auto!important;border-radius:28px!important;background:rgba(247,255,247,.78)!important;backdrop-filter:blur(24px) saturate(1.8)!important;border:1px solid rgba(255,255,255,.7)!important;box-shadow:0 12px 32px rgba(12,63,68,.3)!important;padding:6px!important;min-height:0!important}
+html:root body #worldUI .world-nav button{border-radius:22px!important;color:#43666b!important;min-height:52px!important;padding:4px 0!important;transition:background .2s,color .2s,transform .1s}
+html:root body #worldUI .world-nav button:active{transform:scale(.94)}
+html:root body #worldUI .world-nav button.active{color:#fff!important;background:var(--r4-g-java)!important;box-shadow:0 6px 14px rgba(31,142,147,.45)!important}
+html:root body #worldUI .world-nav button#navMap.active{background:var(--r4-g-sky)!important}
+/* 7 · depth and glass on the HUD and the room sheet */
+html:root body #worldUI .info-panel,html:root body #worldUI #infoPanel{background:rgba(247,255,247,.86)!important;backdrop-filter:blur(22px) saturate(1.6);box-shadow:0 -6px 30px rgba(12,63,68,.22)!important;border:1px solid rgba(255,255,255,.7)!important}
+html:root body #worldUI .next-step{background:linear-gradient(135deg,rgba(31,142,147,.92),rgba(12,63,68,.92))!important;box-shadow:var(--r4-shadow)!important;border:1px solid rgba(255,255,255,.25)!important}
+html:root body button.primary-btn,html:root body .r4-empty button.r4-go,html:root body .r4-tip button{background:var(--r4-g-java)!important;box-shadow:0 6px 14px rgba(31,142,147,.35)}
+/* 3 · Where to? picker */
+html:root body dialog.r4-where{padding:20px 16px 16px!important;background:#F7FFF7!important;border:0}
+html:root body .r4-where h2{margin:8px 0 12px;font:700 28px/34px var(--io-font);color:#0C3F44}
+html:root body .r4-where input{width:100%;min-height:44px;border-radius:12px;border:0;background:rgba(12,63,68,.08);padding:0 14px;font:400 17px/22px var(--io-font);color:#0C3F44;box-sizing:border-box}
+html:root body .r4-where h3{margin:18px 0 8px;font:600 13px/18px var(--io-font);color:#527a83;text-transform:uppercase;letter-spacing:.04em}
+html:root body .r4-where ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+html:root body .r4-where li button{width:100%;display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:center;text-align:left;min-height:56px;padding:6px 10px;border:0;border-radius:16px;background:#fff;box-shadow:0 2px 10px rgba(12,63,68,.08);color:#0C3F44;font:600 16px/20px var(--io-font)}
+html:root body .r4-where li i{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-style:normal;font-size:22px;background:var(--r4-g-java);box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+html:root body .r4-where li:nth-child(4n+2) i{background:var(--r4-g-pink)}html:root body .r4-where li:nth-child(4n+3) i{background:var(--r4-g-sun)}html:root body .r4-where li:nth-child(4n) i{background:var(--r4-g-sky)}
+html:root body .r4-where li small{display:block;font:400 13px/18px var(--io-font);color:#527a83}
+html:root body .r4-where .r4-fullmap{margin-top:14px;width:100%;min-height:48px;border-radius:14px;border:0;background:var(--r4-g-sky);color:#fff;font:600 16px/20px var(--io-font)}
+html:root body:has(.club-emotes.open) #worldUI :is(#quickVoice,.quick-voice,#clubMusicToggle,.club-music-fab,.radio-fab){visibility:hidden!important}
+html:root body #worldUI .world-nav{width:auto!important;max-width:none!important;transform:none!important;display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:4px}
+html:root body #worldUI .world-nav button{width:auto!important;min-width:0!important}
+html:root body .phone-app>b img{mix-blend-mode:multiply;border-radius:14px}
+html:root body #worldUI .world-nav{position:relative!important;left:auto!important;right:auto!important;bottom:auto!important;align-self:stretch!important;width:auto!important;margin:0 12px max(10px,env(safe-area-inset-bottom))!important}
+html:root body #phoneDialog .phone-app>b{background:var(--r4-g-java)!important;border-radius:14px!important}
+html:root body #phoneDialog .phone-app:nth-child(8n+2)>b{background:var(--r4-g-sky)!important}
+html:root body #phoneDialog .phone-app:nth-child(8n+3)>b{background:var(--r4-g-sun)!important}
+html:root body #phoneDialog .phone-app:nth-child(8n+4)>b{background:var(--r4-g-ink)!important}
+html:root body #phoneDialog .phone-app:nth-child(8n+5)>b{background:var(--r4-g-pink)!important}
+html:root body #phoneDialog .phone-app:nth-child(8n+6)>b{background:var(--r4-g-lime)!important}
+html:root body #phoneDialog .phone-app:nth-child(8n+7)>b{background:var(--r4-g-coral)!important}
+html:root body #phoneDialog .phone-app:nth-child(8n)>b{background:var(--r4-g-violet)!important}
+html:root body #phoneDialog .phone-app>b img{mix-blend-mode:multiply!important;background:transparent!important}
+/* street row: chip · live map · map view, one line under the top bar */
+html:root body #worldUI .street-chip{position:absolute!important;top:calc(max(8px,env(safe-area-inset-top)) + 168px)!important;left:calc(16px + env(safe-area-inset-left))!important;right:auto!important;bottom:auto!important;transform:none!important;width:200px!important;max-width:200px!important}
+html:root body #worldUI #liveMapBtn{position:absolute!important;top:calc(max(8px,env(safe-area-inset-top)) + 166px)!important;left:calc(224px + env(safe-area-inset-left))!important;right:auto!important;bottom:auto!important;transform:none!important}
+html:root body #worldUI #tpWalk{position:absolute!important;top:calc(max(8px,env(safe-area-inset-top)) + 166px)!important;left:calc(272px + env(safe-area-inset-left))!important;right:auto!important;bottom:auto!important;transform:none!important}
+html:root body #worldUI :is(#liveMapBtn,#tpWalk){text-indent:300%!important}
+html:root body #worldUI #liveMapBtn span{text-indent:0!important}
+html:root body #worldUI #tpWalk::before{text-indent:0!important}
