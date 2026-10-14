@@ -79,7 +79,8 @@ function wherePicker(fullMap){const g=G(),st=g?.state;if(!st)return fullMap();co
  q.oninput=()=>{const v=q.value.trim().toLowerCase();res.hidden=!v;popl.hidden=!!v;h3.textContent=v?'Results':'Popular';if(v){const m=places.filter(p=>(p[1]+' '+(p[2]||'')+' '+p[0]).toLowerCase().includes(v)).slice(0,12);res.innerHTML=m.length?m.map(row).join(''):'<li><small>No places match.</small></li>'}};
  d.onclick=e=>{const b=e.target.closest('[data-r4-to]');if(b){d.close();(g.travel||g.walkIn)(b.dataset.r4To);return}if(e.target.closest('.r4-fullmap')){d.close();fullMap()}};
  if(!d.open)d.showModal();sheetify()}
-function wireMap(){const nav=$('navMap');if(!nav||!nav.onclick||nav.onclick.__r4)return;const orig=nav.onclick;const f=function(e){const step=window.ChinaLifeOnboarding?.step;const touring=step&&!/^(skip|done|wait)$/.test(step);if(touring||$('worldUI')?.classList.contains('map-view')||window.ChinaLifeWorld?.busy)return orig.call(this,e);wherePicker(()=>orig.call(nav,e))};f.__r4=true;nav.onclick=f}
+function wireMap(){const nav=$('navMap');if(!nav||!nav.onclick||nav.onclick.__r4)return;const orig=nav.onclick;const f=function(e){const step=window.ChinaLifeOnboarding?.step;const touring=step&&!/^(skip|done|wait)$/.test(step);if(touring||$('worldUI')?.classList.contains('map-view')||window.ChinaLifeWorld?.busy)return orig.call(this,e);// R4d: Map opens the city view and expands the room card to its own Where to section (no separate card).
+orig.call(nav,e);setTimeout(()=>{const ui=$('worldUI');if(ui?.classList.contains('map-view')&&!ui.classList.contains('dock-open'))$('panelToggle')?.click()},350)};f.__r4=true;nav.onclick=f}
 
 /* ---------- Wiring ---------- */
 function tick(){empties();tip();titles();sheetify();wireMap()}
