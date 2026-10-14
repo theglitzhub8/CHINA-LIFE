@@ -123,3 +123,8 @@ Every server-side money change goes through the ledger (`chinalife_economy_actio
 - Learning Hub rebuilt in hafrik-hub.js: attendance card, Continue learning with progress, Chinese lesson and practice tiles, search, course cards with colourful tiles and progress bars, and a single empty state.
 - Deploy: attendance.php (new file, owner from common.php) plus the front-end bundles.
 - Live check: the Learning Hub scrolls to the last course (#activityContent); attendance GET returns 200; saves 200 with no 409 or modal; no music 403; no JS errors or 4xx/5xx; no attendance errors in the log; load 1.8.
+
+## R5b (2026-10-14 12:11 CST) a1f26ed
+- Attendance chip: after mark shows "Attended today ✓" + reward, hides after 2.6s; on error/409 re-reads status so it never sticks. R5a observer fixes live visibility.
+- First-day sheet: iOS checklist (icon tiles, progress ring, reward chip, checkmarks, side margins, crisp title).
+- Backup /root/backups/r5b-20261014-041118
