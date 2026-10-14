@@ -77,3 +77,12 @@ Every server-side money change goes through the ledger (`chinalife_economy_actio
 
 ## world-v6 (13 Oct 2026)
 - Slower street walking with hold-to-jog, ambient pedestrians, crosswalks, car accidents with an ambulance to City Hospital (¥800, with a cooldown), the rebuilt profile, and device earnings capped per hour.
+
+## R4 · polish (branch r4-polish, built, not deployed)
+- The joystick, jump and mic buttons hold still while the sheet is dragged and settle after release.
+- The Election week banner hides while the sheet is open or being dragged.
+- One-time intro tips (Got it) for phone, people, map, club, voting, home and street.
+- Empty states: street, chats, homes, tasks and courses, each with one action.
+- Banner toast at the top (2.5 s), collapsing large titles, 12px minimum for People names.
+- Club music sync now runs every 15 s (5 s with the DJ booth open, instantly on a room change) instead of every 2.5 s. Club idle traffic drops from 57 to 17 requests/min. The music 403 fix is unchanged.
+- Tests: tests/r4.mjs (6 tests). npm test: 158 pass / 131 fail (the 131 failures predate this work).

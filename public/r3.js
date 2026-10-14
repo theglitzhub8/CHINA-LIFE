@@ -52,15 +52,17 @@ function drag(){const ui=$('worldUI'),c=$('infoPanel');if(!ui||!c||c.dataset.r3)
  let y0=null,h0=0,moved=false,tabH=0;const vh=()=>innerHeight;
  const set=h=>{c.style.setProperty('height',h+'px','important');c.style.setProperty('max-height',h+'px','important')};
  c.addEventListener('touchstart',e=>{const t=e.touches[0];const inScroll=c.scrollTop>0&&!e.target.closest('.venue-heading,.venue-card::before');if(inScroll||e.target.closest('input,textarea,#worldActivities'))return;y0=t.clientY;h0=c.getBoundingClientRect().height;moved=false;tabH=document.querySelector('#worldUI .world-nav')?.getBoundingClientRect().height||60},{passive:true});
- c.addEventListener('touchmove',e=>{if(y0==null)return;const dy=e.touches[0].clientY-y0;if(!moved&&Math.abs(dy)<6)return;moved=true;ui.classList.add('sheet-dragging');set(Math.max(72,Math.min(vh()*.92-tabH,h0-dy)))},{passive:true});
+ c.addEventListener('touchmove',e=>{if(y0==null)return;const dy=e.touches[0].clientY-y0;if(!moved&&Math.abs(dy)<6)return;moved=true;freeze();ui.classList.add('sheet-dragging');set(Math.max(72,Math.min(vh()*.92-tabH,h0-dy)))},{passive:true});
  c.addEventListener('touchend',e=>{if(y0==null)return;const dy=e.changedTouches[0].clientY-y0;y0=null;if(!moved)return;const h=Math.max(72,Math.min(vh()*.92-tabH,h0-dy));
   const stops=[['peek',96],['half',vh()*.5-24],['full',vh()*.92-tabH]];const v=Math.abs(dy)>120?(dy<0?1:-1):0;let k=stops.reduce((b,s,i)=>Math.abs(s[1]-h)<Math.abs(stops[b][1]-h)?i:b,0);
   setTimeout(()=>{ui.classList.remove('sheet-dragging');c.style.removeProperty('height');c.style.removeProperty('max-height');const n=stops[k][0];ui.classList.toggle('dock-open',n!=='peek');ui.classList.toggle('dock-full',n==='full');haptic()},0)},{passive:true});
  // Mouse and pen: the same drag on the grabber row.
  c.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||!e.target.closest('.venue-heading'))return;if(e.target.closest('button'))return;const y=e.clientY,h=c.getBoundingClientRect().height;tabH=document.querySelector('#worldUI .world-nav')?.getBoundingClientRect().height||60;let m=false;
-  const mv=ev=>{const dy=ev.clientY-y;if(Math.abs(dy)>6)m=true;if(m){ui.classList.add('sheet-dragging');set(Math.max(72,Math.min(vh()*.92-tabH,h-dy)))}};
+  const mv=ev=>{const dy=ev.clientY-y;if(Math.abs(dy)>6)m=true;if(m){freeze();ui.classList.add('sheet-dragging');set(Math.max(72,Math.min(vh()*.92-tabH,h-dy)))}};
   const up=ev=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up);if(!m)return;const hh=Math.max(72,Math.min(vh()*.92-tabH,h-(ev.clientY-y)));const stops=[['peek',96],['half',vh()*.5-24],['full',vh()*.92-tabH]];const k=stops.reduce((b,s,i)=>Math.abs(s[1]-hh)<Math.abs(stops[b][1]-hh)?i:b,0);ui.classList.remove('sheet-dragging');c.style.removeProperty('height');c.style.removeProperty('max-height');ui.classList.toggle('dock-open',stops[k][0]!=='peek');ui.classList.toggle('dock-full',stops[k][0]==='full')};
   addEventListener('pointermove',mv);addEventListener('pointerup',up)})}
+// R4: the joystick, jump and floating buttons hold still while the sheet is dragged.
+function freeze(){const ui=$('worldUI');if(ui.classList.contains('sheet-dragging'))return;ui.style.setProperty('--r4-tpb',getComputedStyle(ui).getPropertyValue('--tp-bottom').trim()||'164px')}
 function haptic(){if(!reduce.matches&&navigator.vibrate)try{navigator.vibrate(8)}catch{}}
 
 /* ---------- Wiring: react to DOM changes the game already makes ---------- */

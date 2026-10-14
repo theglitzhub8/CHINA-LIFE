@@ -55,7 +55,9 @@ function open(){if(!game.clubs.includes(game.state.place))return game.toast('Vis
  if(!$('audioDialog').open)$('audioDialog').showModal();$('djToggle').onclick=toggleClub;$('djVolume').oninput=e=>setVolume(+e.target.value/100);
  $('audioContent').querySelectorAll('[data-djtab]').forEach(b=>b.onclick=()=>{djTab=b.dataset.djtab;open()});
  $('audioContent').querySelectorAll('[data-track]').forEach(b=>b.onclick=async()=>{try{if(!window.ChinaLifeCloud?.joined){if(!await window.ChinaLifeCloud?.join()){note('Sign in and join this club to request shared music.');return}}await api('POST',{city:game.state.city,track:b.dataset.track});note('✅ Requested. It plays from the shared queue.');await sync()}catch(error){note(error.message)}});renderStatus();sync()}
-$('closeAudio').setAttribute('aria-label','Minimize club player');$('closeAudio').textContent='⌄';$('closeAudio').onclick=()=>$('audioDialog').close();setInterval(tick,40);setInterval(sync,2500);
+$('closeAudio').setAttribute('aria-label','Minimize club player');$('closeAudio').textContent='⌄';$('closeAudio').onclick=()=>$('audioDialog').close();setInterval(tick,40);
+// R4: club music sync every 15 s (5 s while the DJ booth is open), straight away on entering a club. The track is scheduled locally from startedAt, so playback stays in step between syncs.
+let lastSync=0,syncRoom='';setInterval(()=>{const room=game.state.city+':'+game.state.place,iv=$('audioDialog')?.open?5000:15000;if(room!==syncRoom||Date.now()-lastSync>=iv-50){syncRoom=room;lastSync=Date.now();sync()}},2500);
 window.addEventListener('chinalife:update',()=>{if(lastClub!==game.state.place){lastClub=game.state.place;track=venueTrack();startedAt=Date.now();queue=[];align();sync()}if(!game.clubs.includes(game.state.place)){stop(false);if($('audioDialog').open)$('audioDialog').close()}else if(enabled&&unlocked&&!playing&&!document.hidden&&!window.ChinaLifeNativePaused)start()});
 window.addEventListener('chinalife:voice',e=>{duck=e.detail.active;gain()});
 window.addEventListener('chinalife:radio',e=>{radioOn=!!e.detail?.playing;gain();songCheck=0;songTick();renderStatus()});

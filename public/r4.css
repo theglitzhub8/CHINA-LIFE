@@ -1,0 +1,36 @@
+/* R4 · polish */
+/* Joystick, jump and floating buttons stay put while the sheet is dragged */
+html:root body #worldUI.sheet-dragging{--tp-bottom:var(--r4-tpb)!important}
+html:root body #worldUI .tp-stick,html:root body #worldUI .tp-jump{transition:bottom .28s cubic-bezier(.2,.9,.25,1.05)}
+html:root body #worldUI.sheet-dragging :is(.tp-stick,.tp-jump){transition:none}
+/* Venue banners (Election week) step aside while the sheet is open or moving */
+html:root body #worldUI:is(.dock-open,.sheet-dragging) :is(.vote-panel,.vote-head),html:root body #worldUI:is(.dock-open,.sheet-dragging) .club-meter{visibility:hidden;opacity:0;pointer-events:none;transition:opacity .15s}
+/* Empty states */
+html:root body .r4-empty{display:grid;justify-items:center;gap:8px;margin:12px 0;padding:20px 16px;border-radius:var(--r-card);background:#fff;text-align:center;box-shadow:0 1px 0 var(--io-sep)}
+html:root body .r4-empty-ic{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:rgba(31,142,147,.12);color:var(--io-java)}
+html:root body .r4-empty-ic .ic{width:24px;height:24px}
+html:root body .r4-empty p{margin:0;font:var(--t-callout)!important;color:var(--io-ink)}
+html:root body .r4-empty>div{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+html:root body .r4-empty button{min-height:44px;padding:0 18px;border-radius:var(--r-btn);border:0;background:rgba(12,63,68,.06);color:var(--io-ink);font:600 15px/20px var(--io-font)}
+html:root body .r4-empty button.r4-go{background:var(--io-java);color:#fff}
+/* Intro tips */
+html:root body .r4-tip{position:absolute;z-index:39;left:16px;right:72px;top:calc(max(8px,env(safe-area-inset-top)) + 56px);display:flex;align-items:center;gap:10px;padding:10px 10px 10px 12px;border-radius:var(--r-card);background:rgba(12,63,68,.94);color:#F7FFF7;box-shadow:var(--io-float);animation:r4TipIn .3s cubic-bezier(.2,.9,.25,1.1)}
+html:root body .r4-tip.inline{position:relative;left:auto;right:auto;top:auto;margin:0 0 12px;z-index:1}
+html:root body #phoneDialog .r4-tip.inline{margin:40px 0 0}
+html:root body .r4-tip p{flex:1;margin:0;font:var(--t-sub)!important;color:inherit!important}
+html:root body .r4-tip button{min-height:36px;padding:0 12px;border:0;border-radius:var(--r-btn);background:var(--io-java);color:#fff;font:600 15px/20px var(--io-font)}
+html:root body .r4-tip-ic{color:#7fd6d9;display:grid}
+html:root body:has(.r4-tip:not(.inline)) #worldUI .next-step{visibility:hidden}
+html:root body #worldUI.dock-full .r4-tip{display:none}
+@keyframes r4TipIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+/* Banner-style toast: drops from the top, 2.5 s */
+html:root body #toast{top:calc(max(8px,env(safe-area-inset-top)) + 4px)!important;bottom:auto!important;left:16px!important;right:16px!important;width:auto!important;max-width:none!important;transform:translateY(-140%)!important;border-radius:var(--r-card)!important;background:rgba(18,18,18,.92)!important;color:#F7FFF7!important;font:500 15px/20px var(--io-font)!important;padding:12px 16px!important;box-shadow:var(--io-float)!important;z-index:2147483000;transition:transform .32s cubic-bezier(.2,.9,.25,1.05),opacity .2s!important}
+html:root body #toast.show{transform:none!important}
+/* Collapsing large title */
+html:root body dialog .r4-inline-title{position:sticky;top:0;z-index:15;height:0;overflow:hidden;opacity:0;text-align:center;font:var(--t-head);color:var(--io-ink);background:rgba(247,255,247,.94);backdrop-filter:blur(16px);transition:opacity .15s,height .15s}
+html:root body dialog.r4-scrolled .r4-inline-title{height:44px;line-height:44px;opacity:1;border-bottom:1px solid var(--io-sep)}
+@media (prefers-reduced-motion:reduce){html:root body .r4-tip,html:root body #toast{animation:none!important;transition:none!important}}
+/* A floating tip briefly takes the place of the Next step pill and room chips */
+html:root body:has(.r4-tip:not(.inline)) #worldUI .world-side #r3Next.next-step:not([hidden]),html:root body:has(.r4-tip:not(.inline)) #worldUI .scene-label{visibility:hidden!important}
+html:root body #socialDialog #socialFeedback:empty{min-height:0!important;padding:0!important}
+html:root body #socialDialog .ppl-faces button>span:not(.player-avatar){font-size:12px!important;line-height:16px}
