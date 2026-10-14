@@ -18,6 +18,14 @@ Every server-side money change goes through the ledger (`chinalife_economy_actio
 
 # Changelog
 
+## R3 (r3-onboard): shipped Wed 14 Oct 2026, ~09:08 China time (founder-approved, outside the Friday slot)
+- New players get a 6-step tour (walk, map, café, order, say hi, phone), one card at a time with Skip. Existing players never see it. No new coins.
+- Phone: 10 apps on one page (Wallet, Travel, Study, Work, Events, Chats, Store, Home, Profile, Settings); apps with several parts open a short list.
+- One "Next step" pill replaces the HUD chips (daily reward, low needs, what's due, events, goal).
+- The room sheet follows the finger and snaps to peek / half / near-full. More outline icons replace leftover emoji.
+- Front end only, no new polling. Old bundles kept.
+- Backup: /root/backups/r3-20261014-010828 (server time).
+
 ## Hotfix r2a: shipped Wed 14 Oct 2026, ~06:29 China time (founder-approved)
 - Club music no longer gets a 403 on entry: presence is sent (or an in-flight send awaited) before the first music request in a room, with one retry after a "join first" refusal. No new polling.
 - Backups: /root/backups/hotfix-r2a-20261013-222057 and /root/backups/hotfix-r2a-step2-20261013-222931 (server time).
