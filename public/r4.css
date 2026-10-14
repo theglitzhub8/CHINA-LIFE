@@ -59,7 +59,7 @@ html:root body .r4-sheet button:focus-visible{outline:2px solid #0a7d83;outline-
 /* ================= R4b · founder redesign: vibrant, glassy, lively ================= */
 :root{--r4-glass:rgba(247,255,247,.72);--r4-glass-dark:rgba(12,63,68,.62);--r4-g-java:linear-gradient(145deg,#3fd0c9,#1F8E93 55%,#0C3F44);--r4-g-pink:linear-gradient(145deg,#ff8ac8,#ff3fa4 60%,#c2187a);--r4-g-sun:linear-gradient(145deg,#ffe066,#ffb627 60%,#f08a00);--r4-g-sky:linear-gradient(145deg,#7cc7ff,#2f7cf6 60%,#1d4fd8);--r4-g-lime:linear-gradient(145deg,#b7f774,#42c35a 60%,#1f8b3c);--r4-g-violet:linear-gradient(145deg,#c9a2ff,#8b5cf6 60%,#5b2bd6);--r4-g-coral:linear-gradient(145deg,#ffb199,#ff6b4a 60%,#e0402a);--r4-g-ink:linear-gradient(145deg,#5d7a80,#2c4a50 60%,#0C3F44);--r4-shadow:0 10px 30px rgba(12,63,68,.28),0 2px 6px rgba(12,63,68,.18)}
 /* 2 · sheets and the phone never fully cover the game: 85% max with a visible game edge */
-html:root body dialog:is(#activityDialog,#phoneDialog,#helpDialog,#sharedDialog,#audioDialog,#voiceDialog,#socialDialog,#cloudDialog,#aiDialog,#radioDialog,#liveMapDialog,.r4-where)[open]{height:85vh!important;max-height:85vh!important;border-radius:28px 28px 0 0!important;box-shadow:0 -12px 40px rgba(12,63,68,.35)!important;transition:transform .25s cubic-bezier(.2,.9,.25,1.05)}
+html:root body dialog:is(#activityDialog,#phoneDialog,#helpDialog,#sharedDialog,#audioDialog,#voiceDialog,#socialDialog,#cloudDialog,#aiDialog,#radioDialog,#liveMapDialog)[open]{height:85vh!important;max-height:85vh!important;border-radius:28px 28px 0 0!important;box-shadow:0 -12px 40px rgba(12,63,68,.35)!important;transition:transform .25s cubic-bezier(.2,.9,.25,1.05)}
 html:root body dialog.ios-half[open]{height:50vh!important}
 html:root body dialog[open]::backdrop{background:rgba(12,63,68,.28)!important;backdrop-filter:blur(3px)}
 html:root body dialog.r4-swiping{transition:none!important}
@@ -153,3 +153,26 @@ html:root body #worldUI #tpWalk{position:absolute!important;top:calc(max(8px,env
 html:root body #worldUI :is(#liveMapBtn,#tpWalk){text-indent:300%!important}
 html:root body #worldUI #liveMapBtn span{text-indent:0!important}
 html:root body #worldUI #tpWalk::before{text-indent:0!important}
+/* R4c · floating everywhere: 12–16px side margins + safe areas, rounded on all sides */
+html:root body dialog:is(#activityDialog,#phoneDialog,#helpDialog,#sharedDialog,#audioDialog,#voiceDialog,#socialDialog,#cloudDialog,#aiDialog,#radioDialog,#liveMapDialog)[open]{inset:auto calc(12px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))!important;width:auto!important;max-width:560px!important;margin:0 auto!important;height:min(85vh,calc(100vh - 24px - env(safe-area-inset-bottom) - env(safe-area-inset-top)))!important;border-radius:28px!important;overflow:hidden auto}
+html:root body dialog.ios-half[open]{height:50vh!important}
+html:root body #worldUI .world-dock{left:calc(12px + env(safe-area-inset-left))!important;right:calc(12px + env(safe-area-inset-right))!important}
+html:root body #worldUI .world-dock :is(.info-panel,#infoPanel){border-radius:24px!important}
+html:root body #worldUI .world-nav{margin:0 auto max(10px,env(safe-area-inset-bottom))!important;width:calc(100% - 8px)!important;max-width:340px!important}
+html:root body #worldUI .street-card{left:calc(16px + env(safe-area-inset-left))!important;right:calc(16px + env(safe-area-inset-right))!important;border-radius:20px!important}
+html:root body #worldUI .r4-tip:not(.inline){left:calc(16px + env(safe-area-inset-left))!important;right:calc(72px + env(safe-area-inset-right))!important}
+/* R4c · Where to?: compact floating card just above the tab bar */
+html:root body dialog.r4-where[open]{position:fixed!important;inset:auto calc(12px + env(safe-area-inset-right)) calc(96px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))!important;margin:0 auto!important;width:auto!important;max-width:520px!important;height:auto!important;max-height:40vh!important;padding:14px 14px 12px!important;border-radius:24px!important;background:rgba(247,255,247,.9)!important;backdrop-filter:blur(24px) saturate(1.7);box-shadow:0 14px 40px rgba(12,63,68,.35)!important;overflow:hidden auto;animation:r4TipIn .25s cubic-bezier(.2,.9,.25,1.1)}
+html:root body dialog.r4-where::backdrop{background:rgba(12,63,68,.12)!important;backdrop-filter:none!important}
+html:root body .r4-where .r4-grab{display:none}
+html:root body .r4-where h2{margin:0 40px 10px 2px;font:700 20px/26px var(--io-font)}
+html:root body .r4-where input{min-height:40px;font-size:16px}
+html:root body .r4-where h3{margin:12px 2px 8px}
+html:root body .r4-where ul.r4-pop{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 6px;margin:0 -2px;scroll-snap-type:x proximity}
+html:root body .r4-where ul.r4-pop li{flex:0 0 96px;scroll-snap-align:start}
+html:root body .r4-where ul.r4-pop li button{grid-template-columns:1fr;justify-items:center;text-align:center;gap:6px;min-height:0;padding:10px 6px;font:600 13px/16px var(--io-font)}
+html:root body .r4-where ul.r4-pop li button span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+html:root body .r4-where ul.r4-pop li small{display:none}
+html:root body .r4-where ul.r4-res li button{min-height:48px}
+html:root body .r4-where .r4-fullmap{margin-top:8px;min-height:40px;font-size:15px;background:none;color:#1d6fd8;box-shadow:none}
+html:root body .r4-where .r4-x{top:12px;right:12px}
