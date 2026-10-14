@@ -104,3 +104,7 @@ Every server-side money change goes through the ledger (`chinalife_economy_actio
 - Every sheet, the phone and the room card keep 12px margins plus safe areas and are rounded on all sides. The tab bar is narrower (max 340px).
 - Deploy: live md5 matched 4745df7; the new styles bundle was added and the old ones kept; all 4 referenced bundles returned 200 before index.html was switched.
 - Smoke test: 0 overlaps, saves 200, no modal, no music 403, no JS errors or 4xx/5xx; load 1.2.
+
+## R4d · Map opens the room card's Where to (r4-polish 7d0f7ec), LIVE 2026-10-14 11:39 CST, backup /root/backups/r4d-20261014-033903
+- Tapping Map opens the city view and expands the existing room card to its "Where to?" search. The separate floating card no longer opens.
+- Deploy: live md5 matched; core-b was renamed and handled; all bundles returned 200 before index.html was switched. Smoke test clean (saves 200, no modal, no music 403, no errors, 0 overlaps).
