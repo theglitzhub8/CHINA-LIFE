@@ -108,3 +108,10 @@ Every server-side money change goes through the ledger (`chinalife_economy_actio
 ## R4d · Map opens the room card's Where to (r4-polish 7d0f7ec), LIVE 2026-10-14 11:39 CST, backup /root/backups/r4d-20261014-033903
 - Tapping Map opens the city view and expands the existing room card to its "Where to?" search. The separate floating card no longer opens.
 - Deploy: live md5 matched; core-b was renamed and handled; all bundles returned 200 before index.html was switched. Smoke test clean (saves 200, no modal, no music 403, no errors, 0 overlaps).
+
+## R4e · fixes (r4-polish), LIVE 2026-10-14 11:54 CST, backup /root/backups/r4e-20261014-035429
+- Practice and quizzes show a short "done" state and close by themselves after 2.2 s (or on tapping Done).
+- The "Lesson 1 takes 2 minutes" empty state shows only when there are truly no courses.
+- Light theme forced (color-scheme: light only, plus a meta tag), so dark-mode phones and the Hafrik app no longer show faint text or black cards.
+- Literal \xe2\x80\x94-style escapes in course titles are decoded on screen (the data is untouched).
+- Smoke test: saves 200, no modal, no music 403, no JS errors or 4xx/5xx, 0 overlaps.
