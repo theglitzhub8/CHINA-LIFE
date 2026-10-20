@@ -264,9 +264,9 @@ function makeClubEnv(){const s=new THREE.Scene();s.background=new THREE.Color(0x
  const people=new Set(),ghostMat=new THREE.MeshBasicMaterial({color:0x8ff0e6,transparent:true,opacity:.42,depthWrite:false,depthFunc:THREE.GreaterDepth});
  R.dress=(g,o)=>{try{dress(g,o)}catch(e){console.warn('dress',e)}};
  R.frame=(g,moving,dt,spd,emote,far)=>{const r=g.userData.real;if(!r)return false;r.acc+=dt;if(far&&r.acc<.066)return true;if(r.lod){const f=renderer.info.render.frame;if(f!==budF){budF=f;bud=12}if(bud>0)bud--;else if(r.acc<.25)return true}const step=r.acc;r.acc=0;
-  const height=1.86*g.scale.x,hps=(spd||0)/height,jog=moving&&hps>1.55,want=emote==='dance'?'Dance_Loop':emote==='talk'&&r.act.Idle_Talking_Loop?'Idle_Talking_Loop':emote==='sit'?'Sitting_Idle_Loop':!moving?'Idle_Loop':jog?'Jog_Fwd_Loop':'Walk_Loop';
+  const height=1.86*g.scale.x,hps=(spd||0)/height,jog=moving&&hps>1.15,want=emote==='dance'?'Dance_Loop':emote==='talk'&&r.act.Idle_Talking_Loop?'Idle_Talking_Loop':emote==='sit'?'Sitting_Idle_Loop':!moving?'Idle_Loop':jog?'Jog_Fwd_Loop':'Walk_Loop';
   if(r.frozen&&r.posed>1)return true;const k=r.frozen?1:1-Math.exp(-step*10);for(const [n,a] of Object.entries(r.act)){const cur=r.w[n]||0,t=n===want?1:0,nw=cur+(t-cur)*k;r.w[n]=nw;if(nw<.002&&t===0){if(a.isRunning())a.stop()}else{if(!a.isRunning())a.play();a.setEffectiveWeight(nw)}}if(r.frozen){r.posed++;r.mixer.update(r.posed===1?Math.random()*2:0);return true}
-  if(r.act.Walk_Loop)r.act.Walk_Loop.timeScale=THREE.MathUtils.clamp(hps/.95,.6,1.7);if(r.act.Jog_Fwd_Loop)r.act.Jog_Fwd_Loop.timeScale=THREE.MathUtils.clamp(hps/1.9,.7,1.4);
+  if(r.act.Walk_Loop)r.act.Walk_Loop.timeScale=THREE.MathUtils.clamp(hps/.45,.5,1.8);if(r.act.Jog_Fwd_Loop)r.act.Jog_Fwd_Loop.timeScale=THREE.MathUtils.clamp(hps/1.9,.7,1.4);
   r.mixer.update(step);return true};
  R.undress=g=>{const r=g.userData.real;if(!r)return;r.m.removeFromParent();r.mixer.stopAllAction();for(const c of g.children)if(c.userData.r7hidden!==undefined){c.visible=c.userData.r7hidden;delete c.userData.r7hidden}delete g.userData.real;people.delete(g)};
  R.decorate=decorate;R.bldList=()=>(R.r8root?.userData.r8?.blds||[]).map(b=>({min:b.b.min.toArray(),max:b.b.max.toArray(),ax:b.ax}));R.light=light;R.paint=paint;R.count=()=>people.size;
