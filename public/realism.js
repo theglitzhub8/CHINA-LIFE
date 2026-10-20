@@ -37,18 +37,18 @@ export function create(ctx){
  const brickish=col=>{const h={};col.getHSL(h,THREE.SRGBColorSpace);return h.h<.075&&h.s>.25&&h.s<.85&&h.l>.18&&h.l<.6};
  const glassMat=new THREE.MeshStandardMaterial({color:0x8fa9b8,metalness:.85,roughness:.06,envMapIntensity:1.4});
  const darkGlass=new THREE.MeshPhysicalMaterial({color:0x10161c,metalness:.2,roughness:.04,clearcoat:1,clearcoatRoughness:.03,envMapIntensity:1.5});
- const facade=new Map();
+ const facade=new Map(),reflective=new Set([glassMat,darkGlass]);let envTex=null;const setEnv=t=>{if(envTex===t)return;envTex=t;for(const m of reflective){m.envMap=t;m.needsUpdate=true}};
  function upMat(m,o){if(!m||!m.isMeshStandardMaterial||m.userData.r7)return m;const c=m.color.getHex();
   if(m.transparent&&m.opacity<.75&&!m.map)return q==='high'?glassMat:m;
   const k=kind(c)||flatKind(m,o);if(k==='asphalt')return S('asphalt',{tex:'asphalt',color:0xd4d8dc,rough:1,scale:.22,ns:.8,ao:true});if(k==='paving')return S('paving',{tex:'paving',color:0xd9d6cf,rough:1,scale:.45,ns:1,ao:true});
   if(q!=='high'||m.map||m.vertexColors)return m;
   if(m.emissive&&m.emissive.getHex()!==0&&m.roughness<.3)return m; // lit windows/signs stay as they are
   if(!facade.has(m)){let n;if(o.isMesh&&brickish(m.color))n=S('brick'+c,{tex:'brick',color:m.color.clone().lerp(new THREE.Color(0xffffff),.35).getHex(),rough:1,scale:.5,ns:1.2});
-   else{n=m.clone();n.flatShading=false;n.normalMap=tex('concrete_n');n.normalScale.set(.35,.35);n.roughnessMap=tex('concrete_orm');n.roughness=Math.max(.75,m.roughness);worldUV(n,.3)}n.userData.r7=1;facade.set(m,n)}return facade.get(m)}
+   else{n=m.clone();n.roughness=Math.max(.8,m.roughness)}n.userData.r7=1;facade.set(m,n)}return facade.get(m)}
  const done=new WeakSet();
  function decorate(root,where){root.traverse(o=>{if(!o.isMesh||done.has(o)||o.userData.r7person||o.isSkinnedMesh)return;done.add(o);if(o.userData.npc)return;const before=o.material;const after=Array.isArray(before)?before.map(m=>upMat(m,o)):upMat(before,o);if(after!==before){o.material=after;o.receiveShadow=true}if(o.castShadow){const g=o.geometry;if(!g.boundingBox)g.computeBoundingBox();if(g.boundingBox.max.y-g.boundingBox.min.y<.6*Math.max(1e-3,o.matrixWorld.elements[5]||1)&&g.boundingBox.max.y<.8)o.castShadow=false}});
   if(q==='high')for(const v of ctx.cars())paint(v)}
- const paints=new Map();function paint(g){if(!g||g.userData.r7paint)return;g.userData.r7paint=1;g.traverse(o=>{if(!o.isMesh)return;const m=o.material;if(!m?.isMeshStandardMaterial)return;const c=m.color.getHex();if(c===0x2c3e4c){o.material=darkGlass;return}if(c===0xfff6d0||c===0xd5332f)return;if(!paints.has(m)){const p=new THREE.MeshPhysicalMaterial({color:m.color,metalness:.55,roughness:.32,clearcoat:1,clearcoatRoughness:.06,envMapIntensity:1.2});p.userData.r7=1;paints.set(m,p)}o.material=paints.get(m)})}
+ const paints=new Map();function paint(g){if(!g||g.userData.r7paint)return;g.userData.r7paint=1;g.traverse(o=>{if(!o.isMesh)return;const m=o.material;if(!m?.isMeshStandardMaterial)return;const c=m.color.getHex();if(c===0x2c3e4c){o.material=darkGlass;return}if(c===0xfff6d0||c===0xd5332f)return;if(!paints.has(m)){const p=new THREE.MeshPhysicalMaterial({color:m.color,metalness:.55,roughness:.32,clearcoat:1,clearcoatRoughness:.06,envMap:envTex,envMapIntensity:1.2});p.userData.r7=1;paints.set(m,p);reflective.add(p)}o.material=paints.get(m)})}
  // ---------- Sky, sun, IBL, time of day, haze ----------
  let sky=null,pmrem=null,envRT=null,envKey='',clubEnv=null,cubeRT=null,cubeCam=null;const skyScene=new THREE.Scene();
  if(q==='high'){sky=new Sky();sky.scale.setScalar(900);const u=sky.material.uniforms;u.turbidity.value=6;u.rayleigh.value=1.6;u.mieCoefficient.value=.006;u.mieDirectionalG.value=.82;sky.material.depthWrite=false;skyScene.add(sky);pmrem=new THREE.PMREMGenerator(renderer);cubeRT=new THREE.WebGLCubeRenderTarget(128,{type:THREE.HalfFloatType});cubeCam=new THREE.CubeCamera(1,1000,cubeRT);skyScene.add(cubeCam)}
@@ -58,15 +58,15 @@ export function create(ctx){
  function sunFor(h){const elev=68*Math.sin(Math.PI*(h-6)/12),az=THREE.MathUtils.degToRad(200+(h-12)*14);const e=THREE.MathUtils.degToRad(elev);sunDir.set(Math.cos(e)*Math.sin(az),Math.sin(e),Math.cos(e)*Math.cos(az));return elev}
  function light(street,club,hour,focus){
   const h=forced??hour;
-  if(club){if(scene.fog===fog)scene.fog=null;renderer.toneMappingExposure=1.05;if(q==='high'){if(!clubEnv)clubEnv=makeClubEnv();scene.environment=clubEnv;scene.environmentIntensity=.6}return}
-  if(!street){if(lastStreet){scene.fog=null;scene.environment=null;if(savedBg)scene.background=savedBg;savedBg=null}lastStreet=false;renderer.toneMappingExposure=1;if(q==='high'&&scene.environment===clubEnv)scene.environment=null;return}
+  if(club){if(scene.fog===fog)scene.fog=null;renderer.toneMappingExposure=1.05;if(q==='high'){if(!clubEnv)clubEnv=makeClubEnv();setEnv(clubEnv)}return}
+  if(!street){if(lastStreet){scene.fog=null;if(savedBg)scene.background=savedBg;savedBg=null}lastStreet=false;renderer.toneMappingExposure=1;return}
   if(!lastStreet){savedBg=scene.background}lastStreet=true;
   const elev=sunFor(h),day=ss(-4,12,elev),dusk=ss(-6,2,elev)*(1-ss(6,22,elev));
   tmpC.copy(H.night).lerp(H.dusk,ss(-8,0,elev)).lerp(H.day,ss(4,20,elev));
   if(q==='high'){scene.fog=fog;fog.color.copy(tmpC);fog.near=35;fog.far=day>.5?200:150;
-   const key=Math.round(h*6);if(key!==envKey){envKey=key;sky.material.uniforms.sunPosition.value.copy(sunDir);const u=sky.material.uniforms;u.rayleigh.value=1.2+dusk*1.8;u.turbidity.value=5+dusk*5;const tm=renderer.toneMapping;renderer.toneMapping=THREE.NoToneMapping;cubeCam.update(renderer,skyScene);renderer.toneMapping=tm;envRT?.dispose();envRT=pmrem.fromCubemap(cubeRT.texture);scene.environment=envRT.texture}
+   const key=Math.round(h*6);if(key!==envKey){envKey=key;sky.material.uniforms.sunPosition.value.copy(sunDir);const u=sky.material.uniforms;u.rayleigh.value=1.2+dusk*1.8;u.turbidity.value=5+dusk*5;const tm=renderer.toneMapping;renderer.toneMapping=THREE.NoToneMapping;cubeCam.update(renderer,skyScene);renderer.toneMapping=tm;envRT?.dispose();envRT=pmrem.fromCubemap(cubeRT.texture);setEnv(envRT.texture)}
    scene.background=elev>-3?cubeRT.texture:H.night
-   scene.environmentIntensity=.15+.55*day}
+   for(const m of reflective)m.envMapIntensity=(m===glassMat?1.4:1.2)*(.2+.8*day)}
   else{scene.background=tmpC.clone()}
   // Sun (or moon) follows the player so shadows stay crisp in a tight box.
   const moon=elev<-3;sun.color.set(moon?0xdfe6ff:0xffffff).lerp(new THREE.Color(0xffa463),moon?0:dusk*.9);sun.intensity=moon?.7:.4+2.3*ss(-2,18,elev);
@@ -77,7 +77,7 @@ export function create(ctx){
   if(q==='high'&&sun.shadow.mapSize.x!==1024){sun.shadow.mapSize.set(1024,1024);sun.shadow.map?.dispose();sun.shadow.map=null}sun.shadow.bias=-.0004;sun.shadow.normalBias=.02}
  function makeClubEnv(){const s=new THREE.Scene();s.background=new THREE.Color(0x05040a);const add=(c,x,y,z,w,h)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:c,side:THREE.DoubleSide}));m.position.set(x,y,z);m.lookAt(0,0,0);s.add(m)};
   add(0xff2a7a,6,3,0,4,1);add(0x2ad1ff,-6,3,0,4,1);add(0x8a4dff,0,4,-6,6,1);add(0xffc14d,0,2,6,3,.6);add(0xffffff,0,9,0,3,3);const rt=pmrem.fromScene(s,0,.1,50);return rt.texture}
- R.clubFloor=(g)=>{if(!g?.material||g.userData.r7floor||q!=='high')return;g.userData.r7floor=1;const m=g.material.clone();m.roughness=.18;m.metalness=.35;m.normalMap=tex('concrete_n');m.normalScale.set(.25,.25);m.envMapIntensity=1.2;worldUV(m,.4);g.material=m};
+ R.clubFloor=(g)=>{if(!g?.material||g.userData.r7floor||q!=='high')return;g.userData.r7floor=1;const m=g.material.clone();m.roughness=.18;m.metalness=.35;m.normalMap=tex('concrete_n');m.normalScale.set(.25,.25);m.envMapIntensity=1.2;m.envMap=envTex;reflective.add(m);worldUV(m,.4);g.material=m};
  // ---------- People ----------
  const tpl={};let clips=null;R.people=Promise.all([glb('man.glb'),glb('woman.glb'),glb('anims.glb')]).then(([m,w,a])=>{tpl.man=prep(m.scene);tpl.woman=prep(w.scene);clips={};for(const c of a.animations){c.tracks=c.tracks.filter(t=>!/^root\.position/.test(t.name));for(const t of c.tracks)if(/^pelvis\.position/.test(t.name)){const v=t.values;for(let i=0;i<v.length;i+=3){v[i]=v[0];v[i+2]=v[2]}}clips[c.name]=c}R.ready=true;for(const b of pending)dress(b.g,b.o);pending.length=0}).catch(e=>{console.warn('Realistic people unavailable',e);R.failed=true});
  const REG={pelvis:4,root:4,thigh:4,calf:5,foot:6,ball:6,spine_01:1,spine_02:1,spine_03:1,clavicle:1,upperarm:2,lowerarm:3,neck_01:0,Head:0,hand:0};
