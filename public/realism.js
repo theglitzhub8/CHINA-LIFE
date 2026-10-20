@@ -61,11 +61,11 @@ export function create(ctx){
     .replace('#include <map_fragment>',`#include <map_fragment>
 {if(vBld.w>.5&&abs(vBN.y)<.5){float h=vBP.y-vBld.x,top=vBld.y-vBld.x,sd=vBld.z;float u=abs(vBN.x)>abs(vBN.z)?vBP.z:vBP.x;vec3 wall=diffuseColor.rgb;
 #ifndef R8_LOW
- float lw=dot(wall,vec3(.3,.59,.11));wall=mix(wall,vec3(lw)*vec3(1.04,1.,.94),.4);float brick=step(.62,fract(sd*.371))*step(h,top-.75);vec3 tc=texture2D(tWallC,vec2(u,h)*.35).rgb,tb=texture2D(tWallB,vec2(u,h)*.55).rgb;vec3 tx=mix(tc/max(dot(tc,vec3(.33)),.05),tb/max(dot(tb,vec3(.33)),.05)*vec3(1.,.82,.7),brick);wall*=mix(vec3(1.),tx,.75);wall*=.94+r8h(floor(vec2(u,h)*.3)+sd*1.3)*.1;wall*=mix(.72,1.,smoothstep(0.,1.2,h))*mix(1.,.86,smoothstep(top-2.5,top,h)*.0+smoothstep(.0,.0,0.)*0.);
+ float lw=dot(wall,vec3(.3,.59,.11));wall=mix(wall,vec3(lw)*vec3(1.04,1.,.94),.4);if(h<3.4||h>top-.8||top<5.6){float brick=step(.62,fract(sd*.371))*step(h,top-.75);vec3 tc=texture2D(tWallC,vec2(u,h)*.35).rgb,tb=texture2D(tWallB,vec2(u,h)*.55).rgb;vec3 tx=mix(tc/max(dot(tc,vec3(.33)),.05),tb/max(dot(tb,vec3(.33)),.05)*vec3(1.,.82,.7),brick);wall*=mix(vec3(1.),tx,.75);wall*=.94+r8h(floor(vec2(u,h)*.3)+sd*1.3)*.1;wall*=mix(.72,1.,smoothstep(0.,1.2,h));}
 #endif
  vec3 col=wall;float gf=top<5.6?top-.45:3.3;
  if(h<gf){float cw=3.2,cx=fract(u/cw),ci=floor(u/cw),sh=r8h(vec2(ci,sd));vec3 sc=.5+.45*cos(6.2831*(sh+vec3(0.,.33,.67)));
-  if(h>gf*.72&&h<gf*.94){col=sc*.8;bEmit=sc*uNight*.85;}
+  if(h>gf*.72&&h<gf*.94){col=sc*.8;bEmit=sc*sc*uNight*.5;}
   else if(h>.1&&h<gf*.66&&cx>.07&&cx<.93){float gt=gf*.66;col=mix(vec3(.07,.09,.11),vec3(.30,.35,.40),smoothstep(.2,gt,h));bGlass=1.;bEmit=vec3(1.,.78,.52)*step(.22,sh)*(.06+.42*uNight)*(.55+.45*smoothstep(gt,.3,h));}
   else col=wall*.6+.03;}
  else if(h>=gf&&h<top-.75){float sl=floor(fract(sd)*10.+.5);
@@ -101,7 +101,7 @@ dbgC=R8_DBG;dbgOn=1.;
   const key=new Map();for(let i=0;i<n;i++){const k=Math.round(pos.getX(i)*200)+','+Math.round(pos.getY(i)*200)+','+Math.round(pos.getZ(i)*200);const j=key.get(k);if(j===undefined)key.set(k,i);else uni(i,j)}
   const idx=g.index;if(idx)for(let t=0;t<idx.count;t+=3){uni(idx.getX(t),idx.getX(t+1));uni(idx.getX(t),idx.getX(t+2))}else for(let t=0;t<n;t+=3){uni(t,t+1);uni(t,t+2)}
   const comp=new Map(),v=new V3(),nrm=g.attributes.normal;o.updateMatrixWorld();for(let i=0;i<n;i++){const r=find(i);let c=comp.get(r);if(!c){c={b:new B3(),ax:true,v:[]};comp.set(r,c)}v.fromBufferAttribute(pos,i).applyMatrix4(o.matrixWorld);c.b.expandByPoint(v);c.v.push(i);if(nrm){const ax=Math.abs(nrm.getX(i)),ay=Math.abs(nrm.getY(i)),az=Math.abs(nrm.getZ(i));if(Math.max(ax,ay,az)<.98)c.ax=false}}
-  const a=new Float32Array(n*4),ac=new Float32Array(n*4),out=[];let any=false;for(const c of comp.values()){const s=c.b.getSize(new V3());if(s.y>2.4&&(Math.min(s.x,s.z)>1.2||Math.max(s.x,s.z)>2.5&&Math.min(s.x,s.z)>.12)&&c.b.min.y<4.5&&c.v.length>=8){any=true;const hs=Math.abs(Math.sin(c.b.min.x*12.9898+c.b.min.z*78.233))*43758.5453,top=s.y,slot=top>16&&(hs*7.13%1)>.45?3:Math.floor((hs*3.71%1)*2.999),seed=Math.floor(hs%97)+slot*.1;for(const i of c.v){a[i*4]=c.b.min.y;a[i*4+1]=c.b.max.y;a[i*4+2]=seed;a[i*4+3]=1;ac[i*4]=c.b.min.x;ac[i*4+1]=c.b.min.z;ac[i*4+2]=c.b.max.x;ac[i*4+3]=c.b.max.z}out.push({b:c.b,ax:c.ax,seed,slot})}}
+  const a=new Float32Array(n*4),ac=new Float32Array(n*4),out=[];let any=false;for(const c of comp.values()){const s=c.b.getSize(new V3());if(s.y>1.9&&(Math.min(s.x,s.z)>1.2||Math.max(s.x,s.z)>2.5&&Math.min(s.x,s.z)>.12)&&c.b.min.y<4.5&&c.v.length>=8){any=true;const hs=Math.abs(Math.sin(c.b.min.x*12.9898+c.b.min.z*78.233))*43758.5453,top=s.y,slot=top>16&&(hs*7.13%1)>.45?3:Math.floor((hs*3.71%1)*2.999),seed=Math.floor(hs%97)+slot*.1;for(const i of c.v){a[i*4]=c.b.min.y;a[i*4+1]=c.b.max.y;a[i*4+2]=seed;a[i*4+3]=1;ac[i*4]=c.b.min.x;ac[i*4+1]=c.b.min.z;ac[i*4+2]=c.b.max.x;ac[i*4+3]=c.b.max.z}out.push({b:c.b,ax:c.ax,seed,slot})}}
   if(!any)return null;g.setAttribute('aBld',new THREE.BufferAttribute(a,4));g.setAttribute('aBldC',new THREE.BufferAttribute(ac,4));return out}
  const facadeTex=t=>!!t&&t.image instanceof HTMLCanvasElement&&t.image.width<=256&&t.image.height<=256;
  const avgCol=new Map();function texAvg(t){if(avgCol.has(t))return avgCol.get(t);let c=new THREE.Color(0xd8d2c6);try{const d=t.image.getContext('2d').getImageData(0,0,t.image.width,t.image.height).data;let r=0,g=0,b=0,n=0;for(let i=0;i<d.length;i+=16){const l=d[i]+d[i+1]+d[i+2];if(l>300){r+=d[i];g+=d[i+1];b+=d[i+2];n++}}if(n)c=new THREE.Color().setRGB(r/n/255,g/n/255,b/n/255,THREE.SRGBColorSpace)}catch{}avgCol.set(t,c);return c}
@@ -136,7 +136,7 @@ dbgC=R8_DBG;dbgOn=1.;
    const nA=Math.max(1,Math.min(5,Math.floor(w*d/30)));for(let k=0;k<nA;k++)acs.push([min.x+1+rnd(k)*(w-2),min.z+1+rnd(k+9)*(d-2),rnd(k+3)>.5?0:Math.PI/2,max.y]);
    if(top>8&&w>5&&d>5){if(rnd(20)>.4)tanks.push([min.x+1.6+rnd(21)*(w-3.2),min.z+1.6+rnd(22)*(d-3.2),0,max.y]);huts.push([min.x+1.6+rnd(23)*(w-3.2),min.z+1.6+rnd(24)*(d-3.2),0,max.y])}}
   // Facade depth: floor ledges and corner pilasters on open faces, balconies on residential (brick) facades (High).
-  const led=[],bal=[],bay=[];for(const b of blds){if(!b.ax)continue;const {min,max}=b.b,top=max.y-min.y;if(top<4)continue;const gf=top<5.6?top-.45:3.3;const rnd=k=>Math.abs(Math.sin(b.seed*12.9898+k*78.233)*43758.5453)%1;
+  const led=[],bal=[],bay=[];for(const b of blds){if(!b.ax)continue;const {min,max}=b.b,top=max.y-min.y;if(top<1.9)continue;const gf=top<5.6?top-.45:3.3;const rnd=k=>Math.abs(Math.sin(b.seed*12.9898+k*78.233)*43758.5453)%1;
    for(const [nx,nz] of [[1,0],[-1,0],[0,1],[0,-1]]){const fx=nx>0?max.x:nx<0?min.x:0,fz=nz>0?max.z:nz<0?min.z:0,a0=nx?min.z:min.x,a1=nx?max.z:max.x,L=a1-a0,cm=(a0+a1)/2,ry=Math.atan2(nx,nz);
     if(inside(all.filter(o=>o!==b),nx?fx+nx*2.5:cm,nz?fz+nz*2.5:cm)&&inside(all.filter(o=>o!==b),nx?fx+nx*2.5:a0+.5,nz?fz+nz*2.5:a0+.5))continue;
     const P=(along,out,y)=>nx?[fx+nx*out,y,along]:[along,y,fz+nz*out];
@@ -144,7 +144,7 @@ dbgC=R8_DBG;dbgOn=1.;
     for(const e of [a0,a1]){const [x,yy,z]=P(e,0,min.y+top/2);led.push([x,yy,z,ry,.42,top-.2,.42])}{const [x,yy,z]=P(cm,.18,max.y-.16);led.push([x,yy,z,ry,L+.5,.32,.36])}
     for(let k=Math.ceil((a0+.2)/3.2);(k+1)*3.2<=a1-.2;k++){const sh=Math.abs(Math.sin(k*91.7+b.seed*13.1))%1;if(sh<.35)continue;const bh=gf*.6,[x,yy,z]=P((k+.5)*3.2,.16,min.y+.12+bh/2);bay.push([x,yy,z,ry,2.6,bh,.32])}
     if(q==='high'&&b.slot!==3&&top>5){for(let y=gf+3;y<top-1.5;y+=3)for(let k=0;(k+1)*3<=L-.4;k++){if(rnd(k*7+y*3+nx*2+nz*5)<(b.slot===1?.7:.35))continue;const [x,yy,z]=P(a0+((L-Math.floor(L/3)*3)/2)+(k+.5)*3,.55,min.y+y+.05);bal.push([x,yy,z,ry])}}}}
-  if(led.length){const im=new THREE.InstancedMesh(unitBox,ledgeMat,led.length);led.forEach(([x,y,z,ry,w,h,d],i)=>{qq.setFromAxisAngle(new V3(0,1,0),ry);mtx.compose(new V3(x,y,z),qq,new V3(w,h,d));im.setMatrixAt(i,mtx)});im.castShadow=q==='high';im.receiveShadow=true;im.userData.r8=1;root.add(im);done.add(im)}
+  if(led.length){const im=new THREE.InstancedMesh(unitBox,ledgeMat,led.length);led.forEach(([x,y,z,ry,w,h,d],i)=>{qq.setFromAxisAngle(new V3(0,1,0),ry);mtx.compose(new V3(x,y,z),qq,new V3(w,h,d));im.setMatrixAt(i,mtx)});im.castShadow=false;im.receiveShadow=true;im.userData.r8=1;root.add(im);done.add(im)}
   if(bay.length){const im=new THREE.InstancedMesh(unitBox,q==='high'?darkGlass:railMat,bay.length);bay.forEach(([x,y,z,ry,w,h,d],i)=>{qq.setFromAxisAngle(new V3(0,1,0),ry);mtx.compose(new V3(x,y,z),qq,new V3(w,h,d));im.setMatrixAt(i,mtx)});im.receiveShadow=true;im.userData.r8=1;root.add(im);done.add(im);const fr=new THREE.InstancedMesh(unitBox,ironMat,bay.length);bay.forEach(([x,y,z,ry,w,h,d],i)=>{qq.setFromAxisAngle(new V3(0,1,0),ry);mtx.compose(new V3(x,y+h/2+.05,z),qq,new V3(w+.12,.1,d+.06));fr.setMatrixAt(i,mtx)});fr.userData.r8=1;root.add(fr);done.add(fr);R.stats.bays=bay.length}
   inst(balSlab,ledgeMat,bal.map(([x,y,z,ry])=>[x,z,ry,y]));inst(balRail,railMat,bal.map(([x,y,z,ry])=>[x,z,ry,y]));st.n+=led.length+bal.length;R.stats.ledges=led.length;R.stats.balconies=bal.length;
   inst(acGeo,acMat,acs);inst(tankGeo,tankMat,tanks);inst(hutGeo,hutMat,huts);st.n+=acs.length+tanks.length+huts.length;

@@ -565,9 +565,11 @@ function tpFrame(dt,time){try{
  const b=tp.bounds;if(b&&view==='venue'&&!venueIsOutdoor()){want.x=THREE.MathUtils.clamp(want.x,b.x0,b.x1+8);want.z=THREE.MathUtils.clamp(want.z,b.z0,b.z1+8)}
  want.y=Math.max(want.y,.9);
  if(!tp.ready){tp.cam.position.copy(want);tp.ready=true;labelsDirty=true}else{const k=motionReduced()?1:1-Math.exp(-dt*(onMap?CAM.damp.pos*2.2:CAM.damp.pos));tp.cam.position.lerp(want,k)}
- tp.cam.lookAt(lookAt);labelsDirty=true
+ tp.cam.lookAt(lookAt);labelsDirty=true;nearFade()
  if(view==='map'){walkFrame(time);streetFrame(dt,time);try{crosswalks();pedFrame(dt,time);hitCheck(time)}catch(err){console.warn('Street life paused',err)}}
 }catch(err){console.warn('Follow camera disabled',err);tp.failed=true;tp.ready=false;$('worldUI')?.classList.remove('tp-view')}}
+// Characters (pedestrians, NPCs) that come within ~1.2 m of the follow camera are hidden so nothing fills the screen.
+function nearFade(){const c=tp.cam.position;for(const g of root.children){const u=g.userData;if(!u||!u.limbs||g===player)continue;const d=Math.hypot(g.position.x-c.x,g.position.z-c.z),near=d<1.2&&c.y<g.position.y+2.6;if(near&&!u.camHid&&g.visible){u.camHid=1;g.visible=false}else if(!near&&u.camHid){u.camHid=0;g.visible=true}}}
 // Walking the city map in follow-camera mode. Entering a venue uses the same flow as the place sheet's Enter/Go button.
 function walkFrame(time){
  const half={x:(layout.width||300)/2-2,z:(layout.depth||300)/2-2};player.position.x=THREE.MathUtils.clamp(player.position.x,-half.x,half.x);player.position.z=THREE.MathUtils.clamp(player.position.z,-half.z,half.z);
@@ -596,7 +598,7 @@ function streetFrame(dt,time){const me=player?.position;for(const r of streetPee
 const peds=[];let pedSeed=1,xwalk=null;const PED_LINES=['Nice weather today!','Have you tried the noodles on this street?','Sorry, I’m in a hurry!','Welcome to '+'the city!','The metro is that way.','Ni hao! 你好!','Watch out for the cars!','I love this neighbourhood.','Going to the market.','Party Night is tonight, see you there!'];
 function pedCap(){const low=(navigator.deviceMemory&&navigator.deviceMemory<=3)||(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=4)||animate.fps<30;return low?8:16}
 function pedSpawn(){const me=player.position,xs=layout.xs||[],zs=layout.zs||[];if(!xs.length||!zs.length)return;const alongX=Math.random()<.5,lines=alongX?zs:xs;const near=lines.filter(l=>Math.abs(l-(alongX?me.z:me.x))<30);if(!near.length)return;const line=near[Math.floor(Math.random()*near.length)],side=Math.random()<.5?-1:1,off=line+side*2.35,along=(alongX?me.x:me.z)+(Math.random()*44-22);const x=alongX?along:off,z=alongX?off:along;if(Math.hypot(x-me.x,z-me.z)<6)return;
- const look={...npcLook(pedSeed*7+3),lite:true};const tints=[0x9a7b6b,0x6d8a96,0x8f8f7a,0xa08cab,0x7b9a83,0xb59a7a,0x777f8f];const body=person(x,z,tints[pedSeed%tints.length],look.skin||0x8d5524,'',null,{...look,crowd:true});pedSeed++;body.scale.setScalar(AVATAR*.92);body.userData.ped=true;body.traverse(o=>{if(o.isMesh)o.castShadow=false});if(tp.walk)litCopy(body,true);
+ const look={...npcLook(pedSeed*7+3),lite:false};const tints=[0x9a7b6b,0x6d8a96,0x8f8f7a,0xa08cab,0x7b9a83,0xb59a7a,0x777f8f];const body=person(x,z,tints[pedSeed%tints.length],look.skin||0x8d5524,'',null,{...look,crowd:true});pedSeed++;body.scale.setScalar(AVATAR*.92);body.userData.ped=true;body.traverse(o=>{if(o.isMesh)o.castShadow=false});if(tp.walk)litCopy(body,true);
  peds.push({body,axis:alongX?'x':'z',dir:Math.random()<.5?-1:1,speed:1+Math.random()*.6,line:off,nextTurn:0,pause:0})}
 function pedClear(){for(const q of peds){litCopy(q.body,false);q.body.parent?.remove(q.body);q.body.traverse(o=>{if(!o.userData.r7person)o.geometry?.dispose()});const l=labels.find(l=>l.follow===q.body);if(l){l.el.remove();labels=labels.filter(x=>x!==l)}}peds.length=0}
 function pedFrame(dt,time){if(!tp.walk||!player){if(peds.length)pedClear();return}if(peds[0]&&peds[0].body.parent!==root)peds.length=0;const me=player.position;
