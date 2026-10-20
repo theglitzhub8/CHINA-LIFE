@@ -50,7 +50,7 @@ export function create(ctx){
  // Plain box buildings get a procedural facade in one shader (no new textures, no extra draw calls): window grid with
  // frames and ledges, a ground-floor shopfront band with a coloured sign strip, a cornice at the roofline, and windows
  // that light up at night. Low keeps the window grid, shopfronts and night lights but skips the noise/ledge detail.
- const uNight={value:0};R.night=uNight;let OFF='';try{OFF=localStorage.getItem('r8off')||''}catch{}
+ const uNight={value:0};R.night=uNight;let OFF='';try{if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)||/[?&]cldebug=1/.test(location.search))OFF=localStorage.getItem('r8off')||''}catch{}// dev-only feature switches
  const GLSL_H='float r8h(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}\n';
  const bldMats=new Map();let _fd,_fn;const facD=()=>_fd||(_fd=tex('fac_day_'+(q==='high'?'h':'l'),true)),facN=()=>_fn||(_fn=tex('fac_night_'+(q==='high'?'h':'l'),true));
  function bldMat(src){const k=src.uuid;if(bldMats.has(k))return bldMats.get(k);const m=src.clone();m.userData.r7=1;m.userData.r8bld=1;if(m.map){m.color.multiply(texAvg(m.map));m.map=null}m.emissiveMap=null;m.emissive.set(0);if(q==='high')m.roughness=Math.max(.8,m.roughness);
@@ -72,7 +72,7 @@ export function create(ctx){
   vec2 tuv=vec2((u-(abs(vBN.x)>abs(vBN.z)?vBC.y:vBC.x))/18.+r8h(vec2(sd,1.7))*.0,(h-gf)/18.),f=fract(tuv),o=vec2(mod(sl,2.)*.5,.5-floor(sl*.5)*.5),au=o+.003+f*.494;
   vec2 gx=dFdx(tuv),gy=dFdy(tuv);float lod=max(0.,log2(max(length(gx),length(gy))*FACT));vec4 fd=textureLod(tFacD,au,lod);vec3 fn=textureLod(tFacN,au,max(0.,lod-1.)).rgb;
   float lw2=dot(wall,vec3(.3,.59,.11));vec3 tint=lw2>.03?clamp(mix(vec3(1.),wall/lw2,sl>2.5?.08:.22),.75,1.3):vec3(1.);
-  col=fd.rgb*mix(tint,vec3(1.),fd.a)*(sl>2.5?1.7:1.05);bGlass=fd.a*(sl>2.5?.85:1.);if(sl>2.5){vec2 ce=floor(tuv*vec2(16.,10.));fn=mix(vec3(1.,.8,.55),vec3(.8,.9,1.),r8h(ce.yx+sd))*step(.62,r8h(ce+sd*3.1))*.9;}vec2 wc=floor(tuv*6.);fn*=step(.45,r8h(wc+sd*5.3));bEmit=fn*vec3(1.,.88,.72)*fd.a*uNight*.55+col*(.16+.22*fd.a)*(1.-uNight);
+  col=fd.rgb*mix(tint,vec3(1.),fd.a)*(sl>2.5?1.7:1.05);bGlass=fd.a*(sl>2.5?.85:1.);if(sl>2.5){vec2 ce=floor(tuv*vec2(16.,10.));fn=mix(vec3(1.,.8,.55),vec3(.8,.9,1.),r8h(ce.yx+sd))*step(.74,r8h(ce+sd*3.1))*.55;}vec2 wc=floor(tuv*6.);fn*=step(.45,r8h(wc+sd*5.3));bEmit=fn*vec3(1.,.86,.68)*fd.a*uNight*.4+col*(.16+.22*fd.a)*(1.-uNight);
 #ifdef R8_DBG
 dbgC=R8_DBG;dbgOn=1.;
 #endif
@@ -115,7 +115,7 @@ dbgC=R8_DBG;dbgOn=1.;
  const binGeo=mergeGeometries([new THREE.CylinderGeometry(.22,.2,.78,10).translate(0,.39,0),new THREE.CylinderGeometry(.24,.24,.06,10).translate(0,.81,0)]);
  const crownGeo=(()=>{const parts=[[0,0,0,1],[.55,.2,.25,.7],[-.48,.32,-.3,.66]].map(([x,y,z,r])=>{const g=new THREE.IcosahedronGeometry(r,0);const p=g.attributes.position;for(let i=0;i<p.count;i++){const k=1+.09*Math.sin(p.getX(i)*9.1+p.getY(i)*5.3+p.getZ(i)*7.7);p.setXYZ(i,p.getX(i)*k,p.getY(i)*k,p.getZ(i)*k)}return g.translate(x,y,z)});const g=mergeGeometries(parts.map(g=>{g.deleteAttribute('uv');return g}));g.computeVertexNormals();return g})();
  const unitBox=new THREE.BoxGeometry(1,1,1),balSlab=new THREE.BoxGeometry(2.2,.14,1.1),balRail=mergeGeometries([new THREE.BoxGeometry(2.2,.95,.05).translate(0,.55,.53),new THREE.BoxGeometry(.05,.95,1.1).translate(-1.08,.55,0),new THREE.BoxGeometry(.05,.95,1.1).translate(1.08,.55,0),new THREE.BoxGeometry(2.24,.06,.08).translate(0,1.04,.53)]);
- const ledgeMat=new THREE.MeshStandardMaterial({color:0xbab5ab,roughness:.95}),railMat=new THREE.MeshStandardMaterial({color:0x30383d,roughness:.4,metalness:.6});ledgeMat.userData.r7=railMat.userData.r7=1;
+ const ledgeMat=new THREE.MeshStandardMaterial({color:0xa29d93,roughness:.95}),railMat=new THREE.MeshStandardMaterial({color:0x30383d,roughness:.4,metalness:.6});ledgeMat.userData.r7=railMat.userData.r7=1;
  const acGeo=mergeGeometries([new THREE.BoxGeometry(1.1,.75,.8).translate(0,.45,0),new THREE.BoxGeometry(1.2,.08,.9).translate(0,.04,0)]),tankGeo=mergeGeometries([new THREE.CylinderGeometry(.75,.75,1.5,12).translate(0,1.35,0),new THREE.BoxGeometry(1.4,.6,1.4).translate(0,.3,0)]),hutGeo=new THREE.BoxGeometry(2.2,2.3,2.4).translate(0,1.15,0);
  const acMat=new THREE.MeshStandardMaterial({color:0xc4c8ca,roughness:.5,metalness:.5}),tankMat=new THREE.MeshStandardMaterial({color:0x8f989c,roughness:.45,metalness:.6}),hutMat=new THREE.MeshStandardMaterial({color:0xb9b4aa,roughness:.95});for(const m of [acMat,tankMat,hutMat])m.userData.r7=1;
  const inside=(blds,x,z,pad=0)=>blds.some(b=>x>b.b.min.x-pad&&x<b.b.max.x+pad&&z>b.b.min.z-pad&&z<b.b.max.z+pad);
@@ -136,18 +136,20 @@ dbgC=R8_DBG;dbgOn=1.;
    const nA=Math.max(1,Math.min(5,Math.floor(w*d/30)));for(let k=0;k<nA;k++)acs.push([min.x+1+rnd(k)*(w-2),min.z+1+rnd(k+9)*(d-2),rnd(k+3)>.5?0:Math.PI/2,max.y]);
    if(top>8&&w>5&&d>5){if(rnd(20)>.4)tanks.push([min.x+1.6+rnd(21)*(w-3.2),min.z+1.6+rnd(22)*(d-3.2),0,max.y]);huts.push([min.x+1.6+rnd(23)*(w-3.2),min.z+1.6+rnd(24)*(d-3.2),0,max.y])}}
   // Facade depth: floor ledges and corner pilasters on open faces, balconies on residential (brick) facades (High).
-  const led=[],bal=[];for(const b of blds){if(!b.ax)continue;const {min,max}=b.b,top=max.y-min.y;if(top<4)continue;const gf=top<5.6?top-.45:3.3;const rnd=k=>Math.abs(Math.sin(b.seed*12.9898+k*78.233)*43758.5453)%1;
+  const led=[],bal=[],bay=[];for(const b of blds){if(!b.ax)continue;const {min,max}=b.b,top=max.y-min.y;if(top<4)continue;const gf=top<5.6?top-.45:3.3;const rnd=k=>Math.abs(Math.sin(b.seed*12.9898+k*78.233)*43758.5453)%1;
    for(const [nx,nz] of [[1,0],[-1,0],[0,1],[0,-1]]){const fx=nx>0?max.x:nx<0?min.x:0,fz=nz>0?max.z:nz<0?min.z:0,a0=nx?min.z:min.x,a1=nx?max.z:max.x,L=a1-a0,cm=(a0+a1)/2,ry=Math.atan2(nx,nz);
     if(inside(all.filter(o=>o!==b),nx?fx+nx*2.5:cm,nz?fz+nz*2.5:cm)&&inside(all.filter(o=>o!==b),nx?fx+nx*2.5:a0+.5,nz?fz+nz*2.5:a0+.5))continue;
     const P=(along,out,y)=>nx?[fx+nx*out,y,along]:[along,y,fz+nz*out];
     for(let y=gf;y<top-.9;y+=3){const [x,yy,z]=P(cm,.1,min.y+y);led.push([x,yy,z,ry,L+.2,.12,.18])}
-    for(const e of [a0,a1]){const [x,yy,z]=P(e,0,min.y+top/2);led.push([x,yy,z,ry,.42,top-.2,.42])}
-    if(q==='high'&&(b.slot===0||b.slot===2)&&top>5.5){for(let y=gf+3;y<top-1.5;y+=3)for(let k=0;(k+1)*3<=L-.4;k++){if(rnd(k*7+y*3+nx*2+nz*5)<.45)continue;const [x,yy,z]=P(a0+((L-Math.floor(L/3)*3)/2)+(k+.5)*3,.55,min.y+y+.05);bal.push([x,yy,z,ry])}}}}
+    for(const e of [a0,a1]){const [x,yy,z]=P(e,0,min.y+top/2);led.push([x,yy,z,ry,.42,top-.2,.42])}{const [x,yy,z]=P(cm,.18,max.y-.16);led.push([x,yy,z,ry,L+.5,.32,.36])}
+    for(let k=Math.ceil((a0+.2)/3.2);(k+1)*3.2<=a1-.2;k++){const sh=Math.abs(Math.sin(k*91.7+b.seed*13.1))%1;if(sh<.35)continue;const bh=gf*.6,[x,yy,z]=P((k+.5)*3.2,.16,min.y+.12+bh/2);bay.push([x,yy,z,ry,2.6,bh,.32])}
+    if(q==='high'&&b.slot!==3&&top>5){for(let y=gf+3;y<top-1.5;y+=3)for(let k=0;(k+1)*3<=L-.4;k++){if(rnd(k*7+y*3+nx*2+nz*5)<(b.slot===1?.7:.35))continue;const [x,yy,z]=P(a0+((L-Math.floor(L/3)*3)/2)+(k+.5)*3,.55,min.y+y+.05);bal.push([x,yy,z,ry])}}}}
   if(led.length){const im=new THREE.InstancedMesh(unitBox,ledgeMat,led.length);led.forEach(([x,y,z,ry,w,h,d],i)=>{qq.setFromAxisAngle(new V3(0,1,0),ry);mtx.compose(new V3(x,y,z),qq,new V3(w,h,d));im.setMatrixAt(i,mtx)});im.castShadow=q==='high';im.receiveShadow=true;im.userData.r8=1;root.add(im);done.add(im)}
+  if(bay.length){const im=new THREE.InstancedMesh(unitBox,q==='high'?darkGlass:railMat,bay.length);bay.forEach(([x,y,z,ry,w,h,d],i)=>{qq.setFromAxisAngle(new V3(0,1,0),ry);mtx.compose(new V3(x,y,z),qq,new V3(w,h,d));im.setMatrixAt(i,mtx)});im.receiveShadow=true;im.userData.r8=1;root.add(im);done.add(im);const fr=new THREE.InstancedMesh(unitBox,ironMat,bay.length);bay.forEach(([x,y,z,ry,w,h,d],i)=>{qq.setFromAxisAngle(new V3(0,1,0),ry);mtx.compose(new V3(x,y+h/2+.05,z),qq,new V3(w+.12,.1,d+.06));fr.setMatrixAt(i,mtx)});fr.userData.r8=1;root.add(fr);done.add(fr);R.stats.bays=bay.length}
   inst(balSlab,ledgeMat,bal.map(([x,y,z,ry])=>[x,z,ry,y]));inst(balRail,railMat,bal.map(([x,y,z,ry])=>[x,z,ry,y]));st.n+=led.length+bal.length;R.stats.ledges=led.length;R.stats.balconies=bal.length;
   inst(acGeo,acMat,acs);inst(tankGeo,tankMat,tanks);inst(hutGeo,hutMat,huts);st.n+=acs.length+tanks.length+huts.length;
   inst(benchGeo,woodMat,bench);inst(benchIron,ironMat,bench);inst(binGeo,binMat,bin);st.n+=bench.length+bin.length;R.stats.furniture=(R.stats.furniture||0)+aw.length+bench.length+bin.length}
- const done=new WeakSet(),allBld=[];R.stripNow=()=>{stripWin(scene,allBld);return R.stats.stripped};
+ const done=new WeakSet(),allBld=[];
  // Photo facades replace the old modelled window panes/frames/ledges on upper floors; collapse those triangles so they
  // do not z-fight with the facade (ground-floor shopfront parts, signs, roofs and cornices stay).
  function stripWin(root,blds){if(!blds.length)return;const zs=blds.map(b=>{const t=b.b.max.y-b.b.min.y;return {b:b.b,y0:b.b.min.y+(t<5.6?t-.45:3.3)+.05,y1:b.b.max.y-.8}}).filter(z=>z.y1>z.y0);if(!zs.length)return;let n=0;const a=new V3(),b2=new V3(),c=new V3();
