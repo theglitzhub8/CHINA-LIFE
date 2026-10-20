@@ -54,7 +54,7 @@ export function create(ctx){
  const GLSL_H='float r8h(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}\n';
  const bldMats=new Map();
  function bldMat(src){const k=src.uuid;if(bldMats.has(k))return bldMats.get(k);const m=src.clone();m.userData.r7=1;m.userData.r8bld=1;if(m.map){m.color.multiply(texAvg(m.map));m.map=null}m.emissiveMap=null;m.emissive.set(0);if(q==='high')m.roughness=Math.max(.8,m.roughness);
-  m.onBeforeCompile=s=>{s.uniforms.uNight=uNight;m.userData.cmp=(m.userData.cmp||0)+1;
+  m.onBeforeCompile=s=>{s.uniforms.uNight=uNight;
    s.vertexShader='attribute vec4 aBld;varying vec4 vBld;varying vec3 vBP;varying vec3 vBN;\n'+s.vertexShader.replace('#include <project_vertex>','#include <project_vertex>\nvBP=(modelMatrix*vec4(transformed,1.)).xyz;vBN=normalize(mat3(modelMatrix)*objectNormal);vBld=aBld;');
    s.fragmentShader=(q==='high'?'':'#define R8_LOW\n')+'uniform float uNight;varying vec4 vBld;varying vec3 vBP;varying vec3 vBN;float bGlass=0.;vec3 bEmit=vec3(0.);\n'+GLSL_H+s.fragmentShader
     .replace('#include <map_fragment>',`#include <map_fragment>
@@ -82,7 +82,7 @@ export function create(ctx){
  diffuseColor.rgb=col;}}`)
     .replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nroughnessFactor=mix(roughnessFactor,.14,bGlass);')
     .replace('#include <metalnessmap_fragment>','#include <metalnessmap_fragment>\nmetalnessFactor=mix(metalnessFactor,.25,bGlass);')
-    .replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\ntotalEmissiveRadiance+=bEmit;');m.userData.fsHas=s.fragmentShader.includes('bEmit=sc');m.userData.vsHas=s.vertexShader.includes('vBld=aBld')};
+    .replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\ntotalEmissiveRadiance+=bEmit;')};
   m.customProgramCacheKey=()=>'r8bld'+q;bldMats.set(k,m);return m}
  // Split a (merged) mesh into solids by welding equal corner positions, then tag ground-standing boxes taller than 4 m.
  const B3=THREE.Box3,V3=THREE.Vector3;
@@ -91,7 +91,7 @@ export function create(ctx){
   const key=new Map();for(let i=0;i<n;i++){const k=Math.round(pos.getX(i)*200)+','+Math.round(pos.getY(i)*200)+','+Math.round(pos.getZ(i)*200);const j=key.get(k);if(j===undefined)key.set(k,i);else uni(i,j)}
   const idx=g.index;if(idx)for(let t=0;t<idx.count;t+=3){uni(idx.getX(t),idx.getX(t+1));uni(idx.getX(t),idx.getX(t+2))}else for(let t=0;t<n;t+=3){uni(t,t+1);uni(t,t+2)}
   const comp=new Map(),v=new V3(),nrm=g.attributes.normal;o.updateMatrixWorld();for(let i=0;i<n;i++){const r=find(i);let c=comp.get(r);if(!c){c={b:new B3(),ax:true,v:[]};comp.set(r,c)}v.fromBufferAttribute(pos,i).applyMatrix4(o.matrixWorld);c.b.expandByPoint(v);c.v.push(i);if(nrm){const ax=Math.abs(nrm.getX(i)),ay=Math.abs(nrm.getY(i)),az=Math.abs(nrm.getZ(i));if(Math.max(ax,ay,az)<.98)c.ax=false}}
-  const a=new Float32Array(n*4),out=[];let any=false;R.lastComps=[...comp.values()].slice(0,8).map(c=>{const z=c.b.getSize(new V3());return [z.x.toFixed(1),z.y.toFixed(1),z.z.toFixed(1),c.b.min.y.toFixed(2),c.v.length]});for(const c of comp.values()){const s=c.b.getSize(new V3());if(s.y>2&&Math.min(s.x,s.z)>1.2&&c.b.min.y<1.2){any=true;const seed=Math.abs(Math.sin(c.b.min.x*12.9898+c.b.min.z*78.233))*43758.5453%97;for(const i of c.v){a[i*4]=c.b.min.y;a[i*4+1]=c.b.max.y;a[i*4+2]=seed;a[i*4+3]=1}out.push({b:c.b,ax:c.ax,seed})}}
+  const a=new Float32Array(n*4),out=[];let any=false;for(const c of comp.values()){const s=c.b.getSize(new V3());if(s.y>2&&Math.min(s.x,s.z)>1.2&&c.b.min.y<1.2){any=true;const seed=Math.abs(Math.sin(c.b.min.x*12.9898+c.b.min.z*78.233))*43758.5453%97;for(const i of c.v){a[i*4]=c.b.min.y;a[i*4+1]=c.b.max.y;a[i*4+2]=seed;a[i*4+3]=1}out.push({b:c.b,ax:c.ax,seed})}}
   if(!any)return null;g.setAttribute('aBld',new THREE.BufferAttribute(a,4));return out}
  const facadeTex=t=>!!t&&t.image instanceof HTMLCanvasElement&&t.image.width<=256&&t.image.height<=256;
  const avgCol=new Map();function texAvg(t){if(avgCol.has(t))return avgCol.get(t);let c=new THREE.Color(0xd8d2c6);try{const d=t.image.getContext('2d').getImageData(0,0,t.image.width,t.image.height).data;let r=0,g=0,b=0,n=0;for(let i=0;i<d.length;i+=16){const l=d[i]+d[i+1]+d[i+2];if(l>300){r+=d[i];g+=d[i+1];b+=d[i+2];n++}}if(n)c=new THREE.Color().setRGB(r/n/255,g/n/255,b/n/255,THREE.SRGBColorSpace)}catch{}avgCol.set(t,c);return c}
@@ -103,7 +103,7 @@ export function create(ctx){
  const benchGeo=(()=>{const parts=[[1.5,.06,.42,0,.45,0],[1.5,.32,.05,0,.72,-.2]].map(([w,h,d,x,y,z])=>new THREE.BoxGeometry(w,h,d).translate(x,y,z));return mergeGeometries(parts)})();
  const benchIron=(()=>{const parts=[];for(const x of [-.66,.66]){parts.push(new THREE.BoxGeometry(.06,.45,.42).translate(x,.22,0),new THREE.BoxGeometry(.06,.4,.05).translate(x,.68,-.21))}return mergeGeometries(parts)})();
  const binGeo=mergeGeometries([new THREE.CylinderGeometry(.22,.2,.78,10).translate(0,.39,0),new THREE.CylinderGeometry(.24,.24,.06,10).translate(0,.81,0)]);
- const crownGeo=(()=>{const parts=[[0,0,0,1],[.55,.18,.25,.72],[-.5,.3,-.28,.68],[.05,.5,-.45,.6]].map(([x,y,z,r])=>{const g=new THREE.IcosahedronGeometry(r,1);const p=g.attributes.position;for(let i=0;i<p.count;i++){const k=1+.09*Math.sin(p.getX(i)*9.1+p.getY(i)*5.3+p.getZ(i)*7.7);p.setXYZ(i,p.getX(i)*k,p.getY(i)*k,p.getZ(i)*k)}return g.translate(x,y,z)});const g=mergeGeometries(parts.map(g=>{g.deleteAttribute('uv');return g}));g.computeVertexNormals();return g})();
+ const crownGeo=(()=>{const parts=[[0,0,0,1],[.55,.2,.25,.7],[-.48,.32,-.3,.66]].map(([x,y,z,r])=>{const g=new THREE.IcosahedronGeometry(r,0);const p=g.attributes.position;for(let i=0;i<p.count;i++){const k=1+.09*Math.sin(p.getX(i)*9.1+p.getY(i)*5.3+p.getZ(i)*7.7);p.setXYZ(i,p.getX(i)*k,p.getY(i)*k,p.getZ(i)*k)}return g.translate(x,y,z)});const g=mergeGeometries(parts.map(g=>{g.deleteAttribute('uv');return g}));g.computeVertexNormals();return g})();
  const inside=(blds,x,z,pad=0)=>blds.some(b=>x>b.b.min.x-pad&&x<b.b.max.x+pad&&z>b.b.min.z-pad&&z<b.b.max.z+pad);
  function furnish(root,blds,lamps){const st=root.userData.r8||(root.userData.r8={blds:[],n:0});R.r8root=root;st.blds.push(...blds);const all=st.blds;const mtx=new THREE.Matrix4(),qq=new THREE.Quaternion(),e=new THREE.Euler(),one=new V3(1,1,1),col=new THREE.Color();
   const aw=[];for(const b of blds){if(!b.ax||b.b.max.y-b.b.min.y<2.2)continue;const {min,max}=b.b;const top=max.y-min.y,gf=top<5.6?top-.45:3.3;
@@ -200,5 +200,5 @@ export function create(ctx){
   if(r.act.Walk_Loop)r.act.Walk_Loop.timeScale=THREE.MathUtils.clamp(hps/.95,.6,1.7);if(r.act.Jog_Fwd_Loop)r.act.Jog_Fwd_Loop.timeScale=THREE.MathUtils.clamp(hps/1.9,.7,1.4);
   r.mixer.update(step);return true};
  R.undress=g=>{const r=g.userData.real;if(!r)return;r.m.removeFromParent();r.mixer.stopAllAction();for(const c of g.children)if(c.userData.r7hidden!==undefined){c.visible=c.userData.r7hidden;delete c.userData.r7hidden}delete g.userData.real;people.delete(g)};
- R.decorate=decorate;R.bldList=()=>(R.r8root?.userData.r8?.blds||[]).map(b=>({min:b.b.min.toArray(),max:b.b.max.toArray(),ax:b.ax}));R.dbgBld=o=>({cand:isBldCandidate(o,o.material),done:done.has(o),prep:(()=>{try{const g=o.geometry;const had=g.attributes.aBld;const r=had?'had':bldPrep(o);return r==='had'?'had':r?r.length:null}catch(e){return String(e)}})()});R.light=light;R.paint=paint;R.count=()=>people.size;
+ R.decorate=decorate;R.bldList=()=>(R.r8root?.userData.r8?.blds||[]).map(b=>({min:b.b.min.toArray(),max:b.b.max.toArray(),ax:b.ax}));R.light=light;R.paint=paint;R.count=()=>people.size;
  return R}
