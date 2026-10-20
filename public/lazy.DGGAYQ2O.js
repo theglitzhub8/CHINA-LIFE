@@ -188,7 +188,7 @@ flat varying vec4 vBld;varying vec3 vBP;varying vec3 vBN;float bGlass=0.;vec3 bE
  vec3 col=wall;float gf=top<5.6?top-.45:3.3;
  if(h<gf){float cw=3.2,cx=fract(u/cw),ci=floor(u/cw),sh=r8h(vec2(ci,sd));vec3 sc=.5+.45*cos(6.2831*(sh+vec3(0.,.33,.67)));
   if(h>gf*.72&&h<gf*.94){col=sc*.8;bEmit=sc*uNight*.85;}
-  else if(h>.1&&h<gf*.66&&cx>.07&&cx<.93){float gt=gf*.66;col=mix(vec3(.07,.09,.11),vec3(.30,.35,.40),smoothstep(.2,gt,h));bGlass=1.;bEmit=vec3(1.,.82,.58)*step(.22,sh)*(.18+.9*uNight)*(.55+.45*smoothstep(gt,.3,h));}
+  else if(h>.1&&h<gf*.66&&cx>.07&&cx<.93){float gt=gf*.66;col=mix(vec3(.07,.09,.11),vec3(.30,.35,.40),smoothstep(.2,gt,h));bGlass=1.;bEmit=vec3(1.,.78,.52)*step(.22,sh)*(.06+.42*uNight)*(.55+.45*smoothstep(gt,.3,h));}
   else col=wall*.6+.03;}
  else if(h>=gf&&h<top-.75){float sl=top>16.&&r8h(vec2(sd,3.1))>.45?3.:floor(r8h(vec2(sd,7.7))*2.999);
   vec2 tuv=vec2((u-(abs(vBN.x)>abs(vBN.z)?vBC.y:vBC.x))/18.+r8h(vec2(sd,1.7))*.0,(h-gf)/18.),f=fract(tuv),o=vec2(mod(sl,2.)*.5,.5-floor(sl*.5)*.5),au=o+.003+f*.494;
