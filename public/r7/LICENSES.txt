@@ -15,6 +15,10 @@ r7/rb/*.glb, r7/rb/lo/*.glb — Microsoft Rocketbox Avatar Library (18 avatars: 
 Female_Adult_03/08/11/12, Female_Party_01/02, Male_Adult_02/04/10/12/15/17/18, Sports_Male_03), converted to glTF with
 meshopt geometry and WebP textures (512 px; lo/ 256 px). Source: https://github.com/microsoft/Microsoft-Rocketbox
 
+r7/rb/loco.glb (R9e) — walking and running motion capture from the same Microsoft Rocketbox Avatar Library (MIT, licence below),
+Assets/Animations/all_animations_max_motextr_xy: m_walk_neutral, m_walk_fast_02, m_run_fast_01, f_walk_neutral, f_walk_fast_03,
+f_run_fast_01 (.max.fbx). Converted with FBX2glTF, body bones only, resampled and meshopt-compressed by scripts/r9-assets/loco.mjs.
+
 MIT License
 
 Copyright (c) 2020 Microsoft Corporation
