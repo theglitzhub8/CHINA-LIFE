@@ -7,3 +7,4 @@ R7 realism assets — all CC0 1.0 (public domain), no attribution required (cred
 R8 photo facades (tex/fac_day_*.webp, tex/fac_night_*.webp): ambientCG (https://ambientcg.com), CC0 1.0 Universal.
   Facade018A/C, Facade019A/C, Facade020A/C, Facade001, Facade017 — day colour + window mask (from Metalness) and night colour,
   packed into 2x2 atlases by scripts/r8-assets/facades.mjs.
+R8 crowd LOD (r7/man_lo.glb, r7/woman_lo.glb): meshoptimizer-simplified copies of the Quaternius Universal Base Characters above (CC0), made by scripts/r8-assets/people-lod.mjs.
