@@ -134,3 +134,11 @@ Every server-side money change goes through the ledger (`chinalife_economy_actio
 - Occlusion: rises over buildings first, pulls in only as a fallback; eased look-at.
 - Movement: accel/decel, short glide on stop, speed-matched stride for local and remote players; framerate-independent damping.
 - Measured (390/430): street char ≈12.6% of viewport, venue ≈14.5%; tests 164/131 (baseline).
+
+## R7 realism prototype (branch r7-real, not deployed)
+- `public/realism.js`, loaded on demand after the first frame (`?gfx=classic` disables it). Build now uses esbuild code splitting: app + shared three chunk (modulepreload) + lazy realism chunk (66 KB, 22 KB gz).
+- People: Quaternius Universal Base Characters (CC0), male/female, rigged; walk/jog/idle/dance/sit from Universal Animation Library (CC0). Applied to the local player and remote players (NPCs stay as before). The legacy body stays in the group (hidden), so sync, labels, positions and hit boxes are unchanged. Clothes are painted per body region from the saved outfit colours (top/bottom/shoes, sleeves, shorts), skin is tinted, hair is tinted or hidden for bald.
+- Surfaces: ambientCG CC0 asphalt, paving, brick and concrete in world-space UVs (512 px WebP, ORM 256 px). Glass is reflective and cars get clearcoat paint (High only).
+- Light: three.js Sky, PMREM IBL from the sky, sun that follows the player with a 2048 soft shadow (High), time of day (day, sunset, night/moon), fog/haze. Club uses a small neon env map and a glossy floor. ACES plus a light grade done in the tone-map step, so there's no post pass.
+- Quality: Settings → "Graphics: Auto/High/Low". Auto picks from WebGL2, GPU and memory, and drops to Low on the next start if High holds under 26 fps for 8 s. Low: people, ACES and albedo-only roads; no sky/IBL, normal maps or clearcoat.
+- Assets: +1.6 MB raw / 1.0 MB gz, lazy, under `/r7/` with `?v=r7a`. Startup bundle size is unchanged. Before deploying, add a long-cache rule (immutable, 1y) for `/r7/` and `lazy.*.js`. Asset pipeline is in `scripts/r7-assets/`; licences are in `public/r7/LICENSES.txt`.
