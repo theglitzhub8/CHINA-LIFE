@@ -238,7 +238,7 @@ function makeClubEnv(){const s=new THREE.Scene();s.background=new THREE.Color(0x
    const tr=(n,i)=>new THREE.QuaternionKeyframeTrack(n+'.quaternion',[0,T/2,T],[...keys[0][i].toArray(),...keys[1][i].toArray(),...keys[0][i].toArray()]);keep.push(tr(up.name,0),tr(lo.name,1))}
   clips.Idle_Loop=new THREE.AnimationClip('Relaxed_Idle',T,tracks.concat(keep))}
  const REG={pelvis:4,root:4,thigh:4,calf:5,foot:6,ball:6,spine_01:1,spine_02:1,spine_03:1,clavicle:1,upperarm:2,lowerarm:3,neck_01:0,Head:0,hand:0};
- function prep(scene){let height=1.8;scene.traverse(o=>{if(!o.isSkinnedMesh)return;o.frustumCulled=false;o.castShadow=true;o.receiveShadow=true;const mn=o.material.name||'';
+ function prep(scene){let height=1.8;scene.traverse(o=>{if(o.isBone)o.userData.rest=[o.position.toArray(),o.quaternion.toArray()]});scene.traverse(o=>{if(!o.isSkinnedMesh)return;o.frustumCulled=false;o.castShadow=true;o.receiveShadow=true;const mn=o.material.name||'';
    if(/Superhero/.test(mn)){const names=o.skeleton.bones.map(b=>b.name),cat=names.map(n=>{for(const k in REG)if(n===k||n.startsWith(k+'_')||n.startsWith(k))return REG[k];return /index|middle|pinky|ring|thumb/.test(n)?0:1});const si=o.geometry.attributes.skinIndex,sw=o.geometry.attributes.skinWeight,r=new Float32Array(si.count);for(let i=0;i<si.count;i++){let best=0,bw=-1;for(let k=0;k<4;k++){const w=sw.getComponent(i,k);if(w>bw){bw=w;best=si.getComponent(i,k)}}r[i]=cat[best]}o.geometry.setAttribute('region',new THREE.BufferAttribute(r,1));o.userData.body=1;o.geometry.computeBoundingBox();height=o.geometry.boundingBox.max.y-o.geometry.boundingBox.min.y}
    else if(/Hair/.test(mn))o.userData.hair=1});scene.userData.h=height;return scene}
  const REF=new THREE.Color().setRGB(166/255,120/255,88/255,THREE.SRGBColorSpace);
@@ -289,7 +289,7 @@ function makeClubEnv(){const s=new THREE.Scene();s.background=new THREE.Color(0x
  R.rbAvatars={male:RBM,female:RBF};
  const rbOff=()=>{try{return /rb/.test(localStorage.getItem('r8off')||'')&&/^(localhost|127\.0\.0\.1)$/.test(location.hostname)}catch(e){return false}};
  const RBT={},rbPend=new Map();let rbClips=null;
- const rbPick=o=>{const fem=o.gender==='female';if(o.avatar&&(RBM.includes(o.avatar)||RBF.includes(o.avatar)))return o.avatar;let list=fem?RBF:RBM;if(q!=='high')list=list.filter(n=>RBLOW.includes(n));
+ const rbPick=o=>{const fem=o.gender==='female';let list=fem?RBF:RBM;if(o.avatar&&list.includes(o.avatar))return o.avatar;if(q!=='high')list=list.filter(n=>RBLOW.includes(n));
   // Black/African-looking avatars are listed twice, so they make up most of the crowd.
   const w=[];for(const n of list){w.push(n);if(RBB.has(n))w.push(n,n)}const id=o.self?'self:'+(o.skin||'')+(o.gender||''):(o.id||JSON.stringify([o.shirt,o.skin,o.hair]));if(o.self){const dark=parseInt(String(o.skin||'#8b5c43').replace('#',''),16);const blk=list.filter(n=>RBB.has(n));return (dark>>16)<0xc0&&blk.length?blk[hsh(id)%blk.length]:list[hsh(id)%list.length]}return w[hsh(id)%w.length]};
  function rbLoad(name,lo){const k=(lo?'lo/':'')+name;if(!RBT[k])RBT[k]=glb('rb/'+k+'.glb').then(gl=>{const sc=gl.scene;sc.traverse(c=>{if(!c.isSkinnedMesh)return;c.frustumCulled=false;c.castShadow=!lo;c.receiveShadow=true;const m=c.material;m.userData.r7=1;m.roughness=.78;m.metalness=0;if(m.alphaTest>0){m.transparent=false;m.side=THREE.DoubleSide}});sc.userData.h=1.806;if(!rbClips)rbClips=rbRetarget(tpl.man,sc);return sc});return RBT[k]}
@@ -300,21 +300,37 @@ function makeClubEnv(){const s=new THREE.Scene();s.background=new THREE.Color(0x
  // Rotation retarget with rest alignment: the UAL rest is a T-pose, Rocketbox an A-pose, so each target bone's rest is first
  // turned to point where the source bone points; then world(t) = src(t) * inv(srcRest) * alignedRest. Hips bob is scaled by leg length.
  const FZ=new THREE.Vector3(0,0,1);
- function rbRetarget(srcTpl,tgt){const src=cloneSkinned(srcTpl),T=tgt.clone(true);src.updateMatrixWorld(true);T.updateMatrixWorld(true);const sb=n=>src.getObjectByName(n),tb=n=>T.getObjectByName(n),V=()=>new THREE.Vector3(),Q=()=>new THREE.Quaternion();
-  const srcRest={},al={},tRestLocal={};for(const [sn,tn] of Object.entries(RMAP)){const a=sb(sn),b=tb(tn);if(!a||!b)continue;srcRest[sn]=a.getWorldQuaternion(Q());let d=Q();const ch=RCH[sn];if(ch&&sb(ch)&&tb(RMAP[ch]||TCH[tn])){const ds=sb(ch).getWorldPosition(V()).sub(a.getWorldPosition(V())).normalize(),dt=tb(RMAP[ch]||TCH[tn]).getWorldPosition(V()).sub(b.getWorldPosition(V())).normalize();d.setFromUnitVectors(dt,ds)}al[tn]=d.multiply(b.getWorldQuaternion(Q()))}
+ function rbRetarget(srcTpl,tgt){const src=cloneSkinned(srcTpl),T=tgt.clone(true);
+  // The UBC template is posed in place by relaxIdle (arms aimed down), so go back to its loaded T-pose (saved in prep) first, and again before each clip.
+  const bind=()=>{src.traverse(o=>{const r=o.userData.rest;if(r){o.position.fromArray(r[0]);o.quaternion.fromArray(r[1])}});src.updateMatrixWorld(true)};bind();src.updateMatrixWorld(true);T.updateMatrixWorld(true);const sb=n=>src.getObjectByName(n),tb=n=>T.getObjectByName(n),V=()=>new THREE.Vector3(),Q=()=>new THREE.Quaternion();
+  const srcRest={},al={},tRestLocal={};for(const [sn,tn] of Object.entries(RMAP)){const a=sb(sn),b=tb(tn);if(!a||!b)continue;srcRest[sn]=a.getWorldQuaternion(Q());let d=Q();const ch=RCH[sn];if(ch&&sb(ch)&&tb(RMAP[ch]||TCH[tn])){const ds=sb(ch).getWorldPosition(V()).sub(a.getWorldPosition(V())).normalize(),dt=tb(RMAP[ch]||TCH[tn]).getWorldPosition(V()).sub(b.getWorldPosition(V())).normalize();const sd=/_(l|r)$/.exec(sn)?.[1];
+   // Arms: match twist as well as direction, using the palm's width axis (pinky to index), so elbows bend forwards and palms face the thighs.
+   if(sd&&/^(upperarm|lowerarm|hand)_/.test(sn)){const S=sd.toUpperCase(),ws=sb('index_01_'+sd).getWorldPosition(V()).sub(sb('pinky_01_'+sd).getWorldPosition(V())),wt=tb('Bip01_'+S+'_Finger1').getWorldPosition(V()).sub(tb('Bip01_'+S+'_Finger4').getWorldPosition(V()));const fr=(x,w)=>{const z=V().crossVectors(x,w).normalize(),y=V().crossVectors(z,x).normalize();return Q().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x,y,z))};d=fr(ds,ws).multiply(fr(dt,wt).invert())}else d.setFromUnitVectors(dt,ds)}al[tn]=d.multiply(b.getWorldQuaternion(Q()))}
   const tBones=[];T.traverse(o=>{if(o.isBone||/^Bip01/.test(o.name)){tBones.push(o);tRestLocal[o.name]=o.quaternion.clone()}});const inv={};for(const k in srcRest)inv[k]=srcRest[k].clone().invert();
   const sPel=sb('pelvis'),sPelY=sPel.getWorldPosition(V()).y,tRoot=tb('Bip01'),tRootP=tRoot.position.clone(),ratio=tb('Bip01_Pelvis').getWorldPosition(V()).y/sPelY,rev={};for(const [a,b] of Object.entries(RMAP))rev[b]=a;
   const mixer=new THREE.AnimationMixer(src),out={};
-  for(const [name,clip] of Object.entries(clips)){mixer.stopAllAction();const act=mixer.clipAction(clip);act.play();const fps=24,N=Math.max(2,Math.round(clip.duration*fps)+1),times=new Float32Array(N),qv={},py=new Float32Array(N*3);for(const b of tBones)if(rev[b.name])qv[b.name]=new Float32Array(N*4);
+  // Arm offsets in each bone's own frame, for measuring where the hand ends up relative to the shoulder.
+  const AO={};for(const S of ['L','R']){const u=tb('Bip01_'+S+'_UpperArm'),f=tb('Bip01_'+S+'_Forearm'),h=tb('Bip01_'+S+'_Hand');AO[S]={up:u.getWorldPosition(V()).sub(T.getWorldPosition(V())),uo:f.getWorldPosition(V()).sub(u.getWorldPosition(V())).applyQuaternion(u.getWorldQuaternion(Q()).invert()),fo:h.getWorldPosition(V()).sub(f.getWorldPosition(V())).applyQuaternion(f.getWorldQuaternion(Q()).invert())}}
+  let ARMW={};
+  for(const [name,clip] of Object.entries(clips)){mixer.stopAllAction();bind();ARMW={};for(const S of ['L','R'])for(const k of ['Clavicle','UpperArm','Forearm','Hand'])ARMW['Bip01_'+S+'_'+k]=[];const act=mixer.clipAction(clip);act.play();const fps=24,N=Math.max(2,Math.round(clip.duration*fps)+1),times=new Float32Array(N),qv={},py=new Float32Array(N*3);for(const b of tBones)if(rev[b.name])qv[b.name]=new Float32Array(N*4);
    for(let i=0;i<N;i++){const t=Math.min(clip.duration,i/fps);times[i]=t;mixer.setTime(t);src.updateMatrixWorld(true);const wq={};
-    const walk=(o,pq)=>{let w;const sn=rev[o.name];if(sn&&sb(sn)){w=sb(sn).getWorldQuaternion(Q()).multiply(inv[sn]).multiply(al[o.name]);const l=pq.clone().invert().multiply(w);qv[o.name].set([l.x,l.y,l.z,l.w],i*4)}else w=pq.clone().multiply(tRestLocal[o.name]||o.quaternion);for(const c of o.children)walk(c,w)};
+    const walk=(o,pq)=>{let w;const sn=rev[o.name];if(sn&&sb(sn)){w=sb(sn).getWorldQuaternion(Q()).multiply(inv[sn]).multiply(al[o.name]);const l=pq.clone().invert().multiply(w);qv[o.name].set([l.x,l.y,l.z,l.w],i*4);if(ARMW[o.name])ARMW[o.name][i]=w}else w=pq.clone().multiply(tRestLocal[o.name]||o.quaternion);for(const c of o.children)walk(c,w)};
     walk(tRoot,tRoot.parent.getWorldQuaternion(Q()));const dy=(sPel.getWorldPosition(V()).y-sPelY)*ratio;py.set([tRootP.x,tRootP.y+dy,tRootP.z],i*3)}
+   // R9c: the library arms sit behind the body (hands ~15 cm behind the hips at idle). Swing each whole arm about the shoulder so the
+   // hand's average position over the clip hangs just in front of the hip line, keeping the clip's own swing around that average;
+   // at idle also soften the elbow a little. Sitting keeps its pose.
+   if(name!=='Sitting_Idle_Loop')for(const S of ['L','R']){const C=ARMW['Bip01_'+S+'_Clavicle'],U=ARMW['Bip01_'+S+'_UpperArm'],F=ARMW['Bip01_'+S+'_Forearm'],H=ARMW['Bip01_'+S+'_Hand'];if(!U.length||!C.length)continue;
+    let m=0;for(let i=0;i<N;i++){const d=AO[S].uo.clone().applyQuaternion(U[i]).add(AO[S].fo.clone().applyQuaternion(F[i]));m+=Math.atan2(d.z,-d.y)}m/=N;
+    const want=name==='Idle_Loop'?.07:.05,c=Math.max(0,Math.min(.7,want-m)),R=Q().setFromAxisAngle(V().set(1,0,0),-c),E=Q().setFromAxisAngle(V().set(1,0,0),name==='Idle_Loop'?-.2:0),un='Bip01_'+S+'_UpperArm',fn='Bip01_'+S+'_Forearm',hn='Bip01_'+S+'_Hand';
+    for(let i=0;i<N;i++){const u=R.clone().multiply(U[i]),f=E.clone().multiply(R).multiply(F[i]),h=E.clone().multiply(R).multiply(H[i]);const lu=C[i].clone().invert().multiply(u),lf=u.clone().invert().multiply(f),lh=f.clone().invert().multiply(h);qv[un].set([lu.x,lu.y,lu.z,lu.w],i*4);qv[fn].set([lf.x,lf.y,lf.z,lf.w],i*4);qv[hn].set([lh.x,lh.y,lh.z,lh.w],i*4)}
+    if(window.__rbArmLog)console.log('rb arm',name,S,(m*57.3).toFixed(1),'->',(want*57.3).toFixed(1))}
    const tracks=[new THREE.VectorKeyframeTrack('Bip01.position',times,py)];for(const [n,v] of Object.entries(qv))tracks.push(new THREE.QuaternionKeyframeTrack(n+'.quaternion',times,v));
    // Relaxed hands: a gentle, natural curl on every finger joint (the library clips don't drive fingers).
    for(const a of ['L','R'])for(let f=0;f<5;f++)for(const j of ['','1','2']){const n='Bip01_'+a+'_Finger'+f+(j?(f===0?'':f)+j:'');const nm=f===0?'Bip01_'+a+'_Finger0'+j:'Bip01_'+a+'_Finger'+f+j;const bone=tb(f===0?(j?'Bip01_'+a+'_Finger0'+j:'Bip01_'+a+'_Finger0'):(j?'Bip01_'+a+'_Finger'+f+j:'Bip01_'+a+'_Finger'+f));if(!bone)continue;
     const ang=(f===0?(j?.18:.1):j===''?.32+.06*f:j==='1'?.55:.42)*.85,qq=tRestLocal[bone.name].clone().multiply(new THREE.Quaternion().setFromAxisAngle(FZ,ang));tracks.push(new THREE.QuaternionKeyframeTrack(bone.name+'.quaternion',[0],[qq.x,qq.y,qq.z,qq.w]))}
    out[name]=new THREE.AnimationClip(name,clip.duration,tracks)}
   mixer.stopAllAction();return out}
+ R._rbRetarget=(a,b)=>rbRetarget(a,b);R._tpl=tpl;
  function dressRB(g,o,L){const lo=!!o.crowd,name=rbPick({...o,gender:L.fem?'female':'male'});const k=(lo?'lo/':'')+name;const sc=RBT[k+'#'];
   if(!sc){if(!rbPend.has(g)){rbPend.set(g,1);rbLoad(name,lo).then(t=>{RBT[k+'#']=t;rbPend.delete(g);if(g.parent&&!g.userData.real)dress(g,o)}).catch(e=>{console.warn('rocketbox',name,e);rbPend.delete(g);g.userData.rbFail=1;if(g.parent)dress(g,o)})}return true}
   const m=cloneSkinned(sc);m.traverse(c=>{if(c.isSkinnedMesh)c.userData.r7person=1});
