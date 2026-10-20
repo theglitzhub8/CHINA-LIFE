@@ -343,7 +343,17 @@ function makeClubEnv(){const s=new THREE.Scene();s.background=new THREE.Color(0x
    for(const a of ['L','R'])for(let f=0;f<5;f++)for(const j of ['','1','2']){const n='Bip01_'+a+'_Finger'+f+(j?(f===0?'':f)+j:'');const nm=f===0?'Bip01_'+a+'_Finger0'+j:'Bip01_'+a+'_Finger'+f+j;const bone=tb(f===0?(j?'Bip01_'+a+'_Finger0'+j:'Bip01_'+a+'_Finger0'):(j?'Bip01_'+a+'_Finger'+f+j:'Bip01_'+a+'_Finger'+f));if(!bone)continue;
     const ang=(f===0?(j?.18:.1):j===''?.32+.06*f:j==='1'?.55:.42)*.85,qq=tRestLocal[bone.name].clone().multiply(new THREE.Quaternion().setFromAxisAngle(FZ,ang));tracks.push(new THREE.QuaternionKeyframeTrack(bone.name+'.quaternion',[0],[qq.x,qq.y,qq.z,qq.w]))}
    out[name]=new THREE.AnimationClip(name,clip.duration,tracks)}
-  mixer.stopAllAction();return out}
+  mixer.stopAllAction();
+  // R9d: natural ground speed of each locomotion clip on this body, in body heights per second: play the retargeted clip on the
+  // target and take the backward speed of whichever foot is on the ground (within 5 cm of its lowest point; the larger of median and mean, since the jog contact is short and uneven). Playback is later
+  // scaled by (actual speed / this) so the feet do not slide.
+  {const tm=new THREE.AnimationMixer(T),h=new THREE.Box3().setFromObject(tgt).getSize(V()).y||1.8;for(const n of ['Walk_Formal_Loop','Walk_Loop','Jog_Fwd_Loop']){const c=out[n];if(!c)continue;tm.stopAllAction();const a=tm.clipAction(c);a.play();const fps=60,M=Math.round(c.duration*fps),vs=[],zr=[];
+   for(const S of ['L','R']){const f=tb('Bip01_'+S+'_Toe0')||tb('Bip01_'+S+'_Foot');if(!f)continue;const P=[];for(let i=0;i<=M;i++){tm.setTime(i/fps);T.updateMatrixWorld(true);P.push(f.getWorldPosition(V()))}let ymin=1e9;for(const q of P)ymin=Math.min(ymin,q.y);{let a=1e9,z=-1e9;for(const q of P){a=Math.min(a,q.z);z=Math.max(z,q.z)}zr.push(z-a)}if(window.__rbStrideDump&&!window.__rbStrideDump[n+S])window.__rbStrideDump[n+S]={h,dur:c.duration,z:P.map(q=>+q.z.toFixed(3)),y:P.map(q=>+q.y.toFixed(3))};for(let i=1;i<P.length;i++)if(P[i].y<ymin+.05*h/1.8&&P[i-1].y<ymin+.05*h/1.8)vs.push(-(P[i].z-P[i-1].z)*fps)}
+   vs.sort((x,y)=>x-y);let v=vs.length?Math.max(vs[vs.length>>1],vs.reduce((x,y)=>x+y,0)/vs.length):0;
+   // Jog: the planted-foot window is hard to find (the pelvis bob lifts the stance foot), so take it from the library's own root motion
+   // (UAL1_Standard_RM: Walk_Formal 1.3 m per 1.333 s = 0.975 m/s, Jog_Fwd 5.0 m per 0.933 s = 5.357 m/s) relative to the measured walk.
+   if(/Jog/.test(n)&&out.Walk_Formal_Loop?.groundSpeed)v=out.Walk_Formal_Loop.groundSpeed*h*(5.357/.975);c.groundSpeed=v>0?v/h:null;if(window.__rbArmLog)console.log('rb stride',n,(v/h).toFixed(3),'h/s',vs.length)}tm.stopAllAction();bind()}
+  return out}
  R._rbRetarget=(a,b)=>rbRetarget(a,b);R._tpl=tpl;
  const selfRimU={value:new THREE.Color(0xfff1dc).multiplyScalar(.38)},selfFillU={value:.22};
  // Player-only fill + rim: cloned materials get an albedo-tinted fill and a fresnel rim in emissive, so the player stays readable when backlit/in shade. No extra scene lights.
@@ -359,7 +369,7 @@ function makeClubEnv(){const s=new THREE.Scene();s.background=new THREE.Color(0x
   {const sh=rbScale(L.fem,sc.userData.h);m.scale.setScalar(sh);m.position.y=.022-(sc.userData.y0||0)*sh}m.userData.r7person=1;m.userData.rb=name;for(const c of g.children)if(!c.userData.r7keep&&c.name!=='emote-prop'){c.userData.r7hidden=c.visible;c.visible=false}
   g.add(m);if(o.self){selfLit(m);g.traverse(c=>{if(c.isMesh&&!c.userData.ghost&&c.userData.r7person)c.renderOrder=2})}
   const mixer=new THREE.AnimationMixer(m),act={};for(const n of o.crowd?['Idle_Loop','Idle_Talking_Loop','Dance_Loop','Walk_Loop','Sitting_Idle_Loop']:['Idle_Loop','Walk_Loop','Jog_Fwd_Loop','Dance_Loop','Sitting_Idle_Loop'])if(sc.userData.clips[n]){act[n]=mixer.clipAction(sc.userData.clips[n]);act[n].setEffectiveWeight(n==='Idle_Loop'?1:0);if(n==='Idle_Loop')act[n].play()}if(act.Dance_Loop)act.Dance_Loop.timeScale=.85+Math.random()*.3;
-  for(const a of Object.values(act))a.time=Math.random()*a.getClip().duration;mixer.update(0);m.updateMatrixWorld(true);g.userData.real={m,mixer,act,w:{Idle_Loop:1},acc:0,frozen:false,posed:0,lod:lo,rb:name};people.add(g);return true}
+  for(const a of Object.values(act))a.time=Math.random()*a.getClip().duration;mixer.update(0);m.updateMatrixWorld(true);g.userData.real={m,mixer,act,w:{Idle_Loop:1},acc:0,frozen:false,posed:0,lod:lo,rb:name,fem:!!L.fem};people.add(g);return true}
  function dress(g,o){if(!R.ready){pending.push({g,o});return}if(g.userData.r7person||!g.parent&&!g.userData.keep)return;const L=lookOf(o);if(!rbOff()&&!g.userData.rbFail&&dressRB(g,o,L))return;const lo=o.crowd&&tpl.manLo,src=lo?(L.fem?tpl.womanLo:tpl.manLo):L.fem?tpl.woman:tpl.man,m=cloneSkinned(src);
   m.traverse(c=>{if(!c.isSkinnedMesh)return;c.userData.r7person=1;if(c.userData.body)c.material=bodyMat(c.material,L,c.geometry.boundingBox);else if(c.userData.hair){c.material=c.material.clone();c.material.color.set(L.hair).multiplyScalar(1/.3)}});addHair(m,L,lo);
   // Your own character shows as a soft silhouette wherever a wall or tree hides it (drawn only where it is behind something).
@@ -368,7 +378,7 @@ function makeClubEnv(){const s=new THREE.Scene();s.background=new THREE.Color(0x
   for(const c of g.children)if(!c.userData.r7keep&&c.name!=='emote-prop'){c.userData.r7hidden=c.visible;c.visible=false}
   g.add(m);try{addSkirt(m,g,L,lo)}catch(e){}if(o.self){selfLit(m);g.traverse(c=>{if(c.isMesh&&!c.userData.ghost&&c.userData.r7person)c.renderOrder=2})}const mixer=new THREE.AnimationMixer(m),act={};for(const n of o.crowd?['Idle_Loop','Idle_Talking_Loop','Dance_Loop','Walk_Loop','Sitting_Idle_Loop']:['Idle_Loop','Walk_Loop','Jog_Fwd_Loop','Dance_Loop','Sitting_Idle_Loop'])if(clips[n]){act[n]=mixer.clipAction(clips[n]);act[n].setEffectiveWeight(n==='Idle_Loop'?1:0);if(n==='Idle_Loop')act[n].play()}if(act.Dance_Loop)act.Dance_Loop.timeScale=.85+Math.random()*.3;
   for(const a of Object.values(act))a.time=Math.random()*a.getClip().duration;
-  const frozen=false;g.userData.real={m,mixer,act,w:{Idle_Loop:1},acc:0,frozen,posed:0,lod:!!lo};people.add(g)}
+  const frozen=false;g.userData.real={m,mixer,act,w:{Idle_Loop:1},acc:0,frozen,posed:0,lod:!!lo,fem:!!L.fem};people.add(g)}
  let crowdN=0,bud=12,budF=-1;R.resetCrowd=()=>{crowdN=0};
  // Low-poly crowd copy: same skeleton, materials (with textures) borrowed from the full model by name; no shadows.
  function lodOf(scene,hi){const mats={};hi.traverse(o=>{if(o.isSkinnedMesh)mats[o.material.name]=o.material});prep(scene);scene.traverse(o=>{if(!o.isSkinnedMesh)return;o.castShadow=false;const h=mats[o.material.name];if(h)o.material=h});scene.userData.h=hi.userData.h;return scene}
@@ -376,9 +386,10 @@ function makeClubEnv(){const s=new THREE.Scene();s.background=new THREE.Color(0x
  // R9: the silhouette is drawn after the world but before your own body (renderOrder 1 vs 2), so your clothes and hair never trigger it.
  R.dress=(g,o)=>{try{dress(g,o)}catch(e){console.warn('dress',e)}};
  R.frame=(g,moving,dt,spd,emote,far)=>{const r=g.userData.real;if(!r)return false;r.acc+=dt;if(far&&r.acc<.066)return true;if(r.lod){const f=renderer.info.render.frame;if(f!==budF){budF=f;bud=12}if(bud>0)bud--;else if(r.acc<.25)return true}const step=r.acc;r.acc=0;
-  const height=1.86*g.scale.x,hps=(spd||0)/height,jog=moving&&hps>1.15,want=emote==='dance'?'Dance_Loop':emote==='talk'&&r.act.Idle_Talking_Loop?'Idle_Talking_Loop':emote==='sit'?'Sitting_Idle_Loop':!moving?'Idle_Loop':jog&&r.act.Jog_Fwd_Loop?'Jog_Fwd_Loop':'Walk_Loop';
+  const height=(r.fem?ADULT_H.f:ADULT_H.m)*g.scale.x/PERSON_BASE,hps=(spd||0)/height,jog=moving&&hps>1.15,want=emote==='dance'?'Dance_Loop':emote==='talk'&&r.act.Idle_Talking_Loop?'Idle_Talking_Loop':emote==='sit'?'Sitting_Idle_Loop':!moving?'Idle_Loop':jog&&r.act.Jog_Fwd_Loop?'Jog_Fwd_Loop':'Walk_Loop';
   if(r.frozen&&r.posed>1)return true;const k=r.frozen?1:1-Math.exp(-step*10);for(const [n,a] of Object.entries(r.act)){const cur=r.w[n]||0,t=n===want?1:0,nw=cur+(t-cur)*k;r.w[n]=nw;if(nw<.002&&t===0){if(a.isRunning())a.stop()}else{if(!a.isRunning())a.play();a.setEffectiveWeight(nw)}}if(r.frozen){r.posed++;r.mixer.update(r.posed===1?Math.random()*2:0);return true}
-  if(r.act.Walk_Loop)r.act.Walk_Loop.timeScale=THREE.MathUtils.clamp(hps/.45,.5,1.8);if(r.act.Jog_Fwd_Loop)r.act.Jog_Fwd_Loop.timeScale=THREE.MathUtils.clamp(hps/1.9,.7,1.4);
+  // Playback follows the real ground speed so feet stay planted (clip's own stride measured at retarget; old fixed ratios as fallback).
+  {const w=r.act.Walk_Loop,j=r.act.Jog_Fwd_Loop;if(w)w.timeScale=THREE.MathUtils.clamp(hps/(w.getClip().groundSpeed||.53),.5,2.1);if(j)j.timeScale=THREE.MathUtils.clamp(hps/(j.getClip().groundSpeed||2.9),.5,1.6)}
   r.mixer.update(step);return true};
  R.undress=g=>{const r=g.userData.real;if(!r)return;r.m.removeFromParent();r.mixer.stopAllAction();for(const c of g.children)if(c.userData.r7hidden!==undefined){c.visible=c.userData.r7hidden;delete c.userData.r7hidden}delete g.userData.real;people.delete(g)};
  R.decorate=decorate;R.bldList=()=>(R.r8root?.userData.r8?.blds||[]).map(b=>({min:b.b.min.toArray(),max:b.b.max.toArray(),ax:b.ax}));R.light=light;R.paint=paint;R.count=()=>people.size;
