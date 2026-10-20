@@ -5,7 +5,7 @@ import fs from 'node:fs';import crypto from 'node:crypto';import * as esbuild fr
 const P='public/',src=fs.readFileSync(P+'index.dev.html','utf8');
 const LAZY=new Set(['weekly-admin.js','cabin.js']);
 const hash=s=>crypto.createHash('sha256').update(s).digest('hex').slice(0,10);
-for(const f of fs.readdirSync(P))if(/^(core-[ab]|app|styles)\.[0-9a-f]{10}\.(js|css)$/.test(f))fs.rmSync(P+f);
+for(const f of fs.readdirSync(P))if(/^(core-[ab]|app|styles)\.[0-9a-f]{10}\.(js|css)$/.test(f)||/^(chunk|lazy)\.[A-Z0-9]{8}\.js$/.test(f))fs.rmSync(P+f);
 const clean=s=>s.replace(/\?v=[^"']*/,'');
 const write=(name,ext,code)=>{const f=name+'.'+hash(code)+'.'+ext;fs.writeFileSync(P+f,code);return f};
 // Walk the tags in order. Classic external scripts are grouped between inline scripts; modules go into one entry.
@@ -23,15 +23,17 @@ const groupFiles=[];for(const [i,g] of groups.entries()){const code=g.map(f=>'/*
 // Modules: one ESM bundle, imports evaluated in the original tag order.
 const strip={name:'strip-query',setup(b){b.onLoad({filter:/cloud\.js$/},a=>({contents:fs.readFileSync(a.path,'utf8').replace(/^await window\.ChinaLifeCloud\.ready;$/m,'/* top-level await dropped in the bundle: it would hold every later module until sign-in */'),loader:'js'}));b.onResolve({filter:/\?v=/},a=>({path:new URL(a.path.replace(/\?.*$/,''),'file://'+a.resolveDir+'/').pathname}))}};
 const entry=modules.map(f=>"import './"+f+"';").join('\n');
-const r=await esbuild.build({stdin:{contents:entry,resolveDir:fs.realpathSync(P),sourcefile:'entry.js'},bundle:true,format:'esm',minify:true,target:'es2020',write:false,plugins:[strip],legalComments:'none'});
-const appFile=write('app','js',r.outputFiles[0].text);
+// R7: code splitting so on-demand modules (realism.js) and their loaders download only when used; shared code (three.js) lands in one chunk.
+fs.writeFileSync(P+'.r1-entry.js',entry);const r=await esbuild.build({entryPoints:{app:P+'.r1-entry.js'},bundle:true,splitting:true,outdir:P,entryNames:'[name]',chunkNames:'lazy.[hash]',format:'esm',minify:true,target:'es2020',write:false,plugins:[strip],legalComments:'none'});fs.rmSync(P+'.r1-entry.js');
+let appFile;for(const o of r.outputFiles){const f=o.path.split('/').pop();if(f==='app.js')appFile=write('app','js',o.text);else fs.writeFileSync(P+f,o.text)}
 const cssCode=(await esbuild.transform(css.map(f=>fs.readFileSync(P+f,'utf8')).join('\n'),{loader:'css',minify:true})).code;const cssFile=write('styles','css',cssCode);
+const preload=[...new Set([...fs.readFileSync(P+appFile,'utf8').matchAll(/from"\.\/(lazy\.[A-Z0-9]{8}\.js)"/g)].map(m=>m[1]))].map(f=>'<link rel="modulepreload" href="'+f+'" />').join('');
 // Rebuild the page: first CSS link becomes the bundle, first classic tag of each group becomes its bundle, first module becomes app.
 let out=src,firstCss=true,firstModule=true,gi=0;for(const p of plan){let rep='';
  if(p.kind==='css'){rep=firstCss?'<link rel="stylesheet" href="'+cssFile+'" />':'';firstCss=false}
  else if(p.kind==='inline'||p.kind==='lazy')continue;
  else if(p.kind==='group')rep='<script src="'+groupFiles[gi++]+'"></script>';
- else if(p.kind==='module'){rep=firstModule?'<script type="module" src="'+appFile+'"></script>':'';firstModule=false}
+ else if(p.kind==='module'){rep=firstModule?'<script type="module" src="'+appFile+'"></script>'+preload:'';firstModule=false}
  out=out.replace(p.tag,rep)}
 for(const p of plan)if(p.kind==='lazy')out=out.replace(p.tag,'');
 out=out.replace('<!-- r1:lazy -->','');

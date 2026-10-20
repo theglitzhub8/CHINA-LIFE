@@ -1,0 +1,5 @@
+R7 realism assets — all CC0 1.0 (public domain), no attribution required (credited anyway).
+- man.glb, woman.glb: Quaternius "Universal Base Characters" (Standard, Superhero_Male/Female_FullBody), https://quaternius.com — CC0. Re-packed: Light skin base colour, textures 512px WebP, quantized.
+- anims.glb: Quaternius "Universal Animation Library" v3 (UAL1_Standard: Idle, Walk, Jog, Dance, Sitting, Idle_Talking), CC0. Fingers/scale tracks stripped, resampled.
+- tex/asphalt_*: ambientCG Asphalt025C; tex/paving_*: PavingStones130; tex/brick_*: Bricks076C; tex/concrete_*: Concrete034 — ambientCG.com, CC0. 512px colour/normal, 256px AO+roughness (ORM: R=AO, G=roughness), WebP.
+- vendor/GLTFLoader.js, SkeletonUtils.js, Sky.js, BufferGeometryUtils.js: three.js r170 examples, MIT.
