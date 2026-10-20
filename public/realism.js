@@ -68,7 +68,7 @@ export function create(ctx){
   if(h>gf*.72&&h<gf*.94){col=sc*.8;bEmit=sc*uNight*.85;}
   else if(h>.1&&h<gf*.66&&cx>.07&&cx<.93){float gt=gf*.66;col=mix(vec3(.07,.09,.11),vec3(.30,.35,.40),smoothstep(.2,gt,h));bGlass=1.;bEmit=vec3(1.,.78,.52)*step(.22,sh)*(.06+.42*uNight)*(.55+.45*smoothstep(gt,.3,h));}
   else col=wall*.6+.03;}
- else if(h>=gf&&h<top-.75){float sl=top>16.&&r8h(vec2(sd,3.1))>.45?3.:floor(r8h(vec2(sd,7.7))*2.999);
+ else if(h>=gf&&h<top-.75){float sl=floor(fract(sd)*10.+.5);
   vec2 tuv=vec2((u-(abs(vBN.x)>abs(vBN.z)?vBC.y:vBC.x))/18.+r8h(vec2(sd,1.7))*.0,(h-gf)/18.),f=fract(tuv),o=vec2(mod(sl,2.)*.5,.5-floor(sl*.5)*.5),au=o+.003+f*.494;
   vec2 gx=dFdx(tuv),gy=dFdy(tuv);float lod=max(0.,log2(max(length(gx),length(gy))*FACT));vec4 fd=textureLod(tFacD,au,lod);vec3 fn=textureLod(tFacN,au,max(0.,lod-1.)).rgb;
   float lw2=dot(wall,vec3(.3,.59,.11));vec3 tint=lw2>.03?clamp(mix(vec3(1.),wall/lw2,sl>2.5?.08:.22),.75,1.3):vec3(1.);
@@ -101,7 +101,7 @@ dbgC=R8_DBG;dbgOn=1.;
   const key=new Map();for(let i=0;i<n;i++){const k=Math.round(pos.getX(i)*200)+','+Math.round(pos.getY(i)*200)+','+Math.round(pos.getZ(i)*200);const j=key.get(k);if(j===undefined)key.set(k,i);else uni(i,j)}
   const idx=g.index;if(idx)for(let t=0;t<idx.count;t+=3){uni(idx.getX(t),idx.getX(t+1));uni(idx.getX(t),idx.getX(t+2))}else for(let t=0;t<n;t+=3){uni(t,t+1);uni(t,t+2)}
   const comp=new Map(),v=new V3(),nrm=g.attributes.normal;o.updateMatrixWorld();for(let i=0;i<n;i++){const r=find(i);let c=comp.get(r);if(!c){c={b:new B3(),ax:true,v:[]};comp.set(r,c)}v.fromBufferAttribute(pos,i).applyMatrix4(o.matrixWorld);c.b.expandByPoint(v);c.v.push(i);if(nrm){const ax=Math.abs(nrm.getX(i)),ay=Math.abs(nrm.getY(i)),az=Math.abs(nrm.getZ(i));if(Math.max(ax,ay,az)<.98)c.ax=false}}
-  const a=new Float32Array(n*4),ac=new Float32Array(n*4),out=[];let any=false;for(const c of comp.values()){const s=c.b.getSize(new V3());if(s.y>2&&Math.min(s.x,s.z)>1.2&&c.b.min.y<1.2){any=true;const seed=Math.abs(Math.sin(c.b.min.x*12.9898+c.b.min.z*78.233))*43758.5453%97;for(const i of c.v){a[i*4]=c.b.min.y;a[i*4+1]=c.b.max.y;a[i*4+2]=seed;a[i*4+3]=1;ac[i*4]=c.b.min.x;ac[i*4+1]=c.b.min.z;ac[i*4+2]=c.b.max.x;ac[i*4+3]=c.b.max.z}out.push({b:c.b,ax:c.ax,seed})}}
+  const a=new Float32Array(n*4),ac=new Float32Array(n*4),out=[];let any=false;for(const c of comp.values()){const s=c.b.getSize(new V3());if(s.y>2&&Math.min(s.x,s.z)>1.2&&c.b.min.y<1.2){any=true;const hs=Math.abs(Math.sin(c.b.min.x*12.9898+c.b.min.z*78.233))*43758.5453,top=s.y,slot=top>16&&(hs*7.13%1)>.45?3:Math.floor((hs*3.71%1)*2.999),seed=Math.floor(hs%97)+slot*.1;for(const i of c.v){a[i*4]=c.b.min.y;a[i*4+1]=c.b.max.y;a[i*4+2]=seed;a[i*4+3]=1;ac[i*4]=c.b.min.x;ac[i*4+1]=c.b.min.z;ac[i*4+2]=c.b.max.x;ac[i*4+3]=c.b.max.z}out.push({b:c.b,ax:c.ax,seed,slot})}}
   if(!any)return null;g.setAttribute('aBld',new THREE.BufferAttribute(a,4));g.setAttribute('aBldC',new THREE.BufferAttribute(ac,4));return out}
  const facadeTex=t=>!!t&&t.image instanceof HTMLCanvasElement&&t.image.width<=256&&t.image.height<=256;
  const avgCol=new Map();function texAvg(t){if(avgCol.has(t))return avgCol.get(t);let c=new THREE.Color(0xd8d2c6);try{const d=t.image.getContext('2d').getImageData(0,0,t.image.width,t.image.height).data;let r=0,g=0,b=0,n=0;for(let i=0;i<d.length;i+=16){const l=d[i]+d[i+1]+d[i+2];if(l>300){r+=d[i];g+=d[i+1];b+=d[i+2];n++}}if(n)c=new THREE.Color().setRGB(r/n/255,g/n/255,b/n/255,THREE.SRGBColorSpace)}catch{}avgCol.set(t,c);return c}
@@ -114,6 +114,8 @@ dbgC=R8_DBG;dbgOn=1.;
  const benchIron=(()=>{const parts=[];for(const x of [-.66,.66]){parts.push(new THREE.BoxGeometry(.06,.45,.42).translate(x,.22,0),new THREE.BoxGeometry(.06,.4,.05).translate(x,.68,-.21))}return mergeGeometries(parts)})();
  const binGeo=mergeGeometries([new THREE.CylinderGeometry(.22,.2,.78,10).translate(0,.39,0),new THREE.CylinderGeometry(.24,.24,.06,10).translate(0,.81,0)]);
  const crownGeo=(()=>{const parts=[[0,0,0,1],[.55,.2,.25,.7],[-.48,.32,-.3,.66]].map(([x,y,z,r])=>{const g=new THREE.IcosahedronGeometry(r,0);const p=g.attributes.position;for(let i=0;i<p.count;i++){const k=1+.09*Math.sin(p.getX(i)*9.1+p.getY(i)*5.3+p.getZ(i)*7.7);p.setXYZ(i,p.getX(i)*k,p.getY(i)*k,p.getZ(i)*k)}return g.translate(x,y,z)});const g=mergeGeometries(parts.map(g=>{g.deleteAttribute('uv');return g}));g.computeVertexNormals();return g})();
+ const unitBox=new THREE.BoxGeometry(1,1,1),balSlab=new THREE.BoxGeometry(2.2,.14,1.1),balRail=mergeGeometries([new THREE.BoxGeometry(2.2,.95,.05).translate(0,.55,.53),new THREE.BoxGeometry(.05,.95,1.1).translate(-1.08,.55,0),new THREE.BoxGeometry(.05,.95,1.1).translate(1.08,.55,0),new THREE.BoxGeometry(2.24,.06,.08).translate(0,1.04,.53)]);
+ const ledgeMat=new THREE.MeshStandardMaterial({color:0xbab5ab,roughness:.95}),railMat=new THREE.MeshStandardMaterial({color:0x30383d,roughness:.4,metalness:.6});ledgeMat.userData.r7=railMat.userData.r7=1;
  const acGeo=mergeGeometries([new THREE.BoxGeometry(1.1,.75,.8).translate(0,.45,0),new THREE.BoxGeometry(1.2,.08,.9).translate(0,.04,0)]),tankGeo=mergeGeometries([new THREE.CylinderGeometry(.75,.75,1.5,12).translate(0,1.35,0),new THREE.BoxGeometry(1.4,.6,1.4).translate(0,.3,0)]),hutGeo=new THREE.BoxGeometry(2.2,2.3,2.4).translate(0,1.15,0);
  const acMat=new THREE.MeshStandardMaterial({color:0xc4c8ca,roughness:.5,metalness:.5}),tankMat=new THREE.MeshStandardMaterial({color:0x8f989c,roughness:.45,metalness:.6}),hutMat=new THREE.MeshStandardMaterial({color:0xb9b4aa,roughness:.95});for(const m of [acMat,tankMat,hutMat])m.userData.r7=1;
  const inside=(blds,x,z,pad=0)=>blds.some(b=>x>b.b.min.x-pad&&x<b.b.max.x+pad&&z>b.b.min.z-pad&&z<b.b.max.z+pad);
@@ -133,6 +135,16 @@ dbgC=R8_DBG;dbgOn=1.;
   const acs=[],tanks=[],huts=[];for(const b of blds){if(!b.ax)continue;const {min,max}=b.b,top=max.y-min.y,w=max.x-min.x,d=max.z-min.z;if(top<4||w<3||d<3)continue;const rnd=k=>Math.abs(Math.sin(b.seed*12.9898+k*78.233)*43758.5453)%1;
    const nA=Math.max(1,Math.min(5,Math.floor(w*d/30)));for(let k=0;k<nA;k++)acs.push([min.x+1+rnd(k)*(w-2),min.z+1+rnd(k+9)*(d-2),rnd(k+3)>.5?0:Math.PI/2,max.y]);
    if(top>8&&w>5&&d>5){if(rnd(20)>.4)tanks.push([min.x+1.6+rnd(21)*(w-3.2),min.z+1.6+rnd(22)*(d-3.2),0,max.y]);huts.push([min.x+1.6+rnd(23)*(w-3.2),min.z+1.6+rnd(24)*(d-3.2),0,max.y])}}
+  // Facade depth: floor ledges and corner pilasters on open faces, balconies on residential (brick) facades (High).
+  const led=[],bal=[];for(const b of blds){if(!b.ax)continue;const {min,max}=b.b,top=max.y-min.y;if(top<4)continue;const gf=top<5.6?top-.45:3.3;const rnd=k=>Math.abs(Math.sin(b.seed*12.9898+k*78.233)*43758.5453)%1;
+   for(const [nx,nz] of [[1,0],[-1,0],[0,1],[0,-1]]){const fx=nx>0?max.x:nx<0?min.x:0,fz=nz>0?max.z:nz<0?min.z:0,a0=nx?min.z:min.x,a1=nx?max.z:max.x,L=a1-a0,cm=(a0+a1)/2,ry=Math.atan2(nx,nz);
+    if(inside(all.filter(o=>o!==b),nx?fx+nx*2.5:cm,nz?fz+nz*2.5:cm)&&inside(all.filter(o=>o!==b),nx?fx+nx*2.5:a0+.5,nz?fz+nz*2.5:a0+.5))continue;
+    const P=(along,out,y)=>nx?[fx+nx*out,y,along]:[along,y,fz+nz*out];
+    for(let y=gf;y<top-.9;y+=3){const [x,yy,z]=P(cm,.1,min.y+y);led.push([x,yy,z,ry,L+.2,.12,.18])}
+    for(const e of [a0,a1]){const [x,yy,z]=P(e,0,min.y+top/2);led.push([x,yy,z,ry,.42,top-.2,.42])}
+    if(q==='high'&&(b.slot===0||b.slot===2)&&top>5.5){for(let y=gf+3;y<top-1.5;y+=3)for(let k=0;(k+1)*3<=L-.4;k++){if(rnd(k*7+y*3+nx*2+nz*5)<.45)continue;const [x,yy,z]=P(a0+((L-Math.floor(L/3)*3)/2)+(k+.5)*3,.55,min.y+y+.05);bal.push([x,yy,z,ry])}}}}
+  if(led.length){const im=new THREE.InstancedMesh(unitBox,ledgeMat,led.length);led.forEach(([x,y,z,ry,w,h,d],i)=>{qq.setFromAxisAngle(new V3(0,1,0),ry);mtx.compose(new V3(x,y,z),qq,new V3(w,h,d));im.setMatrixAt(i,mtx)});im.castShadow=q==='high';im.receiveShadow=true;im.userData.r8=1;root.add(im);done.add(im)}
+  inst(balSlab,ledgeMat,bal.map(([x,y,z,ry])=>[x,z,ry,y]));inst(balRail,railMat,bal.map(([x,y,z,ry])=>[x,z,ry,y]));st.n+=led.length+bal.length;R.stats.ledges=led.length;R.stats.balconies=bal.length;
   inst(acGeo,acMat,acs);inst(tankGeo,tankMat,tanks);inst(hutGeo,hutMat,huts);st.n+=acs.length+tanks.length+huts.length;
   inst(benchGeo,woodMat,bench);inst(benchIron,ironMat,bench);inst(binGeo,binMat,bin);st.n+=bench.length+bin.length;R.stats.furniture=(R.stats.furniture||0)+aw.length+bench.length+bin.length}
  const done=new WeakSet(),allBld=[];R.stripNow=()=>{stripWin(scene,allBld);return R.stats.stripped};
