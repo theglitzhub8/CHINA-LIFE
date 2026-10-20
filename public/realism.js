@@ -95,12 +95,14 @@ export function create(ctx){
   return {fem,top:hexOf(top.c??0x23799a),bottom:hexOf(dress?top.c:(bot.c??0x28394b)),shoes:hexOf(sh.c??0x2b2b2b),skin:hexOf(o.skin??0xa06d4d),hair:hexOf(o.hairColor??0x1f2628),bald:o.hair==='bald'||o.hair==='shaved',sleeve:ts==='tank'?0:1,long:LONG.has(ts)?1:0,legs:bs==='shorts'||(bs==='skirt'&&!dress)?0:1}}
  function dress(g,o){if(!R.ready){pending.push({g,o});return}if(g.userData.r7person||!g.parent&&!g.userData.keep)return;const L=lookOf(o),src=L.fem?tpl.woman:tpl.man,m=cloneSkinned(src);
   m.traverse(c=>{if(!c.isSkinnedMesh)return;c.userData.r7person=1;if(c.userData.body)c.material=bodyMat(c.material,L);else if(c.userData.hair){c.material=c.material.clone();c.material.color.set(L.hair).multiplyScalar(1/.3);c.visible=!L.bald}});
+  // Your own character shows as a soft silhouette wherever a wall or tree hides it (drawn only where it is behind something).
+  if(o.self)m.traverse(c=>{if(!c.isSkinnedMesh||!c.userData.body||c.userData.ghost)return;const gh=new THREE.SkinnedMesh(c.geometry,ghostMat);gh.userData.ghost=gh.userData.r7person=1;gh.frustumCulled=false;gh.renderOrder=10;gh.bind(c.skeleton,c.bindMatrix);c.parent.add(gh)});
   const s=1.86/src.userData.h;m.scale.setScalar(s);m.userData.r7person=1;
   for(const c of g.children)if(!c.userData.r7keep&&c.name!=='emote-prop'){c.userData.r7hidden=c.visible;c.visible=false}
   g.add(m);const mixer=new THREE.AnimationMixer(m),act={};for(const n of ['Idle_Loop','Walk_Loop','Jog_Fwd_Loop','Dance_Loop','Sitting_Idle_Loop'])if(clips[n]){act[n]=mixer.clipAction(clips[n]);act[n].play();act[n].setEffectiveWeight(n==='Idle_Loop'?1:0)}
   for(const a of Object.values(act))a.time=Math.random()*a.getClip().duration;
   g.userData.real={m,mixer,act,w:{Idle_Loop:1},acc:0};people.add(g)}
- const people=new Set();
+ const people=new Set(),ghostMat=new THREE.MeshBasicMaterial({color:0x8ff0e6,transparent:true,opacity:.42,depthWrite:false,depthFunc:THREE.GreaterDepth});
  R.dress=(g,o)=>{try{dress(g,o)}catch(e){console.warn('dress',e)}};
  R.frame=(g,moving,dt,spd,emote,far)=>{const r=g.userData.real;if(!r)return false;r.acc+=dt;if(far&&r.acc<.066)return true;const step=r.acc;r.acc=0;
   const height=1.86*g.scale.x,hps=(spd||0)/height,jog=moving&&hps>1.55,want=emote==='dance'?'Dance_Loop':emote==='sit'?'Sitting_Idle_Loop':!moving?'Idle_Loop':jog?'Jog_Fwd_Loop':'Walk_Loop';
