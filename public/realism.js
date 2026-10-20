@@ -252,15 +252,15 @@ void main(){vec3 d=normalize(vD);float e=d.y,a=atan(d.z,d.x);
   if(o.self)m.traverse(c=>{if(!c.isSkinnedMesh||!c.userData.body||c.userData.ghost)return;const gh=new THREE.SkinnedMesh(c.geometry,ghostMat);gh.userData.ghost=gh.userData.r7person=1;gh.frustumCulled=false;gh.renderOrder=10;gh.bind(c.skeleton,c.bindMatrix);c.parent.add(gh)});
   const s=1.86/src.userData.h;m.scale.setScalar(s);m.userData.r7person=1;
   for(const c of g.children)if(!c.userData.r7keep&&c.name!=='emote-prop'){c.userData.r7hidden=c.visible;c.visible=false}
-  g.add(m);const mixer=new THREE.AnimationMixer(m),act={};for(const n of o.crowd?['Idle_Loop','Idle_Talking_Loop','Dance_Loop']:['Idle_Loop','Walk_Loop','Jog_Fwd_Loop','Dance_Loop','Sitting_Idle_Loop'])if(clips[n]){act[n]=mixer.clipAction(clips[n]);act[n].setEffectiveWeight(n==='Idle_Loop'?1:0);if(n==='Idle_Loop')act[n].play()}if(act.Dance_Loop)act.Dance_Loop.timeScale=.85+Math.random()*.3;
+  g.add(m);const mixer=new THREE.AnimationMixer(m),act={};for(const n of o.crowd?['Idle_Loop','Idle_Talking_Loop','Dance_Loop','Walk_Loop','Sitting_Idle_Loop']:['Idle_Loop','Walk_Loop','Jog_Fwd_Loop','Dance_Loop','Sitting_Idle_Loop'])if(clips[n]){act[n]=mixer.clipAction(clips[n]);act[n].setEffectiveWeight(n==='Idle_Loop'?1:0);if(n==='Idle_Loop')act[n].play()}if(act.Dance_Loop)act.Dance_Loop.timeScale=.85+Math.random()*.3;
   for(const a of Object.values(act))a.time=Math.random()*a.getClip().duration;
-  const frozen=!!o.crowd&&++crowdN>12;g.userData.real={m,mixer,act,w:{Idle_Loop:1},acc:0,frozen,posed:0};people.add(g)}
- let crowdN=0;R.resetCrowd=()=>{crowdN=0};
+  const frozen=false;g.userData.real={m,mixer,act,w:{Idle_Loop:1},acc:0,frozen,posed:0,lod:!!lo};people.add(g)}
+ let crowdN=0,bud=12,budF=-1;R.resetCrowd=()=>{crowdN=0};
  // Low-poly crowd copy: same skeleton, materials (with textures) borrowed from the full model by name; no shadows.
  function lodOf(scene,hi){const mats={};hi.traverse(o=>{if(o.isSkinnedMesh)mats[o.material.name]=o.material});prep(scene);scene.traverse(o=>{if(!o.isSkinnedMesh)return;o.castShadow=false;const h=mats[o.material.name];if(h)o.material=h});scene.userData.h=hi.userData.h;return scene}
  const people=new Set(),ghostMat=new THREE.MeshBasicMaterial({color:0x8ff0e6,transparent:true,opacity:.42,depthWrite:false,depthFunc:THREE.GreaterDepth});
  R.dress=(g,o)=>{try{dress(g,o)}catch(e){console.warn('dress',e)}};
- R.frame=(g,moving,dt,spd,emote,far)=>{const r=g.userData.real;if(!r)return false;r.acc+=dt;if(far&&r.acc<.066)return true;const step=r.acc;r.acc=0;
+ R.frame=(g,moving,dt,spd,emote,far)=>{const r=g.userData.real;if(!r)return false;r.acc+=dt;if(far&&r.acc<.066)return true;if(r.lod){const f=renderer.info.render.frame;if(f!==budF){budF=f;bud=12}if(bud>0)bud--;else if(r.acc<.25)return true}const step=r.acc;r.acc=0;
   const height=1.86*g.scale.x,hps=(spd||0)/height,jog=moving&&hps>1.55,want=emote==='dance'?'Dance_Loop':emote==='talk'&&r.act.Idle_Talking_Loop?'Idle_Talking_Loop':emote==='sit'?'Sitting_Idle_Loop':!moving?'Idle_Loop':jog?'Jog_Fwd_Loop':'Walk_Loop';
   if(r.frozen&&r.posed>1)return true;const k=r.frozen?1:1-Math.exp(-step*10);for(const [n,a] of Object.entries(r.act)){const cur=r.w[n]||0,t=n===want?1:0,nw=cur+(t-cur)*k;r.w[n]=nw;if(nw<.002&&t===0){if(a.isRunning())a.stop()}else{if(!a.isRunning())a.play();a.setEffectiveWeight(nw)}}if(r.frozen){r.posed++;r.mixer.update(r.posed===1?Math.random()*2:0);return true}
   if(r.act.Walk_Loop)r.act.Walk_Loop.timeScale=THREE.MathUtils.clamp(hps/.95,.6,1.7);if(r.act.Jog_Fwd_Loop)r.act.Jog_Fwd_Loop.timeScale=THREE.MathUtils.clamp(hps/1.9,.7,1.4);
