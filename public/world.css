@@ -599,3 +599,6 @@ dialog{border-radius:22px}
 .scene-label.emote-bubble{font-size:26px;line-height:1;padding:2px 4px;background:rgba(247,255,247,.92);border:2px solid #1F8E93;border-radius:999px;box-shadow:0 4px 12px rgba(12,63,68,.25);animation:emotePop .35s ease-out}
 @keyframes emotePop{from{scale:.4;opacity:0}to{scale:1;opacity:1}}
 @media (prefers-reduced-motion:reduce){.scene-label.emote-bubble{animation:none}}
+/* R9 Look picker: one compact screen, three per row */
+.look-sheet .look-grid{grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0 12px}.look-sheet .choice-action{padding:10px 6px;min-height:0;text-align:center}.look-sheet .choice-action b{font-size:13px}.look-sheet .choice-action span{display:none}.look-sheet h3{margin:6px 0 0;font-size:13px}
+.look-sheet .sw{display:inline-block;width:12px;height:12px;border-radius:6px;margin-right:5px;vertical-align:-1px;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
