@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__.'/common.php';require_once __DIR__.'/life-lib.php';
+require_once __DIR__.'/common.php';require_once __DIR__.'/life-lib.php';require_once __DIR__.'/cache-lib.php';
 cl_methods(['POST']);cl_admin();cl_rate('admin',60,60);
 // Admins can send a banner image (up to 2 MB, about 2.8 MB as base64), so their requests may be larger.
 $input=cl_body(3000000);$action=$input['action']??'';
@@ -125,7 +125,7 @@ if ($action==='set_rank') {
     $held=cl_balances_lock((int)$target);cl_balance_write((int)$target,$held['coins'],(int)$ranks[$i]['xp']);
     $game['money']=$held['coins'];$game['xp']=$ranks[$i]['xp'];$game['rankClaimed']=$i;
     cl_store_character((int)$target,$game);
-    admin_log('set_rank',(int)$target,$i,$ranks[$i]['icon'].' '.$ranks[$i]['name'].' (was '.$from.' XP) · '.$note);$db->commit();json_response('success',['xp'=>$ranks[$i]['xp']]);
+    admin_log('set_rank',(int)$target,$i,$ranks[$i]['icon'].' '.$ranks[$i]['name'].' (was '.$from.' XP) · '.$note);$db->commit();cl_cache_forget('leaderboard');json_response('success',['xp'=>$ranks[$i]['xp']]);
 }
 if ($action==='award_badge') {
     $icon=trim((string)($input['icon']??''));$name=trim((string)($input['name']??''));
@@ -145,7 +145,7 @@ if ($action==='suspend_rank') {
     else {if ($note==='') cl_fail('Give a reason for the audit log');
         cl_run('INSERT INTO chinalife_rank_suspensions(user_id,until,reason,created_by,created_at) VALUES(?,DATE_ADD(NOW(),INTERVAL ? DAY),?,?,NOW()) ON DUPLICATE KEY UPDATE until=VALUES(until),reason=VALUES(reason),created_by=VALUES(created_by),created_at=NOW()','iisi',[$target,$days,$note,$uid]);
         admin_log('suspend_rank',(int)$target,$days,$note);}
-    json_response('success',cl_rank_status((int)$target));
+    cl_cache_forget('leaderboard');json_response('success',cl_rank_status((int)$target));
 }
 // Hafrik HQ service applications.
 if ($action==='applications') {

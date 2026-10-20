@@ -599,3 +599,6 @@ dialog{border-radius:22px}
 .scene-label.emote-bubble{font-size:26px;line-height:1;padding:2px 4px;background:rgba(247,255,247,.92);border:2px solid #1F8E93;border-radius:999px;box-shadow:0 4px 12px rgba(12,63,68,.25);animation:emotePop .35s ease-out}
 @keyframes emotePop{from{scale:.4;opacity:0}to{scale:1;opacity:1}}
 @media (prefers-reduced-motion:reduce){.scene-label.emote-bubble{animation:none}}
+
+/* Guangzhou camera prototype: keep the nearby entrance prompt clear of the avatar. */
+.gz-street #tpEnter{left:auto;right:20px;top:auto;bottom:210px;transform:none}

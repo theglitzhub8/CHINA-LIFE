@@ -87,16 +87,17 @@ These rules come from real mistakes:
   backup (`tar xzf /root/backup/chinalife-files-<time>.tgz -C /www/wwwroot`) and by reverting the commit on `main`.
 - Change the approved city map (see `CLAUDE.md`).
 
-## Switches the server reads
+## Polling in this revision
 
-`/www/wwwroot/hafrik.com/api/v4/chinalife/polling-config.json` controls the Batch 1 adaptive polling. It is read on
-every request, so a change applies within about 10 s, with no deploy:
+The current client uses a 20-second presence heartbeat, with room changes sent immediately. Street walking with
+nearby peers permits a 4-second interval. Presence POSTs return the player list, so there is no second GET.
+Background presence pauses while the document is hidden. Shared feed data is cached for up to 65 seconds;
+opening shared activities requests fresh data. Save/transfer reconciliation retains its existing 60-second timer.
 
-| Content | Effect |
-|---|---|
-| `{"mode":"legacy"}` or file missing | old polling for everyone (kill switch) |
-| `{"mode":"testers","testers":["hafrik"],"percent":10}` | listed usernames or ids, plus that share of players |
-| `{"mode":"adaptive"}` | new polling for everyone |
+The older Batch 1 `polling-config.json` adaptive/tester/legacy switch is not read by the current `presence.php` or
+`cloud.js`. Changing that file does not change this revision's polling. Preserve it for older-version rollback,
+but do not use it as a kill switch for this version. `docs/PERF-BATCH1-DEPLOY.md` describes the historical rollout;
+check the deployed code revision before applying that older procedure.
 
 ## Monitoring (read-only)
 

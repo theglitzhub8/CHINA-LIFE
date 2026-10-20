@@ -1,0 +1,98 @@
+{
+  "before": {
+    "camera": {
+      "active": true,
+      "walking": true,
+      "player": [
+        -50,
+        0,
+        -48
+      ],
+      "scale": 0.8,
+      "visible": true,
+      "inScene": true,
+      "camera": [
+        -42.9,
+        6.3,
+        -48
+      ],
+      "hitDist": 8.7,
+      "box": [
+        [
+          -50.4,
+          0,
+          -48.4
+        ],
+        [
+          -49.6,
+          1.6,
+          -47.6
+        ]
+      ],
+      "kids": 9
+    },
+    "stats": {
+      "view": "map",
+      "meshes": 835,
+      "shadowCasters": 220,
+      "triangles": 101476,
+      "drawCalls": 225,
+      "fps": 107,
+      "pixelRatio": 1.5
+    }
+  },
+  "after": {
+    "camera": {
+      "active": true,
+      "walking": true,
+      "player": [
+        -50,
+        0,
+        -48
+      ],
+      "scale": 0.8,
+      "fov": 70,
+      "distance": 5.5,
+      "prototype": true,
+      "visible": true,
+      "inScene": true,
+      "camera": [
+        -44.7,
+        2.9,
+        -48
+      ],
+      "hitDist": null,
+      "box": [
+        [
+          -50.4,
+          0,
+          -48.4
+        ],
+        [
+          -49.6,
+          1.6,
+          -47.6
+        ]
+      ],
+      "kids": 9
+    },
+    "stats": {
+      "view": "map",
+      "meshes": 816,
+      "shadowCasters": 220,
+      "triangles": 97574,
+      "drawCalls": 162,
+      "fps": 108,
+      "pixelRatio": 1.5
+    },
+    "benchmark": {
+      "view": "map",
+      "msPerFrame": 1.65,
+      "estFps": 607,
+      "drawCalls": 130,
+      "triangles": 54810,
+      "pixelRatio": 1.5,
+      "canvas": "925x1791"
+    }
+  }
+}

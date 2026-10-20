@@ -12,7 +12,7 @@ import vm from 'node:vm';
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'chinalife-api-')),socket=path.join(tmp,'mysql.sock');
 let mysql,php,base;
 const sql=command=>execFileSync('mysql',['--no-defaults','--socket='+socket,'-u','root','--batch','--skip-column-names','-e',command],{encoding:'utf8',stdio:['ignore','pipe','pipe']});
-const env={...process.env,CHINALIFE_TEST_SOCKET:socket,CHINALIFE_PUSH_TEST:'1'};
+const env={...process.env,CHINALIFE_TEST_SOCKET:socket,CHINALIFE_PUSH_TEST:'1',CL_CACHE_DIR:path.join(tmp,'cache')};
 async function waitFor(check){for(let i=0;i<100;i++){try{if(await check())return}catch{}await new Promise(resolve=>setTimeout(resolve,100))}throw Error('Test service failed to start')}
 async function call(id,file,method='GET',data){const response=await fetch(base+'/api/v4/chinalife/'+file,{method,headers:{...(id?{Authorization:'Bearer test-'+id}:{}),...(data?{'content-type':'application/json'}:{})},body:data?JSON.stringify(data):undefined});return {...await response.json(),httpStatus:response.status}}
 const presence=(city='Shenyang',place='plaza')=>({city,place,name:'Player',color:'#246fa7',skin:'#8b5c43',hair:'cap',x:1,z:2});
@@ -21,8 +21,8 @@ before(async()=>{
  execFileSync('mysqld',['--no-defaults','--initialize-insecure','--datadir='+path.join(tmp,'data')],{stdio:'ignore'});
  const log=fs.openSync(path.join(tmp,'mysql.log'),'a');mysql=spawn('mysqld',['--no-defaults','--datadir='+path.join(tmp,'data'),'--socket='+socket,'--skip-networking','--mysqlx=0','--pid-file='+path.join(tmp,'mysql.pid')],{stdio:['ignore',log,log]});
  await waitFor(()=>sql('SELECT 1').trim()==='1');
- sql('CREATE DATABASE chinalife_test; USE chinalife_test; CREATE TABLE users(user_id INT UNSIGNED PRIMARY KEY,user_name VARCHAR(100)); INSERT INTO users VALUES '+Array.from({length:12},(_,i)=>`(${i+1},'user${i+1}')`).join(','));
- const root=path.join(tmp,'web/api/v4');fs.mkdirSync(root,{recursive:true});fs.cpSync('chinalife-api',path.join(root,'chinalife'),{recursive:true});fs.writeFileSync(path.join(root,'chinalife/admin-config.php'),`<?php return ['usernames'=>['user1']];`);fs.writeFileSync(path.join(root,'chinalife/polling-config.json'),'{"mode":"adaptive"}');
+ sql('CREATE DATABASE chinalife_test; USE chinalife_test; CREATE TABLE users(user_id INT UNSIGNED PRIMARY KEY,user_name VARCHAR(100),user_picture VARCHAR(255) NULL); INSERT INTO users(user_id,user_name) VALUES '+Array.from({length:12},(_,i)=>`(${i+1},'user${i+1}')`).join(','));
+ const root=path.join(tmp,'web/api/v4');fs.mkdirSync(root,{recursive:true});fs.cpSync('chinalife-api',path.join(root,'chinalife'),{recursive:true});fs.writeFileSync(path.join(root,'chinalife/admin-config.php'),`<?php return ['usernames'=>['user1']];`);
  fs.writeFileSync(path.join(root,'db.php'),`<?php mysqli_report(MYSQLI_REPORT_ERROR|MYSQLI_REPORT_STRICT);`);
  fs.writeFileSync(path.join(root,'helpers.php'),`<?php function get_db_connection(){$db=new mysqli('localhost','root','','chinalife_test',0,getenv('CHINALIFE_TEST_SOCKET'));$db->set_charset('utf8mb4');return $db;} if(($_SERVER['REQUEST_METHOD']??'')==='OPTIONS'){http_response_code(204);exit;} function json_response($status,$data=null,$message=''){header('Content-Type: application/json');echo json_encode(compact('status','data','message'));exit;} function auth_user($db){$token=$_SERVER['HTTP_AUTHORIZATION']??'';if(!preg_match('/^Bearer test-([1-9][0-9]*)$/',$token,$m)){http_response_code(401);json_response('error',null,'Unauthorized');}$s=$db->prepare('SELECT * FROM users WHERE user_id=?');$id=(int)$m[1];$s->bind_param('i',$id);$s->execute();return $s->get_result()->fetch_assoc()?:[];}`);
  // Upgrade the schema already uploaded to the Hafrik server, twice, preserving its rows.
@@ -32,6 +32,9 @@ before(async()=>{
  const listener=net.createServer();await new Promise(resolve=>listener.listen(0,'127.0.0.1',resolve));const port=listener.address().port;await new Promise(resolve=>listener.close(resolve));base='http://127.0.0.1:'+port;
  const phpLog=fs.openSync(path.join(tmp,'php.log'),'a');php=spawn('php',['-S','127.0.0.1:'+port,'-t',path.join(tmp,'web')],{env,stdio:['ignore',phpLog,phpLog]});
  await waitFor(async()=>{try{return (await fetch(base+'/api/v4/chinalife/save.php')).status===401}catch{return false}});
+ // These integration scenarios start in Shenyang; configure that city explicitly instead of relying on production defaults.
+ const defaults=await call(1,'events.php');assert.deepEqual(defaults.data.cities,['China']);
+ sql(`USE chinalife_test; INSERT INTO chinalife_settings(name,value,updated_at) VALUES('open_cities','["Shenyang"]',NOW()) ON DUPLICATE KEY UPDATE value=VALUES(value)`);
 });
 // Each run creates a ~190 MB MySQL data directory; remove it so repeated runs cannot fill the disk.
 after(async()=>{php?.kill();if(mysql&&mysql.exitCode===null){const exited=new Promise(resolve=>mysql.once('exit',resolve));mysql.kill();await exited}fs.rmSync(tmp,{recursive:true,force:true})});
@@ -195,8 +198,8 @@ test('voice relay credentials require an account and fall back to STUN without a
  const r=await call(3,'ice.php');assert.equal(r.httpStatus,200);assert.equal(r.data.turn,false);assert.deepEqual(r.data.iceServers,[{urls:['stun:stun.cloudflare.com:3478']}]);
 });
 
-test('leaderboard ranks server XP only and ignores client totals',async()=>{
- for(const id of [10,11]){const cur=(await call(id,'save.php')).data;const before=cur.save?.game?.xp??0;const r=await call(id,'save.php','POST',{revision:cur.revision||0,save:{character:{name:'x'},game:{...game(),transferTotal:cur.save?.game?.transferTotal??0,sharedXP:cur.save?.game?.sharedXP??0,xp:before+50000}}});assert.equal(r.httpStatus,200,r.message);assert.equal((await call(id,'save.php')).data.save.game.xp,before)}
+test('leaderboard uses saved ledger XP and caps device-reported earnings',async()=>{
+ for(const id of [10,11]){const cur=(await call(id,'save.php')).data;const before=cur.save?.game?.xp??0;const r=await call(id,'save.php','POST',{revision:cur.revision||0,save:{character:{name:'x'},game:{...game(),transferTotal:cur.save?.game?.transferTotal??0,sharedXP:cur.save?.game?.sharedXP??0,xp:before+50000}}});assert.equal(r.httpStatus,200,r.message);const xp=(await call(id,'save.php')).data.save.game.xp;assert.ok(xp>=(cur.exists?before+300:0)&&xp<=(cur.exists?before+301:0),'device XP is capped, not copied from the claimed total')}
  assert.equal((await call(1,'admin.php','POST',{action:'set_rank',user_id:11,rank:4,note:'Board'})).httpStatus,200);
  assert.equal((await call(1,'admin.php','POST',{action:'set_rank',user_id:10,rank:1,note:'Board'})).httpStatus,200);
  const board=await call(10,'leaderboard.php');assert.equal(board.httpStatus,200);const order=board.data.players.map(p=>p.id);assert.ok(order.indexOf('11')<order.indexOf('10'));assert.equal(board.data.players.find(p=>p.id==='11').xp,3500);assert.ok(board.data.players.find(p=>p.id==='10').own);assert.ok(board.data.position>=2);
@@ -232,12 +235,14 @@ test('admin events reward each player once, only at the venue, and end on reques
  await call(1,'admin.php','POST',{action:'end_event',id:Number(ev.id)});assert.ok(!(await call(12,'events.php?city=Shenyang')).data.events.some(e=>e.id===ev.id));
 });
 
-test('save ignores client coin and XP totals',async()=>{
+test('save caps device coin and XP earnings and cannot repeat the hourly coin allowance',async()=>{
  const cur=(await call(11,'save.php')).data,before=cur.save.game;
- const r=await call(11,'save.php','POST',{revision:cur.revision,save:{character:{name:'x'},game:{...before,xp:before.xp+999999,money:before.money+99999999}}});assert.equal(r.httpStatus,200);
- const after=(await call(11,'save.php')).data.save.game;assert.equal(after.xp,before.xp);assert.equal(after.money,before.money);assert.equal(r.data.money,before.money);assert.equal(r.data.xp,before.xp);
+ const recent=Number(sql("USE chinalife_test; SELECT COALESCE(SUM(coins),0) FROM chinalife_economy_actions WHERE user_id=11 AND action='device' AND created_at>=DATE_SUB(NOW(),INTERVAL 1 HOUR)"));
+ const allowance=Math.max(0,20000-recent);
+ const r=await call(11,'save.php','POST',{revision:cur.revision,save:{character:{name:'x'},game:{...before,xp:before.xp+999999,money:before.money+99999999}}});assert.equal(r.httpStatus,200,r.message);
+ const after=(await call(11,'save.php')).data.save.game;assert.equal(after.money,before.money+allowance);assert.ok(after.xp>=before.xp+300&&after.xp<=before.xp+301);assert.equal(r.data.money,after.money);assert.equal(r.data.xp,after.xp);
+ const retry=await call(11,'save.php','POST',{revision:r.data.revision,save:{character:{},game:{...after,money:99999999}}});assert.equal(retry.httpStatus,200,retry.message);assert.equal(retry.data.money,after.money,'saving again cannot repeat the coin allowance');
 });
-
 test('the weekly golden envelope pays only the first finder at its venue',async()=>{
  const g=await call(3,'golden.php');assert.equal(g.httpStatus,200);assert.equal(g.data.found_by,null);
  assert.equal((await call(3,'golden.php','POST',{})).httpStatus,409);
@@ -250,9 +255,9 @@ test('admins open cities and every player receives the open list',async()=>{
  assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['Shenyang']);
  assert.equal((await call(5,'admin.php','POST',{action:'set_cities',open:['Harbin']})).httpStatus,403);
  assert.equal((await call(1,'admin.php','POST',{action:'set_cities',open:['Atlantis']})).httpStatus,400);
- const r=await call(1,'admin.php','POST',{action:'set_cities',open:['Harbin']});assert.deepEqual(r.data.open,['Shenyang','Harbin']);
- assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['Shenyang','Harbin']);
- await call(1,'admin.php','POST',{action:'set_cities',open:[]});assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['Shenyang']);
+ const r=await call(1,'admin.php','POST',{action:'set_cities',open:['Harbin']});assert.deepEqual(r.data.open,['Harbin']);
+ assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['Harbin']);
+ assert.equal((await call(1,'admin.php','POST',{action:'set_cities',open:[]})).httpStatus,400);assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['Harbin']);await call(1,'admin.php','POST',{action:'set_cities',open:['Shenyang']});
 });
 
 test('daily push sends a valid VAPID-signed reminder and removes expired subscriptions',async()=>{
@@ -278,7 +283,7 @@ test('two real clients accept, meet, participate and receive shared activity rew
  async function client(id){const t=harness(null),c=t.context;c.HafrikSession={token:'test-'+id,user:{id}};c.URLSearchParams=URLSearchParams;c.fetch=(url,opts)=>fetch(base+new URL(url).pathname+new URL(url).search,opts);await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);vm.runInContext(fs.readFileSync('public/shared-activities.js','utf8'),c);await c.ChinaLifeShared.ready;return t;}
  const a=await client(11),b=await client(12);
  await a.context.ChinaLifeShared.open('12','user12');assert.ok(a.document.querySelector('[data-kind="study"]'));await a.document.querySelector('[data-kind="study"]').onclick();
- await b.context.ChinaLifeShared.poll();assert.equal(b.document.getElementById('sharedInviteNotice').hidden,false);await b.context.ChinaLifeShared.open();await b.document.querySelector('[data-shared="accept"]').onclick();
+ await b.context.ChinaLifeShared.poll();assert.equal(b.document.getElementById('sharedInviteNotice').hidden,true,'background feed remains cached');b.elapse(65001);await b.context.ChinaLifeShared.poll();assert.equal(b.document.getElementById('sharedInviteNotice').hidden,false);await b.context.ChinaLifeShared.open();await b.document.querySelector('[data-shared="accept"]').onclick();
  let session=(await call(11,'activities.php')).data.activities[0];const id=session.id;
  const reconnect=await client(12);await reconnect.context.ChinaLifeShared.open();assert.match(reconnect.document.getElementById('sharedBody').textContent,/Both players must be present and ready/);
  assert.equal((await call(11,'activities.php','POST',{action:'ready',id})).httpStatus,409);
@@ -367,7 +372,7 @@ test('two game clients send a partner request, accept it, reconnect and end it b
  sql("USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (11,12)");
  async function client(id){const t=harness(null),c=t.context;c.HafrikSession={token:'test-'+id,user:{id}};c.URLSearchParams=URLSearchParams;c.fetch=(url,opts)=>fetch(base+new URL(url).pathname+new URL(url).search,opts);await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);vm.runInContext(fs.readFileSync('public/shared-activities.js','utf8'),c);await c.ChinaLifeShared.ready;return t;}
  const a=await client(11),b=await client(12);await a.context.ChinaLifeShared.open('12','user12','girlfriend');assert.equal(a.document.querySelectorAll('[data-kind]').length,1);await a.document.querySelector('[data-kind="girlfriend"]').onclick();
- await b.context.ChinaLifeShared.poll();assert.equal(b.document.getElementById('sharedInviteNotice').hidden,false);await b.context.ChinaLifeShared.open();await b.document.querySelector('[data-shared="accept"]').onclick();assert.match(b.document.getElementById('sharedBody').textContent,/Partner: user11/);
+ await b.context.ChinaLifeShared.poll();assert.equal(b.document.getElementById('sharedInviteNotice').hidden,true,'background feed remains cached');b.elapse(65001);await b.context.ChinaLifeShared.poll();assert.equal(b.document.getElementById('sharedInviteNotice').hidden,false);await b.context.ChinaLifeShared.open();await b.document.querySelector('[data-shared="accept"]').onclick();assert.match(b.document.getElementById('sharedBody').textContent,/Partner: user11/);
  const restarted=await client(11);await restarted.context.ChinaLifeShared.open();assert.match(restarted.document.getElementById('sharedBody').textContent,/Partner: user12/);assert.ok(restarted.document.querySelector('[data-shared="end-relationship"]'));
  assert.equal((await call(12,'block.php','POST',{peer:'11',blocked:true})).httpStatus,200);for(const id of [11,12])assert.equal((await call(id,'activities.php')).data.relationships.length,0);
  await call(12,'block.php','POST',{peer:'11',blocked:false});
@@ -385,7 +390,7 @@ test('hidden fortunes award server-configured money once and rich public profile
  const loaded=await call(11,'save.php');assert.equal(loaded.data.save.game.money,beforeClaims+3750000);assert.equal(loaded.data.save.game.activeHome,'home-mansion');assert.ok((await call(11,'fortune.php')).data.opportunities.every(o=>o.claimed));const profile=(await call(12,'profile.php?peer=11')).data.profile;assert.equal(profile.wealth,'💎 Millionaire');assert.equal(profile.netWorth,null,'other players never see net worth');assert.ok((await call(11,'profile.php')).data.profile.netWorth>1000000,'own net worth is visible');assert.equal(profile.homes.length,4);assert.deepEqual(profile.items,['piano','safe']);assert.equal(profile.game,undefined);assert.equal((await call(null,'profile.php?peer=11')).httpStatus,401);
  for(const id of ['home-campus','home-nanhu','home-hunnan','home-river','home-mansion'])assert.equal((await call(11,'presence.php','POST',presence('Shenyang',id))).httpStatus,200);
 });
-test('hafrik and horlaarsman have admin access alongside configured additional admins',async()=>{sql("USE chinalife_test; INSERT INTO users VALUES(13,'hafrik'),(14,'horlaarsman')");for(const id of [13,14]){assert.equal((await call(id,'admin.php','POST',{action:'stats'})).httpStatus,200);assert.equal((await call(id,'admin.php','POST',{action:'players'})).httpStatus,200)}assert.equal((await call(12,'admin.php','POST',{action:'stats'})).httpStatus,403)});
+test('hafrik and horlaarsman have admin access alongside configured additional admins',async()=>{sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(13,'hafrik'),(14,'horlaarsman')");for(const id of [13,14]){assert.equal((await call(id,'admin.php','POST',{action:'stats'})).httpStatus,200);assert.equal((await call(id,'admin.php','POST',{action:'players'})).httpStatus,200)}assert.equal((await call(12,'admin.php','POST',{action:'stats'})).httpStatus,403)});
 
 test('players can report other players and admins see the reports with a running count',async()=>{
  assert.equal((await call(4,'report.php','POST',{peer:5,reason:'nonsense'})).httpStatus,400);
@@ -476,10 +481,10 @@ test('admins edit the rank ladder, set a player rank with an audit log, award ba
  assert.equal((await call(1,'admin.php','POST',{action:'award_badge',user_id:11,icon:'🏮',name:'Lantern Festival 2026'})).httpStatus,200);
  assert.deepEqual((await call(12,'profile.php?peer=11')).data.profile.badges.map(b=>b.name),['Lantern Festival 2026']);
  assert.equal((await call(1,'admin.php','POST',{action:'suspend_rank',user_id:11,days:3})).httpStatus,400,'a reason is required to suspend');
- assert.equal((await call(1,'admin.php','POST',{action:'suspend_rank',user_id:11,days:3,note:'Exploit abuse'})).httpStatus,200);
+ assert.ok((await call(12,'leaderboard.php')).data.players.some(p=>p.id==='11'));assert.equal((await call(1,'admin.php','POST',{action:'suspend_rank',user_id:11,days:3,note:'Exploit abuse'})).httpStatus,200);
  const me=(await call(11,'events.php?city=Shenyang')).data.me;assert.ok(me.rankSuspendedUntil>Date.now());assert.equal(me.rankSuspendedReason,'Exploit abuse');
  assert.ok(!(await call(12,'leaderboard.php')).data.players.some(p=>p.id==='11'),'suspended players leave the leaderboard');
- await call(1,'admin.php','POST',{action:'suspend_rank',user_id:11,days:0});assert.equal((await call(11,'events.php?city=Shenyang')).data.me.rankSuspendedUntil,null);
+ await call(1,'admin.php','POST',{action:'suspend_rank',user_id:11,days:0});assert.ok((await call(12,'leaderboard.php')).data.players.some(p=>p.id==='11'),'lifting suspension refreshes the cached leaderboard');assert.equal((await call(11,'events.php?city=Shenyang')).data.me.rankSuspendedUntil,null);
  const log=(await call(1,'admin.php','POST',{action:'ranks'})).data.log;assert.deepEqual(log.slice(0,5).map(l=>l.action),['suspend_rank','suspend_rank','award_badge','set_rank','set_ranks']);assert.match(log[3].note,/Festival winner/);
  assert.equal((await call(11,'events.php?city=Shenyang')).data.admin,false,'top rank never grants admin');
  sql("USE chinalife_test; DELETE FROM chinalife_settings WHERE name='ranks'");
@@ -763,80 +768,35 @@ test('AI characters act in the game with tools (checked against real places, scr
   reply=[{type:'text',text:'Hello from the café'}];r=await call(11,'ai.php','POST',{agent:'barista',message:'Hi',context:ctx});assert.equal(r.httpStatus,200);assert.match(seen.at(-1).system,/You are Coco/);
  }finally{mock.close();fs.unlinkSync(cfg)}
 });
-test('Batch 1: presence carries correctly scoped change counters; old clients get the same response as before',async()=>{
- sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (3,4,5); DELETE FROM chinalife_friends WHERE first_id IN (3,4,5) OR second_id IN (3,4,5); DELETE FROM chinalife_blocks WHERE owner_id IN (3,4,5) OR peer_id IN (3,4,5)');
- for(const [id,place] of [[3,'cafe'],[4,'cafe'],[5,'gym']])await call(id,'presence.php','POST',presence('Shenyang',place));
- const box=async id=>(await call(id,'presence.php','POST',{...presence('Shenyang',id===5?'gym':'cafe'),inbox:1})).data.inbox;
- assert.equal((await call(3,'presence.php','POST',presence('Shenyang','cafe'))).data.inbox,undefined,'no inbox unless asked: unchanged for old clients');
- const a0=await box(3),b0=await box(4),c0=await box(5);assert.equal(a0.mode,'adaptive');assert.equal(typeof a0.revision,'number');
- // Venue message: the room id moves for players in that venue only.
- await call(3,'messages.php','POST',{city:'Shenyang',place:'cafe',text:'Hello cafe'});
- assert.notEqual((await box(4)).room,b0.room,'same venue sees a new room message');assert.equal((await box(5)).room,c0.room,'another venue does not');
- // Private message: only the recipient's message counter moves.
- await call(3,'friends.php','POST',{peer:'4',action:'request'});await call(4,'friends.php','POST',{peer:'3',action:'accept'});
- const b1=await box(4),a1=await box(3);await call(3,'messages.php','POST',{peer:'4',text:'Private hi'});
- assert.equal((await box(4)).messages,b1.messages+1,'recipient');assert.equal((await box(3)).messages,a1.messages,'sender unchanged');assert.equal((await box(5)).messages,c0.messages,'others unchanged');
- // Shared activity: both participants, nobody else.
- const b2=await box(4),a2=await box(3);const inv=await call(3,'activities.php','POST',{action:'invite',peer:'4',kind:'meal'});assert.equal(inv.httpStatus,200,JSON.stringify(inv));
- assert.equal((await box(4)).activities,b2.activities+1);assert.equal((await box(3)).activities,a2.activities+1);assert.equal((await box(5)).activities,c0.activities);
- await call(4,'activities.php','POST',{action:'decline',id:Number(inv.data.id)});assert.equal((await box(3)).activities,a2.activities+2,'declining notifies the inviter');
- // Money received bumps the save revision the player sees.
- const r0=(await box(4)).revision;await call(3,'transfers.php','POST',{peer:'4',amount:1,request_id:'batch1-transfer-0001'});assert.equal((await box(4)).revision,r0+1);
- // Rollback switch.
- // Deployed before the migration: no counters, clients told to keep the old polling, and messages still send.
- sql('USE chinalife_test; RENAME TABLE chinalife_inbox TO chinalife_inbox_off');
- try{assert.deepEqual((await box(3)),{mode:'legacy'});const sent=await call(3,'messages.php','POST',{city:'Shenyang',place:'plaza',text:'no inbox yet',peer:'4'});assert.equal(sent.httpStatus,200,JSON.stringify(sent))}
- finally{sql('USE chinalife_test; RENAME TABLE chinalife_inbox_off TO chinalife_inbox')}
- // Rollout switch (server-only JSON, read on every request so it applies at once). Legacy answers carry no counters.
- const cfg=path.join(tmp,'web/api/v4/chinalife/polling-config.json'),orig=fs.readFileSync(cfg,'utf8'),mode=async id=>(await box(id)).mode;
- try{
-  fs.writeFileSync(cfg,'{"mode":"legacy"}');assert.deepEqual(await box(3),{mode:'legacy'},'kill switch: immediate, and no extra queries');
-  fs.rmSync(cfg);assert.equal(await mode(3),'legacy','missing file means legacy');fs.writeFileSync(cfg,'not json');assert.equal(await mode(3),'legacy','broken file means legacy');
-  fs.writeFileSync(cfg,'{"mode":"testers","testers":["USER3","4"]}');assert.equal(await mode(3),'adaptive','tester by username');assert.equal(await mode(4),'adaptive','tester by user id');assert.deepEqual(await box(5),{mode:'legacy'},'everyone else stays on the old polling');
-  fs.writeFileSync(cfg,'{"mode":"testers","testers":[],"percent":100}');assert.equal(await mode(5),'adaptive','percent rollout');
-  fs.writeFileSync(cfg,'{"mode":"legacy","testers":["user3"]}');assert.equal(await mode(3),'legacy','legacy overrides the tester list');
- }finally{fs.writeFileSync(cfg,orig)}
+test('presence keeps the current one-POST contract and ignores obsolete inbox hints',async()=>{
+ sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (3,4,5); DELETE FROM chinalife_presence WHERE user_id IN (3,4,5)');
+ for(const [id,place] of [[3,'cafe'],[4,'cafe'],[5,'gym']])assert.equal((await call(id,'presence.php','POST',presence('Shenyang',place))).httpStatus,200);
+ const plain=await call(3,'presence.php','POST',presence('Shenyang','cafe'));
+ const hinted=await call(3,'presence.php','POST',{...presence('Shenyang','cafe'),inbox:1});
+ const read=await call(3,'presence.php?city=Shenyang');
+ for(const response of [plain,hinted,read]){assert.equal(response.httpStatus,200);assert.equal(response.data.inbox,undefined);assert.ok(response.data.players.some(p=>p.id==='4'&&p.place==='cafe'));assert.ok(response.data.players.some(p=>p.id==='5'&&p.place==='gym'));assert.ok(!response.data.players.some(p=>p.id==='3'))}
+ assert.deepEqual(hinted.data.players.map(p=>p.id).sort(),read.data.players.map(p=>p.id).sort());
 });
-test('Batch 1 end to end: one presence request per heartbeat, messages wake the right checks, fast when together, legacy rollback',async()=>{
+test('current presence heartbeat uses one POST every 20 seconds, pauses hidden, and accelerates only for street peers',async()=>{
  sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (6,7); DELETE FROM chinalife_saves WHERE user_id IN (6,7); DELETE FROM chinalife_presence WHERE user_id IN (6,7)');
- async function client(id){const t=harness(null),c=t.context,stored=new Map(),log=[];c.localStorage={getItem:k=>stored.get(k)||null,setItem:(k,v)=>stored.set(k,v)};c.HafrikSession={token:'test-'+id,user:{id,name:'User '+id}};c.URLSearchParams=URLSearchParams;
+ for(const id of [6,7])assert.equal((await call(id,'save.php','POST',{revision:0,save:{character:{},game:{...game(),place:'plaza'}}})).httpStatus,200);
+ async function client(id){const t=harness(null),c=t.context,stored=new Map(),log=[];c.localStorage={getItem:k=>stored.get(k)||null,setItem:(k,v)=>stored.set(k,v)};c.HafrikSession={token:'test-'+id,user:{id}};c.URLSearchParams=URLSearchParams;
   c.fetch=(url,options)=>{const u=new URL(url);log.push((options?.method||'GET')+' '+u.pathname.split('/').pop());return fetch(base+u.pathname+u.search,options)};
-  vm.runInContext(fs.readFileSync('public/poller.js','utf8'),c);
-  await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);t.game.loadSave({...game(),name:'Player '+id,place:'plaza'});await c.ChinaLifeCloud.upload();await c.ChinaLifeCloud.refresh();
-  await vm.runInContext('(async()=>{'+fs.readFileSync('public/notifications.js','utf8')+'})()',c);await vm.runInContext('(async()=>{'+fs.readFileSync('public/shared-activities.js','utf8')+'})()',c);return {...t,P:c.ChinaLifePoll,log}}
- for(let i=0;i<30;i++){const m=(await call(6,'presence.php','POST',{...presence(),inbox:1})).data?.inbox?.mode;if(m==='adaptive')break;await new Promise(r=>setTimeout(r,200))}sql('USE chinalife_test; DELETE FROM chinalife_presence WHERE user_id=6; DELETE FROM chinalife_rate_limits WHERE user_id IN (6,7)');
- const a=await client(6),b=await client(7);await a.P.run('presence');assert.equal(b.P.mode,'adaptive','switched on by the server after the first heartbeat');
- b.log.length=0;await b.P.run('presence');assert.deepEqual(b.log,['POST presence.php'],'one request per heartbeat (no separate GET)');
- assert.ok(b.context.ChinaLifeCloud.players.some(p=>p.id==='6'),'still sees the other player');
- assert.equal(b.P.stats().find(s=>s.name==='presence').interval,2500,'fast while another player is in the venue');
- await b.P.run('notifications');
- // A venue message: the next heartbeat wakes B's message check, which delivers it.
- const before=b.P.stats().find(s=>s.name==='notifications').next;assert.ok(before>5000,'message check is idle (safety interval) before anything happens');
- await call(6,'messages.php','POST',{city:'Shenyang',place:'plaza',text:'Batch one hello'});await b.P.run('presence');
- assert.ok(b.P.stats().find(s=>s.name==='notifications').next<1000,'heartbeat woke the message check');b.log.length=0;await b.P.run('notifications');
- assert.deepEqual(b.log,['GET notifications.php']);assert.match(b.document.getElementById('messageNotification').textContent,/Batch one hello/);
- // A shared-activity invitation wakes B's activity check, shows the invite, and keeps that check fast while it is open.
- sql('USE chinalife_test; DELETE FROM chinalife_friends WHERE first_id IN (6,7) OR second_id IN (6,7); DELETE FROM chinalife_shared_activities WHERE inviter_id IN (6,7) OR invitee_id IN (6,7)');
- await call(6,'friends.php','POST',{peer:'7',action:'request'});await call(7,'friends.php','POST',{peer:'6',action:'accept'});
- await b.P.run('activities');assert.equal(b.P.stats().find(s=>s.name==='activities').interval,30000,'idle activity check is slow');
- await call(6,'presence.php','POST',presence('Shenyang','plaza'));const inv=await call(6,'activities.php','POST',{action:'invite',peer:'7',kind:'meal'});assert.equal(inv.httpStatus,200,JSON.stringify(inv));
- await b.P.run('presence');assert.ok(b.P.stats().find(s=>s.name==='activities').next<1000,'heartbeat woke the activity check');await b.P.run('activities');
- assert.match(b.document.getElementById('sharedInvite')?.textContent||b.document.body.textContent,/invited you/);assert.equal(b.P.stats().find(s=>s.name==='activities').interval,3000,'fast while the invitation is open');
- await call(6,'activities.php','POST',{action:'cancel',id:Number(inv.data.id)});
- // Alone: slower heartbeat.
- sql('USE chinalife_test; DELETE FROM chinalife_presence WHERE user_id<>7');await b.P.run('presence');assert.equal(b.P.stats().find(s=>s.name==='presence').interval,10000,'10 s when nobody is with you');
- // Rollback: the server switches every game back to the old two-request heartbeat.
- const cfg=path.join(tmp,'web/api/v4/chinalife/polling-config.json'),orig=fs.readFileSync(cfg,'utf8');fs.writeFileSync(cfg,'{"mode":"legacy"}');
- try{await b.P.run('presence');assert.equal(b.P.mode,'legacy');b.log.length=0;await b.P.run('presence');assert.deepEqual(b.log,['POST presence.php','GET presence.php'],'legacy heartbeat as before');assert.equal(b.P.stats().find(s=>s.name==='notifications').interval,1000)}
- finally{fs.writeFileSync(cfg,orig)}
- // Switching the server back reaches devices already in legacy mode without a reload.
- await b.P.run('presence');assert.equal(b.P.mode,'adaptive');b.log.length=0;await b.P.run('presence');assert.deepEqual(b.log,['POST presence.php'],'back to one request per heartbeat');
+  await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);return {...t,log}}
+ const a=await client(6),b=await client(7);await b.context.ChinaLifeCloud.refresh();assert.ok(b.context.ChinaLifeCloud.players.some(p=>p.id==='6'));
+ const heartbeat=b.intervals.find(fn=>fn.name==='presenceHeartbeat');assert.ok(heartbeat);b.log.length=0;
+ b.elapse(19000);await heartbeat();assert.deepEqual(b.log,[]);
+ b.elapse(1000);await heartbeat();assert.deepEqual(b.log,['POST presence.php'],'no redundant GET, even with a peer in the venue');
+ b.log.length=0;b.game.state.place='cafe';await heartbeat();assert.deepEqual(b.log,['POST presence.php'],'a room change sends immediately');
+ b.log.length=0;b.document.hidden=true;b.elapse(60000);await heartbeat();assert.deepEqual(b.log,[]);b.document.hidden=false;await heartbeat();assert.deepEqual(b.log,['POST presence.php']);
+ b.context.ChinaLifeWorld={street:()=>({x:1,z:2,h:0}),streetPeerIds:()=>['6']};await heartbeat();b.log.length=0;
+ b.elapse(3999);await heartbeat();assert.deepEqual(b.log,[]);b.elapse(1);await heartbeat();assert.deepEqual(b.log,['POST presence.php']);
+ await a.context.ChinaLifeCloud.leave();await b.context.ChinaLifeCloud.leave();
 });
-
-test('Batch 1 money: every incoming transfer moves the recipient revision once, under concurrency and retries, and an open game picks it up',async()=>{
+test('every incoming transfer moves the recipient revision once, survives retries, and reaches an open game',async()=>{
  const ids=[8,9,10,11];sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (8,9,10,11); DELETE FROM chinalife_transfers WHERE sender_id IN (8,9,10,11) OR recipient_id IN (8,9,10,11); DELETE FROM chinalife_saves WHERE user_id IN (8,9,10,11)');
  for(const id of ids)assert.equal((await call(id,'save.php','POST',{revision:0,save:{character:{name:'P'+id},game:{...game(),name:'P'+id,money:1000,transferTotal:0}}})).httpStatus,200);
- const start=await call(11,'save.php'),inbox=async()=>(await call(11,'presence.php','POST',{...presence(),inbox:1})).data.inbox;
+ const start=await call(11,'save.php');
  // Three senders, two transfers each, all at once, and every request sent twice (a retry racing the original).
  const sends=[8,9,10].flatMap(from=>[1,2].map(n=>({from,amount:from*10+n,request_id:'batch1-money-'+from+'-'+n+'-xxxxxxxx'})));
  const results=await Promise.all(sends.flatMap(t=>[t,t]).map(t=>call(t.from,'transfers.php','POST',{peer:'11',amount:t.amount,request_id:t.request_id})));
@@ -845,18 +805,17 @@ test('Batch 1 money: every incoming transfer moves the recipient revision once, 
  const end=await call(11,'save.php'),total=sends.reduce((a,t)=>a+t.amount,0);
  assert.equal(end.data.revision,start.data.revision+6,'one revision step per transfer');
  assert.equal(end.data.save.game.money,1000+total);assert.equal(end.data.save.game.transferTotal,total);
- assert.equal((await inbox()).revision,end.data.revision,'the heartbeat reports the new revision');
  for(const from of [8,9,10])assert.equal((await call(from,'save.php')).data.save.game.money,1000-(from*10+1)-(from*10+2));
- // An open game (adaptive) picks up money even after another device saved without money in between.
+ // The current client checks the save through syncTransfers (also scheduled at its existing 60-second interval).
  const t=harness(null),c=t.context,stored=new Map();c.localStorage={getItem:k=>stored.get(k)||null,setItem:(k,v)=>stored.set(k,v)};c.HafrikSession={token:'test-11',user:{id:11,name:'User 11'}};c.URLSearchParams=URLSearchParams;
- c.fetch=(url,options)=>{const u=new URL(url);return fetch(base+u.pathname+u.search,options)};vm.runInContext(fs.readFileSync('public/poller.js','utf8'),c);
- await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);await c.ChinaLifeCloud.ready;const P=c.ChinaLifePoll,next=()=>P.stats().find(s=>s.name==='transfers').next;
- await P.run('presence');await P.run('presence');await P.run('transfers');const m0=t.game.state.money;
+ c.fetch=(url,options)=>{const u=new URL(url);return fetch(base+u.pathname+u.search,options)};
+ await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);await c.ChinaLifeCloud.ready;
+ await c.ChinaLifeCloud.syncTransfers();const m0=t.game.state.money;
  sql('USE chinalife_test; UPDATE chinalife_saves SET revision=revision+1 WHERE user_id=11');
- await P.run('presence');assert.ok(next()<1000,'newer save noticed');await P.run('transfers');assert.equal(t.game.state.money,m0,'no money in that save');
- await P.run('presence');assert.ok(next()>5000,'the same revision is not downloaded again on every heartbeat');
- await call(8,'transfers.php','POST',{peer:'11',amount:7,request_id:'batch1-money-late-xxxxxxxxx'});
- await P.run('presence');assert.ok(next()<1000,'money wakes the transfer check');await P.run('transfers');assert.equal(t.game.state.money,m0+7,'received money shows in the game');
+ await c.ChinaLifeCloud.syncTransfers();assert.equal(t.game.state.money,m0,'a revision without new money does not award coins');
+ assert.equal((await call(8,'transfers.php','POST',{peer:'11',amount:7,request_id:'batch1-money-late-xxxxxxxxx'})).httpStatus,200);
+ await c.ChinaLifeCloud.syncTransfers();assert.equal(t.game.state.money,m0+7,'received money shows in the game');
+ await c.ChinaLifeCloud.syncTransfers();assert.equal(t.game.state.money,m0+7,'the same transfer is not counted twice');
 });
 
 test('perf monitor reads /proc, the access log, database status and presence ages without changing anything',()=>{
@@ -889,7 +848,7 @@ test('partner upload quotas reject storage exhaustion before adding photos or so
  assert.equal(r.status,409);assert.match((await r.json()).message,/storage limit/);
 });
 
-test('server economy records jobs, night missions and purchases and ignores client totals',async()=>{
+test('server economy records jobs, missions and purchases alongside capped device earnings',async()=>{
  sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id=5; DELETE FROM chinalife_economy_actions WHERE user_id=5; DELETE FROM chinalife_balances WHERE user_id=5; DELETE FROM chinalife_saves WHERE user_id=5');
  const created=await call(5,'save.php','POST',{revision:0,save:{character:{},game:{...game(),job:'cafe-job',promotion:1,place:'cafe',money:10000,xp:9000}}});
  assert.equal(created.httpStatus,200,created.message);
@@ -907,28 +866,30 @@ test('server economy records jobs, night missions and purchases and ignores clie
  const saved=(await call(5,'save.php')).data;
  assert.equal(saved.save.game.money,3384);assert.equal(saved.save.game.xp,25);
  const inflated=await call(5,'save.php','POST',{revision:saved.revision,save:{character:{},game:{...saved.save.game,money:999999,xp:999999}}});
- assert.equal(inflated.data.money,3384);assert.equal(inflated.data.xp,25);
+ assert.equal(inflated.data.money,23384);assert.ok(inflated.data.xp>=325&&inflated.data.xp<=326);const deviceXp=inflated.data.xp-25;
  await call(5,'presence.php','POST',presence('Shenyang','night'));
  for(const key of ['entry','soft','vibe','dance']){const m=await call(5,'economy.php','POST',{action:'mission',key});assert.equal(m.httpStatus,200,m.message);assert.equal(m.data.bonus,false)}
  const bonus=await call(5,'economy.php','POST',{action:'mission',key:'work'});
- assert.equal(bonus.httpStatus,200,bonus.message);assert.equal(bonus.data.bonus,true);assert.equal(bonus.data.awarded,500);assert.equal(bonus.data.awardedXp,100);assert.equal(bonus.data.money,3884);assert.equal(bonus.data.xp,125);
+ assert.equal(bonus.httpStatus,200,bonus.message);assert.equal(bonus.data.bonus,true);assert.equal(bonus.data.awarded,1000,'mission bonus plus the newly reached Explorer rank');assert.equal(bonus.data.rankClaimed,1);assert.equal(bonus.data.awardedXp,100);assert.equal(bonus.data.money,24384);assert.equal(bonus.data.xp,125+deviceXp);
  assert.equal((await call(5,'economy.php','POST',{action:'mission',key:'work'})).data.duplicate,true);
  const broke=await call(5,'economy.php','POST',{action:'purchase',sku:'club-owner:night',place:'night'});
  assert.equal(broke.httpStatus,409);
  const entry=await call(5,'economy.php','POST',{action:'purchase',sku:'club-entry',place:'night'});
- assert.equal(entry.httpStatus,200,entry.message);assert.equal(entry.data.money,3824);assert.equal(entry.data.duplicate,false);
+ assert.equal(entry.httpStatus,200,entry.message);assert.equal(entry.data.money,24324);assert.equal(entry.data.duplicate,false);
  assert.equal((await call(5,'economy.php','POST',{action:'purchase',sku:'club-entry',place:'night'})).data.duplicate,true);
- const totals=await call(5,'economy.php');assert.equal(totals.data.money,3824);assert.equal(totals.data.xp,125);
- const board=await call(5,'leaderboard.php');assert.equal(board.data.players.find(p=>p.id==='5').xp,125);
+ const totals=await call(5,'economy.php');assert.equal(totals.data.money,24324);assert.equal(totals.data.xp,125+deviceXp);
+ // XP changes appear after the shared leaderboard cache expires; moderation invalidation is checked separately.
+ execFileSync('php',['-r',"require $argv[1];cl_cache_forget('leaderboard');",path.join(tmp,'web/api/v4/chinalife/cache-lib.php')],{env});
+ const board=await call(5,'leaderboard.php');assert.equal(board.data.players.find(p=>p.id==='5').xp,125+deviceXp);
 });
 
-test('Gist Night shows an anonymous handle, keeps the author for admins, and counts reactions and one poll vote',async()=>{
+test('Gist Night hides identity from players, keeps the author for admins, and counts reactions and one poll vote',async()=>{
  sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (1,5,6)');
  const posted=await call(5,'gist-night.php','POST',{action:'post',city:'Shenyang',body:'The square is glowing.',poll:{question:'Stay out?',options:['Yes','No']}});
- assert.equal(posted.httpStatus,200,posted.message);assert.match(posted.data.handle,/^night-[0-9a-f]{6}$/);
+ assert.equal(posted.httpStatus,200,posted.message);assert.equal(posted.data.handle,undefined);
  const pub=await call(6,'gist-night.php?city=Shenyang');const post=pub.data.posts[0];
- assert.equal(post.handle,posted.data.handle);assert.equal(post.user_id,undefined);assert.equal(post.body,'The square is glowing.');
- const admin=await call(1,'gist-night.php?city=Shenyang');assert.equal(admin.data.posts[0].user_id,'5');assert.equal(admin.data.admin,true);
+ assert.equal(post.handle,undefined);assert.equal(post.user_id,undefined);assert.equal(post.body,'The square is glowing.');
+ const admin=await call(1,'gist-night.php?city=Shenyang');assert.equal(admin.data.posts[0].user_id,'5');assert.equal(admin.data.admin,true);assert.match(admin.data.posts[0].handle,/^night-[0-9a-f]{6}$/);
  const react=await call(6,'gist-night.php','POST',{action:'react',city:'Shenyang',id:+post.id,kind:'fire'});
  assert.equal(react.data.posts[0].reactions.fire,1);assert.equal(react.data.posts[0].mine,'fire');
  const off=await call(6,'gist-night.php','POST',{action:'react',city:'Shenyang',id:+post.id,kind:'fire'});assert.equal(off.data.posts[0].reactions.fire,0);

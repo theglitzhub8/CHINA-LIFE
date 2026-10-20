@@ -1,7 +1,7 @@
 // R1 front-end bundle: public/index.dev.html is the source; this writes public/index.html with
 // 2 classic bundles (keeping inline scripts in place), 1 module bundle, 1 CSS bundle, all content-hashed.
 // Rarely used files (admin weekly editor, flight cabin) are left out and loaded on demand.
-import fs from 'node:fs';import crypto from 'node:crypto';import * as esbuild from 'esbuild';
+import {fileURLToPath} from 'node:url';import fs from 'node:fs';import crypto from 'node:crypto';import * as esbuild from 'esbuild';
 const P='public/',src=fs.readFileSync(P+'index.dev.html','utf8');
 const LAZY=new Set(['weekly-admin.js','cabin.js']);
 const hash=s=>crypto.createHash('sha256').update(s).digest('hex').slice(0,10);
@@ -21,7 +21,7 @@ while((m=tagRe.exec(src))){const tag=m[0];
 // Classic groups: concatenated in order (they already share one global scope), minified without renaming globals.
 const groupFiles=[];for(const [i,g] of groups.entries()){const code=g.map(f=>'/* '+f+' */\n'+fs.readFileSync(P+f,'utf8')+'\n;').join('\n');const out=(await esbuild.transform(code,{minify:true,target:'es2020',legalComments:'none'})).code;groupFiles.push(write(i?'core-b':'core-a','js',out))}
 // Modules: one ESM bundle, imports evaluated in the original tag order.
-const strip={name:'strip-query',setup(b){b.onLoad({filter:/cloud\.js$/},a=>({contents:fs.readFileSync(a.path,'utf8').replace(/^await window\.ChinaLifeCloud\.ready;$/m,'/* top-level await dropped in the bundle: it would hold every later module until sign-in */'),loader:'js'}));b.onResolve({filter:/\?v=/},a=>({path:new URL(a.path.replace(/\?.*$/,''),'file://'+a.resolveDir+'/').pathname}))}};
+const strip={name:'strip-query',setup(b){b.onLoad({filter:/cloud\.js$/},a=>({contents:fs.readFileSync(a.path,'utf8').replace(/^await window\.ChinaLifeCloud\.ready;$/m,'/* top-level await dropped in the bundle: it would hold every later module until sign-in */'),loader:'js'}));b.onResolve({filter:/\?v=/},a=>({path:fileURLToPath(new URL(a.path.replace(/\?.*$/,''),'file://'+a.resolveDir+'/'))}))}};
 const entry=modules.map(f=>"import './"+f+"';").join('\n');
 const r=await esbuild.build({stdin:{contents:entry,resolveDir:fs.realpathSync(P),sourcefile:'entry.js'},bundle:true,format:'esm',minify:true,target:'es2020',write:false,plugins:[strip],legalComments:'none'});
 const appFile=write('app','js',r.outputFiles[0].text);

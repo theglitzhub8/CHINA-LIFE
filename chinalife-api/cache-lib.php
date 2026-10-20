@@ -3,7 +3,7 @@ declare(strict_types=1);
 // R4b: short-lived cache for shared, read-heavy ChinaLife data (online counts, leaderboard, Hafrik map pins).
 // Never used for coins, balances, saves or anything per player. Uses APCu when the extension is loaded,
 // otherwise small JSON files in /dev/shm (RAM). Set CL_CACHE_OFF=1 in the environment to bypass.
-function cl_cache_dir(): string {return (is_dir('/dev/shm')&&is_writable('/dev/shm')?'/dev/shm':sys_get_temp_dir()).'/chinalife-cache';}
+function cl_cache_dir(): string {if(($dir=getenv('CL_CACHE_DIR'))!==false&&$dir!=='')return $dir;return (is_dir('/dev/shm')&&is_writable('/dev/shm')?'/dev/shm':sys_get_temp_dir()).'/chinalife-cache';}
 function cl_cache(string $key, int $ttl, callable $build): mixed {
     if (getenv('CL_CACHE_OFF')==='1') {return $build();}
     $key='cl4:'.$key;

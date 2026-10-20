@@ -36,7 +36,8 @@ async function pollInternal(){
  }catch(e){if(dialog.open)note(e.message)}finally{polling=false}
 }
 function poll(){if(pending)return pending;const task=pollInternal();pending=task;task.finally(()=>{if(pending===task)pending=null});return task}
-async function open(id=null,name='',kind=null){await window.ChinaLifeCloud?.ready;note('');await poll();peer=id;peerName=name;preferred=kind;peerGender=null;if(id)try{const r=await window.ChinaLifeAuth.request('/chinalife/profile.php?peer='+encodeURIComponent(id),'GET');peerGender=(r.data||r).profile?.gender}catch{}render();if(!dialog.open)dialog.showModal()}
+async function open(id=null,name='',kind=null){await window.ChinaLifeCloud?.ready;note('');peer=id;peerName=name;preferred=kind;peerGender=null;if(!dialog.open){$('sharedBody').textContent='Loading shared activities…';dialog.showModal()}await poll();if(id)try{const r=await window.ChinaLifeAuth.request('/chinalife/profile.php?peer='+encodeURIComponent(id),'GET');peerGender=(r.data||r).profile?.gender}catch{}render()}
+
 async function act(action,data={}){
  if(busy)return;busy=true;note('');try{
   if(action==='people'){dialog.close();await window.ChinaLifeSocial.open('people');return}

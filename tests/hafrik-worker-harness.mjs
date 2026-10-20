@@ -15,7 +15,7 @@ export async function connectClient(t,server,id,signedIn=true){
   let body=input;if(name==='save'&&method==='POST')body={state:input.save.game,revision:input.revision};
   const result=await server.call(signedIn?id:null,routes[name]+url.search,name==='save'&&method==='POST'?'PUT':method,body),data=await result.json();
   if(name==='voice'&&method==='POST')signals=data.signals||[];
-  if(name==='presence'&&method==='POST')latest=(data.players||[]).map(p=>({...p,city:input.city,place:input.place}));
+  if(name==='presence'&&method==='POST'){latest=(data.players||[]).map(p=>({...p,city:input.city,place:input.place}));data.players=latest;}
   const payload=name==='save'&&method==='GET'?{exists:!!data.state,save:data.state?{game:data.state}:null,revision:data.revision,account:{id,name:id}}:data;
   return Response.json({status:result.ok?'success':'error',message:data.error,data:payload},{status:result.status});
  };
