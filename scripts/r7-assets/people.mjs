@@ -2,7 +2,7 @@ import {NodeIO} from '@gltf-transform/core';import {ALL_EXTENSIONS} from '@gltf-
 const io=new NodeIO().registerExtensions(ALL_EXTENSIONS),O='/tmp/r7a/out/';import fs from 'fs';fs.mkdirSync(O,{recursive:true});
 const B='/tmp/r7a/ubc/Universal Base Characters[Standard]/Base Characters/Godot - UE/';
 // Animations
-{const d=await io.read('/tmp/r7a/ual/Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard.glb'),r=d.getRoot();const keep=['Idle_Loop','Walk_Loop','Jog_Fwd_Loop','Dance_Loop','Sitting_Idle_Loop','Idle_Talking_Loop'];
+{const d=await io.read('/tmp/r7a/ual/Universal Animation Library[Standard]/Unreal-Godot/UAL1_Standard.glb'),r=d.getRoot();const keep=['Idle_Loop','Walk_Loop','Walk_Formal_Loop','Jog_Fwd_Loop','Dance_Loop','Sitting_Idle_Loop','Idle_Talking_Loop'];
 for(const a of r.listAnimations())if(!keep.includes(a.getName())){for(const x of a.listSamplers()){x.dispose()}for(const c of a.listChannels())c.dispose();a.dispose()}
 for(const n of r.listNodes())n.setMesh(null);for(const m of r.listMeshes())m.dispose();for(const s of r.listSkins())s.dispose();
 // drop finger tracks (small win) except keep root motion off: remove root/pelvis translation drift handled in runtime

@@ -6,7 +6,7 @@ import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {clone as cloneSkinned} from './vendor/SkeletonUtils.js';
 import {Sky} from './vendor/Sky.js';
-const BASE='r7/',V='?v=r7a';
+const BASE='r7/',V='?v=r8a';
 const ss=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t)};
 // Subtle grade on top of ACES: a touch of contrast and saturation, slightly warm highlights. Free: runs in the tone-map step.
 THREE.ShaderChunk.tonemapping_pars_fragment=THREE.ShaderChunk.tonemapping_pars_fragment.replace('vec3 CustomToneMapping( vec3 color ) { return color; }',
@@ -79,7 +79,21 @@ export function create(ctx){
   add(0xff2a7a,6,3,0,4,1);add(0x2ad1ff,-6,3,0,4,1);add(0x8a4dff,0,4,-6,6,1);add(0xffc14d,0,2,6,3,.6);add(0xffffff,0,9,0,3,3);const rt=pmrem.fromScene(s,0,.1,50);return rt.texture}
  R.clubFloor=(g)=>{if(!g?.material||g.userData.r7floor||q!=='high')return;g.userData.r7floor=1;const m=g.material.clone();m.roughness=.18;m.metalness=.35;m.normalMap=tex('concrete_n');m.normalScale.set(.25,.25);m.envMapIntensity=1.2;m.envMap=envTex;reflective.add(m);worldUV(m,.4);g.material=m};
  // ---------- People ----------
- const tpl={};let clips=null;R.people=Promise.all([glb('man.glb'),glb('woman.glb'),glb('anims.glb')]).then(([m,w,a])=>{tpl.man=prep(m.scene);tpl.woman=prep(w.scene);clips={};for(const c of a.animations){c.tracks=c.tracks.filter(t=>!/^root\.position/.test(t.name));for(const t of c.tracks)if(/^pelvis\.position/.test(t.name)){const v=t.values;for(let i=0;i<v.length;i+=3){v[i]=v[0];v[i+2]=v[2]}}clips[c.name]=c}R.ready=true;for(const b of pending)dress(b.g,b.o);pending.length=0}).catch(e=>{console.warn('Realistic people unavailable',e);R.failed=true});
+ const tpl={};let clips=null;R.people=Promise.all([glb('man.glb'),glb('woman.glb'),glb('anims.glb')]).then(([m,w,a])=>{tpl.man=prep(m.scene);tpl.woman=prep(w.scene);clips={};for(const c of a.animations){c.tracks=c.tracks.filter(t=>!/^root\.position/.test(t.name));for(const t of c.tracks)if(/^pelvis\.position/.test(t.name)){const v=t.values;for(let i=0;i<v.length;i+=3){v[i]=v[0];v[i+2]=v[2]}}clips[c.name]=c}if(clips.Walk_Formal_Loop){clips.Walk_Loop=clips.Walk_Formal_Loop;clips.Walk_Loop.name='Walk_Loop'}try{relaxIdle(tpl.man)}catch(e){console.warn('relaxed idle',e)}R.ready=true;for(const b of pending)dress(b.g,b.o);pending.length=0}).catch(e=>{console.warn('Realistic people unavailable',e);R.failed=true});
+
+ // R8: the library idle is a guard-up hero stance. Build a calm standing idle from it: keep its breathing/weight shift on the
+ // spine and head, stand the legs straight (no crouched guard stance), hang the arms naturally at the sides (palms in, elbows soft) with a slow sway, and open the hands.
+ function relaxIdle(rig){const base=clips.Idle_Loop;if(!base)return;rig.updateMatrixWorld(true);const B={};rig.traverse(o=>{if(o.isBone)B[o.name]=o});const T=base.duration;
+  const ARM=/^(clavicle|upperarm|lowerarm|hand|index|middle|pinky|ring|thumb|thigh|calf|foot|ball|pelvis|root)/;const tracks=base.tracks.filter(t=>!ARM.test(t.name.split('.')[0]));
+  const pel=new THREE.Vector3();B.pelvis.getWorldPosition(pel);
+  const q=new THREE.Quaternion(),pw=new THREE.Quaternion(),bw=new THREE.Quaternion(),a=new THREE.Vector3(),b=new THREE.Vector3();
+  const aim=(bone,child,dir)=>{bone.getWorldPosition(a);child.getWorldPosition(b);const d=b.sub(a).normalize();bone.getWorldQuaternion(bw);bone.parent.getWorldQuaternion(pw);q.setFromUnitVectors(d,dir.clone().normalize());bw.premultiply(q);const loc=pw.invert().multiply(bw);bone.quaternion.copy(loc);bone.updateMatrixWorld(true);return loc.clone()};
+  const keep=[];for(const sd of ['l','r']){const up=B['upperarm_'+sd],lo=B['lowerarm_'+sd],ha=B['hand_'+sd];if(!up||!lo||!ha)return;up.getWorldPosition(a);const side=Math.sign(a.x-pel.x)||1;
+   const save=[up.quaternion.clone(),lo.quaternion.clone()];const keys=[];
+   for(const f of [.03,.075]){up.quaternion.copy(save[0]);lo.quaternion.copy(save[1]);up.updateMatrixWorld(true);const qu=aim(up,lo,new THREE.Vector3(side*.2,-1,f));const ql=aim(lo,ha,new THREE.Vector3(side*.1,-1,f+.16));keys.push([qu,ql])}
+   up.quaternion.copy(save[0]);lo.quaternion.copy(save[1]);rig.updateMatrixWorld(true);
+   const tr=(n,i)=>new THREE.QuaternionKeyframeTrack(n+'.quaternion',[0,T/2,T],[...keys[0][i].toArray(),...keys[1][i].toArray(),...keys[0][i].toArray()]);keep.push(tr(up.name,0),tr(lo.name,1))}
+  clips.Idle_Loop=new THREE.AnimationClip('Relaxed_Idle',T,tracks.concat(keep))}
  const REG={pelvis:4,root:4,thigh:4,calf:5,foot:6,ball:6,spine_01:1,spine_02:1,spine_03:1,clavicle:1,upperarm:2,lowerarm:3,neck_01:0,Head:0,hand:0};
  function prep(scene){let height=1.8;scene.traverse(o=>{if(!o.isSkinnedMesh)return;o.frustumCulled=false;o.castShadow=true;o.receiveShadow=true;const mn=o.material.name||'';
    if(/Superhero/.test(mn)){const names=o.skeleton.bones.map(b=>b.name),cat=names.map(n=>{for(const k in REG)if(n===k||n.startsWith(k+'_')||n.startsWith(k))return REG[k];return /index|middle|pinky|ring|thumb/.test(n)?0:1});const si=o.geometry.attributes.skinIndex,sw=o.geometry.attributes.skinWeight,r=new Float32Array(si.count);for(let i=0;i<si.count;i++){let best=0,bw=-1;for(let k=0;k<4;k++){const w=sw.getComponent(i,k);if(w>bw){bw=w;best=si.getComponent(i,k)}}r[i]=cat[best]}o.geometry.setAttribute('region',new THREE.BufferAttribute(r,1));o.userData.body=1;o.geometry.computeBoundingBox();height=o.geometry.boundingBox.max.y-o.geometry.boundingBox.min.y}
