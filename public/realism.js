@@ -210,11 +210,14 @@ void main(){vec3 d=normalize(vD);float e=d.y,a=atan(d.z,d.x);
   // Sun (or moon) follows the player so shadows stay crisp in a tight box.
   const moon=elev<-3;sun.color.set(moon?0xdfe6ff:0xffffff).lerp(new THREE.Color(0xffa463),moon?0:dusk*.9);sun.intensity=moon?.7:.4+2.3*ss(-2,18,elev);
   const d=moon?sunDir.clone().set(-sunDir.x,.55,-sunDir.z).normalize():sunDir;if(focus){sun.position.copy(focus).addScaledVector(d,45);sun.target.position.copy(focus);sun.target.updateMatrixWorld()}
-  skyLight.color.copy(moon?new THREE.Color(0x8494bc):new THREE.Color(0xd8e8ff).lerp(new THREE.Color(0xffc9a0),dusk*.6));skyLight.groundColor.set(moon?0x14161c:0x6b6458);skyLight.intensity=moon?.9:(q==='high'?.45+.6*day:1.1+1.1*day);
-  renderer.toneMappingExposure=moon?1.15:1+dusk*.08;
+  skyLight.color.copy(moon?new THREE.Color(0x8494bc):new THREE.Color(0xd8e8ff).lerp(new THREE.Color(0xffc9a0),dusk*.6));skyLight.groundColor.set(moon?0x3a3226:0x6b6458);skyLight.intensity=moon?1.6:(q==='high'?.45+.6*day:1.1+1.1*day);
+  renderer.toneMappingExposure=moon?1.3:1+dusk*.08;nightBasics(uNight.value);
   const sc=sun.shadow.camera,ext=q==='high'?18:26;if(sc.right!==ext){sc.left=-ext;sc.right=ext;sc.top=ext;sc.bottom=-ext;sc.updateProjectionMatrix()}
   if(q==='high'&&sun.shadow.mapSize.x!==1024){sun.shadow.mapSize.set(1024,1024);sun.shadow.map?.dispose();sun.shadow.map=null}sun.shadow.bias=-.0004;sun.shadow.normalBias=.02}
- function makeClubEnv(){const s=new THREE.Scene();s.background=new THREE.Color(0x05040a);const add=(c,x,y,z,w,h)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:c,side:THREE.DoubleSide}));m.position.set(x,y,z);m.lookAt(0,0,0);s.add(m)};
+ // R8: unlit near-white panels (old window/sign decals, glass strips) glare at night; ease them to a dim warm glow.
+let bmRoot=null,bmList=[];const bmWarm=new THREE.Color(0x8a6c48);
+function nightBasics(n){const r=R.r8root;if(!r)return;if(bmRoot!==r||bmList.n!==r.children.length){bmRoot=r;bmList=[];bmList.n=r.children.length;const seen=new Set();r.traverse(o=>{const m=o.material;if(!o.isMesh||!m||Array.isArray(m)||seen.has(m)||o.userData.limbs)return;seen.add(m);if(m.isMeshBasicMaterial){const c=m.color;if(c.r+c.g+c.b>2.1)bmList.push([m,c.clone(),'color'])}else if(m.emissive){const e=m.emissive.r+m.emissive.g+m.emissive.b;if(e*(m.emissiveIntensity??1)>1.6&&Math.min(m.emissive.r,m.emissive.g,m.emissive.b)>.45)bmList.push([m,m.emissive.clone(),'emissive'])}})}for(const [m,c,k] of bmList)m[k].copy(c).lerp(bmWarm,n*.6)}
+function makeClubEnv(){const s=new THREE.Scene();s.background=new THREE.Color(0x05040a);const add=(c,x,y,z,w,h)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:c,side:THREE.DoubleSide}));m.position.set(x,y,z);m.lookAt(0,0,0);s.add(m)};
   add(0xff2a7a,6,3,0,4,1);add(0x2ad1ff,-6,3,0,4,1);add(0x8a4dff,0,4,-6,6,1);add(0xffc14d,0,2,6,3,.6);add(0xffffff,0,9,0,3,3);const rt=pmrem.fromScene(s,0,.1,50);return rt.texture}
  R.clubFloor=(g)=>{if(!g?.material||g.userData.r7floor||q!=='high')return;g.userData.r7floor=1;const m=g.material.clone();m.roughness=.18;m.metalness=.35;m.normalMap=tex('concrete_n');m.normalScale.set(.25,.25);m.envMapIntensity=1.2;m.envMap=envTex;reflective.add(m);worldUV(m,.4);g.material=m};
  // ---------- People ----------
