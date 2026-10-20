@@ -8,3 +8,5 @@ R8 photo facades (tex/fac_day_*.webp, tex/fac_night_*.webp): ambientCG (https://
   Facade018A/C, Facade019A/C, Facade020A/C, Facade001, Facade017 — day colour + window mask (from Metalness) and night colour,
   packed into 2x2 atlases by scripts/r8-assets/facades.mjs.
 R8 crowd LOD (r7/man_lo.glb, r7/woman_lo.glb): meshoptimizer-simplified copies of the Quaternius Universal Base Characters above (CC0), made by scripts/r8-assets/people-lod.mjs.
+
+hair.glb (R9): hairstyles, beard and eyebrows from Quaternius "Universal Base Characters" (CC0 1.0, quaternius.com), re-expressed as head-bone meshes by scripts/r9-assets/hair.mjs. Afro, curly, locs and cap shapes are generated in code (realism.js).
