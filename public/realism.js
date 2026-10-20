@@ -6,7 +6,8 @@ import * as THREE from './vendor/three.module.js';
 import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {clone as cloneSkinned} from './vendor/SkeletonUtils.js';
 import {Sky} from './vendor/Sky.js';
-import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
+import {mergeGeometries} from './vendor/BufferGeometryUtils.js'
+import {MeshoptDecoder} from './vendor/meshopt_decoder.module.js';
 const BASE='r7/',V='?v=r8b';
 const ss=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t)};
 // Subtle grade on top of ACES: a touch of contrast and saturation, slightly warm highlights. Free: runs in the tone-map step.
@@ -22,7 +23,7 @@ export function detectQuality(gl){try{const forced=localStorage.getItem('chinali
 export function create(ctx){
  const {renderer,scene,sun,skyLight}=ctx;let q=ctx.quality;const R={quality:()=>q,ready:false,stats:{bytes:0}};
  renderer.toneMapping=THREE.CustomToneMapping;renderer.toneMappingExposure=1;
- const loader=new GLTFLoader(),tl=new THREE.TextureLoader();
+ const loader=new GLTFLoader(),tl=new THREE.TextureLoader();loader.setMeshoptDecoder(MeshoptDecoder);
  const track=url=>fetch(url,{cache:'force-cache'}).then(r=>{if(!r.ok)throw Error(url+' '+r.status);return r.arrayBuffer()}).then(b=>{R.stats.bytes+=b.byteLength;return b});
  const glb=url=>track(BASE+url+V).then(b=>new Promise((ok,no)=>loader.parse(b,BASE,ok,no)));
  const tex=(name,srgb,rep=1)=>{const t=tl.load(BASE+'tex/'+name+'.webp'+V,()=>{R.stats.bytes+=0},undefined,()=>{});t.wrapS=t.wrapT=THREE.RepeatWrapping;if(srgb)t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=q==='high'?4:1;return t};
@@ -280,7 +281,49 @@ function makeClubEnv(){const s=new THREE.Scene();s.background=new THREE.Color(0x
  function lookOf(o){o=vary(o);const top=o.top||{s:o.outfit==='dress'?'dress':o.outfit==='tank'?'tank':'tee',c:o.shirt},bot=o.bottom||{s:'jeans',c:o.trousers},sh=o.shoes&&typeof o.shoes==='object'?o.shoes:{c:o.shoes};const ts=top.s||'tee',bs=bot.s||'jeans',dress=['dress','gown','qipao'].includes(ts);
   const fem=o.gender==='female'||(o.gender!=='male'&&(dress||bs==='skirt'||['long','bun','buns','ponytail','bob','pigtails','braids'].includes(o.hair)));
   return {fem,top:hexOf(top.c??0x23799a),bottom:hexOf(dress?top.c:(bot.c??0x28394b)),shoes:hexOf(sh.c??0x2b2b2b),skin:hexOf(o.skin??0xa06d4d),hair:hexOf(o.hairColor??0x1f2628),bald:o.hair==='bald'||o.hair==='shaved',sleeve:ts==='tank'?0:1,long:LONG.has(ts)?1:0,legs:bs==='shorts'||(bs==='skirt'&&!dress)?0:1,style:o.hair||'cropped',beard:!!o.beard,capC:o.capC??0x1d1f24,pat:ts==='jacket'?3:ts==='shirt'?(o.pattern??1):(o.pattern===2?2:0),denim:bs==='jeans'?1:0,inner:0xe9e4da,skirt:dress||bs==='skirt'?(dress?2:1):0}}
- function dress(g,o){if(!R.ready){pending.push({g,o});return}if(g.userData.r7person||!g.parent&&!g.userData.keep)return;const L=lookOf(o),lo=o.crowd&&tpl.manLo,src=lo?(L.fem?tpl.womanLo:tpl.manLo):L.fem?tpl.woman:tpl.man,m=cloneSkinned(src);
+ // ---------- R9: Microsoft Rocketbox avatars (MIT), fully clothed; clips retargeted from the UAL library at load ----------
+ const RBM=['Male_Adult_12','Male_Adult_04','Male_Adult_17','Male_Adult_18','Business_Male_05','Sports_Male_03','Male_Adult_10','Male_Adult_02','Business_Male_02','Male_Adult_15'],
+  RBF=['Business_Female_01','Female_Party_02','Female_Adult_11','Female_Adult_03','Female_Adult_12','Business_Female_03','Female_Adult_08','Female_Party_01'],
+  RBB=new Set(['Male_Adult_12','Male_Adult_04','Male_Adult_17','Male_Adult_18','Business_Male_05','Sports_Male_03','Business_Female_01','Female_Party_02','Female_Adult_11','Female_Adult_03']),
+  RBLOW=['Male_Adult_12','Male_Adult_04','Male_Adult_17','Business_Female_01','Female_Party_02','Female_Adult_11'];
+ R.rbAvatars={male:RBM,female:RBF};
+ const rbOff=()=>{try{return /rb/.test(localStorage.getItem('r8off')||'')&&/^(localhost|127\.0\.0\.1)$/.test(location.hostname)}catch(e){return false}};
+ const RBT={},rbPend=new Map();let rbClips=null;
+ const rbPick=o=>{const fem=o.gender==='female';if(o.avatar&&(RBM.includes(o.avatar)||RBF.includes(o.avatar)))return o.avatar;let list=fem?RBF:RBM;if(q!=='high')list=list.filter(n=>RBLOW.includes(n));
+  // Black/African-looking avatars are listed twice, so they make up most of the crowd.
+  const w=[];for(const n of list){w.push(n);if(RBB.has(n))w.push(n,n)}const id=o.self?'self:'+(o.skin||'')+(o.gender||''):(o.id||JSON.stringify([o.shirt,o.skin,o.hair]));if(o.self){const dark=parseInt(String(o.skin||'#8b5c43').replace('#',''),16);const blk=list.filter(n=>RBB.has(n));return (dark>>16)<0xc0&&blk.length?blk[hsh(id)%blk.length]:list[hsh(id)%list.length]}return w[hsh(id)%w.length]};
+ function rbLoad(name,lo){const k=(lo?'lo/':'')+name;if(!RBT[k])RBT[k]=glb('rb/'+k+'.glb').then(gl=>{const sc=gl.scene;sc.traverse(c=>{if(!c.isSkinnedMesh)return;c.frustumCulled=false;c.castShadow=!lo;c.receiveShadow=true;const m=c.material;m.userData.r7=1;m.roughness=.78;m.metalness=0;if(m.alphaTest>0){m.transparent=false;m.side=THREE.DoubleSide}});sc.userData.h=1.806;if(!rbClips)rbClips=rbRetarget(tpl.man,sc);return sc});return RBT[k]}
+ const RMAP={pelvis:'Bip01_Pelvis',spine_01:'Bip01_Spine',spine_02:'Bip01_Spine1',spine_03:'Bip01_Spine2',neck_01:'Bip01_Neck',Head:'Bip01_Head'};
+ for(const [a,b] of [['l','L'],['r','R']])Object.assign(RMAP,{['clavicle_'+a]:'Bip01_'+b+'_Clavicle',['upperarm_'+a]:'Bip01_'+b+'_UpperArm',['lowerarm_'+a]:'Bip01_'+b+'_Forearm',['hand_'+a]:'Bip01_'+b+'_Hand',['thigh_'+a]:'Bip01_'+b+'_Thigh',['calf_'+a]:'Bip01_'+b+'_Calf',['foot_'+a]:'Bip01_'+b+'_Foot',['ball_'+a]:'Bip01_'+b+'_Toe0'});
+ const RCH={pelvis:'spine_01',spine_01:'spine_02',spine_02:'spine_03',spine_03:'neck_01',neck_01:'Head'};for(const a of ['l','r'])Object.assign(RCH,{['clavicle_'+a]:'upperarm_'+a,['upperarm_'+a]:'lowerarm_'+a,['lowerarm_'+a]:'hand_'+a,['thigh_'+a]:'calf_'+a,['calf_'+a]:'foot_'+a,['foot_'+a]:'ball_'+a,['hand_'+a]:'middle_01_'+a});
+ const TCH={};for(const a of ['L','R'])TCH['Bip01_'+a+'_Hand']='Bip01_'+a+'_Finger2';
+ // Rotation retarget with rest alignment: the UAL rest is a T-pose, Rocketbox an A-pose, so each target bone's rest is first
+ // turned to point where the source bone points; then world(t) = src(t) * inv(srcRest) * alignedRest. Hips bob is scaled by leg length.
+ const FZ=new THREE.Vector3(0,0,1);
+ function rbRetarget(srcTpl,tgt){const src=cloneSkinned(srcTpl),T=tgt.clone(true);src.updateMatrixWorld(true);T.updateMatrixWorld(true);const sb=n=>src.getObjectByName(n),tb=n=>T.getObjectByName(n),V=()=>new THREE.Vector3(),Q=()=>new THREE.Quaternion();
+  const srcRest={},al={},tRestLocal={};for(const [sn,tn] of Object.entries(RMAP)){const a=sb(sn),b=tb(tn);if(!a||!b)continue;srcRest[sn]=a.getWorldQuaternion(Q());let d=Q();const ch=RCH[sn];if(ch&&sb(ch)&&tb(RMAP[ch]||TCH[tn])){const ds=sb(ch).getWorldPosition(V()).sub(a.getWorldPosition(V())).normalize(),dt=tb(RMAP[ch]||TCH[tn]).getWorldPosition(V()).sub(b.getWorldPosition(V())).normalize();d.setFromUnitVectors(dt,ds)}al[tn]=d.multiply(b.getWorldQuaternion(Q()))}
+  const tBones=[];T.traverse(o=>{if(o.isBone||/^Bip01/.test(o.name)){tBones.push(o);tRestLocal[o.name]=o.quaternion.clone()}});const inv={};for(const k in srcRest)inv[k]=srcRest[k].clone().invert();
+  const sPel=sb('pelvis'),sPelY=sPel.getWorldPosition(V()).y,tRoot=tb('Bip01'),tRootP=tRoot.position.clone(),ratio=tb('Bip01_Pelvis').getWorldPosition(V()).y/sPelY,rev={};for(const [a,b] of Object.entries(RMAP))rev[b]=a;
+  const mixer=new THREE.AnimationMixer(src),out={};
+  for(const [name,clip] of Object.entries(clips)){mixer.stopAllAction();const act=mixer.clipAction(clip);act.play();const fps=24,N=Math.max(2,Math.round(clip.duration*fps)+1),times=new Float32Array(N),qv={},py=new Float32Array(N*3);for(const b of tBones)if(rev[b.name])qv[b.name]=new Float32Array(N*4);
+   for(let i=0;i<N;i++){const t=Math.min(clip.duration,i/fps);times[i]=t;mixer.setTime(t);src.updateMatrixWorld(true);const wq={};
+    const walk=(o,pq)=>{let w;const sn=rev[o.name];if(sn&&sb(sn)){w=sb(sn).getWorldQuaternion(Q()).multiply(inv[sn]).multiply(al[o.name]);const l=pq.clone().invert().multiply(w);qv[o.name].set([l.x,l.y,l.z,l.w],i*4)}else w=pq.clone().multiply(tRestLocal[o.name]||o.quaternion);for(const c of o.children)walk(c,w)};
+    walk(tRoot,tRoot.parent.getWorldQuaternion(Q()));const dy=(sPel.getWorldPosition(V()).y-sPelY)*ratio;py.set([tRootP.x,tRootP.y+dy,tRootP.z],i*3)}
+   const tracks=[new THREE.VectorKeyframeTrack('Bip01.position',times,py)];for(const [n,v] of Object.entries(qv))tracks.push(new THREE.QuaternionKeyframeTrack(n+'.quaternion',times,v));
+   // Relaxed hands: a gentle, natural curl on every finger joint (the library clips don't drive fingers).
+   for(const a of ['L','R'])for(let f=0;f<5;f++)for(const j of ['','1','2']){const n='Bip01_'+a+'_Finger'+f+(j?(f===0?'':f)+j:'');const nm=f===0?'Bip01_'+a+'_Finger0'+j:'Bip01_'+a+'_Finger'+f+j;const bone=tb(f===0?(j?'Bip01_'+a+'_Finger0'+j:'Bip01_'+a+'_Finger0'):(j?'Bip01_'+a+'_Finger'+f+j:'Bip01_'+a+'_Finger'+f));if(!bone)continue;
+    const ang=(f===0?(j?.18:.1):j===''?.32+.06*f:j==='1'?.55:.42)*.85,qq=tRestLocal[bone.name].clone().multiply(new THREE.Quaternion().setFromAxisAngle(FZ,ang));tracks.push(new THREE.QuaternionKeyframeTrack(bone.name+'.quaternion',[0],[qq.x,qq.y,qq.z,qq.w]))}
+   out[name]=new THREE.AnimationClip(name,clip.duration,tracks)}
+  mixer.stopAllAction();return out}
+ function dressRB(g,o,L){const lo=!!o.crowd,name=rbPick({...o,gender:L.fem?'female':'male'});const k=(lo?'lo/':'')+name;const sc=RBT[k+'#'];
+  if(!sc){if(!rbPend.has(g)){rbPend.set(g,1);rbLoad(name,lo).then(t=>{RBT[k+'#']=t;rbPend.delete(g);if(g.parent&&!g.userData.real)dress(g,o)}).catch(e=>{console.warn('rocketbox',name,e);rbPend.delete(g);g.userData.rbFail=1;if(g.parent)dress(g,o)})}return true}
+  const m=cloneSkinned(sc);m.traverse(c=>{if(c.isSkinnedMesh)c.userData.r7person=1});
+  if(o.self)m.traverse(c=>{if(!c.isSkinnedMesh||c.userData.ghost)return;const gh=new THREE.SkinnedMesh(c.geometry,ghostMat);gh.userData.ghost=gh.userData.r7person=1;gh.frustumCulled=false;gh.renderOrder=1;gh.bind(c.skeleton,c.bindMatrix);c.parent.add(gh)});
+  m.scale.setScalar(1.86/1.806);m.userData.r7person=1;m.userData.rb=name;for(const c of g.children)if(!c.userData.r7keep&&c.name!=='emote-prop'){c.userData.r7hidden=c.visible;c.visible=false}
+  g.add(m);if(o.self)g.traverse(c=>{if(c.isMesh&&!c.userData.ghost&&c.userData.r7person)c.renderOrder=2});
+  const mixer=new THREE.AnimationMixer(m),act={};for(const n of o.crowd?['Idle_Loop','Idle_Talking_Loop','Dance_Loop','Walk_Loop','Sitting_Idle_Loop']:['Idle_Loop','Walk_Loop','Jog_Fwd_Loop','Dance_Loop','Sitting_Idle_Loop'])if(rbClips[n]){act[n]=mixer.clipAction(rbClips[n]);act[n].setEffectiveWeight(n==='Idle_Loop'?1:0);if(n==='Idle_Loop')act[n].play()}if(act.Dance_Loop)act.Dance_Loop.timeScale=.85+Math.random()*.3;
+  for(const a of Object.values(act))a.time=Math.random()*a.getClip().duration;g.userData.real={m,mixer,act,w:{Idle_Loop:1},acc:0,frozen:false,posed:0,lod:lo,rb:name};people.add(g);return true}
+ function dress(g,o){if(!R.ready){pending.push({g,o});return}if(g.userData.r7person||!g.parent&&!g.userData.keep)return;const L=lookOf(o);if(!rbOff()&&!g.userData.rbFail&&dressRB(g,o,L))return;const lo=o.crowd&&tpl.manLo,src=lo?(L.fem?tpl.womanLo:tpl.manLo):L.fem?tpl.woman:tpl.man,m=cloneSkinned(src);
   m.traverse(c=>{if(!c.isSkinnedMesh)return;c.userData.r7person=1;if(c.userData.body)c.material=bodyMat(c.material,L,c.geometry.boundingBox);else if(c.userData.hair){c.material=c.material.clone();c.material.color.set(L.hair).multiplyScalar(1/.3)}});addHair(m,L,lo);
   // Your own character shows as a soft silhouette wherever a wall or tree hides it (drawn only where it is behind something).
   if(o.self)m.traverse(c=>{if(!c.isSkinnedMesh||!c.userData.body||c.userData.ghost)return;const gh=new THREE.SkinnedMesh(c.geometry,ghostMat);gh.userData.ghost=gh.userData.r7person=1;gh.frustumCulled=false;gh.renderOrder=1;gh.bind(c.skeleton,c.bindMatrix);c.parent.add(gh)});
