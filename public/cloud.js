@@ -90,7 +90,9 @@ async function connect(session,{source}={}) {
     if (id == null) throw Error('Your Hafrik session needs an account ID. Open the game from the app or sign in.');
     const nativeId=sessionSource==='app'?(session?.user?.user_id ?? session?.user?.id):null;
     if(nativeId!=null&&String(nativeId)!==String(id)){account=null;throw Error('The returned Hafrik account does not match your app account. Reopen ChinaLife from Hafrik.')}
-    account = {...profile, signedIn:true}; storage.setItem(PROFILE_KEY, JSON.stringify(account));
+    // save.php's account carries no gender; keep the Hafrik profile gender from the login response or the stored profile.
+    const g0=profile?.gender??session?.user?.gender??(()=>{try{return JSON.parse(storage.getItem(PROFILE_KEY))?.gender}catch{return null}})()
+    account = {...profile, ...(g0!=null?{gender:g0}:{}), signedIn:true}; storage.setItem(PROFILE_KEY, JSON.stringify(account));
     storage.setItem(TOKEN_KEY, sessionSource==='app'?'':liveToken);
     remote = saved; const hasLocal = game.setAccount(id,{loadLocal:!remote.state});
     if (remote.state) game.loadSave(remote.state);
