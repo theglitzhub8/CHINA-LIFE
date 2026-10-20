@@ -54,13 +54,14 @@ export function create(ctx){
  const GLSL_H='float r8h(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}\n';
  const bldMats=new Map();
  function bldMat(src){const k=src.uuid;if(bldMats.has(k))return bldMats.get(k);const m=src.clone();m.userData.r7=1;m.userData.r8bld=1;if(m.map){m.color.multiply(texAvg(m.map));m.map=null}m.emissiveMap=null;m.emissive.set(0);if(q==='high')m.roughness=Math.max(.8,m.roughness);
-  m.onBeforeCompile=s=>{s.uniforms.uNight=uNight;
+  const hiT=q==='high';if(hiT){m.userData.tC=tex('concrete_c',true);m.userData.tB=tex('brick_c',true)}
+  m.onBeforeCompile=s=>{s.uniforms.uNight=uNight;if(hiT){s.uniforms.tWallC={value:m.userData.tC};s.uniforms.tWallB={value:m.userData.tB}}
    s.vertexShader='attribute vec4 aBld;varying vec4 vBld;varying vec3 vBP;varying vec3 vBN;\n'+s.vertexShader.replace('#include <project_vertex>','#include <project_vertex>\nvBP=(modelMatrix*vec4(transformed,1.)).xyz;vBN=normalize(mat3(modelMatrix)*objectNormal);vBld=aBld;');
-   s.fragmentShader=(q==='high'?'':'#define R8_LOW\n')+'uniform float uNight;varying vec4 vBld;varying vec3 vBP;varying vec3 vBN;float bGlass=0.;vec3 bEmit=vec3(0.);\n'+GLSL_H+s.fragmentShader
+   s.fragmentShader=(q==='high'?'':'#define R8_LOW\n')+'uniform float uNight;\n#ifndef R8_LOW\nuniform sampler2D tWallC,tWallB;\n#endif\nvarying vec4 vBld;varying vec3 vBP;varying vec3 vBN;float bGlass=0.;vec3 bEmit=vec3(0.);\n'+GLSL_H+s.fragmentShader
     .replace('#include <map_fragment>',`#include <map_fragment>
 {if(vBld.w>.5&&abs(vBN.y)<.5){float h=vBP.y-vBld.x,top=vBld.y-vBld.x,sd=vBld.z;float u=abs(vBN.x)>abs(vBN.z)?vBP.z:vBP.x;vec3 wall=diffuseColor.rgb;
 #ifndef R8_LOW
- wall*=.9+r8h(floor(vec2(u,h)*1.7)+sd)*.06+r8h(floor(vec2(u,h)*.3)+sd*1.3)*.09;wall*=mix(.78,1.,smoothstep(0.,1.4,h));
+ float lw=dot(wall,vec3(.3,.59,.11));wall=mix(wall,vec3(lw)*vec3(1.04,1.,.94),.4);float brick=step(.62,fract(sd*.371))*step(h,top-.75);vec3 tc=texture2D(tWallC,vec2(u,h)*.35).rgb,tb=texture2D(tWallB,vec2(u,h)*.55).rgb;vec3 tx=mix(tc/max(dot(tc,vec3(.33)),.05),tb/max(dot(tb,vec3(.33)),.05)*vec3(1.,.82,.7),brick);wall*=mix(vec3(1.),tx,.75);wall*=.94+r8h(floor(vec2(u,h)*.3)+sd*1.3)*.1;wall*=mix(.72,1.,smoothstep(0.,1.2,h))*mix(1.,.86,smoothstep(top-2.5,top,h)*.0+smoothstep(.0,.0,0.)*0.);
 #endif
  vec3 col=wall;float gf=top<5.6?top-.45:3.3;
  if(h<gf){float cw=3.2,cx=fract(u/cw),ci=floor(u/cw),sh=r8h(vec2(ci,sd));vec3 sc=.5+.45*cos(6.2831*(sh+vec3(0.,.33,.67)));
