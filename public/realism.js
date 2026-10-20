@@ -311,14 +311,28 @@ function makeClubEnv(){const s=new THREE.Scene();s.background=new THREE.Color(0x
   const mixer=new THREE.AnimationMixer(src),out={};
   // Arm offsets in each bone's own frame, for measuring where the hand ends up relative to the shoulder.
   const AO={};for(const S of ['L','R']){const u=tb('Bip01_'+S+'_UpperArm'),f=tb('Bip01_'+S+'_Forearm'),h=tb('Bip01_'+S+'_Hand');AO[S]={up:u.getWorldPosition(V()).sub(T.getWorldPosition(V())),uo:f.getWorldPosition(V()).sub(u.getWorldPosition(V())).applyQuaternion(u.getWorldQuaternion(Q()).invert()),fo:h.getWorldPosition(V()).sub(f.getWorldPosition(V())).applyQuaternion(f.getWorldQuaternion(Q()).invert())}}
-  let ARMW={};
-  for(const [name,clip] of Object.entries(clips)){mixer.stopAllAction();bind();ARMW={};for(const S of ['L','R'])for(const k of ['Clavicle','UpperArm','Forearm','Hand'])ARMW['Bip01_'+S+'_'+k]=[];const act=mixer.clipAction(clip);act.play();const fps=24,N=Math.max(2,Math.round(clip.duration*fps)+1),times=new Float32Array(N),qv={},py=new Float32Array(N*3);for(const b of tBones)if(rev[b.name])qv[b.name]=new Float32Array(N*4);
+  // R9d: torso/neck posture. Offsets from each spine bone to the next (and neck to head) in the bone's own frame, to measure lean per clip.
+  const PB=['Bip01_Pelvis','Bip01_Spine','Bip01_Spine1','Bip01_Spine2','Bip01_Neck'],PO={};[['Bip01_Spine','Bip01_Spine1'],['Bip01_Spine1','Bip01_Spine2'],['Bip01_Spine2','Bip01_Neck'],['Bip01_Neck','Bip01_Head']].forEach(([a,b])=>{const A=tb(a),B=tb(b);if(A&&B)PO[a]=B.getWorldPosition(V()).sub(A.getWorldPosition(V())).applyQuaternion(A.getWorldQuaternion(Q()).invert())});
+  let ARMW={},PW={};
+  for(const [name,clip] of Object.entries(clips)){mixer.stopAllAction();bind();ARMW={};PW={};for(const k of PB)PW[k]=[];for(const S of ['L','R'])for(const k of ['Clavicle','UpperArm','Forearm','Hand'])ARMW['Bip01_'+S+'_'+k]=[];const act=mixer.clipAction(clip);act.play();const fps=24,N=Math.max(2,Math.round(clip.duration*fps)+1),times=new Float32Array(N),qv={},py=new Float32Array(N*3);for(const b of tBones)if(rev[b.name])qv[b.name]=new Float32Array(N*4);
    for(let i=0;i<N;i++){const t=Math.min(clip.duration,i/fps);times[i]=t;mixer.setTime(t);src.updateMatrixWorld(true);const wq={};
-    const walk=(o,pq)=>{let w;const sn=rev[o.name];if(sn&&sb(sn)){w=sb(sn).getWorldQuaternion(Q()).multiply(inv[sn]).multiply(al[o.name]);const l=pq.clone().invert().multiply(w);qv[o.name].set([l.x,l.y,l.z,l.w],i*4);if(ARMW[o.name])ARMW[o.name][i]=w}else w=pq.clone().multiply(tRestLocal[o.name]||o.quaternion);for(const c of o.children)walk(c,w)};
+    const walk=(o,pq)=>{let w;const sn=rev[o.name];if(sn&&sb(sn)){w=sb(sn).getWorldQuaternion(Q()).multiply(inv[sn]).multiply(al[o.name]);const l=pq.clone().invert().multiply(w);qv[o.name].set([l.x,l.y,l.z,l.w],i*4);if(ARMW[o.name])ARMW[o.name][i]=w;if(PW[o.name])PW[o.name][i]=w}else w=pq.clone().multiply(tRestLocal[o.name]||o.quaternion);for(const c of o.children)walk(c,w)};
     walk(tRoot,tRoot.parent.getWorldQuaternion(Q()));const dy=(sPel.getWorldPosition(V()).y-sPelY)*ratio;py.set([tRootP.x,tRootP.y+dy,tRootP.z],i*3)}
    // R9c: the library arms sit behind the body (hands ~15 cm behind the hips at idle). Swing each whole arm about the shoulder so the
    // hand's average position over the clip hangs just in front of the hip line, keeping the clip's own swing around that average;
    // at idle also soften the elbow a little. Sitting keeps its pose.
+   // R9d: the library idle/walk clips stoop (upper body and head pitched well forward), which reads as a short, hunched character.
+   // Measure the mean torso lean (spine to neck) and neck lean (neck to head) over the clip and straighten only the excess, about the
+   // model's lateral axis, at the first spine bone and at the neck. Arms ride along with the torso. Sitting and dancing keep their pose.
+   const PWANT={Idle_Loop:[.03,.12],Idle_Talking_Loop:[.03,.12],Walk_Loop:[.06,.14],Walk_Formal_Loop:[.06,.14],Jog_Fwd_Loop:[.14,.16]}[name];
+   if(PWANT&&PO.Bip01_Spine&&PO.Bip01_Spine2&&PO.Bip01_Neck&&PW.Bip01_Spine.length===N&&PW.Bip01_Neck.length===N&&PW.Bip01_Pelvis.length===N){let lt=0,ln=0;for(let i=0;i<N;i++){const d=V();for(const b of ['Bip01_Spine','Bip01_Spine1','Bip01_Spine2'])d.add(PO[b].clone().applyQuaternion(PW[b][i]));lt+=Math.atan2(d.z,d.y);const h=PO.Bip01_Neck.clone().applyQuaternion(PW.Bip01_Neck[i]);ln+=Math.atan2(h.z,h.y)}lt/=N;ln/=N;
+    const cs=Math.max(-.45,Math.min(0,PWANT[0]-lt)),ch=Math.max(-.45,Math.min(0,PWANT[1]-(ln+cs))),Rs=Q().setFromAxisAngle(V().set(1,0,0),cs),Rh=Q().setFromAxisAngle(V().set(1,0,0),ch);
+    if(cs||ch){for(let i=0;i<N;i++){const ws=Rs.clone().multiply(PW.Bip01_Spine[i]),ls=PW.Bip01_Pelvis[i].clone().invert().multiply(ws);qv.Bip01_Spine.set([ls.x,ls.y,ls.z,ls.w],i*4);
+      const w2=Rs.clone().multiply(PW.Bip01_Spine2[i]),wn=Rh.clone().multiply(Rs).multiply(PW.Bip01_Neck[i]),ln2=w2.invert().multiply(wn);qv.Bip01_Neck.set([ln2.x,ln2.y,ln2.z,ln2.w],i*4);
+      for(const k in ARMW)if(ARMW[k][i])ARMW[k][i]=Rs.clone().multiply(ARMW[k][i]);
+      // Biped clavicles hang off the neck: keep the shoulders where the torso put them, so the neck fix moves the head only.
+      for(const S of ['L','R']){const cn='Bip01_'+S+'_Clavicle',cb=tb(cn);if(cb&&cb.parent?.name==='Bip01_Neck'&&qv[cn]&&ARMW[cn][i]){const lc=wn.clone().invert().multiply(ARMW[cn][i]);qv[cn].set([lc.x,lc.y,lc.z,lc.w],i*4)}}}}
+    if(window.__rbArmLog)console.log('rb posture',name,'torso',(lt*57.3).toFixed(1),'->',((lt+cs)*57.3).toFixed(1),'neck',(ln*57.3).toFixed(1),'->',((ln+cs+ch)*57.3).toFixed(1))}
    if(name!=='Sitting_Idle_Loop')for(const S of ['L','R']){const C=ARMW['Bip01_'+S+'_Clavicle'],U=ARMW['Bip01_'+S+'_UpperArm'],F=ARMW['Bip01_'+S+'_Forearm'],H=ARMW['Bip01_'+S+'_Hand'];if(!U.length||!C.length)continue;
     let m=0;for(let i=0;i<N;i++){const d=AO[S].uo.clone().applyQuaternion(U[i]).add(AO[S].fo.clone().applyQuaternion(F[i]));m+=Math.atan2(d.z,-d.y)}m/=N;
     const want=name==='Idle_Loop'?.07:.05,c=Math.max(0,Math.min(.7,want-m)),R=Q().setFromAxisAngle(V().set(1,0,0),-c),E=Q().setFromAxisAngle(V().set(1,0,0),name==='Idle_Loop'?-.2:0),un='Bip01_'+S+'_UpperArm',fn='Bip01_'+S+'_Forearm',hn='Bip01_'+S+'_Hand';
