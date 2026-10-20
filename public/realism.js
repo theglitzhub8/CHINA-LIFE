@@ -20,7 +20,7 @@ export function detectQuality(gl){try{const forced=localStorage.getItem('chinali
 
 export function create(ctx){
  const {renderer,scene,sun,skyLight}=ctx;let q=ctx.quality;const R={quality:()=>q,ready:false,stats:{bytes:0}};
- renderer.toneMapping=THREE.CustomToneMapping;renderer.toneMappingExposure=1;
+ renderer.toneMapping=THREE.CustomToneMapping;renderer.toneMappingExposure=1;renderer.debug.onShaderError=(gl,prog,vs,fs)=>{const e=(gl.getShaderInfoLog(fs)||'')+(gl.getShaderInfoLog(vs)||'')+(gl.getProgramInfoLog(prog)||'');(window.__r7shaderErrors=window.__r7shaderErrors||[]).push(e.slice(0,300));console.warn('r7 shader',e.slice(0,300))};
  const loader=new GLTFLoader(),tl=new THREE.TextureLoader();
  const track=url=>fetch(url,{cache:'force-cache'}).then(r=>{if(!r.ok)throw Error(url+' '+r.status);return r.arrayBuffer()}).then(b=>{R.stats.bytes+=b.byteLength;return b});
  const glb=url=>track(BASE+url+V).then(b=>new Promise((ok,no)=>loader.parse(b,BASE,ok,no)));
