@@ -564,7 +564,7 @@ function tpFrame(dt,time){try{
  // The front sides are open (cut-away), so the camera may sit a little outside them.
  const b=tp.bounds;if(b&&view==='venue'&&!venueIsOutdoor()){want.x=THREE.MathUtils.clamp(want.x,b.x0,b.x1+8);want.z=THREE.MathUtils.clamp(want.z,b.z0,b.z1+8)}
  want.y=Math.max(want.y,.9);
- if(!tp.ready){tp.cam.position.copy(want);tp.ready=true;labelsDirty=true}else{const k=motionReduced()?1:1-Math.exp(-dt*CAM.damp.pos);tp.cam.position.lerp(want,k)}
+ if(!tp.ready){tp.cam.position.copy(want);tp.ready=true;labelsDirty=true}else{const k=motionReduced()?1:1-Math.exp(-dt*(onMap?CAM.damp.pos*2.2:CAM.damp.pos));tp.cam.position.lerp(want,k)}
  tp.cam.lookAt(lookAt);labelsDirty=true
  if(view==='map'){walkFrame(time);streetFrame(dt,time);try{crosswalks();pedFrame(dt,time);hitCheck(time)}catch(err){console.warn('Street life paused',err)}}
 }catch(err){console.warn('Follow camera disabled',err);tp.failed=true;tp.ready=false;$('worldUI')?.classList.remove('tp-view')}}
