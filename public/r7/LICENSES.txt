@@ -3,3 +3,7 @@ R7 realism assets — all CC0 1.0 (public domain), no attribution required (cred
 - anims.glb: Quaternius "Universal Animation Library" v3 (UAL1_Standard: Idle, Walk, Jog, Dance, Sitting, Idle_Talking), CC0. Fingers/scale tracks stripped, resampled.
 - tex/asphalt_*: ambientCG Asphalt025C; tex/paving_*: PavingStones130; tex/brick_*: Bricks076C; tex/concrete_*: Concrete034 — ambientCG.com, CC0. 512px colour/normal, 256px AO+roughness (ORM: R=AO, G=roughness), WebP.
 - vendor/GLTFLoader.js, SkeletonUtils.js, Sky.js, BufferGeometryUtils.js: three.js r170 examples, MIT.
+
+R8 photo facades (tex/fac_day_*.webp, tex/fac_night_*.webp): ambientCG (https://ambientcg.com), CC0 1.0 Universal.
+  Facade018A/C, Facade019A/C, Facade020A/C, Facade001, Facade017 — day colour + window mask (from Metalness) and night colour,
+  packed into 2x2 atlases by scripts/r8-assets/facades.mjs.

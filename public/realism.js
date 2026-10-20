@@ -7,7 +7,7 @@ import {GLTFLoader} from './vendor/GLTFLoader.js';
 import {clone as cloneSkinned} from './vendor/SkeletonUtils.js';
 import {Sky} from './vendor/Sky.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
-const BASE='r7/',V='?v=r8a';
+const BASE='r7/',V='?v=r8b';
 const ss=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t)};
 // Subtle grade on top of ACES: a touch of contrast and saturation, slightly warm highlights. Free: runs in the tone-map step.
 THREE.ShaderChunk.tonemapping_pars_fragment=THREE.ShaderChunk.tonemapping_pars_fragment.replace('vec3 CustomToneMapping( vec3 color ) { return color; }',
@@ -52,12 +52,12 @@ export function create(ctx){
  // that light up at night. Low keeps the window grid, shopfronts and night lights but skips the noise/ledge detail.
  const uNight={value:0};R.night=uNight;let OFF='';try{OFF=localStorage.getItem('r8off')||''}catch{}
  const GLSL_H='float r8h(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}\n';
- const bldMats=new Map();
+ const bldMats=new Map();let _fd,_fn;const facD=()=>_fd||(_fd=tex('fac_day_'+(q==='high'?'h':'l'),true)),facN=()=>_fn||(_fn=tex('fac_night_'+(q==='high'?'h':'l'),true));
  function bldMat(src){const k=src.uuid;if(bldMats.has(k))return bldMats.get(k);const m=src.clone();m.userData.r7=1;m.userData.r8bld=1;if(m.map){m.color.multiply(texAvg(m.map));m.map=null}m.emissiveMap=null;m.emissive.set(0);if(q==='high')m.roughness=Math.max(.8,m.roughness);
   const hiT=q==='high';if(hiT){m.userData.tC=tex('concrete_c',true);m.userData.tB=tex('brick_c',true)}
-  m.onBeforeCompile=s=>{s.uniforms.uNight=uNight;if(hiT){s.uniforms.tWallC={value:m.userData.tC};s.uniforms.tWallB={value:m.userData.tB}}
-   s.vertexShader='attribute vec4 aBld;varying vec4 vBld;varying vec3 vBP;varying vec3 vBN;\n'+s.vertexShader.replace('#include <project_vertex>','#include <project_vertex>\nvBP=(modelMatrix*vec4(transformed,1.)).xyz;vBN=normalize(mat3(modelMatrix)*objectNormal);vBld=aBld;');
-   s.fragmentShader=(q==='high'?'':'#define R8_LOW\n')+'uniform float uNight;\n#ifndef R8_LOW\nuniform sampler2D tWallC,tWallB;\n#endif\nvarying vec4 vBld;varying vec3 vBP;varying vec3 vBN;float bGlass=0.;vec3 bEmit=vec3(0.);\n'+GLSL_H+s.fragmentShader
+  m.onBeforeCompile=s=>{s.uniforms.uNight=uNight;s.uniforms.tFacD={value:facD()};s.uniforms.tFacN={value:facN()};if(hiT){s.uniforms.tWallC={value:m.userData.tC};s.uniforms.tWallB={value:m.userData.tB}}
+   s.vertexShader='attribute vec4 aBld;attribute vec4 aBldC;flat varying vec4 vBC;flat varying vec4 vBld;varying vec3 vBP;varying vec3 vBN;\n'+s.vertexShader.replace('#include <project_vertex>','#include <project_vertex>\nvBP=(modelMatrix*vec4(transformed,1.)).xyz;vBN=normalize(mat3(modelMatrix)*objectNormal);vBld=aBld;vBC=aBldC;');
+   s.fragmentShader=(OFF.includes('dbga')?'#define R8_DBG vec3(fd.a)\n':OFF.includes('dbgn')?'#define R8_DBG fn\n':OFF.includes('dbg')?'#define R8_DBG fd.rgb\n':'')+(q==='high'?'':'#define R8_LOW\n')+'uniform float uNight;uniform sampler2D tFacD,tFacN;\n#define FACT '+(q==='high'?'1024.':'512.')+'\nflat varying vec4 vBC;\n#ifndef R8_LOW\nuniform sampler2D tWallC,tWallB;\n#endif\nflat varying vec4 vBld;varying vec3 vBP;varying vec3 vBN;float bGlass=0.;vec3 bEmit=vec3(0.);vec3 dbgC=vec3(0.);float dbgOn=0.;\n'+GLSL_H+s.fragmentShader
     .replace('#include <map_fragment>',`#include <map_fragment>
 {if(vBld.w>.5&&abs(vBN.y)<.5){float h=vBP.y-vBld.x,top=vBld.y-vBld.x,sd=vBld.z;float u=abs(vBN.x)>abs(vBN.z)?vBP.z:vBP.x;vec3 wall=diffuseColor.rgb;
 #ifndef R8_LOW
@@ -68,22 +68,31 @@ export function create(ctx){
   if(h>gf*.72&&h<gf*.94){col=sc*.8;bEmit=sc*uNight*.85;}
   else if(h>.1&&h<gf*.66&&cx>.07&&cx<.93){float gt=gf*.66;col=mix(vec3(.07,.09,.11),vec3(.30,.35,.40),smoothstep(.2,gt,h));bGlass=1.;bEmit=vec3(1.,.82,.58)*step(.22,sh)*(.18+.9*uNight)*(.55+.45*smoothstep(gt,.3,h));}
   else col=wall*.6+.03;}
- else if(h>=gf&&h<top-.75){float fh=2.9,f=(h-gf)/fh,fy=fract(f),fi=floor(f),cw=2.4,cx=fract(u/cw),ci=floor(u/cw);
-  if(cx>.2&&cx<.8&&fy>.24&&fy<.8){float lit=step(.6,r8h(vec2(ci+sd*7.,fi+sd)));col=mix(vec3(.10,.13,.17),vec3(.40,.48,.56),fy);bGlass=1.;bEmit=mix(vec3(1.,.76,.48),vec3(.78,.86,1.),r8h(vec2(fi,ci)))*lit*uNight*1.05;}
-  else if(cx>.16&&cx<.84&&fy>.2&&fy<.84)col=wall*.62;
-#ifndef R8_LOW
-  else if(fy<.07)col=wall*1.1+.03;else if(fy>.95)col=wall*.78;
+ else if(h>=gf&&h<top-.75){float sl=top>16.&&r8h(vec2(sd,3.1))>.45?3.:floor(r8h(vec2(sd,7.7))*2.999);
+  vec2 tuv=vec2((u-(abs(vBN.x)>abs(vBN.z)?vBC.y:vBC.x))/18.+r8h(vec2(sd,1.7))*.0,(h-gf)/18.),f=fract(tuv),o=vec2(mod(sl,2.)*.5,.5-floor(sl*.5)*.5),au=o+.003+f*.494;
+  vec2 gx=dFdx(tuv),gy=dFdy(tuv);float lod=max(0.,log2(max(length(gx),length(gy))*FACT));vec4 fd=textureLod(tFacD,au,lod);vec3 fn=textureLod(tFacN,au,max(0.,lod-1.)).rgb;
+  float lw2=dot(wall,vec3(.3,.59,.11));vec3 tint=lw2>.03?clamp(mix(vec3(1.),wall/lw2,sl>2.5?.08:.22),.75,1.3):vec3(1.);
+  col=fd.rgb*mix(tint,vec3(1.),fd.a)*(sl>2.5?1.7:1.05);bGlass=fd.a*(sl>2.5?.85:1.);if(sl>2.5){vec2 ce=floor(tuv*vec2(16.,10.));fn=mix(vec3(1.,.8,.55),vec3(.8,.9,1.),r8h(ce.yx+sd))*step(.62,r8h(ce+sd*3.1))*.9;}vec2 wc=floor(tuv*6.);fn*=step(.45,r8h(wc+sd*5.3));bEmit=fn*vec3(1.,.88,.72)*fd.a*uNight*.55+col*(.16+.22*fd.a)*(1.-uNight);
+#ifdef R8_DBG
+dbgC=R8_DBG;dbgOn=1.;
 #endif
+
  }
  else if(h>=top-.75||h>=gf){col=wall*1.12+.04;
 #ifndef R8_LOW
   if(h>top-.14||h<top-.62)col*=.82;
 #endif
  }
- diffuseColor.rgb=col;}}`)
-    .replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nroughnessFactor=mix(roughnessFactor,.14,bGlass);')
-    .replace('#include <metalnessmap_fragment>','#include <metalnessmap_fragment>\nmetalnessFactor=mix(metalnessFactor,.25,bGlass);')
-    .replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\ntotalEmissiveRadiance+=bEmit;')};
+ diffuseColor.rgb=col;}
+ else if(vBld.w>.5&&vBN.y>.5&&vBP.y>vBld.y-.05){float e=min(min(vBP.x-vBC.x,vBC.z-vBP.x),min(vBP.z-vBC.y,vBC.w-vBP.z));vec3 rc=vec3(.42,.43,.44);
+#ifndef R8_LOW
+ vec3 tc2=texture2D(tWallC,vBP.xz*.3).rgb;rc*=tc2/max(dot(tc2,vec3(.33)),.05)*.9+.1;
+#endif
+ vec2 sg=fract(vBP.xz*.5);rc*=.92+.08*step(.04,sg.x)*step(.04,sg.y);rc*=.9+.15*r8h(floor(vBP.xz*.25)+vBld.z);
+ if(e<.32)rc=vec3(.62,.6,.57)*(e<.05?.7:1.);else if(e<.5)rc*=.6;diffuseColor.rgb=rc;}}`)
+    .replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nroughnessFactor=mix(roughnessFactor,.22,bGlass);')
+    .replace('#include <metalnessmap_fragment>','#include <metalnessmap_fragment>\nmetalnessFactor=mix(metalnessFactor,.12,bGlass);')
+    .replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\ntotalEmissiveRadiance+=bEmit;').replace('#include <dithering_fragment>','#include <dithering_fragment>\n#ifdef R8_DBG\nif(dbgOn>.5)gl_FragColor=vec4(dbgC,1.);\n#endif')};
   m.customProgramCacheKey=()=>'r8bld'+q;bldMats.set(k,m);return m}
  // Split a (merged) mesh into solids by welding equal corner positions, then tag ground-standing boxes taller than 4 m.
  const B3=THREE.Box3,V3=THREE.Vector3;
@@ -92,8 +101,8 @@ export function create(ctx){
   const key=new Map();for(let i=0;i<n;i++){const k=Math.round(pos.getX(i)*200)+','+Math.round(pos.getY(i)*200)+','+Math.round(pos.getZ(i)*200);const j=key.get(k);if(j===undefined)key.set(k,i);else uni(i,j)}
   const idx=g.index;if(idx)for(let t=0;t<idx.count;t+=3){uni(idx.getX(t),idx.getX(t+1));uni(idx.getX(t),idx.getX(t+2))}else for(let t=0;t<n;t+=3){uni(t,t+1);uni(t,t+2)}
   const comp=new Map(),v=new V3(),nrm=g.attributes.normal;o.updateMatrixWorld();for(let i=0;i<n;i++){const r=find(i);let c=comp.get(r);if(!c){c={b:new B3(),ax:true,v:[]};comp.set(r,c)}v.fromBufferAttribute(pos,i).applyMatrix4(o.matrixWorld);c.b.expandByPoint(v);c.v.push(i);if(nrm){const ax=Math.abs(nrm.getX(i)),ay=Math.abs(nrm.getY(i)),az=Math.abs(nrm.getZ(i));if(Math.max(ax,ay,az)<.98)c.ax=false}}
-  const a=new Float32Array(n*4),out=[];let any=false;for(const c of comp.values()){const s=c.b.getSize(new V3());if(s.y>2&&Math.min(s.x,s.z)>1.2&&c.b.min.y<1.2){any=true;const seed=Math.abs(Math.sin(c.b.min.x*12.9898+c.b.min.z*78.233))*43758.5453%97;for(const i of c.v){a[i*4]=c.b.min.y;a[i*4+1]=c.b.max.y;a[i*4+2]=seed;a[i*4+3]=1}out.push({b:c.b,ax:c.ax,seed})}}
-  if(!any)return null;g.setAttribute('aBld',new THREE.BufferAttribute(a,4));return out}
+  const a=new Float32Array(n*4),ac=new Float32Array(n*4),out=[];let any=false;for(const c of comp.values()){const s=c.b.getSize(new V3());if(s.y>2&&Math.min(s.x,s.z)>1.2&&c.b.min.y<1.2){any=true;const seed=Math.abs(Math.sin(c.b.min.x*12.9898+c.b.min.z*78.233))*43758.5453%97;for(const i of c.v){a[i*4]=c.b.min.y;a[i*4+1]=c.b.max.y;a[i*4+2]=seed;a[i*4+3]=1;ac[i*4]=c.b.min.x;ac[i*4+1]=c.b.min.z;ac[i*4+2]=c.b.max.x;ac[i*4+3]=c.b.max.z}out.push({b:c.b,ax:c.ax,seed})}}
+  if(!any)return null;g.setAttribute('aBld',new THREE.BufferAttribute(a,4));g.setAttribute('aBldC',new THREE.BufferAttribute(ac,4));return out}
  const facadeTex=t=>!!t&&t.image instanceof HTMLCanvasElement&&t.image.width<=256&&t.image.height<=256;
  const avgCol=new Map();function texAvg(t){if(avgCol.has(t))return avgCol.get(t);let c=new THREE.Color(0xd8d2c6);try{const d=t.image.getContext('2d').getImageData(0,0,t.image.width,t.image.height).data;let r=0,g=0,b=0,n=0;for(let i=0;i<d.length;i+=16){const l=d[i]+d[i+1]+d[i+2];if(l>300){r+=d[i];g+=d[i+1];b+=d[i+2];n++}}if(n)c=new THREE.Color().setRGB(r/n/255,g/n/255,b/n/255,THREE.SRGBColorSpace)}catch{}avgCol.set(t,c);return c}
  const isBldCandidate=(o,m)=>o.isMesh&&!o.isInstancedMesh&&m&&m.isMeshStandardMaterial&&(!m.map||facadeTex(m.map))&&!m.transparent&&!m.vertexColors&&!(m.emissive&&m.emissive.getHex()!==0&&!m.emissiveMap)&&!kind(m.color.getHex());
@@ -105,6 +114,8 @@ export function create(ctx){
  const benchIron=(()=>{const parts=[];for(const x of [-.66,.66]){parts.push(new THREE.BoxGeometry(.06,.45,.42).translate(x,.22,0),new THREE.BoxGeometry(.06,.4,.05).translate(x,.68,-.21))}return mergeGeometries(parts)})();
  const binGeo=mergeGeometries([new THREE.CylinderGeometry(.22,.2,.78,10).translate(0,.39,0),new THREE.CylinderGeometry(.24,.24,.06,10).translate(0,.81,0)]);
  const crownGeo=(()=>{const parts=[[0,0,0,1],[.55,.2,.25,.7],[-.48,.32,-.3,.66]].map(([x,y,z,r])=>{const g=new THREE.IcosahedronGeometry(r,0);const p=g.attributes.position;for(let i=0;i<p.count;i++){const k=1+.09*Math.sin(p.getX(i)*9.1+p.getY(i)*5.3+p.getZ(i)*7.7);p.setXYZ(i,p.getX(i)*k,p.getY(i)*k,p.getZ(i)*k)}return g.translate(x,y,z)});const g=mergeGeometries(parts.map(g=>{g.deleteAttribute('uv');return g}));g.computeVertexNormals();return g})();
+ const acGeo=mergeGeometries([new THREE.BoxGeometry(1.1,.75,.8).translate(0,.45,0),new THREE.BoxGeometry(1.2,.08,.9).translate(0,.04,0)]),tankGeo=mergeGeometries([new THREE.CylinderGeometry(.75,.75,1.5,12).translate(0,1.35,0),new THREE.BoxGeometry(1.4,.6,1.4).translate(0,.3,0)]),hutGeo=new THREE.BoxGeometry(2.2,2.3,2.4).translate(0,1.15,0);
+ const acMat=new THREE.MeshStandardMaterial({color:0xc4c8ca,roughness:.5,metalness:.5}),tankMat=new THREE.MeshStandardMaterial({color:0x8f989c,roughness:.45,metalness:.6}),hutMat=new THREE.MeshStandardMaterial({color:0xb9b4aa,roughness:.95});for(const m of [acMat,tankMat,hutMat])m.userData.r7=1;
  const inside=(blds,x,z,pad=0)=>blds.some(b=>x>b.b.min.x-pad&&x<b.b.max.x+pad&&z>b.b.min.z-pad&&z<b.b.max.z+pad);
  function furnish(root,blds,lamps){const st=root.userData.r8||(root.userData.r8={blds:[],n:0});R.r8root=root;st.blds.push(...blds);const all=st.blds;const mtx=new THREE.Matrix4(),qq=new THREE.Quaternion(),e=new THREE.Euler(),one=new V3(1,1,1),col=new THREE.Color();
   const aw=[];for(const b of blds){if(!b.ax||b.b.max.y-b.b.min.y<2.2)continue;const {min,max}=b.b;const top=max.y-min.y,gf=top<5.6?top-.45:3.3;
@@ -118,11 +129,25 @@ export function create(ctx){
     const tx=-nz,tz=nx,ry=Math.atan2(nx,nz);if(i%3===0){const x=p.x-nx*Math.min(1.1,bd*.45)+tx*1.4,z=p.z-nz*Math.min(1.1,bd*.45)+tz*1.4;if(!inside(all,x,z,.3))bench.push([x,z,ry,p.y-1.7])}
     if(i%2===1){const x=p.x+tx*.6-nx*.1,z=p.z+tz*.6-nz*.1;if(!inside(all,x,z,.2))bin.push([x,z,0,p.y-1.7])}})}
   const inst=(geo,mat,items)=>{if(!items.length)return;const im=new THREE.InstancedMesh(geo,mat,items.length);items.forEach(([x,z,ry,y],i)=>{qq.setFromAxisAngle(new V3(0,1,0),ry);mtx.compose(new V3(x,y,z),qq,one);im.setMatrixAt(i,mtx)});im.castShadow=false;im.receiveShadow=true;im.userData.r8=1;root.add(im);done.add(im)};
+  // Rooftops: AC units, water tanks and stair huts (instanced, three draw calls for the whole city).
+  const acs=[],tanks=[],huts=[];for(const b of blds){if(!b.ax)continue;const {min,max}=b.b,top=max.y-min.y,w=max.x-min.x,d=max.z-min.z;if(top<4||w<3||d<3)continue;const rnd=k=>Math.abs(Math.sin(b.seed*12.9898+k*78.233)*43758.5453)%1;
+   const nA=Math.max(1,Math.min(5,Math.floor(w*d/30)));for(let k=0;k<nA;k++)acs.push([min.x+1+rnd(k)*(w-2),min.z+1+rnd(k+9)*(d-2),rnd(k+3)>.5?0:Math.PI/2,max.y]);
+   if(top>8&&w>5&&d>5){if(rnd(20)>.4)tanks.push([min.x+1.6+rnd(21)*(w-3.2),min.z+1.6+rnd(22)*(d-3.2),0,max.y]);huts.push([min.x+1.6+rnd(23)*(w-3.2),min.z+1.6+rnd(24)*(d-3.2),0,max.y])}}
+  inst(acGeo,acMat,acs);inst(tankGeo,tankMat,tanks);inst(hutGeo,hutMat,huts);st.n+=acs.length+tanks.length+huts.length;
   inst(benchGeo,woodMat,bench);inst(benchIron,ironMat,bench);inst(binGeo,binMat,bin);st.n+=bench.length+bin.length;R.stats.furniture=(R.stats.furniture||0)+aw.length+bench.length+bin.length}
- const done=new WeakSet();
+ const done=new WeakSet(),allBld=[];R.stripNow=()=>{stripWin(scene,allBld);return R.stats.stripped};
+ // Photo facades replace the old modelled window panes/frames/ledges on upper floors; collapse those triangles so they
+ // do not z-fight with the facade (ground-floor shopfront parts, signs, roofs and cornices stay).
+ function stripWin(root,blds){if(!blds.length)return;const zs=blds.map(b=>{const t=b.b.max.y-b.b.min.y;return {b:b.b,y0:b.b.min.y+(t<5.6?t-.45:3.3)+.05,y1:b.b.max.y-.8}}).filter(z=>z.y1>z.y0);if(!zs.length)return;let n=0;const a=new V3(),b2=new V3(),c=new V3();
+  root.traverse(o=>{if(!o.isMesh||o.isInstancedMesh||o.isSkinnedMesh||o.userData.r7person||o.userData.r8||o.userData.npc||o.userData.r8s===blds.length)return;o.userData.r8s=blds.length;const g=o.geometry;if(!g?.attributes?.position||g.attributes.aBld||Array.isArray(o.material))return;const m=o.material;if(!m||!(m.isMeshStandardMaterial||m.isMeshBasicMaterial&&m.map)||m.transparent)return;const P=m.isMeshBasicMaterial?.15:.45;
+   if(!g.boundingBox)g.computeBoundingBox();const wb=g.boundingBox.clone().applyMatrix4(o.matrixWorld);if(!zs.some(z=>wb.min.x<z.b.max.x+P&&wb.max.x>z.b.min.x-P&&wb.min.z<z.b.max.z+P&&wb.max.z>z.b.min.z-P&&wb.max.y>z.y0&&wb.min.y<z.y1))return;
+   const pos=g.attributes.position,idx=g.index,nt=(idx?idx.count:pos.count)/3;let hit=[];for(let t=0;t<nt;t++){const i0=idx?idx.getX(t*3):t*3,i1=idx?idx.getX(t*3+1):t*3+1,i2=idx?idx.getX(t*3+2):t*3+2;a.fromBufferAttribute(pos,i0);b2.fromBufferAttribute(pos,i1);c.fromBufferAttribute(pos,i2);a.add(b2).add(c).multiplyScalar(1/3).applyMatrix4(o.matrixWorld);
+    for(const z of zs){if(a.y>z.y0&&a.y<z.y1&&a.x>z.b.min.x-P&&a.x<z.b.max.x+P&&a.z>z.b.min.z-P&&a.z<z.b.max.z+P){hit.push(t);break}}}
+   if(!hit.length)return;const ng=o.userData.r8own?g:g.clone();o.userData.r8own=1;o.geometry=ng;if(ng.index){const ia=ng.index.array;for(const t of hit){ia[t*3+1]=ia[t*3+2]=ia[t*3]}ng.index.needsUpdate=true}else{const pa=ng.attributes.position.array;for(const t of hit)for(let k=1;k<3;k++)for(let d=0;d<3;d++)pa[(t*3+k)*3+d]=pa[t*9+d];ng.attributes.position.needsUpdate=true}n+=hit.length});R.stats.stripped=(R.stats.stripped||0)+n}
  function decorate(root,where){const nb=[],lamps=[];root.traverse(o=>{if(!o.isMesh||done.has(o)||o.userData.r7person||o.isSkinnedMesh)return;done.add(o);if(o.userData.npc)return;
   if(o.isInstancedMesh){const gp=o.geometry.parameters||{};if(o.geometry.type==='CylinderGeometry'&&gp.height===3.4&&gp.radiusTop===.06)lamps.push(o);else if(q==='high'&&!OFF.includes('crown')&&o.geometry.type==='IcosahedronGeometry'&&gp.radius===1&&gp.detail===0){o.geometry=crownGeo;o.castShadow=true}}
   else if(!OFF.includes('bld')&&!Array.isArray(o.material)&&isBldCandidate(o,o.material)){const b=bldPrep(o);if(b){o.material=bldMat(o.material);o.castShadow=true;o.receiveShadow=true;nb.push(...b);return}}const before=o.material;const after=Array.isArray(before)?before.map(m=>upMat(m,o)):upMat(before,o);if(after!==before){o.material=after;o.receiveShadow=true}if(o.castShadow){const g=o.geometry;if(!g.boundingBox)g.computeBoundingBox();if(g.boundingBox.max.y-g.boundingBox.min.y<.6*Math.max(1e-3,o.matrixWorld.elements[5]||1)&&g.boundingBox.max.y<.8)o.castShadow=false}});
+  if(nb.length)allBld.push(...nb);if(allBld.length&&!OFF.includes('strip'))try{stripWin(scene,allBld)}catch(e){console.warn('r8 strip',e)}
   if((nb.length||lamps.length)&&!OFF.includes('furn'))try{furnish(root,nb,lamps)}catch(e){console.warn('r8 furnish',e)}
   if(q==='high')for(const v of ctx.cars())paint(v)}
  const paints=new Map();function paint(g){if(!g||g.userData.r7paint)return;g.userData.r7paint=1;g.traverse(o=>{if(!o.isMesh)return;const m=o.material;if(!m?.isMeshStandardMaterial)return;const c=m.color.getHex();if(c===0x2c3e4c){o.material=darkGlass;return}if(c===0xfff6d0||c===0xd5332f)return;if(!paints.has(m)){const p=new THREE.MeshPhysicalMaterial({color:m.color,metalness:.55,roughness:.32,clearcoat:1,clearcoatRoughness:.06,envMap:envTex,envMapIntensity:1.2});p.userData.r7=1;paints.set(m,p);reflective.add(p)}o.material=paints.get(m)})}
