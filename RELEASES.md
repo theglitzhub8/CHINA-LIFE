@@ -128,3 +128,9 @@ Every server-side money change goes through the ledger (`chinalife_economy_actio
 - Attendance chip: after mark shows "Attended today ✓" + reward, hides after 2.6s; on error/409 re-reads status so it never sticks. R5a observer fixes live visibility.
 - First-day sheet: iOS checklist (icon tiles, progress ring, reward chip, checkmarks, side margins, crisp title).
 - Backup /root/backups/r5b-20261014-041118
+
+## R6 camera (branch r6-camera, not deployed)
+- Third-person camera tuned in one CAM block (FOV 50, street dist 10.5, pitch .66); pinch/wheel zoom 0.75–1.35.
+- Occlusion: rises over buildings first, pulls in only as a fallback; eased look-at.
+- Movement: accel/decel, short glide on stop, speed-matched stride for local and remote players; framerate-independent damping.
+- Measured (390/430): street char ≈12.6% of viewport, venue ≈14.5%; tests 164/131 (baseline).
