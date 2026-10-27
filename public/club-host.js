@@ -1,5 +1,8 @@
 import {sprayMenu} from './club-fx.js?v=20261014d1';
+import {clubLife} from './club-life.js?v=20261027d';
 // v9: 007 Club host ChampagnePappi, the neon club dressing and the party HUD.
+// v11: in one-city mode the club takes ChinaLifeOneCity.clubName() (no 007, no Shenyang) and club-life.js adds the
+// disco lights, DJ booth, Now playing chip and shout-outs. Classic mode keeps the 007 naming unchanged.
 // Built once per visit into the venue root; tick() runs from the world loop. No paid AI: canned lines only.
 // Drinks are paid on the server (economy.php action club-drink) and only update money/XP, never the save revision.
 export const DRINKS=[
@@ -17,18 +20,20 @@ const LINES={
  toast:['Cheers! 🥂','To money, love and good music!','Glasses up! 🥂'],
  served:['One {d}, coming right up!','{d} for {n}. Enjoy! 🍾','Good choice, {n}.'],
  quiet:['It\'s quiet… bring your friends. 📲','Early bird gets the dance floor.']};
-const fill=(t,v)=>t.replace('{n}',v.n||'friend').replace('{d}',v.d||'');
+const brand=t=>window.ChinaLifeOneCity?.brand?.(t)??t;
+const fill=(t,v)=>brand(t).replace('{n}',v.n||'friend').replace('{d}',v.d||'');
 export function nightClub(c){
- const {THREE,root,mesh,box,cylinder,label,game}=c,reduced=c.motionReduced,disposers=[];
+ const {THREE,root,mesh,box,cylinder,label,game}=c,reduced=c.motionReduced,disposers=[],OC=window.ChinaLifeOneCity,oneCity=!!OC?.active?.(),clubName=oneCity?OC.clubName():'007 Club',clubSign=oneCity?clubName.toUpperCase():'007';
+ const escH=v=>String(v).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch]);
  const basic=(color,extra={})=>{const m=new THREE.MeshBasicMaterial({color,...extra});disposers.push(m);return m};
  const plane=(w,h,mat,x,y,z,ry=0,rx=0)=>{const g=new THREE.PlaneGeometry(w,h);disposers.push(g);const m=new THREE.Mesh(g,mat);m.position.set(x,y,z);m.rotation.set(rx,ry,0);root.add(m);return m};
  // Neon text panels drawn once on canvas.
- const neon=(text,w,h,color,x,y,z,ry=0,size=110)=>{const cv=document.createElement('canvas');cv.width=512;cv.height=Math.round(512*h/w);const x2=cv.getContext('2d');x2.fillStyle='rgba(10,6,24,.85)';x2.fillRect(0,0,cv.width,cv.height);x2.shadowColor=color;x2.shadowBlur=24;x2.strokeStyle=color;x2.lineWidth=6;x2.strokeRect(10,10,cv.width-20,cv.height-20);x2.fillStyle='#fff';x2.font='900 '+size+'px system-ui,sans-serif';x2.textAlign='center';x2.textBaseline='middle';x2.fillText(text,256,cv.height/2+4);const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;disposers.push(t);const m=plane(w,h,basic(0xffffff,{map:t,transparent:true}),x,y,z,ry);m.userData.signText=text;return m};
+ const neon=(text,w,h,color,x,y,z,ry=0,size=110)=>{const cv=document.createElement('canvas');cv.width=512;cv.height=Math.round(512*h/w);const x2=cv.getContext('2d');x2.fillStyle='rgba(10,6,24,.85)';x2.fillRect(0,0,cv.width,cv.height);x2.shadowColor=color;x2.shadowBlur=24;x2.strokeStyle=color;x2.lineWidth=6;x2.strokeRect(10,10,cv.width-20,cv.height-20);x2.fillStyle='#fff';x2.font='900 '+size+'px system-ui,sans-serif';while(size>28&&x2.measureText(text).width>cv.width-48){size-=4;x2.font='900 '+size+'px system-ui,sans-serif'}x2.textAlign='center';x2.textBaseline='middle';x2.fillText(text,256,cv.height/2+4);const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;disposers.push(t);const m=plane(w,h,basic(0xffffff,{map:t,transparent:true}),x,y,z,ry);m.userData.signText=text;return m};
  // Entrance: neon arch, VIP rope and the bouncer, between the doors and the arrival spots.
  const pink=basic(0xff3fa4),cyan=basic(0x35e6ff),gold=basic(0xffcf5a);
  for(const z of [4.9,6.7]){const p=mesh(new THREE.BoxGeometry(.18,3,.18),0x221532,-9.2,1.5,z);p.material=pink;p.userData.privateMaterial=true}
  {const top=mesh(new THREE.BoxGeometry(.18,.18,2),0x221532,-9.2,3,5.8);top.material=cyan;top.userData.privateMaterial=true}
- neon('007',1.7,.6,'#ff3fa4',-9.28,3.5,5.8,Math.PI/2,120);
+ neon(clubSign,oneCity?2.4:1.7,.6,'#ff3fa4',-9.28,3.5,5.8,Math.PI/2,120);
  for(const x of [-8.4,-7.6,-6.8])cylinder(.05,.95,0xd9b24a,x,.48,6.75);box(1.6,.05,.05,0xb5122b,-7.6,.82,6.75);
  const bouncer=c.person(-8.3,4.6,0x111111,0x5b3a29,'Bouncer','host',{skin:0x5b3a29,hair:'cropped',acc:['sunglasses','headphones'],top:{s:'tee',c:0x111111},bottom:{s:'jeans',c:0x161616}});bouncer.rotation.y=Math.PI/2;
  // Dance floor: 6×4 tiles in four shared colours that swap on the beat.
@@ -62,8 +67,9 @@ export function nightClub(c){
  const hud=document.createElement('div');hud.className='club-hud';hud.innerHTML='<div class="club-meter" role="meter" aria-label="Party level" aria-valuemin="0" aria-valuemax="100"><span>🔥</span><i><b></b></i><em>0%</em></div><div class="club-emotes"><button data-ce="dance">💃<span>Dance</span></button><button data-ce="toast">🥂<span>Toast</span></button><button data-ce="hype">🙌<span>Hype</span></button><button data-ce="spray">💸<span>Spray</span></button><button data-ce="menu">🍾<span>Drinks</span></button></div>';
  (document.getElementById('worldUI')||document.body).append(hud);
  let boost=0;const meter=hud.querySelector('.club-meter'),fillEl=meter.querySelector('b'),pct=meter.querySelector('em');
- hud.querySelectorAll('[data-ce]').forEach(b=>b.onclick=()=>{const k=b.dataset.ce;if(k==='menu')return menu();if(k==='spray')return sprayMenu(c,a=>{boost+=a>=2000?20:a>=500?12:6;say(a>=2000?'Big money! Make it rain! 💸':'Spray on the dance floor! 💸')});if(k==='dance'){c.setEmote('dance');boost+=8;if(duel&&performance.now()<duel){duel=null;boost+=20;say('🏆 '+game.state.name+' wins the dance-off!');game.toast('🏆 You won the dance-off')}}if(k==='toast'){c.setEmote('drink');boost+=5;say(pick(LINES.toast))}if(k==='hype'){c.setEmote('cheer');boost+=6;say(pick(LINES.dj))}});
- const curtain=document.createElement('div');curtain.className='club-curtain';curtain.innerHTML='<b>007</b>';document.body.append(curtain);requestAnimationFrame(()=>curtain.classList.add('open'));setTimeout(()=>curtain.remove(),1200);
+ const life=oneCity?clubLife(c,{say:(t,ms)=>say(t,ms),bump:n=>{boost+=n},hud,clubName,bpm:OC.CLUB?.bpm||113}):null;
+ hud.querySelectorAll('[data-ce]').forEach(b=>b.onclick=()=>{const k=b.dataset.ce;if(k==='menu')return menu();if(k==='shout')return life?.openShout();if(k==='spray')return sprayMenu(c,a=>{boost+=a>=2000?20:a>=500?12:6;say(a>=2000?'Big money! Make it rain! 💸':'Spray on the dance floor! 💸')});if(k==='dance'){c.setEmote('dance');boost+=8;if(duel&&performance.now()<duel){duel=null;boost+=20;say('🏆 '+game.state.name+' wins the dance-off!');game.toast('🏆 You won the dance-off')}}if(k==='toast'){c.setEmote('drink');boost+=5;say(pick(LINES.toast))}if(k==='hype'){c.setEmote('cheer');boost+=6;say(pick(LINES.dj))}});
+ const curtain=document.createElement('div');curtain.className='club-curtain'+(clubSign.length>6?' brand':'');curtain.innerHTML='<b>'+escH(clubSign==='007'?'007':clubName)+'</b>';document.body.append(curtain);requestAnimationFrame(()=>curtain.classList.add('open'));setTimeout(()=>curtain.remove(),1200);
  function party(){const crowd=c.remotes().length,music=window.ChinaLifeAudio?.playing?25:0;return Math.max(0,Math.min(100,Math.round(15+crowd*12+music+boost)))}
  let busy=false;const last=new Map();
  function menu(){const s=game.state,d=game.drunkInfo?.()||{icon:'😊',label:'Sober',value:0};
@@ -79,7 +85,10 @@ export function nightClub(c){
  let lastCheck=0,lastBeat=-1,lastFx=0,stuck=0,steer=0,straightFor=0;const vel={x:0,z:0};
  // Heading eases toward the target along the shortest arc and ignores tiny differences.
  const turn=(target,dt)=>{let d=target-pappi.rotation.y;d=Math.atan2(Math.sin(d),Math.cos(d));if(Math.abs(d)<.03)return;pappi.rotation.y+=d*(1-Math.exp(-dt*7))};
- const clear=(x,z)=>Math.abs(x)<9&&Math.abs(z)<6.5&&!c.obstacles().some(o=>Math.abs(x-o.x)<o.w/2+.15&&Math.abs(z-o.z)<o.d/2+.15)&&!c.bodies().some(b=>b!==pappi&&Math.hypot(b.position.x-x,b.position.z-z)<.55);
+ const free=(x,z)=>Math.abs(x)<9&&Math.abs(z)<6.5&&!c.obstacles().some(o=>Math.abs(x-o.x)<o.w/2+.15&&Math.abs(z-o.z)<o.d/2+.15);
+ // v11: Pappi keeps the same personal space as everyone else (world.js CROWD_GAP .72) and gives way when someone is closer.
+ const GAP=.8,clear=(x,z)=>free(x,z)&&!c.bodies().some(b=>b!==pappi&&Math.hypot(b.position.x-x,b.position.z-z)<GAP);
+ function yieldSpace(){for(const b of c.bodies()){if(b===pappi)continue;const dx=pappi.position.x-b.position.x,dz=pappi.position.z-b.position.z,d=Math.hypot(dx,dz);if(d>=.76)continue;const ux=d>1e-4?dx/d:1,uz=d>1e-4?dz/d:0,k=.76-d;for(const [vx,vz] of [[ux,uz],[uz,-ux],[-uz,ux]]){const nx=pappi.position.x+vx*k,nz=pappi.position.z+vz*k;if(free(nx,nz)){pappi.position.x=nx;pappi.position.z=nz;break}}}}
  function tick(time,dt){
   const me=c.getPlayer();
   if(me&&!greeted){greeted=true;setTimeout(()=>say(fill(pick(LINES.welcome),{n:game.state.name})),900)}
@@ -101,11 +110,12 @@ export function nightClub(c){
     const w=Math.sin(time*.01)*Math.min(1,sp/1.2),[l,r,al,ar]=pappi.userData.limbs;l.rotation.x=w*.5;r.rotation.x=-w*.5;al.rotation.x=-w*.4;al.rotation.z=0;ar.rotation.x=-.6;pappi.position.y=0}}
   else{wait-=dt;vel.x=vel.z=0;const [l,r,al]=pappi.userData.limbs,e=1-Math.exp(-dt*8);l.rotation.x*=1-e;r.rotation.x*=1-e;al.rotation.x*=1-e;al.rotation.z+=((reduced()?.3:.4+Math.sin(time*.003)*.3)-al.rotation.z)*e;pappi.position.y=0;
    if(wait<=0){let next;do next=pick(spots);while(next===pappi.userData.spot);pappi.userData.spot=next;goal=next}}
+  yieldSpace();
   if(time-(dodgeAt||0)>250){dodgeAt=time;dodge()}
   if(time-lastCheck>1000){lastCheck=time;boost=Math.max(0,boost-.6);const p=party();fillEl.style.width=p+'%';pct.textContent=p+'%';meter.setAttribute('aria-valuenow',p);meter.classList.toggle('hot',p>=75);
    const first=!seen.primed;seen.primed=true;for(const r of c.remotes())if(!seen.has(r.id)){seen.add(r.id);if(!first&&r.name)setTimeout(()=>say(fill(pick(LINES.join),{n:r.name})),400)}
    if(performance.now()>nextBanter){nextBanter=performance.now()+16000+Math.random()*14000;const roll=Math.random();if(roll<.12&&!duel){duel=performance.now()+15000;say(pick(LINES.duel),6000)}else if(roll<.4&&window.ChinaLifeAudio?.playing)say(pick(LINES.dj));else if(realOn&&roll<.6)say(pick(["I'm online, pull up! 🍾","Pappi is live tonight. Tap my name and follow! 🍾"]));else say(pick(c.remotes().length?LINES.banter:[...LINES.banter,...LINES.quiet]))}}}
  let dodgeAt=0;const emoteBar=hud.querySelector('.club-emotes');function dodge(){const e=bubble.el;if(e.classList.contains('quiet')){e.style.marginLeft='';return}const b=e.getBoundingClientRect(),r=emoteBar.getBoundingClientRect(),cur=parseFloat(e.style.marginLeft)||0;const over=b.right-cur-(r.left-10);e.style.marginLeft=(b.bottom>r.top&&b.top<r.bottom&&over>0)?(-over)+'px':''}
- function dispose(){window.removeEventListener('chinalife:players',onPlayers);if(window.ChinaLifeClubHost?.pappi===pappi)window.ChinaLifeClubHost=null;clearTimeout(sayTimer);hud.remove();curtain.remove();for(const d of disposers)d.dispose?.();const out=document.createElement('div');out.className='club-curtain leaving';out.innerHTML='<b>007</b>';document.body.append(out);setTimeout(()=>out.remove(),700)}
- const api={_obs:()=>c.obstacles(),keep:[pappi,bouncer,...tiles,...beams],tick,dispose,menu,say,party,pappi,me:()=>c.getPlayer()};window.ChinaLifeClubHost=api;return api;
+ function dispose(){window.removeEventListener('chinalife:players',onPlayers);if(window.ChinaLifeClubHost?.pappi===pappi)window.ChinaLifeClubHost=null;clearTimeout(sayTimer);life?.dispose();hud.remove();curtain.remove();for(const d of disposers)d.dispose?.();const out=document.createElement('div');out.className='club-curtain leaving'+(clubSign.length>6?' brand':'');out.innerHTML='<b>'+escH(clubSign==='007'?'007':clubName)+'</b>';document.body.append(out);setTimeout(()=>out.remove(),700)}
+ const api={_obs:()=>c.obstacles(),keep:[pappi,bouncer,...tiles,...beams,...(life?.keep||[])],tick:(t,d)=>{tick(t,d);life?.tick(t,d,{tiles,mats:floorMats})},life,clubName,dispose,menu,say,party,pappi,me:()=>c.getPlayer()};window.ChinaLifeClubHost=api;return api;
 }

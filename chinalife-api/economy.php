@@ -142,7 +142,7 @@ try {
         $sku=(string)($input['sku']??'');
         if (!isset($clubDrinks[$sku])) cl_fail('That drink is not on the menu');
         [, $here]=economy_here();
-        if ($here!=='night') cl_fail('Order at 007 Club',403);
+        if ($here!=='night') cl_fail('Order at the club bar',403);
         if (cl_one('SELECT id FROM chinalife_economy_actions WHERE user_id=? AND action="club-drink" AND created_at>=DATE_SUB(NOW(),INTERVAL 90 SECOND)','i',[$uid])) {$totals=economy_totals($game);$db->commit();json_response('success',$totals+['cooldown'=>true],'One drink every 90 seconds.');}
         [$price,$xp]=$clubDrinks[$sku];
         $held=cl_balances_lock($uid);

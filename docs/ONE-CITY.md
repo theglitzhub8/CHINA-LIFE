@@ -81,3 +81,12 @@ The founder found venues too crowded and characters walking into each other.
   NPCs step aside for the player, and two NPCs or two players share the push. Pushes never go into furniture or walls.
   Ambient NPCs spawn at least 1.3 m apart and clear of hosts, AI characters, the arrival row and the player, and
   wanderers pick goals away from other people.
+
+## Club (one-city)
+
+- In one-city mode the `night` venue is **Jollof & Neon** ("Afrobeats · Amapiano · all night"). The name lives in `CLUB.name` in `public/one-city.js` and can be overridden from Admin → World layout → Club name (`club_name`, max 24 chars, validated in `cl_valid_world_layout`).
+- Classic mode keeps the original **007 Club** copy and Shenyang dressing (nothing deleted; `ChinaLifeOneCity.brand()` only rewrites text when one-city is active).
+- `public/club-life.js` adds the disco ball, beams, neon strips, beat-pulsing floor sparkles, DJ booth + DJ, a "Now playing" chip (tap = music on/off) and the 📣 Shout-out interaction (8 preset messages, 20 s cooldown, shown on the club screen and by the DJ).
+- Music: original synth track `amapiano` ("Jollof Log Drum", 113 BPM, log-drum pattern) in `catalog.js`; dancers, DJ and the player's Dance emote follow `ChinaLifeAudio.beatPhase()` (or a silent 113 BPM clock when muted).
+- Spacing: crowd gap .72 m; Pappi steps aside when anyone is closer than .76 m.
+- Tests: `tests/club-one-city.mjs`.

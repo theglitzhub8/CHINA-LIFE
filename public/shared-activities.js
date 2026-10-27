@@ -1,5 +1,5 @@
 const game=window.ChinaLife,esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const dialog=document.getElementById('sharedDialog');dialog.innerHTML='<div class="activity-panel"><span class="eyebrow">SHENYANG · TOGETHER</span><h2>Make a shared memory</h2><div id="sharedBody"></div><p id="sharedFeedback" role="status"></p></div><button id="closeShared" class="close-x" aria-label="Close shared activities">×</button>';
+const dialog=document.getElementById('sharedDialog');dialog.innerHTML='<div class="activity-panel"><span class="eyebrow">'+(window.ChinaLifeOneCity?.active?.()?'CHINA':'SHENYANG')+' · TOGETHER</span><h2>Make a shared memory</h2><div id="sharedBody"></div><p id="sharedFeedback" role="status"></p></div><button id="closeShared" class="close-x" aria-label="Close shared activities">×</button>';
 const banner=document.createElement('button');banner.id='sharedInviteNotice';banner.className='shared-invite-notice';banner.hidden=true;document.body.append(banner);
 let catalog={},relationships=[],preferred=null,peerGender=null,sessions=[],peer=null,peerName='',account='',generation=0,polling=false,offset=0,seen=new Set(),busy=false,pending=null;
 const $=id=>document.getElementById(id),mine=()=>window.ChinaLifeCloud?.playerId;
@@ -28,7 +28,7 @@ function render(){
 async function pollInternal(){
  if(polling||!window.ChinaLifeCloud?.signedIn||!game.state.created||document.hidden)return;
  const id=mine();if(id!==account){account=id;seen=new Set();sessions=[];peer=null;generation++}const epoch=generation;
- polling=true;try{const data=await api();if(epoch!==generation||id!==mine())return;catalog=data.catalog;sessions=data.activities;relationships=data.relationships||[];offset=data.serverTime-Date.now();
+ polling=true;try{const data=await api();if(epoch!==generation||id!==mine())return;catalog=data.catalog||{};/* one city: '007 Club' in server titles reads as the club's one-city name */if(window.ChinaLifeOneCity?.active())for(const k in catalog)if(catalog[k]?.title)catalog[k]={...catalog[k],title:window.ChinaLifeOneCity.brand(catalog[k].title)};sessions=data.activities;relationships=data.relationships||[];offset=data.serverTime-Date.now();
   const incoming=sessions.find(s=>s.status==='pending'&&s.invitee_id===id&&!seen.has(s.id));
   if(incoming){seen.add(incoming.id);banner.textContent=incoming.inviter_name+' invited you: '+catalog[incoming.kind].title;banner.hidden=false;banner.onclick=()=>{banner.hidden=true;open()};}
   if(!active()||active().status!=='pending')banner.hidden=true;

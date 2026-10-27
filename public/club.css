@@ -96,3 +96,16 @@ html:root body:has(.club-hud) #worldUI.tp-view:is(.dock-open,:not(.dock-open)) :
 .club-emotes{top:auto;bottom:calc(var(--tp-bottom,150px) + 88px);max-height:calc(100% - var(--tp-bottom,150px) - 88px - 150px - env(safe-area-inset-top));overflow-y:auto;scrollbar-width:none;align-content:end}
 .club-emotes::-webkit-scrollbar{display:none}
 @media(max-height:760px){.club-emotes{gap:5px}.club-emotes button{padding:5px 0 4px;font-size:16px}}
+/* v11: one-city club (club-life.js): Now playing chip, long-name curtain, DJ bubble. Compositor-only animation. */
+.club-curtain.brand b{font-size:clamp(40px,13vw,88px);max-width:90vw;text-align:center;line-height:1.05;letter-spacing:.02em}
+.club-hud .club-now{pointer-events:auto;position:absolute;left:50%;bottom:calc(var(--tp-bottom,164px) + 10px);transform:translateX(-50%);display:flex;align-items:center;gap:8px;max-width:min(56vw,230px);padding:5px 11px 5px 7px;border:1px solid rgb(255 255 255 / .16);border-radius:999px;background:rgb(14 8 30 / .74);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#fff;font:700 12px/1.2 system-ui,sans-serif;text-align:left}
+.club-hud .club-now span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.club-hud .club-now small{display:block;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#35e6ff;opacity:.9}
+.club-hud .club-now>i{flex:none;font-style:normal;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#ff3fa4,#8b5cff);font-size:10px}
+.club-hud .club-now.on{border-color:rgb(53 230 255 / .45)}
+.club-hud .club-now .eq{display:flex;align-items:flex-end;justify-content:center;gap:2px;padding:5px}
+.club-hud .club-now .eq b{width:3px;height:12px;background:#fff;border-radius:2px;transform-origin:bottom;animation:clubEq .53s ease-in-out infinite alternate}
+.club-hud .club-now .eq b:nth-child(2){animation-delay:-.2s}.club-hud .club-now .eq b:nth-child(3){animation-delay:-.4s}
+@keyframes clubEq{from{transform:scaleY(.25)}to{transform:scaleY(1)}}
+.scene-label.dj-say{color:#35e6ff;border-color:#8b5cff}
+@media (prefers-reduced-motion:reduce){.club-hud .club-now .eq b{animation:none}}

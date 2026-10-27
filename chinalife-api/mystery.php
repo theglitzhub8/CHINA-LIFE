@@ -6,7 +6,7 @@ cl_methods(['GET','POST']);
 function mystery_steps(string $city): array {
     $routes=['Shenyang'=>[
         ['object'=>'plaza-lantern','place'=>'plaza','x'=>2.2,'z'=>1.1,'label'=>'Paper lantern','clue'=>'The lantern’s ribbon names the park bench as the next stop.'],
-        ['object'=>'park-bench','place'=>'park','x'=>-2.0,'z'=>0.2,'label'=>'Folded note','clue'=>'The note under the bench says the last mark is a poster inside 007 Club.'],
+        ['object'=>'park-bench','place'=>'park','x'=>-2.0,'z'=>0.2,'label'=>'Folded note','clue'=>'The note under the bench says the last mark is a poster inside the Club.'],
         ['object'=>'night-poster','place'=>'night','x'=>3.1,'z'=>-1.2,'label'=>'Club poster','clue'=>'The poster closes the route. You have the whole trail.'],
     ]];
     return $routes[$city]??[];

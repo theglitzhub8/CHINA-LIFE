@@ -215,6 +215,8 @@ function cl_valid_world_layout($v): ?array {
     $out=['mode'=>$mode,'city'=>$city,'places'=>array_values(array_unique($places)),'where_to'=>$where,'flights'=>$flights];
     // Optional share of each venue's ambient NPC crowd (0–1). Missing means the client default (0.4 one-city, 1 classic).
     if (array_key_exists('npc_density',$v)) {$n=$v['npc_density'];if (!is_int($n)&&!is_float($n)||$n<0||$n>1) return null;$out['npc_density']=round((float)$n,2);}
+    // Optional one-city club name (venue 'night'); missing means the client default. Classic always shows 007 Club.
+    if (array_key_exists('club_name',$v)) {$c=$v['club_name'];if (!is_string($c)) return null;$c=trim(preg_replace('/\s+/u',' ',$c));if ($c===''||mb_strlen($c)>24||preg_match('/[<>"\x00-\x1f]/',$c)) return null;$out['club_name']=$c;}
     return $out;
 }
 // Null when the row is missing, so the client keeps its built-in default.
