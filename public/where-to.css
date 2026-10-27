@@ -1,0 +1,43 @@
+/* "Where to?" destination board (one-city mode). Hafrik palette: Honeydew #F7FFF7, Hafrik Black #121212,
+   Java #1F8E93, Cyprus #0C3F44. Mobile first. */
+.where-to{position:fixed;inset:0 0 var(--wt-dock,72px) 0;z-index:60;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  background:#F7FFF7;color:#121212;font-family:var(--hk-head,'Work Sans',system-ui,sans-serif);padding:0 0 20px}
+.where-to[hidden]{display:none}
+.where-to .wt-head{position:sticky;top:0;z-index:1;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+  padding:calc(env(safe-area-inset-top,0px) + 18px) 18px 16px;background:#0C3F44;color:#F7FFF7}
+.where-to .wt-kicker{font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.75}
+.where-to h2{margin:4px 0 2px;font-size:30px;font-weight:700;letter-spacing:-.01em}
+.where-to .wt-head p{margin:0;font-size:14px;opacity:.85}
+.where-to .wt-close{background:rgba(247,255,247,.14);color:#F7FFF7;border:0;border-radius:999px;width:38px;height:38px;font-size:22px;cursor:pointer}
+.where-to .wt-section{padding:16px 16px 0}
+.where-to h3{margin:0 0 10px;font-size:15px;font-weight:600;color:#0C3F44}
+.where-to .wt-suggest{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px}
+.where-to .wt-tip{flex:0 0 78%;max-width:300px;scroll-snap-align:start;display:grid;grid-template-columns:auto 1fr;column-gap:10px;align-items:center;text-align:left;
+  border:0;border-radius:16px;padding:14px;background:#1F8E93;color:#F7FFF7;font:inherit;cursor:pointer}
+.where-to .wt-tip span{grid-row:span 2;font-size:28px}
+.where-to .wt-tip b{font-size:16px}
+.where-to .wt-tip small{font-size:13px;opacity:.92}
+.where-to .wt-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.where-to .wt-card{display:grid;grid-template-columns:52px 1fr;grid-template-rows:auto auto;column-gap:12px;row-gap:8px;align-items:center;text-align:left;
+  background:#fff;border:1px solid rgba(12,63,68,.14);border-radius:16px;padding:12px;font:inherit;color:#121212;cursor:pointer}
+.where-to .wt-card:active{transform:scale(.99)}
+.where-to .wt-card[aria-disabled="true"]{opacity:.62}
+.where-to .wt-icon{grid-row:span 2;width:52px;height:52px;border-radius:14px;display:grid;place-items:center;font-size:28px;background:rgba(31,142,147,.12)}
+.where-to .wt-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
+.where-to .wt-copy b{font-size:16px;font-weight:600}
+.where-to .wt-copy small{font-size:13px;color:#4a5a5c}
+.where-to .wt-meta{display:flex;flex-wrap:wrap;gap:6px}
+.where-to .wt-meta i{font-style:normal;font-size:12px;border-radius:999px;padding:3px 9px;background:rgba(12,63,68,.08);color:#0C3F44}
+.where-to .wt-open.on{background:rgba(31,142,147,.16);color:#0f6a6e}
+.where-to .wt-open.off{background:rgba(18,18,18,.08);color:#555}
+.where-to .wt-home{display:block;margin:16px 16px 0;width:calc(100% - 32px);border:1px dashed rgba(12,63,68,.35);border-radius:14px;padding:12px;
+  background:transparent;color:#0C3F44;font:inherit;font-weight:600;cursor:pointer}
+@media (min-width:720px){
+  .where-to .wt-grid{grid-template-columns:repeat(2,1fr)}
+  .where-to .wt-section,.where-to .wt-head{padding-left:max(24px,calc((100vw - 980px)/2));padding-right:max(24px,calc((100vw - 980px)/2))}
+  .where-to .wt-tip{flex-basis:300px}
+  .where-to .wt-home{margin-left:max(24px,calc((100vw - 980px)/2));width:auto;padding-inline:24px}
+}
+@media (min-width:1100px){.where-to .wt-grid{grid-template-columns:repeat(3,1fr)}}
+/* Keep the bottom dock above the board so Home / People / Phone stay reachable. */
+body.where-to-open .world-nav{z-index:61}

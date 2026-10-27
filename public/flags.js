@@ -12,9 +12,11 @@
  };
  const on=()=>{try{return new Set((localStorage.getItem('chinalife-flags-on')||'').split(',').map(s=>s.trim()).filter(Boolean))}catch{return new Set()}};
  const keepPlace=id=>{const s=window.ChinaLife?.state;if(!s)return false;const job=window.ChinaLife?.jobPlace?.(s.job);return s.place===id||s.student?.campus===id||s.home===id||job===id||(s.job==='roach-farmer'||s.job==='roach-manager')&&id==='roachfarm'};
+ // One-city mode (one-city.js): every venue outside the seven destinations is hidden, never deleted. Homes stay.
+ const oneCityOff=id=>!!window.ChinaLifeOneCity&&!window.ChinaLifeOneCity.allows(id)&&!window.ChinaLife?.isResidence?.(id);
  window.ChinaLifeFlags={OFF,
   appOff:id=>OFF.apps.includes(id)&&!on().has(id),
-  placeOff:id=>OFF.places.includes(id)&&!on().has(id)&&!keepPlace(id),
+  placeOff:id=>(OFF.places.includes(id)&&!on().has(id)||oneCityOff(id))&&!keepPlace(id),
   off:name=>OFF.features.includes(name)&&!on().has(name)};
 })();
 // R1 lazy loader for rarely used scripts (admin weekly editor, flight cabin). Resolves once the script has run.

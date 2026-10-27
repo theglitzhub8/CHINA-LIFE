@@ -87,6 +87,14 @@ if ($action==='end_event') {
     cl_run('UPDATE chinalife_events SET ends_at=NOW() WHERE id=? AND ends_at>NOW()','i',[$id]);admin_log('end_event',null,null,(string)$id);json_response('success',['ended'=>true]);
 }
 if ($action==='cities') json_response('success',['open'=>cl_open_cities()]);
+if ($action==='world_layout') json_response('success',['layout'=>cl_world_layout(),'places'=>CL_ONE_CITY_PLACES,'open'=>cl_open_cities()]);
+if ($action==='set_world_layout') {
+    $layout=cl_valid_world_layout($input['layout']??null);if (!$layout) cl_fail('Choose a valid world layout');
+    $db->begin_transaction();cl_run("INSERT IGNORE INTO chinalife_settings(name,value,updated_at) VALUES('world_layout','{}',NOW())");
+    cl_one("SELECT value FROM chinalife_settings WHERE name='world_layout' FOR UPDATE");$value=json_encode($layout);
+    cl_run("UPDATE chinalife_settings SET value=?,updated_at=NOW() WHERE name='world_layout'",'s',[$value]);$db->commit();
+    admin_log('set_world_layout',null,null,$value);json_response('success',['layout'=>$layout]);
+}
 if ($action==='set_cities') {
     $all=['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'];$open=$input['open']??null;
     if (!is_array($open)||!count($open)||array_diff($open,$all)) cl_fail('Choose valid cities');

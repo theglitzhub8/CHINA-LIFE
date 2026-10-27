@@ -202,6 +202,23 @@ function cl_open_cities(): array {
     $list=$row?json_decode($row['value'],true):null;
     return is_array($list)&&count($list)?array_values(array_unique(array_intersect($list,['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin']))):['China'];
 }
+// One-city world layout (docs/ONE-CITY.md). Admin switches which venues are open, the Where-to board and flights.
+// Mode 'classic' turns every city, venue, the map and flights back on. Nothing is deleted either way.
+const CL_ONE_CITY_PLACES=['night','gist','voting','football','hq','cityhospital','university'];
+function cl_valid_world_layout($v): ?array {
+    if (!is_array($v)) return null;$mode=$v['mode']??'one-city';
+    if (!in_array($mode,['one-city','classic'],true)) return null;
+    $city=$v['city']??'China';if (!is_string($city)||!in_array($city,['China','Shenyang','Guangzhou','Shenzhen','Beijing','Shanghai','Chengdu','Harbin'],true)) return null;
+    $places=$v['places']??CL_ONE_CITY_PLACES;if (!is_array($places)||!count($places)||array_diff($places,CL_ONE_CITY_PLACES)) return null;
+    $where=$v['where_to']??($mode==='one-city');$flights=$v['flights']??($mode!=='one-city');
+    if (!is_bool($where)||!is_bool($flights)) return null;
+    return ['mode'=>$mode,'city'=>$city,'places'=>array_values(array_unique($places)),'where_to'=>$where,'flights'=>$flights];
+}
+// Null when the row is missing, so the client keeps its built-in default.
+function cl_world_layout(): ?array {
+    $row=cl_one("SELECT value FROM chinalife_settings WHERE name='world_layout'");
+    return $row?cl_valid_world_layout(json_decode($row['value'],true)):null;
+}
 // Player ranks (XP ladder) are configured by admins. They are game status only and never grant admin access.
 function cl_default_ranks(): array {
     $list=[[0,'Newcomer','🌱'],[200,'Explorer','🧭'],[600,'Local','🏮'],[1500,'Regular','⭐'],[3500,'Insider','💎'],[7000,'Shenyang Star','🌟'],[12000,'Legend','👑']];

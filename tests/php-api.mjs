@@ -255,6 +255,21 @@ test('admins open cities and every player receives the open list',async()=>{
  await call(1,'admin.php','POST',{action:'set_cities',open:[]});assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['Shenyang']);
 });
 
+test('admins set the one-city world layout and every player receives it',async()=>{
+ // migration-world-layout.sql seeds the one-city default once and never overwrites it.
+ assert.deepEqual((await call(5,'events.php?city=China')).data.world_layout,{mode:'one-city',city:'China',places:['night','gist','voting','football','hq','cityhospital','university'],where_to:true,flights:false});
+ assert.equal((await call(5,'admin.php','POST',{action:'set_world_layout',layout:{mode:'one-city'}})).httpStatus,403);
+ assert.equal((await call(1,'admin.php','POST',{action:'set_world_layout',layout:{mode:'one-city',places:['casino']}})).httpStatus,400);
+ assert.equal((await call(1,'admin.php','POST',{action:'set_world_layout',layout:{mode:'everything'}})).httpStatus,400);
+ const r=await call(1,'admin.php','POST',{action:'set_world_layout',layout:{mode:'one-city',city:'China',places:['night','gist','hq']}});
+ assert.deepEqual(r.data.layout,{mode:'one-city',city:'China',places:['night','gist','hq'],where_to:true,flights:false});
+ assert.deepEqual((await call(5,'events.php?city=China')).data.world_layout.places,['night','gist','hq']);
+ assert.equal((await call(1,'admin.php','POST',{action:'world_layout'})).data.layout.mode,'one-city');
+ await call(1,'admin.php','POST',{action:'set_world_layout',layout:{mode:'classic'}});
+ const c=(await call(5,'events.php?city=China')).data.world_layout;assert.equal(c.mode,'classic');assert.equal(c.flights,true);
+ sql("USE chinalife_test; DELETE FROM chinalife_settings WHERE name='world_layout'");
+});
+
 test('daily push sends a valid VAPID-signed reminder and removes expired subscriptions',async()=>{
  const dir=path.join(tmp,'web/api/v4/chinalife');assert.equal((await call(6,'push.php')).data.enabled,false);
  execFileSync('php',[path.join(dir,'push-setup.php'),'mailto:test@example.com'],{env,stdio:'pipe'});

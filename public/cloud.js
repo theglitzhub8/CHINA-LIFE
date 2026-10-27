@@ -10,10 +10,12 @@ let songs=[],songsKey='';
 let ads=[],adsKey='';const adImage=a=>HAFRIK_API+'/chinalife/ad-image.php?id='+encodeURIComponent(a.id)+'&v='+a.version;
 async function gesture(to,phrase){if(!account||!presence)throw Error('Join the shared city first.');const s=game.state,r=await api('/chinalife/gestures.php','POST',{city:s.city,place:s.place,to:to==null?null:String(to),phrase});const id=String((r.data||r).id||'');if(id)seenGestures.add(id);return true}
 let presenceCheck={lastSuccess:null,error:null,serverId:null};
-let message = 'Sign in with Hafrik to save across devices.', liveToken = storage.getItem(TOKEN_KEY) || '';
+let message = 'Sign in with Hafrik to save across devices.', liveToken = window.ChinaLifeSandbox?.localOnly ? '' : storage.getItem(TOKEN_KEY) || '';
 const FEED_PARTS={'/chinalife/online.php':'online','/chinalife/events.php':'events','/chinalife/golden.php':'golden','/chinalife/activities.php':'activities'},feedCache={};
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(path, method = 'GET', data) {
+  // Preview copies (one-city.js sets ChinaLifeSandbox) never reach the Hafrik API, so they cannot change real saves.
+  if (window.ChinaLifeSandbox?.localOnly) throw Object.assign(Error('Preview runs offline'), { status: 0 });
   {const part=FEED_PARTS[path];if(part){if(method==='GET'){const c=feedCache[part];if(c&&Date.now()-c.at<65000&&c.city===game.state.city&&!(part==='activities'&&document.querySelector('#sharedDialog[open]')))return {status:'success',data:c.data}}else delete feedCache[part]}}
   const visit=window.ChinaLifeHomeVisits?.current;if(visit&&/\/chinalife\/(presence|messages|notifications|voice|voice-signal|gestures)\.php/.test(path)&&visit.city===game.state.city&&visit.place===game.state.place){if(method==='GET'){path+=(path.includes('?')?'&':'?')+'homeOwner='+encodeURIComponent(visit.owner)}else if(data)data={...data,homeOwner:visit.owner}}
   const query = method === 'GET' && data ? new URLSearchParams(data).toString() : '';
@@ -37,6 +39,7 @@ function requestAppSession() {
   clearTimeout(appWait); appWaiting = true; appWait = setTimeout(() => {appWaiting = false; if (!account) show()}, 8000);
 }
 function show() {
+  if (window.ChinaLifeSandbox?.localOnly) return;
   const name=esc(account?.username || account?.user_name || 'Hafrik user'), head='<div class="auth-brand"><img class="hafrik-logo" src="https://s3.ap-northeast-1.wasabisys.com/hafriksocial/uploads/photos/2025/07/sngine_1c76aafda2234d9e92ff37897edbd4be.png" alt="Hafrik"><small>CHINALIFE</small></div>';
   const passwordForm='<form id="hafrikLoginForm" class="cloud-login"><label>Email or username<input id="hafrikLogin" autocomplete="username" placeholder="Your email or username" required></label><label>Password<div class="auth-password"><input id="hafrikPassword" type="password" autocomplete="current-password" placeholder="Your password" required><button id="showHafrikPassword" type="button" aria-label="Show password">Show</button></div></label><button type="submit" class="primary-btn">Log in</button><p id="hafrikLoginFeedback" role="status"></p></form>';
   const conflict=!!account&&!auto&&!loading&&!restoreFailed;
@@ -263,6 +266,7 @@ function join() {
 }
 async function leave() {epoch++; presence = false; players = []; publish(); if (account) try {await api('/chinalife/presence.php', 'DELETE', {})} catch {}}
 async function initialize() {
+  if (window.ChinaLifeSandbox?.localOnly) { loading = false; setTimeout(() => game.startOnboarding?.(), 0); return false; }
   if (window.ReactNativeWebView || window.HafrikSession) $('onboardLinks')?.setAttribute('hidden','');
   if (window.HafrikSession?.token) return connect(window.HafrikSession,{source:'app'});
   if (window.ReactNativeWebView) {loading=false;sessionSource='app';status('Connecting your Hafrik app account…');requestAppSession();notify();return false}
@@ -307,7 +311,7 @@ async function refreshOnline(){if(!account||document.hidden)return;try{const res
 setInterval(refreshOnline,30000);window.addEventListener('chinalife:cloudready',refreshOnline);
 // Events created in the admin panel: shown in venues, on the map and on billboards.
 let events=[],gist=[],announcements=[],admin=false;const seenEvents=new Set();
-async function refreshEvents(){if(!account||document.hidden)return;try{const result=await api('/chinalife/events.php','GET',{city:game.state.city}),data=result.data||result;events=data.events||[];gist=data.gist||[];announcements=data.announcements||[];admin=data.admin===true;window.ChinaLifeHafrik?.setFeatures(data.hafrik_features);if(Array.isArray(data.cities))game.setOpenCities?.(data.cities);if(Array.isArray(data.city_launches))game.setCityLaunches?.(data.city_launches);if(Array.isArray(data.ranks))game.setRanks?.(data.ranks);if(data.me)game.setRankStatus?.(data.me);if(Array.isArray(data.restaurants)){game.setPartnerRestaurants?.(data.restaurants);
+async function refreshEvents(){if(!account||document.hidden)return;try{const result=await api('/chinalife/events.php','GET',{city:game.state.city}),data=result.data||result;events=data.events||[];gist=data.gist||[];announcements=data.announcements||[];admin=data.admin===true;window.ChinaLifeHafrik?.setFeatures(data.hafrik_features);if(data.world_layout)window.ChinaLifeOneCity?.set(data.world_layout);if(Array.isArray(data.cities))game.setOpenCities?.(data.cities);if(Array.isArray(data.city_launches))game.setCityLaunches?.(data.city_launches);if(Array.isArray(data.ranks))game.setRanks?.(data.ranks);if(data.me)game.setRankStatus?.(data.me);if(Array.isArray(data.restaurants)){game.setPartnerRestaurants?.(data.restaurants);
  // Newly approved businesses: tell players who are online so they can find them.
  if(knownPartners===null||knownCity!==game.state.city){knownCity=game.state.city;knownPartners=new Set(data.restaurants.map(r=>String(r.id)))}else for(const r of data.restaurants)if(!knownPartners.has(String(r.id))){knownPartners.add(String(r.id));game.notify?.('🆕 '+(r.icon||'')+' '+r.name+' just joined ChinaLife in '+game.state.city,()=>game.partner?.(r))}}if(Array.isArray(data.songs)){const key=data.songs.map(x=>x.id).join(',');songs=data.songs;if(key!==songsKey){songsKey=key;window.dispatchEvent(new CustomEvent('chinalife:songs'))}}if(Array.isArray(data.ads)){const key=JSON.stringify(data.ads.map(a=>[a.id,a.version,a.place]));ads=data.ads;if(key!==adsKey){adsKey=key;window.dispatchEvent(new CustomEvent('chinalife:ads'))}}for(const e of events)if(!seenEvents.has(e.id)){seenEvents.add(e.id);if(!e.joined)game.notify?.('🎉 '+e.title+(e.reward?' · +¥'+e.reward:''),()=>game.eventScreen?.(e.id))}window.dispatchEvent(new CustomEvent('chinalife:events',{detail:events}))}catch{}}
 async function joinEvent(id){await api('/chinalife/events.php','POST',{id:Number(id)});await refreshEvents();await syncTransfers()}
