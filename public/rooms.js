@@ -9,14 +9,17 @@ export function dressRoom(c,id){
  if(kind==='gist'){
   // Newsroom: on-air screen with rolling headlines, a pinboard of clues, a tea table and a studio mic.
   const heads=['Who left 007 with two phones?','Landlord raises rent, tenants raise eyebrows','Mystery chef spotted at the market','Campus crush confesses on the radio','Big Laoban buys third scooter'];let k=0;
-  const tv=panel(3.4,1.9,(x,w,h)=>{x.fillStyle='#14121f';x.fillRect(0,0,w,h);x.fillStyle='#e0263b';x.fillRect(0,0,w,64);text(x,'● ON AIR · GOSSIP TV',30,44);text(x,'BREAKING',26,120,{color:'#ffcf5a'});const words=heads[k%heads.length].split(' ');let line='',y=170;for(const wd of words){if((line+wd).length>22){text(x,line,34,y);y+=44;line=''}line+=wd+' '}text(x,line,34,y);x.fillStyle='#e0263b';x.fillRect(0,h-40,w,40);text(x,'Tip us anonymously at the Gossip desk',18,h-14)},-1.6,2.3,BACK,0,true);
+  const tv=panel(3.4,1.9,(x,w,h)=>{x.fillStyle='#14121f';x.fillRect(0,0,w,h);x.fillStyle='#e0263b';x.fillRect(0,0,w,64);text(x,'● ON AIR · GOSSIP TV',30,44);const hs=window.ChinaLifeHotSeat?.enabled?.()&&window.ChinaLifeHotSeat.featured?.();if(hs&&k%2===0){window.ChinaLifeHotSeat.paintTV(x,w,h,hs,text);return}text(x,'BREAKING',26,120,{color:'#ffcf5a'});const words=heads[k%heads.length].split(' ');let line='',y=170;for(const wd of words){if((line+wd).length>22){text(x,line,34,y);y+=44;line=''}line+=wd+' '}text(x,line,34,y);x.fillStyle='#e0263b';x.fillRect(0,h-40,w,40);text(x,'Tip us anonymously at the Gossip desk',18,h-14)},-3,2.6,BACK,0,true);
   timers.push(setInterval(()=>{k++;tv.userData.paint()},7000));
-  box(3.6,2.1,.06,0x241b2e,-1.6,2.3,BACK-.04);
+  // Gossip hot seat: today's most-voted gist takes every other slot on Gossip TV, and shows at once when it changes.
+  const onHotSeat=()=>{k=0;tv.userData.paint()};addEventListener('chinalife:hotseat',onHotSeat);disposers.push({dispose(){removeEventListener('chinalife:hotseat',onHotSeat)}});
+  box(3.6,2.1,.06,0x241b2e,-3,2.6,BACK-.04);
   box(.06,1.6,2.4,0x8a6a45,LEFT+.05,1.7,1.4);for(let i=0;i<6;i++)box(.02,.42,.34,[0xfff4c2,0xffffff,0xbfe3ff][i%3],LEFT+.1,1.3+(i%2)*.6,.6+Math.floor(i/2)*.8);
   for(let i=0;i<3;i++){const s=box(.01,.012,.9,0xd22b2b,LEFT+.12,1.55+i*.15,.9+i*.5);s.rotation.x=.4-i*.4}
   box(2.2,.45,.8,0x7a3b62,-3.8,.25,-3.4);box(2.2,.5,.15,0x7a3b62,-3.8,.6,-3.75);cylinder(.45,.42,0xd9b24a,-3.8,.22,-2.4);
   cylinder(.03,1.5,0x222222,4.6,.75,-2.6);mesh(new THREE.SphereGeometry(.09,10,8),0x333333,4.6,1.55,-2.6);
-  label('🫖 Tea table · spill it',-3.8,1.2,-2.4,'interactive',()=>game.gist?.())}
+  label('🫖 Tea table · spill it',-3.8,1.2,-2.4,'interactive',()=>game.gist?.());
+  if(window.ChinaLifeHotSeat?.enabled?.()){cylinder(.34,.5,0xe0263b,3.7,.25,-2.6);box(.7,.7,.1,0xe0263b,3.7,.85,-2.95);cylinder(.36,.04,0xffcf5a,3.7,.52,-2.6);label('🔥 Hot seat · True or Cap?',3.9,1.9,-2.6,'interactive',()=>window.ChinaLifeHotSeat.open())}}
  if(kind==='hospital'){
   // Ward: reception with a red cross, two curtained beds, a heart monitor and waiting chairs.
   box(3,1.05,.7,0xf4f7f8,-3.6,.53,BACK+1.1);box(3.1,.06,.8,0x5fb5b8,-3.6,1.08,BACK+1.1);

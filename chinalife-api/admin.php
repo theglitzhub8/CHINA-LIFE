@@ -87,6 +87,28 @@ if ($action==='end_event') {
     cl_run('UPDATE chinalife_events SET ends_at=NOW() WHERE id=? AND ends_at>NOW()','i',[$id]);admin_log('end_event',null,null,(string)$id);json_response('success',['ended'=>true]);
 }
 if ($action==='cities') json_response('success',['open'=>cl_open_cities()]);
+// Gossip hot seat moderation: list recent gists (reported first), hide/unhide, delete, and the on/off switch.
+if ($action==='hot_seat') {
+    require_once __DIR__.'/hot-seat-lib.php';
+    $rows=cl_optional_rows("SELECT h.id,h.user_id,u.user_name,h.city,h.body,h.status,h.true_votes,h.cap_votes,h.reports,h.created_at FROM chinalife_hot_seat h LEFT JOIN users u ON u.user_id=h.user_id ORDER BY h.reports>0 DESC,h.id DESC LIMIT 60");
+    json_response('success',['enabled'=>cl_hot_seat_enabled(),'gists'=>$rows]);
+}
+if ($action==='set_hot_seat') {
+    $on=$input['enabled']??null;if (!is_bool($on)) cl_fail('Choose on or off');
+    $db->begin_transaction();cl_run("INSERT IGNORE INTO chinalife_settings(name,value,updated_at) VALUES('hot_seat','{}',NOW())");
+    cl_one("SELECT value FROM chinalife_settings WHERE name='hot_seat' FOR UPDATE");
+    cl_run("UPDATE chinalife_settings SET value=?,updated_at=NOW() WHERE name='hot_seat'",'s',[json_encode(['enabled'=>$on])]);
+    admin_log('set_hot_seat',null,null,$on?'on':'off');$db->commit();json_response('success',['enabled'=>$on]);
+}
+if ($action==='hot_seat_moderate') {
+    $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);$op=$input['op']??'';
+    if (!$id||!in_array($op,['hide','unhide','delete'],true)) cl_fail('Choose a gist and hide, unhide or delete');
+    $row=cl_one('SELECT body FROM chinalife_hot_seat WHERE id=?','i',[$id]);if (!$row) cl_fail('That gist is gone',404);
+    if ($op==='delete') cl_run('DELETE FROM chinalife_hot_seat WHERE id=?','i',[$id]);
+    elseif ($op==='hide') cl_run("UPDATE chinalife_hot_seat SET status='hidden',hidden_by=? WHERE id=?",'ii',[$uid,$id]);
+    else cl_run("UPDATE chinalife_hot_seat SET status=IF(closes_at>NOW(),'voting','revealed'),hidden_by=NULL,reports=0 WHERE id=? AND status='hidden'",'i',[$id]);
+    admin_log('hot_seat_'.$op,$id,null,mb_substr($row['body'],0,120));json_response('success',['id'=>(string)$id,'op'=>$op]);
+}
 if ($action==='world_layout') json_response('success',['layout'=>cl_world_layout(),'places'=>CL_ONE_CITY_PLACES,'open'=>cl_open_cities()]);
 if ($action==='set_world_layout') {
     $layout=cl_valid_world_layout($input['layout']??null);if (!$layout) cl_fail('Choose a valid world layout');
