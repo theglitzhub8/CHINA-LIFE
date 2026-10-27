@@ -4,13 +4,13 @@ const load=()=>{const ctx={console,localStorage:{getItem:()=>null}};ctx.window=c
 
 test('one-city club name is configurable and never says 007 or Shenyang; Classic keeps 007 Club',()=>{
  const o=load();
- assert.equal(o.clubName(),'Jollof & Neon');assert.equal(o.CLUB.classic,'007 Club');
+ assert.equal(o.clubName(),'Club');assert.equal(o.CLUB.classic,'007 Club');
  assert.doesNotMatch(o.clubName(),/007|Shenyang|Guangzhou/);
- assert.equal(o.brand('Welcome to 007, {n}! 🥂'),'Welcome to Jollof & Neon, {n}! 🥂');
- assert.equal(o.brand('Bored? 007 Club is open'),'Bored? Jollof & Neon is open');
+ assert.equal(o.brand('Welcome to 007, {n}! 🥂'),'Welcome to the Club, {n}! 🥂');
+ assert.equal(o.brand('Bored? 007 Club is open'),'Bored? The Club is open');assert.equal(o.brand('The 007 Club bar'),'The Club bar');
  assert.equal(o.brand('I’m filming a “day in Shenyang” vlog.'),'I’m filming a “day in China” vlog.');
  o.set({mode:'one-city',club_name:'  Afro   Lounge China <b> '});assert.equal(o.clubName(),'Afro Lounge China b');
- o.set({mode:'one-city',club_name:''});assert.equal(o.clubName(),'Jollof & Neon');
+ o.set({mode:'one-city',club_name:''});assert.equal(o.clubName(),'Club');
  o.set({mode:'classic'});assert.equal(o.clubName(),'007 Club');assert.equal(o.brand('Welcome to 007'),'Welcome to 007');
 });
 
@@ -36,7 +36,7 @@ test('beat clock follows the DJ when music plays and a silent tempo otherwise; s
 });
 
 test('amapiano track exists and server validates club_name',()=>{
- assert.match(fs.readFileSync('public/catalog.js','utf8'),/id:'amapiano',name:'Jollof Log Drum',style:'Amapiano · 113 BPM',bpm:113/);
+ assert.match(fs.readFileSync('public/catalog.js','utf8'),/id:'amapiano',name:'Club mix',style:'Amapiano · 113 BPM',bpm:113/);
  const php=fs.readFileSync('chinalife-api/common.php','utf8');assert.match(php,/club_name/);assert.match(php,/mb_strlen\(\$c\)>24/);
 });
 
@@ -48,4 +48,13 @@ test('quests, events, shifts and the student story point at the 7 one-city venue
  const g=fs.readFileSync('public/game.js','utf8');
  assert.match(g,/function currentEvent\(\)\{const e0=.*questPlace/);assert.match(g,/storyCity=oneCity\?state\.city/);
  assert.match(g,/bizPlace=window\.ChinaLifeOneCity\?\.questPlace/);assert.match(g,/wid=window\.ChinaLifeOneCity\?\.questPlace/);
+});
+
+test('no Jollof & Neon anywhere in the client, and Walk the city is off in one city only',()=>{
+ for(const f of fs.readdirSync('public').filter(f=>/\.(js|css|html)$/.test(f)))assert.doesNotMatch(fs.readFileSync('public/'+f,'utf8'),/Jollof\s*(&|&amp;|and)\s*Neon|Jollof Log Drum/,f);
+ const o=load();assert.equal(o.walkCity(),false);o.set({mode:'classic'});assert.equal(o.walkCity(),true);
+ assert.match(fs.readFileSync('public/world.js','utf8'),/function setCityWalk\(on\)\{if\(on&&window\.ChinaLifeOneCity\?\.walkCity&&!window\.ChinaLifeOneCity\.walkCity\(\)\)return;/);
+ const r3=fs.readFileSync('public/r3.js','utf8');assert.match(r3,/ONE_CITY_STEPS=ALL_STEPS\.filter\(s=>s\.id!=='walk'\)/);
+ assert.match(fs.readFileSync('public/r4.js','utf8'),/k==='street'&&window\.ChinaLifeOneCity\?\.walkCity\?\.\(\)===false/);
+ assert.match(fs.readFileSync('public/social.js','utf8'),/walkCity\?\.\(\)===false\?'':'<button data-social="walk-now"/);
 });

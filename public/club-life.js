@@ -2,7 +2,7 @@
 // moves on the beat, a "Now playing" chip and a shout-out to the DJ that shows on the booth screen.
 // Mobile first: MeshBasic/additive materials only, no extra lights or shadows, one canvas redraw per shout-out.
 // Built by club-host.js in one-city mode only; Classic 007 keeps its original dressing.
-export const SHOUTS = ['Big up the DJ! 🔊', 'Run it back, DJ! 🔁', 'Amapiano to the world! 🎹', 'Afrobeats all night! 🥁', 'Jollof wars truce tonight 🍚', 'Happy birthday to me! 🎂', 'Shout-out to my squad 👯', 'Make some noise for Africa! 🌍'];
+export const SHOUTS = ['Big up the DJ! 🔊', 'Run it back, DJ! 🔁', 'Amapiano to the world! 🎹', 'Afrobeats all night! 🥁', 'Hands up for the Club! 🙌', 'Happy birthday to me! 🎂', 'Shout-out to my squad 👯', 'Make some noise for Africa! 🌍'];
 export const SHOUT_COOLDOWN_MS = 20000;
 const PALETTE = [0xff3fa4, 0x35e6ff, 0x8b5cff, 0xffcf5a, 0x2ee6a0];
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);

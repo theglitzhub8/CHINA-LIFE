@@ -16,7 +16,7 @@
   };
   // The one-city Club (venue id 'night'). Change the name here, or per server with world_layout.club_name (admin).
   // Classic mode keeps the original '007 Club' naming and its Shenyang dressing; nothing is deleted.
-  const CLUB = Object.freeze({ name: 'Jollof & Neon', tagline: 'Afrobeats · Amapiano · all night', track: 'amapiano', bpm: 113, classic: '007 Club' });
+  const CLUB = Object.freeze({ name: 'Club', tagline: 'Afrobeats · Amapiano · all night', track: 'amapiano', bpm: 113, classic: '007 Club' });
   const clubLabel = (v) => String(v ?? '').replace(/[\u0000-\u001f<>"]/g, '').replace(/\s+/g, ' ').trim().slice(0, 24);
   const ORDER = ['night', 'gist', 'voting', 'football', 'hq', 'cityhospital', 'university'];
   // npcDensity: share of each venue's ambient crowd that is spawned (1 = the classic crowd). The founder asked for fewer
@@ -39,6 +39,7 @@
   const listeners = new Set();
   const set = (v) => {
     layout = normalise(v);
+    syncDoc();
     listeners.forEach((f) => {
       try { f(layout); } catch {}
     });
@@ -50,9 +51,12 @@
   // One-city copy for club text written for the classic Shenyang map: 007 becomes the club name, Shenyang becomes China.
   const brand = (text) => {
     if (!active() || text === null || text === undefined) return text;
-    const n = clubName();
-    return String(text).replace(/\b007(?:\s+Night)?\s+Club\b/gi, n).replace(/\b007\b/g, n).replace(/C L U B {1,2}· {1,2}S H E N Y A N G/g, CLUB.tagline.toUpperCase()).replace(/\bShenyang\b/g, 'China');
+    const n = clubName(), ref = /^club$/i.test(n) ? 'the Club' : n;
+    return String(text).replace(/\b007(?:\s+Night)?\s+Club\b/gi, ref).replace(/\b007\b/g, ref).replace(/\b([Tt])he the Club\b/g, '$1he Club').replace(/(^|[.!?:]\s+|["“‘(]\s*)the Club\b/g, '$1The Club').replace(/C L U B {1,2}· {1,2}S H E N Y A N G/g, CLUB.tagline.toUpperCase()).replace(/\bShenyang\b/g, 'China');
   };
+  // "Walk the city" (free roaming on the city map) is a Classic-only feature; one-city players use Where to?.
+  const walkCity = () => !active();
+  const syncDoc = () => { try { root.document?.documentElement?.classList.toggle('cl-no-walk', !walkCity()); } catch {} };
   const allows = (id) => !active() || layout.places.includes(id) || id === 'home' || String(id).startsWith('home-');
   // Quests, events and the student story that point at a venue hidden in one-city mode are sent to the closest of the 7.
   const QUEST_PLACES = Object.freeze({ airport: 'hq', ef: 'university', campus: 'university', mall: 'hq', market: 'gist', cafe: 'gist', business: 'hq', product: 'hq', gym: 'football', park: 'football', plaza: 'gist', station: 'hq', hotel: 'hq', african: 'gist', 'black-sheep': 'night' });
@@ -137,6 +141,7 @@
       try { const r = await adminCall('set_world_layout', { layout: layoutOut }); set(r.layout); toast('World layout saved.'); mountAdmin(el, adminCall, toast); } catch (e) { toast(e.message); }
     };
   }
+  syncDoc();
   root.ChinaLifeOneCity = {
     PLACES, ORDER, ALL_CITIES, DEFAULT, CLASSIC,
     normalise, set, get layout() { return layout; }, active, allows,
@@ -146,7 +151,7 @@
       try { const o = root.localStorage?.getItem('chinalife-npc-density'); if (o !== null && o !== undefined && o !== '') return density(o, layout.npcDensity); } catch {}
       return layout.npcDensity ?? 1;
     },
-    NPC_DENSITY, CLUB, clubName, brand, QUEST_PLACES, questPlace,
+    NPC_DENSITY, CLUB, clubName, brand, walkCity, QUEST_PLACES, questPlace,
     isOpenAt, hourOf, suggest, relocate, mountAdmin,
     onChange: (f) => (listeners.add(f), () => listeners.delete(f)),
   };

@@ -21,27 +21,30 @@ function pill(){const side=document.querySelector('#worldUI .world-side');if(!si
  const n=nextStep();p.hidden=!n;if(!n)return;const html=I(n.icon)+'<span>'+n.text.replace(/[<>&]/g,'')+'</span>'+I('fwd','sm chev');if(p._html!==html){p.innerHTML=html;p._html=html}p._go=n.go;p.setAttribute('aria-label','Next step: '+n.text)}
 
 /* ---------- Onboarding: one coach card at a time, skippable, saved in state.onboard ---------- */
-const STEPS=[
+const ALL_STEPS=[
  {id:'walk',title:'Walk around',text:'Drag the joystick to move.',spot:'.tp-stick'},
  {id:'map',title:'Open the map',text:'Tap Map to see your city.',spot:'#navMap'},
  {id:'cafe',title:'Go to the café',text:'Tap the café, then go in. The first ride is free.',spot:null,go:()=>G().walkIn('cafe')},
  {id:'order',title:'Order a drink',text:'Pick something from the sheet to refill your needs.',spot:'#worldActivities'},
  {id:'hi',title:'Say hi',text:'Tap “Say something” to chat with people here.',spot:'#venueSay'},
  {id:'phone',title:'Your phone',text:'Open Phone and claim your welcome reward.',spot:'#navPhone'}];
+// One city: no "Walk around" step, and the café step (a hidden venue) becomes the Where to? board.
+const ONE_CITY_STEPS=ALL_STEPS.filter(s=>s.id!=='walk').map(s=>s.id==='cafe'?{id:'cafe',title:'Pick a place',text:'Tap Where to? and choose where to go. The first ride is free.',spot:'#navMap',go:()=>window.ChinaLifeWhereTo?.show?.()}:s.id==='order'?{...s,title:'Try an activity'}:s);
+function steps(){return window.ChinaLifeOneCity?.walkCity?.()===false?ONE_CITY_STEPS:ALL_STEPS}
 const LS='chinalife-onboard';
 function onboardState(){const st=G()?.state;if(!st?.created)return 'wait';if(st.onboard)return st.onboard;const ls=localStorage.getItem(LS);if(ls)return ls;
  // Only brand-new players get the tour: day 1, almost no XP, nothing visited yet.
  const fresh=(st.day||1)<=1&&Number(st.xp||0)<60&&(st.visited||[]).length<=2;return fresh?'0':'skip'}
 function setOnboard(v){const st=G()?.state;if(st)st.onboard=v;localStorage.setItem(LS,v)}
-function onboardStep(){const s=onboardState();if(!/^\d+$/.test(s))return null;return STEPS[+s]||null}
+function onboardStep(){const s=onboardState();if(!/^\d+$/.test(s))return null;return steps()[+s]||null}
 let card=null,spotEl=null;
 function coach(){const step=onboardStep();if(!step){card?.remove();card=null;spot(null);return}
  if(!card){card=document.createElement('section');card.id='coachCard';card.className='coach-card';card.setAttribute('role','status');document.getElementById('worldUI')?.appendChild(card)}
- const i=STEPS.indexOf(step),html='<div class="coach-dots">'+STEPS.map((_,k)=>'<i'+(k<i?' class="done"':k===i?' class="now"':'')+'></i>').join('')+'</div><b>'+step.title+'</b><p>'+step.text+'</p><div class="coach-actions"><button type="button" data-coach="skip">Skip tour</button>'+(step.go?'<button type="button" class="primary" data-coach="go">Take me there</button>':'')+'</div>';
+ const i=steps().indexOf(step),html='<div class="coach-dots">'+steps().map((_,k)=>'<i'+(k<i?' class="done"':k===i?' class="now"':'')+'></i>').join('')+'</div><b>'+step.title+'</b><p>'+step.text+'</p><div class="coach-actions"><button type="button" data-coach="skip">Skip tour</button>'+(step.go?'<button type="button" class="primary" data-coach="go">Take me there</button>':'')+'</div>';
  if(card._html!==html){card.innerHTML=html;card._html=html;card.querySelector('[data-coach=skip]').onclick=()=>{setOnboard('skip');coach()};const g=card.querySelector('[data-coach=go]');if(g)g.onclick=()=>{step.go();}}
  spot(step.spot?document.querySelector(step.spot):null)}
 function spot(el){if(spotEl===el)return;spotEl?.classList.remove('coach-spot');spotEl=el;el?.classList.add('coach-spot')}
-function advance(id){const step=onboardStep();if(!step||step.id!==id)return;const i=STEPS.indexOf(step);setOnboard(i+1>=STEPS.length?'done':String(i+1));if(i+1>=STEPS.length)window.ChinaLifeToast?.('You’re all set. Enjoy your life in China.');coach();soon(pill)}
+function advance(id){const step=onboardStep();if(!step||step.id!==id)return;const i=steps().indexOf(step);setOnboard(i+1>=steps().length?'done':String(i+1));if(i+1>=steps().length)window.ChinaLifeToast?.('You’re all set. Enjoy your life in China.');coach();soon(pill)}
 // Step completion, from what the player actually does.
 document.addEventListener('pointerdown',e=>{const t=e.target;if(t.closest?.('.tp-stick'))setTimeout(()=>advance('walk'),900);if(t.closest?.('#navMap'))setTimeout(()=>advance('map'),300);if(t.closest?.('#worldActivities button'))setTimeout(()=>advance('order'),300);if(t.closest?.('#venueSay,#venueChatButton'))setTimeout(()=>advance('hi'),300);if(t.closest?.('#navPhone'))setTimeout(()=>advance('phone'),300)},{capture:true,passive:true});
 document.addEventListener('keydown',e=>{if(/^(Arrow|w$|a$|s$|d$)/i.test(e.key))advance('walk')});

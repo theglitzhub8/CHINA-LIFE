@@ -26,6 +26,7 @@ function where(){const st=G()?.state,ui=$('worldUI');if(!st?.created||!ui)return
 function tip(){const step=window.ChinaLifeOnboarding?.step;const touring=step&&!/^(skip|done|wait)$/.test(step);const k=where();
  if(tipEl&&(k!==tipFor||touring)){tipEl.remove();tipEl=null;tipFor=''}
  if(!k||touring||tipEl||seen().includes(k)||Date.now()-lastTip<60000)return;
+ if(k==='street'&&window.ChinaLifeOneCity?.walkCity?.()===false)return; // one city: no walk-the-city prompt
  const st=G().state;if(k==='club'&&Math.floor((st.hour||0)/60)%24>=22)return; // no tips in clubs late at night
  lastTip=Date.now();tipFor=k;tipEl=document.createElement('div');tipEl.className='r4-tip';tipEl.setAttribute('role','status');tipEl.innerHTML='<span class="r4-tip-ic">'+I('nav')+'</span><p>'+TIPS[k]+'</p><button type="button">Got it</button>';
  tipEl.querySelector('button').onclick=()=>{localStorage.setItem(KEY,JSON.stringify([...new Set([...seen(),k])]));tipEl.remove();tipEl=null;tipFor=''};

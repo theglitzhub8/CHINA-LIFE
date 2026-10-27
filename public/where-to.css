@@ -44,3 +44,5 @@ body.where-to-open .world-nav{z-index:61}
 /* Go-live fix: the "Daily reward ready" pill and reward toasts must not sit on top of the Where to? header. */
 html:root body.where-to-open #worldUI.tp-view .world-side #r3Next.next-step:not([hidden]),html:root body.where-to-open #worldUI .world-side #r3Next.next-step:not([hidden]),html:root body.where-to-open #worldUI #worldRankBadge,html:root body.where-to-open .message-notification{visibility:hidden!important;pointer-events:none!important}
 html:root body.where-to-open #toast{top:auto!important;bottom:calc(var(--wt-dock,72px) + 12px)!important;z-index:62!important}
+/* One city: "Walk the city" is off (Classic keeps it). */
+html.cl-no-walk:root body #worldUI #tpWalk,html.cl-no-walk:root body [data-social="walk-now"]{display:none!important}

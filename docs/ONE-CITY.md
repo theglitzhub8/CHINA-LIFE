@@ -84,9 +84,10 @@ The founder found venues too crowded and characters walking into each other.
 
 ## Club (one-city)
 
-- In one-city mode the `night` venue is **Jollof & Neon** ("Afrobeats · Amapiano · all night"). The name lives in `CLUB.name` in `public/one-city.js` and can be overridden from Admin → World layout → Club name (`club_name`, max 24 chars, validated in `cl_valid_world_layout`).
+- In one-city mode the `night` venue is **Club** (renamed from a first draft on the founder's request) ("Afrobeats · Amapiano · all night"). The name lives in `CLUB.name` in `public/one-city.js` and can be overridden from Admin → World layout → Club name (`club_name`, max 24 chars, validated in `cl_valid_world_layout`).
 - Classic mode keeps the original **007 Club** copy and Shenyang dressing (nothing deleted; `ChinaLifeOneCity.brand()` only rewrites text when one-city is active).
 - `public/club-life.js` adds the disco ball, beams, neon strips, beat-pulsing floor sparkles, DJ booth + DJ, a "Now playing" chip (tap = music on/off) and the 📣 Shout-out interaction (8 preset messages, 20 s cooldown, shown on the club screen and by the DJ).
-- Music: original synth track `amapiano` ("Jollof Log Drum", 113 BPM, log-drum pattern) in `catalog.js`; dancers, DJ and the player's Dance emote follow `ChinaLifeAudio.beatPhase()` (or a silent 113 BPM clock when muted).
+- Music: original synth track `amapiano` ("Club mix", 113 BPM, log-drum pattern) in `catalog.js`; dancers, DJ and the player's Dance emote follow `ChinaLifeAudio.beatPhase()` (or a silent 113 BPM clock when muted).
 - Spacing: crowd gap .72 m; Pappi steps aside when anyone is closer than .76 m.
 - Tests: `tests/club-one-city.mjs`.
+- "Walk the city" (free roaming on the map: the 🚶 button, the People "Walk the city" button, the street tip and the "Walk around" tour step) is off in one-city mode via `ChinaLifeOneCity.walkCity()`; Classic keeps it.
