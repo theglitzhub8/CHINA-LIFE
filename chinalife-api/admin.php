@@ -88,6 +88,7 @@ if ($action==='end_event') {
 }
 if ($action==='cities') json_response('success',['open'=>cl_open_cities()]);
 // Gossip hot seat moderation: list recent gists (reported first), hide/unhide, delete, and the on/off switch.
+if (str_starts_with((string)$action,'football')||$action==='set_football') require __DIR__.'/football-admin.php';
 if ($action==='hot_seat') {
     require_once __DIR__.'/hot-seat-lib.php';
     $rows=cl_optional_rows("SELECT h.id,h.user_id,u.user_name,h.city,h.body,h.status,h.true_votes,h.cap_votes,h.reports,h.created_at FROM chinalife_hot_seat h LEFT JOIN users u ON u.user_id=h.user_id ORDER BY h.reports>0 DESC,h.id DESC LIMIT 60");
