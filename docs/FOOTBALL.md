@@ -72,6 +72,9 @@ Data is stored under the sandbox prefix in localStorage.
 
 Admin UI: the **⚽ Football matches** card in the admin panel and the in-game admin sheet. It has the on/off switch, create/edit/cancel tournaments, prize coins, and disputed results.
 
+## Live status
+Went live 27 Oct 2026 18:19–18:20 CST (commit 8b52400): migration run on hafr_hafrikcom2, football.php / football-lib.php / football-admin.php + admin.php hook uploaded, front end deployed, switch `football_matches` = on. Tournament prize coins left at 0. Backup and RESTORE.txt: `/root/backups/chinalife-football-golive-20261027-101914/` (UTC stamp). Off switch without a restore: Admin > Football matches > Turn off. Still pending: a two-account online test (lobby, match, result confirm, tournament) with seed logins.
+
 ## Going live checklist
 1. Back up the DB, run `pending/migration-football.sql` once, and upload the three PHP files plus the `admin.php` hook.
 2. Deploy the front end (football-engine.js, football.js, football.css, world.js/game.js/admin.js hooks, rebuilt bundles).
