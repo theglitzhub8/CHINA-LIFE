@@ -1,4 +1,4 @@
-// Football Field: "⚽ Play a match" (Oct 2026). Real-time 1v1 to 5v5 matches with joystick + Pass/Shoot,
+// Football Field: "⚽ Play a match" (Oct 2026, v2 polish). Real-time 1v1 to 5v5 matches with joystick, Sprint, Pass (hold = lob), Shoot (hold = power),
 // lobbies with Team A/B and quick match, bots in empty slots, and knockout tournaments with a bracket.
 // Online it talks to chinalife-api/football.php; the match is host-authoritative (the host's phone runs
 // football-engine.js and relays snapshots through the API; everyone else sends inputs and draws what the host sends).
@@ -41,7 +41,7 @@
     if (match && !match.local && match.id && ['lobby', 'live'].includes(match.status) && match.state?.phase !== 'full') call('POST', { action: 'leave', id: match.id }).catch(() => {});
     match = null;
   }
-  function stopLoops() { clearInterval(poll); poll = null; cancelAnimationFrame(loop); loop = null; clearInterval(netT); netT = null; }
+  function stopLoops() { clearInterval(poll); poll = null; cancelAnimationFrame(loop); loop = null; clearInterval(netT); netT = null; SND.stop(); }
   // ---------- home ----------
   async function open() {
     if (!enabled()) { if (online() && serverOn === null && await refreshFlag()) return open(); return toastOut('Football matches are closed right now'); }
@@ -94,65 +94,200 @@
     const isHost = String(m.host) === String(m.me);
     show('lobby', `<section class="fb-lobby"><p class="fb-sub">${m.size}v${m.size} · 3 minutes${m.tournament ? ' · tournament match' : ''}${m.local ? ' · on this device' : ''}</p>
       <div class="fb-teams">${col(0)}${col(1)}</div>
-      ${isHost ? `<button class="fb-btn primary big" data-fb="start">▶ Kick off</button><p class="fb-note">Bots fill the open spots when you kick off.</p>` : '<p class="fb-note">Waiting for the host to kick off…</p>'}
+      ${isHost ? `<div class="fb-diff"><span>Bots</span>${['easy', 'normal', 'hard'].map((d) => `<button class="fb-chip${d === difficulty ? ' on' : ''}" data-fb="diff" data-d="${d}">${d[0].toUpperCase() + d.slice(1)}</button>`).join('')}</div><button class="fb-btn primary big" data-fb="start">▶ Kick off</button><p class="fb-note">Bots fill the open spots when you kick off.</p>` : '<p class="fb-note">Waiting for the host to kick off…</p>'}
       <button class="fb-btn ghost" data-fb="leave">Leave match</button></section>`, 'Match lobby');
   }
   // ---------- match ----------
-  const input = { mx: 0, my: 0, pass: false, shoot: false };
-  let netT = null, lastFrame = 0, acc = 0, cv = null, ctx = null, events = [], banner = null, prevSnap = null;
+  // v2: 60 Hz fixed-step sim on the host/offline, a tilted follow camera (football-render.js), hold-to-power shots,
+  // tap/hold passes (hold = lob), sprint, slide tackles, auto-switch, countdown, GOAL splash + slow-mo + replay,
+  // confetti, synthesized whistle/crowd, haptics, and for guests: snapshot interpolation + own-player prediction.
+  const RD = root.ChinaLifeFootballRender, SND = RD?.sound || { init() {}, whistle() {}, kick() {}, ping() {}, cheer() {}, ooh() {}, crowd() {}, stop() {}, toggle() { return false; }, resume() {}, on: false };
+  const DIFF_KEY = () => PREFIX() + 'chinalife-football-diff';
+  let difficulty = (() => { try { return localStorage.getItem(DIFF_KEY()) || 'normal'; } catch { return 'normal'; } })();
+  const input = { mx: 0, my: 0, sprint: false, act: null };
+  // action numbers start from the clock so a reloaded guest never reuses an old n (the host applies each n once)
+  const actBase = () => Date.now() % 100000000;
+  let actN = actBase(), charge = null, pendingAct = null;
+  let netT = null, lastFrame = 0, acc = 0, cv = null, rend = null, remoteInputs = {}, legacyPrev = {}, legacyN = {};
+  let fx = null;
+  const now = () => performance.now();
+  function resetFx() { fx = { goalAt: 0, goal: null, replay: null, rec: [], go: 0, excite: 0, lastPhase: null, banner: null, labels: '' }; }
   function startMatch() {
-    clearInterval(poll); poll = null; finished = false;
+    clearInterval(poll); poll = null; finished = false; resetFx(); actN = actBase(); charge = null; pendingAct = null; input.mx = input.my = 0; input.sprint = false; input.act = null; legacyPrev = {}; legacyN = {}; remoteInputs = {};
     const m = match; m.status = 'live';
-    m.state = E.create({ roster: m.roster.map((p) => ({ id: String(p.id), name: p.name, team: p.team })), size: m.size, seed: m.seed || (Date.now() % 2e9), duration: m.duration || F.DURATION_MS, knockout: !!m.knockout });
+    m.state = E.create({ roster: m.roster.map((p) => ({ id: String(p.id), name: p.name, team: p.team })), size: m.size, seed: m.seed || (Date.now() % 2e9), duration: m.duration || F.DURATION_MS, knockout: !!m.knockout, difficulty });
     m.myTeam = (m.roster.find((p) => String(p.id) === String(m.me)) || { team: 0 }).team;
     m.isHost = String(m.host) === String(m.me);
-    show('match', `<div class="fb-hud"><span class="fb-sa">A <b>0</b></span><span class="fb-clock">3:00</span><span class="fb-sb"><b>0</b> B</span></div>
-      <canvas class="fb-pitch"></canvas><div class="fb-banner" hidden></div>
-      <div class="fb-controls"><div class="fb-stick"><div class="fb-knob"></div></div><div class="fb-buttons"><button class="fb-act pass" data-act="pass">Pass</button><button class="fb-act shoot" data-act="shoot">Shoot</button></div></div>`, m.tournament ? 'Tournament match' : `${m.size}v${m.size} match`);
-    cv = $('.fb-pitch', el); ctx = cv.getContext('2d'); bindControls(); size();
-    banner = { text: 'Kick off!', until: performance.now() + 1400 };
-    lastFrame = performance.now(); acc = 0; loop = requestAnimationFrame(frame);
-    if (!m.local) netT = setInterval(m.isHost ? hostNet : guestNet, m.isHost ? 200 : 150);
+    m.humans = new Set(m.roster.map((p) => String(p.id)));
+    m.buf = []; m.pred = null; m.rtt = 250;
+    show('match', `<div class="fb-stage"><canvas class="fb-pitch"></canvas>
+      <div class="fb-hud"><button class="fb-hb" data-fb="back" aria-label="Leave">‹</button><div class="fb-sc"><span class="fb-tm t0">A</span><b class="fb-score"><i>0</i><s>–</s><i>0</i></b><span class="fb-tm t1">B</span></div><span class="fb-clock">3:00</span><button class="fb-hb" data-fb="snd" aria-label="Sound">${SND.on ? '🔊' : '🔇'}</button></div>
+      <div class="fb-count" hidden></div><div class="fb-goal" hidden><b>GOAL!</b><span></span></div><div class="fb-replay" hidden>⟲ REPLAY</div><div class="fb-banner" hidden></div>
+      <div class="fb-controls"><div class="fb-stickzone"><div class="fb-stick"><div class="fb-knob"></div></div></div>
+        <div class="fb-buttons"><button class="fb-act sprint" data-act="sprint">Sprint</button><button class="fb-act pass" data-act="pass"><span>Pass</span></button><button class="fb-act shoot" data-act="shoot"><span>Shoot</span></button></div></div></div>`, m.tournament ? 'Tournament match' : `${m.size}v${m.size} match`);
+    cv = $('.fb-pitch', el); rend = RD.create(cv); rend.resize(); rend.snapCam(m.state, m.myTeam); bindControls();
+    SND.init(); SND.resume();
+    lastFrame = now(); acc = 0; loop = requestAnimationFrame(frame);
+    if (!m.local) netT = setInterval(m.isHost ? hostNet : guestNet, m.isHost ? 200 : 120);
   }
-  let remoteInputs = {};
-  function frame(now) {
+  const myCtrl = () => { const s = match?.state; return s ? (s.ctrl[String(match.me)] || String(match.me)) : null; };
+  function frame(t) {
     const m = match; if (!m || view !== 'match') return;
-    const dt = Math.min(100, now - lastFrame); lastFrame = now;
+    const dt = Math.min(100, t - lastFrame); lastFrame = t;
+    const s = m.state;
     if (m.local || m.isHost) {
-      acc += dt;
-      while (acc >= 33) { acc -= 33; const ins = { ...remoteInputs, [String(m.me)]: { ...input } }; const ev = E.step(m.state, ins, 33); input.pass = input.shoot = false; handle(ev); }
-    } else guestPredict(dt);
-    draw(); hud();
+      // Slow motion for the first moments after a goal.
+      const slow = s.phase === 'goal' && s.phaseT > F.GOAL_MS - 600 ? .4 : 1;
+      acc += dt * slow;
+      while (acc >= F.DT) { acc -= F.DT; const ins = { ...takeRemote(), [String(m.me)]: { mx: input.mx, my: input.my, sprint: input.sprint, act: input.act } }; const ev = E.step(s, ins, F.DT); input.act = null; handle(ev); if (!match || finished) break; }
+    } else guestUpdate(dt);
+    if (!match) return;
+    juice(dt); render(dt);
     loop = requestAnimationFrame(frame);
   }
+  // Remote inputs (host): movement persists; one-shot actions carry a sequence number so each applies once.
+  function takeRemote() {
+    const out = {};
+    for (const [h, i] of Object.entries(remoteInputs)) {
+      if (!i) continue; let a = i.act && typeof i.act === 'object' ? i.act : null;
+      if (!a) { // a v1 server only relays pass/shoot booleans: act on the rising edge
+        const prev = legacyPrev[h] || {}; if (i.shoot && !prev.shoot) a = { type: 'shoot', power: .7 }; else if (i.pass && !prev.pass) a = { type: 'pass' };
+        legacyPrev[h] = { pass: !!i.pass, shoot: !!i.shoot }; if (a) { legacyN[h] = (legacyN[h] || 0) + 1; a.n = legacyN[h]; i.act = a; }
+      }
+      out[h] = { mx: +i.mx || 0, my: +i.my || 0, sprint: !!i.sprint, act: a };
+    }
+    return out;
+  }
+  function nameOf(p) { return p.name; }
   function handle(ev) {
+    const m = match, me = myCtrl();
     for (const e of ev) {
-      if (e.type === 'goal') { const p = match.state.players.find((q) => q.id === e.by); banner = { text: `GOAL! ${e.own ? 'Own goal' : esc(p?.name || '')}`, until: performance.now() + 2000, big: true }; buzz(80); }
-      if (e.type === 'extra') banner = { text: 'Extra time · golden goal', until: performance.now() + 2000 };
-      if (e.type === 'full') fullTime();
+      if (e.type === 'kick') { SND.kick(e.power || .5); if (e.by === me) buzz(e.kind === 'shot' ? 25 : 10); if (e.kind === 'shot') fx.excite = Math.max(fx.excite, .7); }
+      else if (e.type === 'whistle') SND.whistle(e.kind === 'full' ? 'full' : e.kind === 'kickoff' ? 'kickoff' : 'short');
+      else if (e.type === 'post' || e.type === 'bar') { SND.ping(); SND.ooh(); rend?.shake(7); flash(e.type === 'post' ? 'Off the post!' : 'Off the bar!'); buzz(40); }
+      else if (e.type === 'save') { if (e.kind !== 'collect') { SND.ooh(); flash(e.kind === 'catch' ? 'Great catch!' : 'What a save!'); } }
+      else if (e.type === 'slide') { const p = m.state.players.find((q) => q.id === e.by); if (p) rend?.puff(m.state, p.x, p.y); if (e.by === me) buzz(20); }
+      else if (e.type === 'tackle' || e.type === 'steal') { SND.kick(.2); if (e.by === me || e.on === me) buzz(30); if (e.type === 'tackle') flash(e.by === me ? 'Tackle won!' : 'Tackle!'); }
+      else if (e.type === 'out') flash(e.kind === 'corner' ? 'Corner' : e.kind === 'goalkick' ? 'Goal kick' : 'Kick-in');
+      else if (e.type === 'goal') goalFx(e.team, e.by, e.own, e.assist);
+      else if (e.type === 'extra') flash('Extra time · golden goal', 2200);
+      else if (e.type === 'full') { setTimeout(() => fullTime(), 900); }
     }
   }
+  function flash(text, ms = 1300) { fx.banner = { text, until: now() + ms }; }
+  function goalFx(team, by, own, assist) {
+    const s = match.state, p = s.players.find((q) => q.id === by), a = assist && s.players.find((q) => q.id === assist);
+    fx.goalAt = now(); fx.goal = { team, text: own ? `Own goal · ${p ? esc(p.name) : ''}` : `⚽ ${esc(p?.name || 'Goal')}${p ? ` #${p.num}` : ''}${a ? ` <small>assist ${esc(a.name)}</small>` : ''}`, mine: team === match.myTeam };
+    fx.replay = { clip: null, start: fx.goalAt + 1500 };
+    rend?.confetti(170, team); rend?.shake(12); SND.cheer(); fx.excite = 1; buzz(team === match.myTeam ? [80, 60, 160] : [60]);
+  }
   function buzz(ms) { try { navigator.vibrate?.(ms); } catch {} }
+  // Effects that run every frame (countdown, splash, crowd, button labels).
+  function juice(dt) {
+    const s = match.state, t = now();
+    if (s.phase !== 'goal') { const b = s.ball, dg = Math.min(Math.hypot(b.x, b.y - F.H / 2), Math.hypot(F.W - b.x, b.y - F.H / 2)); fx.excite += ((dg < 16 ? 1 - dg / 16 : 0) * .8 - fx.excite) * Math.min(1, dt / 600); }
+    SND.crowd(fx.excite);
+    if (fx.lastPhase === 'kickoff' && s.phase === 'play') fx.go = t + 650;
+    fx.lastPhase = s.phase;
+    const cnt = $('.fb-count', el); if (cnt) { let txt = ''; if (s.phase === 'kickoff' && s.phaseT > 0) txt = String(Math.ceil(s.phaseT / 1000)); else if (t < fx.go) txt = 'GO!'; if (cnt.dataset.t !== txt) { cnt.dataset.t = txt; cnt.textContent = txt; cnt.hidden = !txt; cnt.classList.remove('pop'); void cnt.offsetWidth; if (txt) cnt.classList.add('pop'); } }
+    const g = $('.fb-goal', el), showGoal = fx.goal && s.phase === 'goal' && t - fx.goalAt < 1500;
+    if (g) { if (showGoal && g.hidden) { g.hidden = false; g.className = 'fb-goal t' + fx.goal.team; $('span', g).innerHTML = fx.goal.text; } else if (!showGoal && !g.hidden) g.hidden = true; }
+    const bn = $('.fb-banner', el); if (bn) { const on = fx.banner && t < fx.banner.until && s.phase !== 'goal'; if (on) { if (bn.textContent !== fx.banner.text) bn.textContent = fx.banner.text; bn.hidden = false; } else bn.hidden = true; }
+    // Button labels follow possession: Pass/Shoot with the ball, Switch/Tackle without.
+    const me = myCtrl(), has = s.ball.owner === me, near = !s.ball.owner && (() => { const p = s.players.find((q) => q.id === me); return p && Math.hypot(p.x - s.ball.x, p.y - s.ball.y) < 1.6; })();
+    const lab = has || near ? (charge?.type === 'pass' && t - charge.t0 > 260 ? 'Lob|Shoot' : 'Pass|Shoot') : 'Switch|Tackle';
+    if (lab !== fx.labels) { fx.labels = lab; const [l1, l2] = lab.split('|'); const pb = $('.fb-act.pass span', el), sb = $('.fb-act.shoot span', el); if (pb) pb.textContent = l1; if (sb) sb.textContent = l2; $('.fb-controls', el)?.classList.toggle('defend', l1 === 'Switch'); }
+    const sbtn = $('.fb-act.shoot', el); if (sbtn) sbtn.style.setProperty('--p', charge?.type === 'shoot' ? chargeLevel() : 0);
+    hud();
+  }
+  const chargeLevel = () => (charge ? Math.min(1, (now() - charge.t0) / 900) : 0);
+  // Replay buffer: what was drawn over the last few seconds.
+  function record(s) {
+    const t = now(), rec = fx.rec;
+    rec.push({ t, b: [s.ball.x, s.ball.y, s.ball.z, s.ball.spin, s.ball.vx, s.ball.vy, s.ball.owner], p: s.players.map((p) => [p.x, p.y, p.ang, p.vx, p.vy, p.slide ? 1 : 0, p.dive ? 1 : 0, p.touch]) });
+    while (rec.length && t - rec[0].t > 4200) rec.shift();
+  }
+  let ghost = null;
+  function replayState(t) {
+    const r = fx.replay, s = match.state; if (!r) return null;
+    if (s.phase !== 'goal' || t < r.start) return null;
+    if (!r.clip) { r.clip = fx.rec.filter((f) => f.t >= fx.goalAt - 2600 && f.t <= fx.goalAt + 300); if (r.clip.length < 10) { fx.replay = null; return null; } }
+    const c = r.clip, t0 = c[0].t, span = c[c.length - 1].t - t0, k = (t - r.start) * .75; if (k > span) { fx.replay = null; return null; }
+    let i = 0; while (i < c.length - 1 && c[i + 1].t - t0 < k) i++;
+    const f = c[i];
+    if (!ghost || ghost.players.length !== s.players.length) ghost = { players: s.players.map((p) => ({ ...p })), ball: { ...s.ball }, phase: 'play', ctrl: s.ctrl };
+    ghost.players.forEach((g, j) => { const a = f.p[j]; Object.assign(g, { x: a[0], y: a[1], ang: a[2], vx: a[3], vy: a[4], slide: a[5], dive: a[6], touch: a[7], st: s.players[j].st, stamina: 1 }); });
+    Object.assign(ghost.ball, { x: f.b[0], y: f.b[1], z: f.b[2], spin: f.b[3], vx: f.b[4], vy: f.b[5], owner: f.b[6] });
+    ghost.ctrl = s.ctrl; return ghost;
+  }
+  function render(dt) {
+    const s = match.state, t = now(); if (!rend) return;
+    const rs = replayState(t);
+    if (!rs) record(s);
+    const rb = $('.fb-replay', el); if (rb) rb.hidden = !rs;
+    const ctrlIds = new Set(Object.values(s.ctrl || {}));
+    rend.draw(rs || s, { myTeam: match.myTeam, myCtrl: myCtrl(), ctrlIds, humanIds: match.humans, nameOf, charge: charge?.type === 'shoot' ? chargeLevel() : 0, excite: fx.excite, letterbox: !!rs, map: !rs, cam: rs ? { zoom: 1.3 } : {} }, dt);
+  }
   // Host: send a snapshot, receive the other players' inputs.
   async function hostNet() {
     const m = match; if (!m || m.local) return;
     try { const d = await call('POST', { action: 'snap', id: m.id, seq: ++m.seq, snap: E.snapshot(m.state) }); remoteInputs = d.inputs || {}; if (d.match && d.match.status !== 'live') { say('Match stopped'); } } catch (e) { if (e.status === 403 || e.status === 404) { say(e.message); home(); } }
   }
-  // Guest: send my input, get the host's latest snapshot back in the same request.
+  // Guest: send my input (+ my latest one-shot action), get the host's latest snapshot back in the same request.
   async function guestNet() {
     const m = match; if (!m || m.local) return;
-    const sent = { ...input }; input.pass = input.shoot = false;
+    const a = pendingAct; const sent = { action: 'input', id: m.id, mx: input.mx, my: input.my, sprint: input.sprint, pass: !!a && a.type !== 'shoot', shoot: !!a && a.type === 'shoot' };
+    if (a) sent.act = { n: a.n, type: a.type, power: +(a.power || 0).toFixed(2) };
+    // keep re-sending the action for ~420 ms: a v1 relay keeps only the latest pass/shoot flags and the host polls every 200 ms
+    if (a && now() > a.until) pendingAct = null; const t0 = now();
     try {
-      const d = await call('POST', { action: 'input', id: m.id, mx: sent.mx, my: sent.my, pass: sent.pass, shoot: sent.shoot });
-      if (d.snap) { const before = m.state.goals.length, prevScore = m.state.score.slice(); prevSnap = JSON.parse(JSON.stringify(m.state.players.map((p) => [p.x, p.y]))); E.applySnapshot(m.state, d.snap); if (m.state.score[0] + m.state.score[1] > prevScore[0] + prevScore[1]) { banner = { text: 'GOAL!', until: performance.now() + 2000, big: true }; buzz(80); } }
+      const d = await call('POST', sent);
+      if (!match) return; m.rtt = m.rtt * .8 + (now() - t0) * .2;
+      if (d.snap && (!m.buf.length || d.snap.t !== m.buf[m.buf.length - 1].n.t || d.snap.ph !== m.buf[m.buf.length - 1].n.ph)) onSnap(d.snap);
       if (d.match?.status && d.match.status !== 'live' || m.state.phase === 'full') { if (m.state.phase === 'full' || ['reported', 'done'].includes(d.match?.status)) fullTime(d.match); else { say('Match stopped'); home(); } }
     } catch (e) { if (e.status === 404) home(); }
   }
-  // Between snapshots guests move everything along its last velocity so it looks smooth.
-  function guestPredict(dt) { const s = match.state; if (s.phase !== 'play') return; const k = dt / 1000; for (const p of s.players) { p.x = Math.max(F.R, Math.min(F.W - F.R, p.x + p.vx * k)); p.y = Math.max(F.R, Math.min(F.H - F.R, p.y + p.vy * k)); } const b = s.ball; if (!b.owner) { b.x += b.vx * k; b.y += b.vy * k; } else { const p = s.players.find((q) => q.id === b.owner); if (p) { b.x = p.x + p.fx * (F.R + F.BALL); b.y = p.y + p.fy * (F.R + F.BALL); } } s.t += dt; }
+  function onSnap(n) {
+    const m = match, prev = m.buf.length ? m.buf[m.buf.length - 1].n : null;
+    m.buf.push({ at: now(), n }); while (m.buf.length > 12) m.buf.shift();
+    if (!prev) return;
+    // Recreate the host's events from the difference between snapshots (sounds, splash, whistles).
+    const ev = [];
+    if (n.sc[0] + n.sc[1] > prev.sc[0] + prev.sc[1]) { const lg = n.lg || {}; ev.push({ type: 'goal', team: n.sc[0] > prev.sc[0] ? 0 : 1, by: lg.scorer || lg.by, own: !!lg.own, assist: lg.assist }); }
+    if (prev.ph !== n.ph) { if (n.ph === 'play') ev.push({ type: 'whistle', kind: prev.ph === 'kickoff' ? 'kickoff' : 'restart' }); if (n.ph === 'restart' && n.rs) ev.push({ type: 'out', kind: n.rs.type }, { type: 'whistle', kind: 'out' }); if (n.ph === 'full') ev.push({ type: 'whistle', kind: 'full' }); }
+    const bs = Math.hypot(n.b[3], n.b[4]), ps = Math.hypot(prev.b[3], prev.b[4]); if (n.b[6] === null && bs > ps + 6) ev.push({ type: 'kick', power: Math.min(1, bs / 30) });
+    if (ev.length) { E.applySnapshot(m.state, n); handle(ev); }
+  }
+  // Guests draw the host ~(one snapshot interval) in the past, interpolated, and predict their own player locally.
+  function guestUpdate(dt) {
+    const m = match, s = m.state, buf = m.buf; if (!buf.length) return;
+    const delay = Math.max(160, Math.min(400, m.rtt * .6 + 120)), rt = now() - delay;
+    let a = buf[0], b = buf[buf.length - 1];
+    for (let i = 0; i < buf.length - 1; i++) if (buf[i].at <= rt && buf[i + 1].at >= rt) { a = buf[i]; b = buf[i + 1]; break; }
+    const k = b.at === a.at ? 1 : Math.max(0, Math.min(1, (rt - a.at) / (b.at - a.at)));
+    const pid = s.ctrl[String(m.me)] || String(m.me);
+    E.applySnapshot(s, b.n);
+    const lerp = (x, y) => x + (y - x) * k, la = (x, y) => { let d = y - x; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return x + d * k; };
+    const pa = new Map(a.n.p.map((r) => [r[0], r]));
+    for (const p of s.players) { const r = pa.get(p.id), q = b.n.p.find((x) => x[0] === p.id); if (!r || !q || r.length < 8) continue; p.x = lerp(r[1], q[1]); p.y = lerp(r[2], q[2]); p.ang = la(r[5], q[5]); p.touch = (p.touch || 0) + Math.hypot(p.vx, p.vy) * dt / 1000 * 1.3; }
+    if (a.n.b.length > 6) { s.ball.x = lerp(a.n.b[0], b.n.b[0]); s.ball.y = lerp(a.n.b[1], b.n.b[1]); s.ball.z = lerp(a.n.b[2], b.n.b[2]); s.ball.spin = (s.ball.spin || 0) + Math.hypot(s.ball.vx, s.ball.vy) * dt / 1000 / F.BALL; }
+    // Own player: predicted from my input, gently corrected toward where the host says I am.
+    const me = s.players.find((p) => p.id === pid);
+    if (me && s.phase === 'play') {
+      const hostP = b.n.p.find((x) => x[0] === pid) || [pid, me.x, me.y, 0, 0, me.ang];
+      if (!m.pred || m.pred.id !== pid) m.pred = { ...me, x: hostP[1], y: hostP[2], vx: hostP[3], vy: hostP[4], ang: hostP[5] };
+      const pr = m.pred; pr.slide = 0; pr.dive = 0; pr.stun = 0;
+      E.movePlayer(pr, input, dt / 1000, s.ball.owner === pid, 1);
+      const lead = (now() - b.at + m.rtt / 2) / 1000, tx = hostP[1] + hostP[3] * lead, ty = hostP[2] + hostP[4] * lead, ex = tx - pr.x, ey = ty - pr.y;
+      if (Math.hypot(ex, ey) > 4) { pr.x = tx; pr.y = ty; } else { const c = Math.min(1, dt / 1000 * 3); pr.x += ex * c; pr.y += ey * c; }
+      Object.assign(me, { x: pr.x, y: pr.y, vx: pr.vx, vy: pr.vy, ang: pr.ang, touch: pr.touch, sprint: pr.sprint });
+      if (s.ball.owner === pid) { s.ball.x = me.x + Math.cos(me.ang) * (F.R + F.BALL + .1); s.ball.y = me.y + Math.sin(me.ang) * (F.R + F.BALL + .1); s.ball.z = 0; }
+    } else m.pred = null;
+    if (s.phase === 'full' && !finished) fullTime();
+  }
   let finished = false;
   async function fullTime(srv) {
-    if (finished) return; finished = true; const m = match; clearInterval(netT); netT = null;
+    if (finished || !match) return; finished = true; const m = match; clearInterval(netT); netT = null;
     const s = m.state, mine = m.myTeam, won = s.winner === mine, isDraw = s.winner === null;
     let note = '';
     if (!m.local) {
@@ -164,72 +299,69 @@
       const st = stats(); st.played++; if (won) st.won++; else if (!isDraw) st.lost++; else st.drawn++; localStorage.setItem(STATS_KEY(), JSON.stringify(st));
       if (m.tournament) note = localTournamentResult(m);
     }
-    banner = null; cancelAnimationFrame(loop); loop = null; draw();
-    const scorers = s.goals.map((g) => { const p = s.players.find((q) => q.id === g.by); return `<li class="t${g.team}">⚽ ${Math.floor(g.t / 60000)}:${String(Math.floor(g.t / 1000) % 60).padStart(2, '0')} · ${g.own ? 'Own goal' : esc(p?.name || 'Player')} <small>${g.team ? 'B' : 'A'}</small></li>`; }).join('');
+    if (!match || match !== m) return;
+    const mt = (t) => `${Math.floor(t / 60000)}:${String(Math.floor(t / 1000) % 60).padStart(2, '0')}`;
+    const scorers = s.goals.map((g) => { const p = s.players.find((q) => q.id === g.by); return `<li class="t${g.team}">⚽ ${mt(g.t)} · ${g.own ? 'Own goal' : esc(p?.name || 'Player')} <small>${g.team ? 'B' : 'A'}</small></li>`; }).join('');
+    const motm = E.manOfMatch(s), poss = E.possession(s), sh = s.shots || [0, 0];
+    const line = motm ? [motm.st.g && `${motm.st.g} goal${motm.st.g > 1 ? 's' : ''}`, motm.st.a && `${motm.st.a} assist${motm.st.a > 1 ? 's' : ''}`, motm.st.sv && `${motm.st.sv} save${motm.st.sv > 1 ? 's' : ''}`, motm.st.tk && `${motm.st.tk} tackle${motm.st.tk > 1 ? 's' : ''}`, motm.st.pc && `${motm.st.pc} passes`].filter(Boolean).join(' · ') || 'Solid all match' : '';
+    const youMotm = motm && (motm.id === String(m.me));
     const ov = document.createElement('div'); ov.className = 'fb-full';
-    ov.innerHTML = `<div class="fb-card"><p class="fb-kicker">FULL TIME</p><h2>${isDraw ? 'Draw' : won ? 'You win! 🎉' : 'You lose'}</h2><p class="fb-final"><span>A</span> ${s.score[0]} – ${s.score[1]} <span>B</span></p>${s.pens ? `<p class="fb-sub">Penalties ${s.pens[0]}–${s.pens[1]}</p>` : ''}<ul class="fb-goals">${scorers || '<li>No goals</li>'}</ul><p class="fb-note">${esc(note)}</p>
+    ov.innerHTML = `<div class="fb-card"><p class="fb-kicker">FULL TIME</p><h2>${isDraw ? 'Draw' : won ? 'You win! 🎉' : 'You lose'}</h2><p class="fb-final"><span class="t0">A</span> ${s.score[0]} – ${s.score[1]} <span class="t1">B</span></p>${s.pens ? `<p class="fb-sub">Penalties ${s.pens[0]}–${s.pens[1]}</p>` : ''}
+      ${motm ? `<div class="fb-motm t${motm.team}"><span class="fb-star">★</span><div><small>MAN OF THE MATCH</small><b>${esc(youMotm ? 'You' : motm.name)} <em>#${motm.num} · ${motm.team ? 'B' : 'A'}</em></b><small>${esc(line)} · rating ${motm.rating}</small></div></div>` : ''}
+      <div class="fb-stats"><div><b>${poss[0]}%</b><small>Possession</small><b>${poss[1]}%</b></div><div><b>${sh[0]}</b><small>Shots</small><b>${sh[1]}</b></div></div>
+      <ul class="fb-goals">${scorers || '<li>No goals</li>'}</ul><p class="fb-note">${esc(note)}</p>
       <div class="fb-row">${m.tournament ? `<button class="fb-btn primary" data-fb="t-open" data-id="${esc(m.tournament)}">🏆 Bracket</button>` : `<button class="fb-btn primary" data-fb="again">Play again</button>`}<button class="fb-btn" data-fb="home">Done</button></div></div>`;
-    $('.fb-body', el).appendChild(ov); buzz([60, 40, 60]);
+    $('.fb-stage', el)?.appendChild(ov); buzz([60, 40, 60]);
+    if (won) rend?.confetti(120, mine);
+    // keep drawing a gentle crowd view behind the card
   }
   const stats = () => { try { return { played: 0, won: 0, lost: 0, drawn: 0, ...JSON.parse(localStorage.getItem(STATS_KEY()) || '{}') }; } catch { return { played: 0, won: 0, lost: 0, drawn: 0 }; } };
-  // ---------- drawing (portrait: my team always attacks up) ----------
-  let scale = 10, ox = 0, oy = 0;
-  function size() {
-    if (!cv) return; const r = cv.getBoundingClientRect(), dpr = Math.min(2, root.devicePixelRatio || 1);
-    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    scale = Math.min((r.width - 16) / (F.H + 2), (r.height - 8) / (F.W + 3)); ox = (r.width - F.H * scale) / 2; oy = (r.height - F.W * scale) / 2;
-  }
-  root.addEventListener?.('resize', () => size());
-  function toScreen(x, y) { const up = match?.myTeam !== 1; return up ? [ox + y * scale, oy + (F.W - x) * scale] : [ox + (F.H - y) * scale, oy + x * scale]; }
-  function draw() {
-    if (!ctx || !match) return; const s = match.state, W = cv.clientWidth, H = cv.clientHeight;
-    ctx.clearRect(0, 0, W, H);
-    // grass stripes
-    for (let i = 0; i < 10; i++) { ctx.fillStyle = i % 2 ? '#2f8a4c' : '#36985a'; ctx.fillRect(ox, oy + i * F.W * scale / 10, F.H * scale, F.W * scale / 10 + 1); }
-    ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 2;
-    ctx.strokeRect(ox, oy, F.H * scale, F.W * scale);
-    ctx.beginPath(); ctx.moveTo(ox, oy + F.W * scale / 2); ctx.lineTo(ox + F.H * scale, oy + F.W * scale / 2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(ox + F.H * scale / 2, oy + F.W * scale / 2, 5 * scale, 0, Math.PI * 2); ctx.stroke();
-    for (const end of [0, 1]) { const y0 = end ? oy + F.W * scale : oy, dir = end ? -1 : 1; ctx.strokeRect(ox + (F.H / 2 - 9) * scale, end ? y0 - 8 * scale : y0, 18 * scale, 8 * scale);
-      ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect(ox + (F.H / 2 - F.GOAL / 2) * scale, y0 - (end ? 0 : 1.4 * scale) + (end ? 0 : 0), F.GOAL * scale, 1.4 * scale * (end ? 1 : 1)); void dir; }
-    // players
-    for (const p of s.players) {
-      const [x, y] = toScreen(p.x, p.y), me = String(p.id) === String(match.me), r = F.R * scale * 1.05;
-      ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(x + 2, y + 3, r, r * .7, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = p.team ? '#3a7bd5' : '#e8543f'; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-      ctx.lineWidth = me ? 3 : 1.5; ctx.strokeStyle = me ? '#ffe14d' : 'rgba(255,255,255,.9)'; ctx.stroke();
-      const [fx, fy] = toScreen(p.x + p.fx * F.R * 1.4, p.y + p.fy * F.R * 1.4); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(fx, fy, 2.2, 0, Math.PI * 2); ctx.fill();
-      ctx.font = '600 10px system-ui,sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = me ? '#ffe14d' : 'rgba(255,255,255,.92)'; ctx.fillText(me ? 'YOU' : p.name.replace(' 🤖', '').slice(0, 9), x, y - r - 4);
-    }
-    const [bx, by] = toScreen(s.ball.x, s.ball.y); ctx.fillStyle = '#fff'; ctx.strokeStyle = '#111'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(bx, by, Math.max(4, F.BALL * scale), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    const bn = $('.fb-banner', el);
-    if (banner && performance.now() < banner.until) { bn.hidden = false; bn.textContent = banner.text; bn.classList.toggle('big', !!banner.big); }
-    else if (s.phase === 'kickoff') { bn.hidden = false; bn.textContent = 'Kick off'; bn.classList.remove('big'); }
-    else bn.hidden = true;
-  }
   function hud() {
     const s = match.state, left = Math.max(0, (s.extra ? s.duration + F.EXTRA_MS : s.duration) - s.t), sec = Math.ceil(left / 1000);
-    const sa = $('.fb-sa b', el), sb = $('.fb-sb b', el), c = $('.fb-clock', el); if (!sa) return;
-    sa.textContent = s.score[0]; sb.textContent = s.score[1]; c.textContent = (s.extra ? 'ET ' : '') + Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+    const sc = el.querySelectorAll('.fb-score i'), c = $('.fb-clock', el); if (!sc.length) return;
+    if (sc[0].textContent !== String(s.score[0])) sc[0].textContent = s.score[0]; if (sc[1].textContent !== String(s.score[1])) sc[1].textContent = s.score[1];
+    const txt = (s.extra ? 'ET ' : '') + Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); if (c.textContent !== txt) c.textContent = txt;
   }
+  root.addEventListener?.('resize', () => rend?.resize());
   // ---------- controls ----------
   function setStick(jx, jy) {
     // joystick right/down in screen space -> field direction (my team attacks up the screen)
     const up = match?.myTeam !== 1; input.mx = up ? -jy : jy; input.my = up ? jx : -jx;
   }
-  function bindControls() {
-    const stick = $('.fb-stick', el), knob = $('.fb-knob', el); let id = null, cx = 0, cy = 0;
-    const move = (e) => { const R = stick.clientWidth / 2, dx = e.clientX - cx, dy = e.clientY - cy, d = Math.hypot(dx, dy), k = d > R ? R / d : 1; knob.style.transform = `translate(${dx * k}px,${dy * k}px)`; setStick(dx * k / R, dy * k / R); };
-    stick.addEventListener('pointerdown', (e) => { id = e.pointerId; stick.setPointerCapture(id); const r = stick.getBoundingClientRect(); cx = r.left + r.width / 2; cy = r.top + r.height / 2; move(e); e.preventDefault(); });
-    stick.addEventListener('pointermove', (e) => { if (e.pointerId === id) move(e); });
-    const end = (e) => { if (e.pointerId !== id) return; id = null; knob.style.transform = ''; setStick(0, 0); };
-    stick.addEventListener('pointerup', end); stick.addEventListener('pointercancel', end);
-    for (const b of el.querySelectorAll('.fb-act')) b.addEventListener('pointerdown', (e) => { input[b.dataset.act] = true; b.classList.add('down'); setTimeout(() => b.classList.remove('down'), 140); e.preventDefault(); });
+  function pushAct(a) { a.n = ++actN; a.until = now() + 420; input.act = a; pendingAct = a; }
+  function hasBall() { const s = match?.state; if (!s) return false; const me = myCtrl(); if (s.ball.owner === me) return true; const p = s.players.find((q) => q.id === me); return !s.ball.owner && p && Math.hypot(p.x - s.ball.x, p.y - s.ball.y) < 1.6; }
+  function press(kind) {
+    SND.resume();
+    if (kind === 'sprint') { input.sprint = true; return; }
+    if (!hasBall()) { pushAct({ type: kind === 'shoot' ? 'tackle' : 'switch' }); buzz(8); return; }
+    charge = { type: kind, t0: now() };
   }
-  const keys = new Set();
-  document.addEventListener('keydown', (e) => { if (view !== 'match' || !match) return; const k = e.key.toLowerCase(); if (k === 'j') input.pass = true; else if (k === 'k' || k === ' ') input.shoot = true; else keys.add(k); keyStick(); if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault(); });
-  document.addEventListener('keyup', (e) => { keys.delete(e.key.toLowerCase()); if (view === 'match') keyStick(); });
-  function keyStick() { const has = (...a) => a.some((k) => keys.has(k)); const jx = (has('d', 'arrowright') ? 1 : 0) - (has('a', 'arrowleft') ? 1 : 0), jy = (has('s', 'arrowdown') ? 1 : 0) - (has('w', 'arrowup') ? 1 : 0); if (keys.size || jx || jy) setStick(jx, jy); else setStick(0, 0); }
+  function release(kind) {
+    if (kind === 'sprint') { input.sprint = false; return; }
+    if (!charge || charge.type !== kind) return; const held = now() - charge.t0;
+    if (kind === 'shoot') pushAct({ type: 'shoot', power: +Math.max(.2, chargeLevel()).toFixed(2) });
+    else pushAct(held > 260 ? { type: 'lob', power: Math.min(1, held / 700) } : { type: 'pass', power: .5 });
+    charge = null;
+  }
+  function bindControls() {
+    const zone = $('.fb-stickzone', el), stick = $('.fb-stick', el), knob = $('.fb-knob', el); let id = null, cx = 0, cy = 0;
+    const R = () => stick.clientWidth / 2;
+    const move = (e) => { const r = R(), dx = e.clientX - cx, dy = e.clientY - cy, d = Math.hypot(dx, dy), k = d > r ? r / d : 1; knob.style.transform = `translate(${dx * k}px,${dy * k}px)`; const m = Math.min(1, d / r); const nx = d ? dx / d * m : 0, ny = d ? dy / d * m : 0; setStick(Math.abs(nx) < .12 ? 0 : nx, Math.abs(ny) < .12 ? 0 : ny); };
+    zone.addEventListener('pointerdown', (e) => { id = e.pointerId; try { zone.setPointerCapture(id); } catch {} const zr = zone.getBoundingClientRect(); const r = R(); cx = Math.max(zr.left + r, Math.min(zr.right - r, e.clientX)); cy = Math.max(zr.top + r, Math.min(zr.bottom - r, e.clientY)); stick.style.left = (cx - zr.left - r) + 'px'; stick.style.top = (cy - zr.top - r) + 'px'; stick.classList.add('on'); move(e); SND.resume(); e.preventDefault(); });
+    zone.addEventListener('pointermove', (e) => { if (e.pointerId === id) move(e); });
+    const end = (e) => { if (e.pointerId !== id) return; id = null; knob.style.transform = ''; stick.classList.remove('on'); stick.style.left = stick.style.top = ''; setStick(0, 0); };
+    zone.addEventListener('pointerup', end); zone.addEventListener('pointercancel', end);
+    for (const b of el.querySelectorAll('.fb-act')) {
+      const kind = b.dataset.act;
+      b.addEventListener('pointerdown', (e) => { try { b.setPointerCapture?.(e.pointerId); } catch {} b.classList.add('down'); press(kind); e.preventDefault(); });
+      const up = (e) => { b.classList.remove('down'); release(kind); e.preventDefault(); };
+      b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('contextmenu', (e) => e.preventDefault());
+    }
+  }
+  const keys = new Set(), KEYACT = { j: 'pass', k: 'shoot', ' ': 'shoot', shift: 'sprint', l: 'sprint' };
+  document.addEventListener('keydown', (e) => { if (view !== 'match' || !match) return; const k = e.key.toLowerCase(); if (KEYACT[k]) { if (!e.repeat) press(KEYACT[k]); } else keys.add(k); keyStick(); if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault(); });
+  document.addEventListener('keyup', (e) => { const k = e.key.toLowerCase(); if (view === 'match' && match && KEYACT[k]) release(KEYACT[k]); keys.delete(k); if (view === 'match') keyStick(); });
+  function keyStick() { const has = (...a) => a.some((k) => keys.has(k)); const jx = (has('d', 'arrowright') ? 1 : 0) - (has('a', 'arrowleft') ? 1 : 0), jy = (has('s', 'arrowdown') ? 1 : 0) - (has('w', 'arrowup') ? 1 : 0); const m = Math.hypot(jx, jy) || 1; setStick(jx / m, jy / m); }
   // ---------- tournaments ----------
   function localTours() { try { const v = JSON.parse(localStorage.getItem(T_KEY()) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } }
   function saveTours(list) { localStorage.setItem(T_KEY(), JSON.stringify(list.slice(-12))); }
@@ -298,6 +430,8 @@
     if (a === 'close') return close();
     if (a === 'back' || a === 'home') { if (match && !match.local && match.status === 'lobby') { try { await call('POST', { action: 'leave', id: match.id }); } catch {} } finished = false; return view === 'home' ? close() : home(); }
     if (a === 'size') { pickSize = +b.dataset.n; return home(); }
+    if (a === 'diff') { difficulty = b.dataset.d; try { localStorage.setItem(DIFF_KEY(), difficulty); } catch {} return paintLobby(); }
+    if (a === 'snd') { const on = SND.toggle(); b.textContent = on ? '🔊' : '🔇'; return; }
     if (a === 'quick' || a === 'create' || a === 'again') {
       finished = false; const n = a === 'again' && match ? match.size : pickSize;
       if (!online()) { const lob = localLobby(n); enterLobby(lob); if (a === 'quick') return startMatch(); return; }
@@ -340,5 +474,5 @@
   }
   if (online()) refreshFlag();
   root.addEventListener?.('chinalife:cloudready', () => refreshFlag());
-  root.ChinaLifeFootball = { open, close, enabled, refreshFlag, mountAdmin, get match() { return match; }, _engine: E, _finish() { if (match?.state && (match.local || match.isHost)) { match.state.t = match.state.duration + (match.state.extra ? F.EXTRA_MS : 0); } }, _input: input };
+  root.ChinaLifeFootball = { open, close, enabled, refreshFlag, mountAdmin, get match() { return match; }, _engine: E, get _fps() { return rend?.fps; }, get _drawMs() { return rend?.ms; }, _finish() { if (match?.state && (match.local || match.isHost)) { match.state.t = match.state.duration + (match.state.extra ? F.EXTRA_MS : 0); } }, _input: input };
 })(typeof window !== 'undefined' ? window : globalThis);

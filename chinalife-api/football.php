@@ -11,7 +11,7 @@ declare(strict_types=1);
 // GET  football.php?action=tournament&id=..           -> {tournament, teams, matches}
 // POST {action:'create', size} | {action:'quick', size} | {action:'join', id, team} | {action:'team', id, team}
 // POST {action:'leave', id} | {action:'start', id} (host)
-// POST {action:'input', id, mx, my, pass, shoot}      (players)  -> {snap}
+// POST {action:'input', id, mx, my, pass, shoot, sprint?, act?{n,type,power}} (players) -> {snap}
 // POST {action:'snap', id, seq, snap}                 (host)     -> {inputs}
 // POST {action:'result', id, report}                  (host)     -> {status}
 // POST {action:'confirm', id, score}                  (others)   -> {status}
@@ -131,7 +131,12 @@ case 'snap':
     cl_reply(['inputs'=>$inputs,'players'=>fb_roster($id)]);
 case 'input':
     $c=fn($v)=>max(-1,min(1,round((float)$v,2)));
-    $in=json_encode(['mx'=>$c($input['mx']??0),'my'=>$c($input['my']??0),'pass'=>!empty($input['pass']),'shoot'=>!empty($input['shoot'])]);
+    $row=['mx'=>$c($input['mx']??0),'my'=>$c($input['my']??0),'pass'=>!empty($input['pass']),'shoot'=>!empty($input['shoot'])];
+    // v2 (optional, backward compatible): sprint flag + one numbered action {n,type,power}
+    if (!empty($input['sprint'])) $row['sprint']=true;
+    $a=$input['act']??null;
+    if (is_array($a) && in_array($a['type']??'',['pass','lob','shoot','tackle','switch'],true)) $row['act']=['n'=>max(0,min(1000000000,(int)($a['n']??0))),'type'=>$a['type'],'power'=>round(max(0,min(1,(float)($a['power']??0))),2)];
+    $in=json_encode($row);
     cl_run('UPDATE chinalife_football_match_players SET input=?,input_at=NOW(3) WHERE match_id=? AND user_id=? AND left_at IS NULL','sii',[$in,$id,$uid]);
     cl_reply(fb_state($id));
 case 'result':

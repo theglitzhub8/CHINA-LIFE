@@ -70,6 +70,11 @@ test('relay: guests send inputs, the host sends snapshots and gets inputs back',
  r=await call(2,'football.php','POST',{action:'snap',id:A,seq:1,snap:{t:1000,sc:[0,0]}});assert.deepEqual(r.data.inputs['3'],{mx:.5,my:-1,pass:true,shoot:false});
  r=await call(3,'football.php?action=state&id='+A);assert.equal(r.data.snap.t,1000);
  r=await call(2,'football.php','POST',{action:'snap',id:A,seq:1,snap:{t:5}});r=await call(3,'football.php?action=state&id='+A);assert.equal(r.data.snap.t,1000,'old snapshots are ignored');
+ // v2 fields: sprint + one numbered action are relayed; unknown action types are dropped
+ r=await call(3,'football.php','POST',{action:'input',id:A,mx:0,my:0,sprint:true,act:{n:7,type:'lob',power:1.7}});assert.equal(r.httpStatus,200);
+ r=await call(2,'football.php','POST',{action:'snap',id:A,seq:2,snap:{t:1100,sc:[0,0]}});assert.deepEqual(r.data.inputs['3'],{mx:0,my:0,pass:false,shoot:false,sprint:true,act:{n:7,type:'lob',power:1}});
+ r=await call(3,'football.php','POST',{action:'input',id:A,mx:0,my:0,act:{n:8,type:'nuke'}});
+ r=await call(2,'football.php','POST',{action:'snap',id:A,seq:3,snap:{t:1200,sc:[0,0]}});assert.deepEqual(r.data.inputs['3'],{mx:0,my:0,pass:false,shoot:false});
 });
 test('results: too early, doctored, then host + other side confirm',async()=>{
  const good=report([1,0],[{team:0,by:'2',t:5000}],0);

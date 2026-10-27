@@ -42,6 +42,18 @@ ChinaLife has no websocket server. Its realtime runs on PHP polling (presence) a
 
 Later upgrade: move the snapshot and input stream to a WebRTC data channel, reusing the voice signalling and the TURN server. This would cut guest lag to roughly the network ping. The server would still validate results.
 
+## Match v2 (arcade polish)
+
+Files: `public/football-engine.js` (rules + physics, no DOM), `public/football-render.js` (canvas camera, stadium, sound), `public/football.js` (UI, input, network).
+
+- **Look:** tilted broadcast camera that follows the ball (look-ahead, shake, zoom on replays); striped pitch with full markings, goals with nets/posts/bar; stands with a batched crowd that jumps on goals, roof floodlights, ad boards; kits with numbers, name tags for humans, YOU marker, ball shadow + spin + trail; minimap.
+- **Controls:** floating joystick; **Pass** (tap = pass to the teammate in the stick direction, hold > 0.26 s = lob); **Shoot** (hold to fill the power ring, aim with the stick, over-hit balls fly over the bar); **Sprint** (drains stamina). Without the ball the buttons become **Switch** and **Tackle** (slide). Keys: WASD/arrows, J pass, K/Space shoot, Shift/L sprint. Auto-switch to the player nearest the ball.
+- **Physics/rules:** acceleration and turn rate, close dribbling, steals and slide tackles, ball gravity/bounce/friction, posts and crossbar, keepers that position, dive, catch or parry and distribute; kick-ins, corners and goal kicks; 3-2-1 kickoff countdown. No half-time switch (matches are 3 minutes).
+- **Bots:** roles (keeper/defender/midfield/attacker), pressing, cover, passing (lob over blocked lanes), shooting in range. Difficulty Easy / Normal / Hard (host or offline picks it in the lobby).
+- **Juice:** GOAL! splash, scorer banner, slow-mo, confetti, crowd cheer/ooh, whistles (WebAudio synth, mute button), haptics, 4-second instant replay; full-time card with man of the match, possession and shots.
+- **Network:** guests send `{mx,my,sprint,pass,shoot,act:{n,type,power}}` every 120 ms and re-send an action for ~0.4 s; the host applies each action number once. Guests interpolate snapshots (delay adapts to round-trip) and predict their own player. Works on the v1 relay (pass/shoot booleans, rising edge); `chinalife-api/football.php` in the repo also stores `sprint` and `act` (backward compatible) — deploying it touches the shared API and needs approval.
+- **Performance:** one canvas, crowd drawn in 7 batched fills, adaptive quality (lower DPR and half crowd when frames are slow). `ChinaLifeFootball._drawMs` shows the average draw cost.
+
 ## Offline / preview
 In the preview sandbox everything runs on the device:
 - you plus bots;
