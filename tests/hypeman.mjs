@@ -51,3 +51,7 @@ test('one-city phone keeps the founder\'s apps; the rest is hidden, not deleted,
  for(const f of ['soccer_ball_3d.png','fire_3d.png','globe_showing_europe-africa_3d.png','bullseye_3d.png','spiral_calendar_3d.png'])assert.ok(fs.existsSync('public/assets/phone/'+f),f)});
 test('Work routes by background: students get side jobs, others work or their own business',()=>{const g=r('public/game.js'),w=g.slice(g.indexOf('function workApp(){'),g.indexOf('function hotSeatApp(){'));
  assert.match(w,/student=state\.background==='Student'\|\|!!state\.student/);assert.match(w,/student\?shift\+action\('workJobs','💼 Part-time jobs'/);assert.match(w,/action\('workBiz','🧰 My business'/);assert.match(w,/on\('workJobs',jobsDialog\);on\('workGigs',\(\)=>earnScreen\(\)\);on\('workBiz',businessScreen\)/)});
+test('Hypeman outfit: bright, stylised, kept visible on every graphics level',async()=>{const js=r('public/hypeman.js');const {OUTFIT}=await import('../public/hypeman.js');
+ assert.equal(OUTFIT.jacket,0xff2d95);assert.match(js,/avatar: 'Male_Adult_12'/,'a model that also exists in the Low set');
+ assert.match(js,/userData\.r7keep = true/,'glow, cap and mic survive the realism swap');assert.match(js,/top: \{ s: 'tee', c: 0xff3fa4 \}/,'Classic graphics: stylised pink tee');
+ assert.doesNotMatch(js,/\.(jpe?g|png|webp)['"]/i,'no photo textures');assert.match(js,/walk\(time, dt\); outfit\.update\(time\)/)});

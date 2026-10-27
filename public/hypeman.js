@@ -32,10 +32,11 @@ export function hypeman(c, { hud, bump, party, clubName = 'Club', startDuel, ope
   const club = /^club$/i.test(clubName) ? 'Club' : clubName, v = (n, d) => ({ n, d, club });
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
   // Stylised game character like the rest of the cast: bright tee, cap, shades, chain and a microphone.
-  const body = c.person(2.3, -2.25, 0xff3fa4, 0x5b3a29, '', null, { skin: 0x5b3a29, hair: 'cap', hairColor: 0x1f8e93, acc: ['sunglasses', 'chain', 'watch'], top: { s: 'tee', c: 0xff3fa4 }, bottom: { s: 'joggers', c: 0x121212 }, shoes: { s: 'sneakers', c: 0xf7fff7 } });
+  const body = c.person(2.3, -2.25, 0xff3fa4, 0x5b3a29, '', null, { avatar: 'Male_Adult_12', skin: 0x5b3a29, hair: 'cap', hairColor: 0x1f8e93, acc: ['sunglasses', 'chain', 'watch'], top: { s: 'tee', c: 0xff3fa4 }, bottom: { s: 'joggers', c: 0x121212 }, shoes: { s: 'sneakers', c: 0xf7fff7 } });
   body.rotation.y = .2; body.userData.hypeman = true;
   const mic = new THREE.Group(); mesh(new THREE.CylinderGeometry(.025, .035, .22, 8), 0x222222, 0, 0, 0, mic); mesh(new THREE.SphereGeometry(.06, 10, 8), 0xc9ced6, 0, .14, 0, mic);
   body.userData.limbs?.[3]?.add(mic); mic.position.set(0, -.6, .12); mic.rotation.x = -.5;
+  const outfit = hypeOutfit(THREE, body);
   const tag = label('🎤 Hypeman', 0, 0, 0, 'interactive hype-name', () => menu()); tag.follow = body;
   const bubble = label('', 0, 0, 0, 'say-bubble pappi-say hype-say quiet'); bubble.follow = body; bubble.lift = .45; bubble.el.setAttribute('role', 'status');
   let sayTimer = 0;
@@ -84,13 +85,77 @@ export function hypeman(c, { hud, bump, party, clubName = 'Club', startDuel, ope
   }
   function tick(time, dt) {
     if (!greeted && c.getPlayer()) { greeted = true; setTimeout(() => { say(line('welcome', v(me())), 5000, 1); if (wins().some((w) => !w.done)) winner() }, 1100) }
-    walk(time, dt);
+    walk(time, dt); outfit.update(time);
     if (time - lastCheck < 1000) return; lastCheck = time;
     // Real players coming in: their character name from the presence feed. Players already here when you arrive are not re-announced.
     const first = !seen.primed; seen.primed = true; let delay = 400;
     for (const r of c.remotes()) if (!seen.has(r.id)) { seen.add(r.id); if (!first && r.name) { const n = r.name; setTimeout(() => say(line('join', v(n)), 4200, 1), delay); delay += 4500 } }
     if (performance.now() > nextCrowd) { nextCrowd = performance.now() + 15000 + Math.random() * 12000; say(line(c.remotes().length || (party?.() || 0) > 40 ? 'crowd' : Math.random() < .5 ? 'quiet' : 'crowd', v(me()))) }
   }
-  function dispose() { clearTimeout(sayTimer) }
-  return { body, say, tick, dispose, menu, event, winner, shoutMe, hypeCrowd, danceMoment, keep: [body], get shouted() { return shouted } };
+  function dispose() { clearTimeout(sayTimer); outfit.dispose() }
+  return { body, outfit, say, tick, dispose, menu, event, winner, shoutMe, hypeCrowd, danceMoment, keep: [body], get shouted() { return shouted } };
+}
+
+// Bright outfit on whichever model the realism layer gives him (the stylised one already wears the pink tee, cap and joggers).
+// Rocketbox body texture: clothes are recoloured by bind-pose height (torso = hot pink jacket, legs = black joggers, feet = white
+// sneakers); skin-coloured texels are left alone so hands and face stay natural. Plus a cap and mic that follow his head and hand
+// bones, and a soft neon floor glow. Plain meshes and one shader tweak: no textures or photos, works on Low and Classic graphics.
+export const OUTFIT = { jacket: 0xff2d95, joggers: 0x121212, sneakers: 0xf7fff7, cap: 0x1f8e93, glow: 0xff3fa4 };
+export function hypeOutfit(THREE, body) {
+  const keep = (o) => { o.userData.r7keep = true; o.traverse((c) => { c.userData.r7keep = true }); return o };
+  const glow = keep(new THREE.Mesh(new THREE.CircleGeometry(.62, 28), new THREE.MeshBasicMaterial({ color: OUTFIT.glow, transparent: true, opacity: .32, depthWrite: false, blending: THREE.AdditiveBlending })));
+  glow.rotation.x = -Math.PI / 2; glow.position.y = .03; glow.renderOrder = 3; glow.name = 'hype-glow'; body.add(glow);
+  const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: .55, metalness: 0, ...extra });
+  const cap = keep(new THREE.Group()); cap.name = 'hype-cap'; cap.visible = false;
+  const crown = new THREE.Mesh(new THREE.SphereGeometry(1, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), std(OUTFIT.cap)); crown.scale.set(1, .72, 1.06); cap.add(crown);
+  const brim = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, .08, 20, 1, false, -Math.PI / 2.4, Math.PI / 1.2), std(OUTFIT.jacket, { emissive: OUTFIT.jacket, emissiveIntensity: .35 })); brim.scale.set(1.05, 1, 1.55); brim.position.set(0, .02, .18); cap.add(brim);
+  body.add(cap);
+  const mic = keep(new THREE.Group()); mic.name = 'hype-mic'; mic.visible = false;
+  const stick = new THREE.Mesh(new THREE.CylinderGeometry(.018, .026, .2, 8), std(0x222222)); mic.add(stick);
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(.045, 10, 8), std(0xc9ced6, { emissive: OUTFIT.glow, emissiveIntensity: .25 })); ball.position.y = .12; mic.add(ball);
+  body.add(mic);
+  let real = null, head = null, hand = null, h = 1;
+  const v = new THREE.Vector3(), v2 = new THREE.Vector3();
+  function tint(mesh) {
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    mesh.material = mats.map((m) => {
+      if (!m || m.userData.hypeTint || !/body/i.test(m.name || '')) return m;
+      const g = mesh.geometry; g.computeBoundingBox(); const bb = g.boundingBox, size = bb.getSize(new THREE.Vector3());
+      const axis = size.y >= size.z && size.y >= size.x ? new THREE.Vector3(0, 1, 0) : size.z >= size.x ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0);
+      const lo = bb.min.dot(axis), hi = bb.max.dot(axis);
+      const n = m.clone(); n.userData = { ...m.userData, hypeTint: 1 }; n.customProgramCacheKey = () => 'hypeTint';
+      n.onBeforeCompile = (sh) => {
+        Object.assign(sh.uniforms, { hAxis: { value: axis }, hLo: { value: lo }, hHi: { value: hi }, hJacket: { value: new THREE.Color(OUTFIT.jacket) }, hJog: { value: new THREE.Color(OUTFIT.joggers) }, hShoe: { value: new THREE.Color(OUTFIT.sneakers) } });
+        sh.vertexShader = 'uniform vec3 hAxis;uniform float hLo;uniform float hHi;varying float vHY;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvHY=(dot(position,hAxis)-hLo)/max(hHi-hLo,1e-4);');
+        sh.fragmentShader = 'uniform vec3 hJacket;uniform vec3 hJog;uniform vec3 hShoe;varying float vHY;float hMask;\n' + sh.fragmentShader
+          .replace('#include <map_fragment>', `#include <map_fragment>
+{vec3 c=diffuseColor.rgb;float mx=max(c.r,max(c.g,c.b)),mn=min(c.r,min(c.g,c.b)),sat=(mx-mn)/(mx+1e-4),lum=dot(c,vec3(.3,.59,.11));
+ float skin=step(c.b,c.g)*step(c.g,c.r)*smoothstep(.16,.28,sat)*(1.-smoothstep(.78,.9,sat))*step(.012,lum);
+ float torso=smoothstep(.49,.53,vHY)*(1.-smoothstep(.885,.91,vHY)),legs=smoothstep(.055,.075,vHY)*(1.-smoothstep(.49,.53,vHY)),feet=1.-smoothstep(.055,.075,vHY);
+ float sh=clamp(.45+lum*2.4,.35,1.35);vec3 o=hJacket*sh*torso+hJog*(.7+lum*1.6)*legs+hShoe*clamp(.4+lum*1.8,.4,1.)*feet;
+ hMask=torso*(1.-skin);diffuseColor.rgb=mix(c,o,(1.-skin)*clamp(torso+legs+feet,0.,1.));}`)
+          .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance+=hJacket*hMask*.22;');
+      };
+      return n;
+    });
+    if (mats.length === 1) mesh.material = mesh.material[0];
+  }
+  function style(r) {
+    real = r; r.m.updateMatrixWorld(true);
+    const ghosts = []; r.m.traverse((o) => { if (o.userData.ghost) ghosts.push(o); else if (o.isSkinnedMesh) tint(o); if (o.isBone && /Head$/.test(o.name)) head = o; if (o.isBone && /R_Hand$/.test(o.name)) hand = o });
+    for (const g of ghosts) g.removeFromParent(); // he is not the player: no see-through-walls silhouette
+    body.updateMatrixWorld(true); h = head ? body.worldToLocal(head.getWorldPosition(v)).y : 1.4;
+    cap.scale.setScalar(h * .074); mic.scale.setScalar(h / 1.45); cap.visible = !!head; mic.visible = !!hand;
+    for (const o of body.children) if (o.name === 'hype-mic-stylised') o.visible = false;
+  }
+  function update() {
+    const r = body.userData.real;
+    if (r !== real) { if (r) style(r); else { real = null; head = hand = null; cap.visible = mic.visible = false } }
+    if (!real) return;
+    body.updateMatrixWorld(true);
+    if (head) { body.worldToLocal(head.getWorldPosition(v)); cap.position.set(v.x, v.y + h * .058, v.z + h * .006) }
+    if (hand) { body.worldToLocal(hand.getWorldPosition(v2)); mic.position.set(v2.x, v2.y + h * .02, v2.z + h * .03); mic.rotation.set(-.35, 0, 0) }
+  }
+  function dispose() { glow.geometry.dispose(); glow.material.dispose() }
+  return { glow, cap, mic, update, dispose, get styled() { return !!real }, get parts() { return { head: !!head, hand: !!hand, h } } };
 }
