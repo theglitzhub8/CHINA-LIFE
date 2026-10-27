@@ -39,3 +39,13 @@ test('amapiano track exists and server validates club_name',()=>{
  assert.match(fs.readFileSync('public/catalog.js','utf8'),/id:'amapiano',name:'Jollof Log Drum',style:'Amapiano · 113 BPM',bpm:113/);
  const php=fs.readFileSync('chinalife-api/common.php','utf8');assert.match(php,/club_name/);assert.match(php,/mb_strlen\(\$c\)>24/);
 });
+
+test('quests, events, shifts and the student story point at the 7 one-city venues',()=>{
+ const o=load();
+ for(const id of ['airport','ef','campus','mall','market','business','gym','park','cafe','some-unknown-place'])assert.ok(o.layout.places.includes(o.questPlace(id)),id);
+ assert.equal(o.questPlace('night'),'night');assert.equal(o.questPlace('home'),'home');assert.equal(o.questPlace('campus'),'university');
+ o.set({mode:'classic'});assert.equal(o.questPlace('market'),'market');
+ const g=fs.readFileSync('public/game.js','utf8');
+ assert.match(g,/function currentEvent\(\)\{const e0=.*questPlace/);assert.match(g,/storyCity=oneCity\?state\.city/);
+ assert.match(g,/bizPlace=window\.ChinaLifeOneCity\?\.questPlace/);assert.match(g,/wid=window\.ChinaLifeOneCity\?\.questPlace/);
+});

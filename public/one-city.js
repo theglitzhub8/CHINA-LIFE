@@ -54,6 +54,13 @@
     return String(text).replace(/\b007(?:\s+Night)?\s+Club\b/gi, n).replace(/\b007\b/g, n).replace(/C L U B {1,2}· {1,2}S H E N Y A N G/g, CLUB.tagline.toUpperCase()).replace(/\bShenyang\b/g, 'China');
   };
   const allows = (id) => !active() || layout.places.includes(id) || id === 'home' || String(id).startsWith('home-');
+  // Quests, events and the student story that point at a venue hidden in one-city mode are sent to the closest of the 7.
+  const QUEST_PLACES = Object.freeze({ airport: 'hq', ef: 'university', campus: 'university', mall: 'hq', market: 'gist', cafe: 'gist', business: 'hq', product: 'hq', gym: 'football', park: 'football', plaza: 'gist', station: 'hq', hotel: 'hq', african: 'gist', 'black-sheep': 'night' });
+  const questPlace = (id) => {
+    if (!id || allows(id)) return id;
+    const to = QUEST_PLACES[id] || (/campus|univ|school|college/i.test(id) ? 'university' : 'hq');
+    return layout.places.includes(to) ? to : layout.places[0];
+  };
 
   const hourOf = (minutes) => Math.floor((Number(minutes) || 0) / 60) % 24;
   function isOpenAt(id, minutes) {
@@ -139,7 +146,7 @@
       try { const o = root.localStorage?.getItem('chinalife-npc-density'); if (o !== null && o !== undefined && o !== '') return density(o, layout.npcDensity); } catch {}
       return layout.npcDensity ?? 1;
     },
-    NPC_DENSITY, CLUB, clubName, brand,
+    NPC_DENSITY, CLUB, clubName, brand, QUEST_PLACES, questPlace,
     isOpenAt, hourOf, suggest, relocate, mountAdmin,
     onChange: (f) => (listeners.add(f), () => listeners.delete(f)),
   };

@@ -41,3 +41,6 @@
 @media (min-width:1100px){.where-to .wt-grid{grid-template-columns:repeat(3,1fr)}}
 /* Keep the bottom dock above the board so Home / People / Phone stay reachable. */
 body.where-to-open .world-nav{z-index:61}
+/* Go-live fix: the "Daily reward ready" pill and reward toasts must not sit on top of the Where to? header. */
+html:root body.where-to-open #worldUI.tp-view .world-side #r3Next.next-step:not([hidden]),html:root body.where-to-open #worldUI .world-side #r3Next.next-step:not([hidden]),html:root body.where-to-open #worldUI #worldRankBadge,html:root body.where-to-open .message-notification{visibility:hidden!important;pointer-events:none!important}
+html:root body.where-to-open #toast{top:auto!important;bottom:calc(var(--wt-dock,72px) + 12px)!important;z-index:62!important}
