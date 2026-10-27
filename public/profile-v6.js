@@ -4,7 +4,7 @@ const ROLES={Student:['🎓','Student'],Entrepreneur:['🚀','Entrepreneur'],Wor
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ago=t=>{const m=Math.max(1,Math.round((Date.now()-t)/60000));return m<60?m+'m ago':m<1440?Math.round(m/60)+'h ago':Math.round(m/1440)+'d ago'};
 const placeName=(id,city)=>{try{const g=window.ChinaLife;const l=(g?.placesIn?.(city)||g?.locations||[]).find(p=>p[0]===id);return l?l[1]:id.replace(/[-_]/g,' ')}catch{return id}};
-function card(p,{own=false,actions=''}={}){
+function card(p,{own=false,actions='',extra=''}={}){
  const xp=Number(p.xp||0),lv=1+Math.floor(xp/100),pct=xp%100,role=ROLES[p.role]||null,s=p.stats||{};
  const stat=(n,l)=>'<div class="pv6-stat"><b>'+Number(n||0).toLocaleString()+'</b><span>'+l+'</span></div>';
  return '<section class="pv6">'
@@ -14,6 +14,7 @@ function card(p,{own=false,actions=''}={}){
  +(own&&p.coins!=null?'<div class="pv6-coins">¥'+Number(p.coins).toLocaleString()+'</div>':'')+'</header>'
  +(p.wealth||p.badges?.length?'<div class="pv6-badges">'+(p.wealth?'<span>'+esc(p.wealth)+'</span>':'')+(p.badges||[]).map(b=>'<span>'+esc(b.icon)+' '+esc(b.name)+'</span>').join('')+'</div>':'')
  +'<div class="pv6-stats">'+stat(p.days,'Days played')+stat(s.friends,'Friends')+stat(s.venues,'Venues')+stat(s.dance,'Dance titles')+stat(s.offices,'Offices')+'</div>'
+ +(extra||'') // e.g. the Link Up football / hot seat record, right under the stats row
  +(actions?'<div class="pv6-actions">'+actions+'</div>':'')
  +'<h4 class="pv6-h">Recent activity</h4>'+((p.recent||[]).length?'<ul class="pv6-recent">'+p.recent.map(r=>'<li>📍 '+esc(placeName(r.place,r.city))+(placeName(r.place,r.city).includes(r.city)?'':' · '+esc(r.city))+'<small>'+ago(r.at)+'</small></li>').join('')+'</ul>':'<p class="pv6-empty">No recent activity yet.</p>')
  +'<h4 class="pv6-h">Friends</h4>'+((p.friends||[]).length?'<div class="pv6-friends">'+p.friends.map(f=>'<button type="button" data-pv6-peer="'+esc(f.id)+'"><span style="background:'+esc(f.color)+'">'+esc((f.name||'?')[0].toUpperCase())+'</span>'+esc(f.name)+'</button>').join('')+'</div>':'<p class="pv6-empty">No friends yet.</p>')

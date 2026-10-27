@@ -3,7 +3,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import fs f
 import {harness,fixture} from './game-harness.mjs';
 const src=f=>fs.readFileSync('public/'+f,'utf8');
 // A client with one-city.js (or without it, for Classic) and stubbed cloud/auth: no server needed.
-async function client({oneCity=true,joined=true,signedIn=true,players=[],friends=[],football=null,hot=null,profile=null,flags=''}={}){
+async function client({card=false,oneCity=true,joined=true,signedIn=true,players=[],friends=[],football=null,hot=null,profile=null,flags=''}={}){
  const t=harness({...fixture(),name:'me',city:'China',place:'gist',hour:20*60}),c=t.context,store=new Map([['chinalife-flags-on',flags]]);
  c.localStorage={getItem:k=>store.has(k)?store.get(k):null,setItem:(k,v)=>store.set(k,v),removeItem:k=>store.delete(k)};c.URLSearchParams=URLSearchParams;
  if(oneCity)vm.runInContext(src('one-city.js'),c);
@@ -11,6 +11,7 @@ async function client({oneCity=true,joined=true,signedIn=true,players=[],friends
  const calls=[];c.ChinaLifeAuth={request:async(path)=>{calls.push(path);if(path.includes('/social.php'))return {friends,blocked:[]};if(path.includes('/profile.php'))return {profile};if(path.includes('/messages.php'))return {messages:[]};return {}}};
  c.ChinaLifeFootball={summary:async()=>football};c.ChinaLifeHotSeat={peek:async()=>hot,open(){}};
  const travels=[];c.ChinaLifeWhereTo={go:id=>travels.push(id)};
+ if(card)vm.runInContext(src('profile-v6.js'),c);
  await vm.runInContext('(async()=>{'+src('social.js')+'})()',c);
  const S=c.ChinaLifeSocial,doc=t.document,body=()=>doc.getElementById('socialBody'),tabs=()=>[...doc.querySelectorAll('#socialTabs [data-view]')].map(b=>b.dataset.view);
  return {t,c,S,doc,body,tabs,calls,travels,store,async press(action,peer){const sel='[data-social="'+action+'"]'+(peer!=null?'[data-peer="'+peer+'"]':''),b=doc.querySelector(sel);assert.ok(b,'Control '+sel);await b.onclick()},settle:()=>new Promise(r=>setTimeout(r,0))};
@@ -106,4 +107,16 @@ test('the admin Features list carries legacy_people_nearby, off by default; prof
  const prof=fs.readFileSync('chinalife-api/profile.php','utf8');
  assert.match(prof,/'football'=>/);assert.match(prof,/'hotSeat'=>/);assert.match(prof,/chinalife_hot_seat_votes/);assert.doesNotMatch(prof,/author_id/);
  assert.match(src('index.dev.html'),/link-up\.css/);assert.match(src('index.dev.html'),/<\/svg><\/span>Link Up<\/button>/);
+});
+
+test('polished profile: record sits under the stats row inside the card, the name is light, and Wave is not repeated in one-city',async()=>{
+ const pp={id:'ada',name:'Ada',color:'#1f8e93',city:'China',online:true,badges:[],homes:[],stats:{},football:{played:14,won:9,titles:1},hotSeat:{calls:23,right:17}};
+ const u=await client({card:true,players:[P('ada','gist')],profile:pp});await u.S.player('ada');await u.settle();
+ const html=u.body().innerHTML;assert.ok(u.body().querySelector('.pv6 .lu-record'),'record inside the card');
+ assert.ok(html.indexOf('lu-record')>html.indexOf('pv6-stats')&&html.indexOf('lu-record')<html.indexOf('Recent activity'),'record right after the stats row');
+ assert.equal(u.body().querySelectorAll('[data-social="wave"]').length,1,'one Wave in one-city');
+ assert.equal(u.body().querySelector('[data-social="go-player"]'),null,'no Go there when they are at your place');
+ assert.match(src('link-up.css'),/\.pv6-head \.pv6-id h3[^{]*\{color:#F7FFF7/);
+ const c=await client({card:true,oneCity:false,players:[P('ada','gist')],profile:pp});await c.S.player('ada');await c.settle();
+ assert.equal(c.body().querySelectorAll('[data-social="wave"]').length,2,'Classic keeps its Wave in Do something together');
 });

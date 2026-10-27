@@ -49,3 +49,7 @@
 #socialDialog .lu-record{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px}
 #socialDialog .lu-record span{background:#F7FFF7;border:1px solid #dbe7e6;border-radius:999px;padding:5px 10px;font-size:13px;color:#0C3F44}
 @media (min-width:760px){#socialDialog .lu-hap{flex-basis:240px}}
+/* Profile polish: the player's name and place line on the dark hero card were dark-on-teal; keep them light. */
+#socialDialog .pv6-head .pv6-id h3,html body #socialDialog .pv6-head .pv6-id h3{color:#F7FFF7!important}
+#socialDialog .pv6-head .pv6-id p,#socialDialog .pv6-head .pv6-rank,#socialDialog .pv6-head .pv6-rank small{color:#F7FFF7!important}
+#socialDialog .pv6 .lu-record{margin:0}
