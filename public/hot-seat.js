@@ -236,5 +236,7 @@ function mountAdmin(el,admin,say=toast){
   };
   load_();
 }
-root.ChinaLifeHotSeat={...api,enabled,setEnabled,featured,open,paintTV,mountAdmin,voters,get round(){return round},_finish(){if(round?.local&&round.status==='voting'){round.closesAt=Date.now();round.startedAt-=round.seconds*1000;tickLocal()}}};
+// Link Up (social.js) "Happening now": the live round, if any. Online it is the same GET the seat polls; the True/Cap split stays hidden.
+async function peek(){if(!enabled())return null;if(online()&&!busy){try{fromServer(await call('GET'))}catch{}}const r=round;if(!r||r.status!=='voting')return null;const left=Math.max(0,Math.round((r.closesAt-Date.now())/1000));return left?{id:r.id,votes:+r.count||0,secondsLeft:left,own:!!r.own,voted:!!r.myVote,local:!!r.local}:null}
+root.ChinaLifeHotSeat={...api,enabled,setEnabled,featured,open,peek,paintTV,mountAdmin,voters,get round(){return round},_finish(){if(round?.local&&round.status==='voting'){round.closesAt=Date.now();round.startedAt-=round.seconds*1000;tickLocal()}}};
 })(typeof window!=='undefined'?window:globalThis);

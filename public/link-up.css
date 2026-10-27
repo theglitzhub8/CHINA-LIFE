@@ -1,0 +1,51 @@
+/* Link Up (one-city People tab, Oct 2026): Places, Happening now, place detail and the profile record.
+   Palette from docs/ONE-CITY.md: Honeydew #F7FFF7, Hafrik Black #121212, Java #1F8E93, Cyprus #0C3F44. Mobile first. */
+#socialDialog .lu-section{margin:4px 0 14px}
+#socialDialog .lu-h{display:flex;align-items:center;gap:8px;margin:12px 2px 8px;font-size:15px;font-weight:800;color:#0C3F44}
+#socialDialog .lu-h span{font-size:12px;font-weight:600;background:#e3f3f3;color:#16767b;border-radius:999px;padding:2px 8px}
+#socialDialog .lu-btn{flex:none;min-height:36px;min-width:64px;padding:0 14px;border-radius:999px;border:0;background:#1F8E93;color:#fff;font-weight:700;font-size:14px;cursor:pointer}
+#socialDialog .lu-btn.ghost{background:#e3f3f3;color:#0C3F44}
+#socialDialog .lu-btn:disabled{background:#e9ecec;color:#8a9799;cursor:default}
+#socialDialog .lu-mini{min-height:30px;padding:0 12px;border-radius:999px;border:0;background:#e3f3f3;color:#0C3F44;font-weight:700;font-size:13px}
+#socialDialog .lu-guest{display:flex;align-items:center;gap:10px;background:#0C3F44;color:#F7FFF7;border-radius:16px;padding:12px 14px;margin:4px 0 10px}
+#socialDialog .lu-guest p{margin:0;font-size:13px;line-height:1.35;flex:1}
+#socialDialog .lu-guest .lu-btn{background:#F7FFF7;color:#0C3F44}
+/* Happening now: a swipeable strip of cards. */
+#socialDialog .lu-strip{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 6px;margin:0 -2px}
+#socialDialog .lu-hap{scroll-snap-align:start;flex:0 0 min(78%,260px);display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;gap:6px 10px;align-items:center;background:linear-gradient(135deg,#0C3F44,#145a5f);color:#F7FFF7;border-radius:16px;padding:12px}
+#socialDialog .lu-hap-icon{font-size:24px;line-height:1;grid-row:1}
+#socialDialog .lu-hap b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#socialDialog .lu-hap small{display:block;font-size:12px;opacity:.85}
+#socialDialog .lu-hap .lu-btn{grid-column:1/-1;justify-self:start;background:#F7FFF7;color:#0C3F44;min-height:32px}
+#socialDialog .lu-friends{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 6px}
+#socialDialog .lu-friend{flex:none;display:grid;justify-items:center;gap:4px;width:76px}
+#socialDialog .lu-friend>button{display:grid;justify-items:center;gap:2px;background:none;border:0;padding:0;color:#121212;width:100%}
+#socialDialog .lu-friend>button span:not(.player-avatar){font-size:12px;font-weight:700;max-width:76px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#socialDialog .lu-friend small{font-size:11px;color:#5d7379;max-width:76px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Places list: one row per venue. */
+#socialDialog .lu-places{display:grid;gap:8px}
+#socialDialog .lu-place{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #dbe7e6;border-radius:16px;padding:8px 10px 8px 8px}
+#socialDialog .lu-place.here{border-color:#1F8E93;box-shadow:0 0 0 2px #1F8E9322}
+#socialDialog .lu-place.closed{opacity:.7}
+#socialDialog .lu-place-main{flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:0;padding:2px;text-align:left;color:#121212;cursor:pointer}
+#socialDialog .lu-place-icon{flex:none;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:22px;background:#F7FFF7;border:1px solid #e3efee}
+#socialDialog .lu-place-icon.big{width:56px;height:56px;font-size:30px;border-radius:16px}
+#socialDialog .lu-place-copy{flex:1;min-width:0;display:grid;gap:1px}
+#socialDialog .lu-place-copy b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#socialDialog .lu-place-copy small{font-size:12px;color:#5d7379;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#socialDialog .lu-place-copy em,#socialDialog .lu-place-hero em{font-style:normal;font-size:12px;font-weight:700;color:#16767b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#socialDialog .lu-you{font-style:normal;font-size:11px;font-weight:700;color:#fff;background:#1F8E93;border-radius:999px;padding:1px 7px;margin-right:2px;vertical-align:1px}
+#socialDialog .lu-faces{display:flex;padding:3px 0 0 8px}
+#socialDialog .lu-faces .player-avatar{width:24px;height:24px;font-size:10px;margin-left:-8px;box-shadow:0 0 0 2px #fff}
+#socialDialog .lu-faces .player-avatar .online-dot{display:none}
+#socialDialog .lu-more{font-style:normal;font-size:11px;font-weight:700;color:#0C3F44;align-self:center;margin-left:3px}
+/* Place detail. */
+#socialDialog .lu-place-hero{display:flex;gap:12px;align-items:center;padding:6px 2px 10px}
+#socialDialog .lu-place-hero h3{margin:0;font-size:18px;color:#0C3F44}
+#socialDialog .lu-place-hero p{margin:2px 0;font-size:13px;color:#33494d}
+#socialDialog .lu-place-hero small{display:block;font-size:12px;color:#5d7379}
+#socialDialog .lu-place-actions{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 6px}
+/* Profile record (football, hot seat). */
+#socialDialog .lu-record{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px}
+#socialDialog .lu-record span{background:#F7FFF7;border:1px solid #dbe7e6;border-radius:999px;padding:5px 10px;font-size:13px;color:#0C3F44}
+@media (min-width:760px){#socialDialog .lu-hap{flex-basis:240px}}

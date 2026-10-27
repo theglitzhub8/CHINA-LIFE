@@ -91,3 +91,6 @@ The founder found venues too crowded and characters walking into each other.
 - Spacing: crowd gap .72 m; Pappi steps aside when anyone is closer than .76 m.
 - Tests: `tests/club-one-city.mjs`.
 - "Walk the city" (free roaming on the map: the 🚶 button, the People "Walk the city" button, the street tip and the "Walk around" tour step) is off in one-city mode via `ChinaLifeOneCity.walkCity()`; Classic keeps it.
+
+## Link Up (People tab)
+In one-city mode the People tab is **Link Up**, with three tabs: Places (the seven venues live, plus Happening now), Chats and Friends. Venue chat moved into the venue card. The old Nearby screen is behind the admin switch `legacy_people_nearby`, which is off by default. See [LINK-UP.md](LINK-UP.md).

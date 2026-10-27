@@ -474,5 +474,27 @@
   }
   if (online()) refreshFlag();
   root.addEventListener?.('chinalife:cloudready', () => refreshFlag());
-  root.ChinaLifeFootball = { open, close, enabled, refreshFlag, mountAdmin, get match() { return match; }, _engine: E, get _fps() { return rend?.fps; }, get _drawMs() { return rend?.ms; }, _finish() { if (match?.state && (match.local || match.isHost)) { match.state.t = match.state.duration + (match.state.extra ? F.EXTRA_MS : 0); } }, _input: input };
+  // Link Up (social.js) "Happening now": open lobbies and tournaments that still need players. Read-only; online it is one
+  // lobby GET (the same call the Football screen makes), offline it lists this device's local tournaments.
+  const tourBrief = (t) => ({ id: String(t.id), name: String(t.name || ''), size: +t.team_size || 0, teams: +t.teams || 0, max: +t.max_teams || 0, status: t.status, startsAt: t.starts_at || null });
+  async function summary() {
+    const none = { enabled: false, online: online(), lobbies: [], tournaments: [] };
+    if (!enabled()) { if (!(online() && serverOn === null && await refreshFlag())) return none; }
+    if (online()) {
+      try {
+        const d = await call('GET', { action: 'lobby' }); serverOn = d?.enabled === true; if (!serverOn) return none;
+        return { enabled: true, online: true,
+          lobbies: (d.lobbies || []).filter((l) => l.status === 'lobby' && +l.humans < +l.size * 2).map((l) => ({ id: String(l.id), size: +l.size, humans: +l.humans })),
+          tournaments: (d.tournaments || []).filter((t) => t.status === 'registering' && +t.teams < +t.max_teams).map(tourBrief) };
+      } catch { return { ...none, enabled: true, error: true }; }
+    }
+    return { enabled: true, online: false, lobbies: [], tournaments: localTours().filter((t) => t.status === 'registering' && (+t.teams || 0) < (+t.max_teams || 0)).map(tourBrief) };
+  }
+  async function joinLobby(id) {
+    if (!enabled()) return toastOut('Football matches are closed right now');
+    if (!online()) return open();
+    try { enterLobby(await call('POST', { action: 'join', id, team: 0 })); } catch (e) { await home(); say(e.message); }
+  }
+  async function openTournament(id) { if (!enabled()) return toastOut('Football matches are closed right now'); return tOpen(id); }
+  root.ChinaLifeFootball = { open, close, enabled, refreshFlag, mountAdmin, summary, joinLobby, openTournament, get match() { return match; }, _engine: E, get _fps() { return rend?.fps; }, get _drawMs() { return rend?.ms; }, _finish() { if (match?.state && (match.local || match.isHost)) { match.state.t = match.state.duration + (match.state.extra ? F.EXTRA_MS : 0); } }, _input: input };
 })(typeof window !== 'undefined' ? window : globalThis);

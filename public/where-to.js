@@ -116,7 +116,8 @@ function init() {
   setInterval(() => open && render(), 15000);
   if (ui?.classList.contains('map-view') && game()?.state?.created) show();
 }
-window.ChinaLifeWhereTo = { show, hide, render, get open() { return open; } };
+// go(id) is also used by Link Up (social.js) so Join/Go there travel exactly like a Where to? card (hours, busy check).
+window.ChinaLifeWhereTo = { show, hide, render, go, get open() { return open; } };
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 // world.js assigns the Map button's handler during its own setup; re-apply once everything has loaded.
 window.addEventListener('load', applyButton);
