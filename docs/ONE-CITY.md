@@ -68,3 +68,16 @@ So a preview can never change a real save. Presence counts and friends are there
 
 ## Restore everything
 Go to admin → Cities → World layout → **Classic** (or tick more cities). Nothing else is needed, and no code has to change.
+
+## Venue crowds and character spacing (27 Oct 2026)
+The founder found venues too crowded and characters walking into each other.
+* **Crowd size:** `npc_density` in the world layout (admin → Cities → World layout → "NPC crowd per venue (%)"), 0–1.
+  One-city default 0.4, classic 1. world.js scales the ambient crowd (wanderers, chatters, dancers, seated students) by it
+  and keeps at most 2 hosts per venue (Hafrik host, then named AI character, then the generic AI host, then the plain
+  venue host). Nothing is removed from hosts.js or ai-agents.js. For testing, localStorage `chinalife-npc-density`
+  overrides it.
+* **No overlap:** `separateCrowd()` runs every frame in a venue and pushes any two characters closer than 0.72 m apart.
+  Hosts, staff and seated NPCs hold their spot (the player slides round them, and a tap on one stops beside it), ambient
+  NPCs step aside for the player, and two NPCs or two players share the push. Pushes never go into furniture or walls.
+  Ambient NPCs spawn at least 1.3 m apart and clear of hosts, AI characters, the arrival row and the player, and
+  wanderers pick goals away from other people.

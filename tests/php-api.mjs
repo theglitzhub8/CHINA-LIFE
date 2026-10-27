@@ -261,6 +261,8 @@ test('admins set the one-city world layout and every player receives it',async()
  assert.equal((await call(5,'admin.php','POST',{action:'set_world_layout',layout:{mode:'one-city'}})).httpStatus,403);
  assert.equal((await call(1,'admin.php','POST',{action:'set_world_layout',layout:{mode:'one-city',places:['casino']}})).httpStatus,400);
  assert.equal((await call(1,'admin.php','POST',{action:'set_world_layout',layout:{mode:'everything'}})).httpStatus,400);
+ assert.equal((await call(1,'admin.php','POST',{action:'set_world_layout',layout:{mode:'one-city',npc_density:1.5}})).httpStatus,400);
+ assert.equal((await call(1,'admin.php','POST',{action:'set_world_layout',layout:{mode:'one-city',npc_density:0.5}})).data.layout.npc_density,0.5);
  const r=await call(1,'admin.php','POST',{action:'set_world_layout',layout:{mode:'one-city',city:'China',places:['night','gist','hq']}});
  assert.deepEqual(r.data.layout,{mode:'one-city',city:'China',places:['night','gist','hq'],where_to:true,flights:false});
  assert.deepEqual((await call(5,'events.php?city=China')).data.world_layout.places,['night','gist','hq']);

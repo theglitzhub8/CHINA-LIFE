@@ -15,17 +15,21 @@
     university: { kind: 'university', icon: '🎓', label: 'University', line: 'Lectures, study and campus life', hours: [7, 22] },
   };
   const ORDER = ['night', 'gist', 'voting', 'football', 'hq', 'cityhospital', 'university'];
-  const DEFAULT = Object.freeze({ mode: 'one-city', city: 'China', places: ORDER, whereTo: true, flights: false });
-  const CLASSIC = Object.freeze({ mode: 'classic', city: null, places: null, whereTo: false, flights: true });
+  // npcDensity: share of each venue's ambient crowd that is spawned (1 = the classic crowd). The founder asked for fewer
+  // NPCs per venue on 27 Oct 2026, so one-city mode spawns 40% and keeps at most 2 hosts. NPC definitions are untouched.
+  const NPC_DENSITY = 0.4;
+  const DEFAULT = Object.freeze({ mode: 'one-city', city: 'China', places: ORDER, whereTo: true, flights: false, npcDensity: NPC_DENSITY });
+  const CLASSIC = Object.freeze({ mode: 'classic', city: null, places: null, whereTo: false, flights: true, npcDensity: 1 });
+  const density = (v, d) => (v === undefined || v === null || v === '' || !Number.isFinite(Number(v)) ? d : Math.max(0, Math.min(1, Number(v))));
 
   // Accepts the server value (snake_case JSON from chinalife_settings.world_layout) or a partial object.
   function normalise(v) {
     if (!v || typeof v !== 'object') return { ...DEFAULT, places: [...ORDER] };
-    if (v.mode === 'classic') return { ...CLASSIC };
+    if (v.mode === 'classic') return { ...CLASSIC, npcDensity: density(v.npc_density ?? v.npcDensity, 1) };
     const places = Array.isArray(v.places) ? v.places.filter((id) => PLACES[id]) : [...ORDER];
     const city = ALL_CITIES.includes(v.city) ? v.city : DEFAULT.city;
     const whereTo = v.where_to ?? v.whereTo;
-    return { mode: 'one-city', city, places: places.length ? places : [...ORDER], whereTo: whereTo !== false, flights: v.flights === true };
+    return { mode: 'one-city', city, places: places.length ? places : [...ORDER], whereTo: whereTo !== false, flights: v.flights === true, npcDensity: density(v.npc_density ?? v.npcDensity, NPC_DENSITY) };
   }
   let layout = normalise(null);
   const listeners = new Set();
@@ -102,10 +106,11 @@
       '<label>Active city<select id="wlCity">' + ALL_CITIES.map((c) => '<option ' + ((cur.city || 'China') === c ? 'selected' : '') + '>' + esc(c) + '</option>').join('') + '</select></label>' +
       ORDER.map((id) => '<label class="admin-check"><input type="checkbox" data-wl-place="' + id + '" ' + (classic || cur.places.includes(id) ? 'checked' : '') + '> ' + PLACES[id].icon + ' ' + esc(PLACES[id].label) + '</label>').join('') +
       '<label class="admin-check"><input type="checkbox" id="wlFlights" ' + (cur.flights ? 'checked' : '') + '> Allow flights between cities</label>' +
+      '<label>NPC crowd per venue (%)<input id="wlNpc" type="number" min="0" max="100" step="5" value="' + Math.round(cur.npcDensity * 100) + '"></label>' +
       '<button id="wlSave" class="primary-btn btn primary">Save world layout</button>';
     el.querySelector('#wlSave').onclick = async () => {
       const mode = el.querySelector('[name=wlMode]:checked').value;
-      const layoutOut = { mode, city: el.querySelector('#wlCity').value, places: [...el.querySelectorAll('[data-wl-place]:checked')].map((x) => x.dataset.wlPlace), where_to: mode === 'one-city', flights: mode === 'classic' || el.querySelector('#wlFlights').checked };
+      const layoutOut = { mode, city: el.querySelector('#wlCity').value, places: [...el.querySelectorAll('[data-wl-place]:checked')].map((x) => x.dataset.wlPlace), where_to: mode === 'one-city', flights: mode === 'classic' || el.querySelector('#wlFlights').checked, npc_density: density(Number(el.querySelector('#wlNpc').value) / 100, cur.npcDensity) };
       if (!layoutOut.places.length) return toast('Keep at least one venue open.');
       if (!confirm(mode === 'classic' ? 'Switch back to the classic map and every venue?' : 'One city: ' + layoutOut.city + ' with ' + layoutOut.places.length + ' venues?')) return;
       try { const r = await adminCall('set_world_layout', { layout: layoutOut }); set(r.layout); toast('World layout saved.'); mountAdmin(el, adminCall, toast); } catch (e) { toast(e.message); }
@@ -115,6 +120,12 @@
     PLACES, ORDER, ALL_CITIES, DEFAULT, CLASSIC,
     normalise, set, get layout() { return layout; }, active, allows,
     whereTo: () => active() && layout.whereTo, flights: () => !active() || layout.flights,
+    // Venue crowd share for world.js; localStorage 'chinalife-npc-density' (0–1) overrides it for testing.
+    npcDensity: () => {
+      try { const o = root.localStorage?.getItem('chinalife-npc-density'); if (o !== null && o !== undefined && o !== '') return density(o, layout.npcDensity); } catch {}
+      return layout.npcDensity ?? 1;
+    },
+    NPC_DENSITY,
     isOpenAt, hourOf, suggest, relocate, mountAdmin,
     onChange: (f) => (listeners.add(f), () => listeners.delete(f)),
   };

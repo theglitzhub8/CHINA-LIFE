@@ -80,3 +80,23 @@ test('without one-city.js the game behaves exactly as before (classic)',()=>{
  const h=harness({...fixture(),city:'Guangzhou'},{openCities:['China','Guangzhou']});
  assert.equal(h.game.state.city,'Guangzhou');assert.equal(h.game.state.cityBeforeOneCity,undefined);
 });
+
+test('venue crowd density: 40% in one-city mode, full in classic, admin value and test override',()=>{
+ const {ChinaLifeOneCity:o}=load();
+ assert.equal(o.npcDensity(),0.4);
+ o.set({mode:'one-city',npc_density:0.6});assert.equal(o.npcDensity(),0.6);
+ o.set({mode:'one-city',npc_density:7});assert.equal(o.npcDensity(),1);
+ o.set({mode:'one-city',npc_density:'x'});assert.equal(o.npcDensity(),0.4);
+ o.set({mode:'classic'});assert.equal(o.npcDensity(),1);
+ const {ChinaLifeOneCity:t}=load({localStorage:{getItem:k=>k==='chinalife-npc-density'?'0.25':null}});
+ assert.equal(t.npcDensity(),0.25);
+});
+
+test('world.js scales venue crowds, caps hosts and keeps characters apart every frame',()=>{
+ const w=fs.readFileSync('public/world.js','utf8');
+ assert.match(w,/function separateCrowd\(dt\)/);assert.match(w,/separateCrowd\(dt\);/);
+ assert.match(w,/placeHosts\(fxCtx\(\),id\)\}catch\(e\)\{console\.warn\('hosts',e\)\}trimCrowd\(\);/);
+ assert.match(w,/const count=scaled\(/);assert.match(w,/function crowdReserved\(id\)/);
+ // NPC definitions stay: every Hafrik host and AI character is still defined.
+ assert.match(fs.readFileSync('public/hosts.js','utf8'),/id:'tunde'/);
+});

@@ -212,7 +212,10 @@ function cl_valid_world_layout($v): ?array {
     $places=$v['places']??CL_ONE_CITY_PLACES;if (!is_array($places)||!count($places)||array_diff($places,CL_ONE_CITY_PLACES)) return null;
     $where=$v['where_to']??($mode==='one-city');$flights=$v['flights']??($mode!=='one-city');
     if (!is_bool($where)||!is_bool($flights)) return null;
-    return ['mode'=>$mode,'city'=>$city,'places'=>array_values(array_unique($places)),'where_to'=>$where,'flights'=>$flights];
+    $out=['mode'=>$mode,'city'=>$city,'places'=>array_values(array_unique($places)),'where_to'=>$where,'flights'=>$flights];
+    // Optional share of each venue's ambient NPC crowd (0–1). Missing means the client default (0.4 one-city, 1 classic).
+    if (array_key_exists('npc_density',$v)) {$n=$v['npc_density'];if (!is_int($n)&&!is_float($n)||$n<0||$n>1) return null;$out['npc_density']=round((float)$n,2);}
+    return $out;
 }
 // Null when the row is missing, so the client keeps its built-in default.
 function cl_world_layout(): ?array {
