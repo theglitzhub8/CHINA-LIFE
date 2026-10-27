@@ -1,9 +1,13 @@
 import {sprayMenu} from './club-fx.js?v=20261014d1';
 import {clubLife} from './club-life.js?v=20261027d';
+import {hypeman} from './hypeman.js?v=20261028a';
 // v9: 007 Club host ChampagnePappi, the neon club dressing and the party HUD.
 // v11: in one-city mode the club takes ChinaLifeOneCity.clubName() (no 007, no Shenyang) and club-life.js adds the
 // disco lights, DJ booth, Now playing chip and shout-outs. Classic mode keeps the 007 naming unchanged.
 // Built once per visit into the venue root; tick() runs from the world loop. No paid AI: canned lines only.
+// Oct 2026: in one-city ChampagnePappi sits behind the admin flag club_pappi (default OFF) and the canned Hypeman
+// (hypeman.js, flag club_hypeman, default ON) works the room instead. The bar is a plain counter that works either way
+// (the server menu has no tie to Pappi); with Pappi off it is the Club bar and Pappi Fizz shows as Club Fizz (same sku).
 // Drinks are paid on the server (economy.php action club-drink) and only update money/XP, never the save revision.
 export const DRINKS=[
  {sku:'pappi-fizz',icon:'🥂',name:'Pappi Fizz',price:120,note:'+10 XP · fun up',fun:15,social:6,alc:15},
@@ -24,6 +28,8 @@ const brand=t=>window.ChinaLifeOneCity?.brand?.(t)??t;
 const fill=(t,v)=>brand(t).replace('{n}',v.n||'friend').replace('{d}',v.d||'');
 export function nightClub(c){
  const {THREE,root,mesh,box,cylinder,label,game}=c,reduced=c.motionReduced,disposers=[],OC=window.ChinaLifeOneCity,oneCity=!!OC?.active?.(),clubName=oneCity?OC.clubName():'007 Club',clubSign=oneCity?clubName.toUpperCase():'007';
+ const cast=k=>window.ChinaLifeFlags?.cast?.(k)===true,pappiOn=!oneCity||cast('club_pappi'),hypeOn=oneCity&&cast('club_hypeman');let hype=null;
+ const drinkName=x=>!pappiOn&&x.sku==='pappi-fizz'?'Club Fizz':x.name;
  const escH=v=>String(v).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch]);
  const basic=(color,extra={})=>{const m=new THREE.MeshBasicMaterial({color,...extra});disposers.push(m);return m};
  const plane=(w,h,mat,x,y,z,ry=0,rx=0)=>{const g=new THREE.PlaneGeometry(w,h);disposers.push(g);const m=new THREE.Mesh(g,mat);m.position.set(x,y,z);m.rotation.set(rx,ry,0);root.add(m);return m};
@@ -54,33 +60,35 @@ export function nightClub(c){
  mesh(new THREE.TorusGeometry(.17,.022,6,20),0xd9b24a,0,1.36,.1,pappi).rotation.x=Math.PI/2.4;
  {const shades=mesh(new THREE.BoxGeometry(.36,.1,.05),0x050505,0,1.775,.2,pappi);shades.castShadow=false;mesh(new THREE.BoxGeometry(.4,.025,.04),0xd9b24a,0,1.83,.2,pappi);
   const glintG=new THREE.PlaneGeometry(.07,.025);disposers.push(glintG);const glintM=basic(0xffffff,{transparent:true,opacity:.9});for(const x of [-.11,.06]){const gl=new THREE.Mesh(glintG,glintM);gl.position.set(x,1.79,.227);gl.rotation.z=.5;pappi.add(gl)}pappi.userData.glint=glintM}
+ if(!pappiOn){root.remove(pappi);pappi.visible=false}
  // Linked to the real Hafrik account champagnepapi (user 6988): tap opens the profile card; online state comes from the existing presence feed only.
  const REAL={id:'6988',user:'champagnepapi'};let realOn=false;
- const tag=label('🍾 ChampagnePappi',0,0,0,'pappi-name',()=>{if(window.ChinaLifeSocial?.player)window.ChinaLifeSocial.player(REAL.id);else menu()});tag.follow=pappi;
+ const tag=pappiOn?label('🍾 ChampagnePappi',0,0,0,'pappi-name',()=>{if(window.ChinaLifeSocial?.player)window.ChinaLifeSocial.player(REAL.id);else menu()}):{el:null};if(pappiOn)tag.follow=pappi;
  if(!document.getElementById('pappiOnlineCss')){const st=document.createElement('style');st.id='pappiOnlineCss';st.textContent='.scene-label.pappi-name.online::after{content:"\\25CF  online";margin-left:6px;font-size:.78em;color:#0b7a3b;background:#d8ffe6;border-radius:9px;padding:1px 6px}';document.head.append(st)}
  function realCheck(list){const on=(list||[]).some(p=>String(p.id)===REAL.id||String(p.name||'').toLowerCase()===REAL.user);tag.el?.classList.toggle('online',on);if(on&&!realOn)setTimeout(()=>say("I'm online, pull up! 🍾",5000),600);realOn=on}
- const onPlayers=e=>realCheck(e.detail);window.addEventListener('chinalife:players',onPlayers);realCheck(window.ChinaLifeCloud?.players);
- const bubble=label('',0,0,0,'say-bubble pappi-say quiet');bubble.follow=pappi;bubble.lift=.45;bubble.el.setAttribute('role','status');
- let sayTimer=0;function say(text,ms=4200){bubble.el.textContent=text;bubble.el.classList.remove('quiet');bubble.hw=0;clearTimeout(sayTimer);sayTimer=setTimeout(()=>bubble.el.classList.add('quiet'),ms)}
+ const onPlayers=e=>realCheck(e.detail);if(pappiOn){window.addEventListener('chinalife:players',onPlayers);realCheck(window.ChinaLifeCloud?.players)}
+ const bubble=pappiOn?label('',0,0,0,'say-bubble pappi-say quiet'):null;if(bubble){bubble.follow=pappi;bubble.lift=.45;bubble.el.setAttribute('role','status')}
+ let sayTimer=0;function say(text,ms=4200){if(!bubble)return hype?.say(text,ms);bubble.el.textContent=text;bubble.el.classList.remove('quiet');bubble.hw=0;clearTimeout(sayTimer);sayTimer=setTimeout(()=>bubble.el.classList.add('quiet'),ms)}
  const spots=[[7,-3.2],[3.1,.4],[-4.6,-1.2],[-7.2,5.6],[6,2.9],[-2.8,3]];let goal=null,wait=2,greeted=false,seen=new Set(),nextBanter=performance.now()+9000,duel=null;
  // HUD: party meter, emotes and the drink menu.
  const hud=document.createElement('div');hud.className='club-hud';hud.innerHTML='<div class="club-meter" role="meter" aria-label="Party level" aria-valuemin="0" aria-valuemax="100"><span>🔥</span><i><b></b></i><em>0%</em></div><div class="club-emotes"><button data-ce="dance">💃<span>Dance</span></button><button data-ce="toast">🥂<span>Toast</span></button><button data-ce="hype">🙌<span>Hype</span></button><button data-ce="spray">💸<span>Spray</span></button><button data-ce="menu">🍾<span>Drinks</span></button></div>';
  (document.getElementById('worldUI')||document.body).append(hud);
  let boost=0;const meter=hud.querySelector('.club-meter'),fillEl=meter.querySelector('b'),pct=meter.querySelector('em');
  const life=oneCity?clubLife(c,{say:(t,ms)=>say(t,ms),bump:n=>{boost+=n},hud,clubName,bpm:OC.CLUB?.bpm||113}):null;
- hud.querySelectorAll('[data-ce]').forEach(b=>b.onclick=()=>{const k=b.dataset.ce;if(k==='menu')return menu();if(k==='shout')return life?.openShout();if(k==='spray')return sprayMenu(c,a=>{boost+=a>=2000?20:a>=500?12:6;say(a>=2000?'Big money! Make it rain! 💸':'Spray on the dance floor! 💸')});if(k==='dance'){c.setEmote('dance');boost+=8;if(duel&&performance.now()<duel){duel=null;boost+=20;say('🏆 '+game.state.name+' wins the dance-off!');game.toast('🏆 You won the dance-off')}}if(k==='toast'){c.setEmote('drink');boost+=5;say(pick(LINES.toast))}if(k==='hype'){c.setEmote('cheer');boost+=6;say(pick(LINES.dj))}});
+ if(hypeOn)try{hype=hypeman(c,{hud,clubName,bump:n=>{boost+=n},party:()=>party(),openBar:()=>menu(),startDuel:()=>{if(duel&&performance.now()<duel)return false;duel=performance.now()+15000;return true}})}catch(e){console.warn('hypeman',e)}
+ hud.querySelectorAll('[data-ce]').forEach(b=>b.onclick=()=>{const k=b.dataset.ce;if(k==='menu')return menu();if(k==='shout')return life?.openShout();if(k==='spray')return sprayMenu(c,a=>{boost+=a>=2000?20:a>=500?12:6;if(hype&&a>=500)return hype.event('spray',{amount:a});say(a>=2000?'Big money! Make it rain! 💸':'Spray on the dance floor! 💸')});if(k==='dance'){c.setEmote('dance');boost+=8;if(duel&&performance.now()<duel){duel=null;boost+=20;say('🏆 '+game.state.name+' wins the dance-off!');game.toast('🏆 You won the dance-off')}else hype?.event('dance')}if(k==='toast'){c.setEmote('drink');boost+=5;say(pick(LINES.toast))}if(k==='hype'){c.setEmote('cheer');boost+=6;say(pick(LINES.dj))}});
  const curtain=document.createElement('div');curtain.className='club-curtain'+(clubSign.length>6?' brand':'');curtain.innerHTML='<b>'+escH(clubSign==='007'?'007':clubName)+'</b>';document.body.append(curtain);requestAnimationFrame(()=>curtain.classList.add('open'));setTimeout(()=>curtain.remove(),1200);
  function party(){const crowd=c.remotes().length,music=window.ChinaLifeAudio?.playing?25:0;return Math.max(0,Math.min(100,Math.round(15+crowd*12+music+boost)))}
  let busy=false;const last=new Map();
  function menu(){const s=game.state,d=game.drunkInfo?.()||{icon:'😊',label:'Sober',value:0};
-  game.showScreen('🍾 Pappi\'s bar','¥'+Math.floor(s.money).toLocaleString()+' · '+d.icon+' '+d.label,'<div class="pappi-menu">'+DRINKS.map(x=>'<button class="choice-action" data-drink="'+x.sku+'"><b>'+x.icon+' '+x.name+' · '+(x.price?'¥'+x.price:'free')+'</b><span>'+x.note+'</span></button>').join('')+'</div><p id="pappiStatus" class="fine-print" role="status">One drink every 90 seconds.</p>');
+  game.showScreen(pappiOn?'🍾 Pappi\'s bar':'🍾 '+clubName+' bar','¥'+Math.floor(s.money).toLocaleString()+' · '+d.icon+' '+d.label,'<div class="pappi-menu">'+DRINKS.map(x=>'<button class="choice-action" data-drink="'+x.sku+'"><b>'+x.icon+' '+drinkName(x)+' · '+(x.price?'¥'+x.price:'free')+'</b><span>'+x.note+'</span></button>').join('')+'</div><p id="pappiStatus" class="fine-print" role="status">One drink every 90 seconds.</p>');
   document.querySelectorAll('[data-drink]').forEach(b=>b.onclick=()=>order(DRINKS.find(x=>x.sku===b.dataset.drink)))}
  async function order(x){const status=document.getElementById('pappiStatus');if(busy||!x)return;if(!(window.ChinaLifeAuth?.request&&window.ChinaLifeCloud?.signedIn)){if(status)status.textContent='Sign in to order.';return}
   if(x.price>game.state.money){if(status)status.textContent='Not enough money.';return}
   busy=true;document.querySelectorAll('[data-drink]').forEach(b=>b.disabled=true);
   try{const r=await window.ChinaLifeAuth.request('/chinalife/economy.php','POST',{action:'club-drink',sku:x.sku});game.applyServerTotals(r.data);const s=game.state;
    if(!r.data?.cooldown){s.needs.fun=Math.min(100,(s.needs.fun||0)+x.fun);s.needs.social=Math.min(100,(s.needs.social||0)+x.social);if(x.energy)s.needs.energy=Math.min(100,(s.needs.energy||0)+x.energy);s.drunk=Math.max(0,Math.min(95,(s.drunk||0)+x.alc));boost+=x.price>=300?14:x.price?8:2}
-   document.getElementById('activityDialog')?.close();say(r.data?.cooldown?'Easy, tiger. One every 90 seconds. ⏳':fill(pick(LINES.served),{n:s.name,d:x.name}));game.toast(r.data?.cooldown?'⏳ '+(r.message||'Slow down. Try again soon.'):x.icon+' '+x.name+(r.data?.awardedXp?' · +'+r.data.awardedXp+' XP':''));c.setEmote('drink');game.save?.();game.refresh?.()}
+   document.getElementById('activityDialog')?.close();say(r.data?.cooldown?'Easy, tiger. One every 90 seconds. ⏳':(hype&&x.price>=300?hype.event('drink',{price:x.price,name:drinkName(x)}):fill(pick(LINES.served),{n:s.name,d:drinkName(x)})));game.toast(r.data?.cooldown?'⏳ '+(r.message||'Slow down. Try again soon.'):x.icon+' '+drinkName(x)+(r.data?.awardedXp?' · +'+r.data.awardedXp+' XP':''));c.setEmote('drink');game.save?.();game.refresh?.()}
   catch(e){if(status)status.textContent=e.message||'Try again.'}finally{busy=false;document.querySelectorAll('[data-drink]').forEach(b=>b.disabled=false)}}
  let lastCheck=0,lastBeat=-1,lastFx=0,stuck=0,steer=0,straightFor=0;const vel={x:0,z:0};
  // Heading eases toward the target along the shortest arc and ignores tiny differences.
@@ -91,14 +99,14 @@ export function nightClub(c){
  function yieldSpace(){for(const b of c.bodies()){if(b===pappi)continue;const dx=pappi.position.x-b.position.x,dz=pappi.position.z-b.position.z,d=Math.hypot(dx,dz);if(d>=.76)continue;const ux=d>1e-4?dx/d:1,uz=d>1e-4?dz/d:0,k=.76-d;for(const [vx,vz] of [[ux,uz],[uz,-ux],[-uz,ux]]){const nx=pappi.position.x+vx*k,nz=pappi.position.z+vz*k;if(free(nx,nz)){pappi.position.x=nx;pappi.position.z=nz;break}}}}
  function tick(time,dt){
   const me=c.getPlayer();
-  if(me&&!greeted){greeted=true;setTimeout(()=>say(fill(pick(LINES.welcome),{n:game.state.name})),900)}
+  if(me&&!greeted&&pappiOn){greeted=true;setTimeout(()=>say(fill(pick(LINES.welcome),{n:game.state.name})),900)}
   // Lights: on the beat while the DJ plays, slow drift otherwise.
   const phase=window.ChinaLifeAudio?.beatPhase?.(),beat=phase!=null?Math.floor(phase):Math.floor(time/900);
   if(beat!==lastBeat){lastBeat=beat;for(const t of tiles)t.material=floorMats[(t.userData.k+beat)%4]}
   if(!reduced()&&time-lastFx>66){lastFx=time;if(pappi.userData.glint)pappi.userData.glint.opacity=.5+.45*Math.abs(Math.sin(time*.003));const sw=Math.sin(time*.0011);beams[0].rotation.z=.5*sw;beams[1].rotation.z=-.5*sw;beams[0].rotation.x=beams[1].rotation.x=.25*Math.cos(time*.0008);const pulse=phase!=null?1-(phase%1):.5;for(const m of floorMats)m.opacity=.35+pulse*.35}
   // Pappi walks between his spots and pauses to talk.
   // Walking: one committed steer angle (hysteresis), smoothed velocity and heading, full settle when idle.
-  if(goal){const dx=goal[0]-pappi.position.x,dz=goal[1]-pappi.position.z,dist=Math.hypot(dx,dz);
+  if(pappiOn){if(goal){const dx=goal[0]-pappi.position.x,dz=goal[1]-pappi.position.z,dist=Math.hypot(dx,dz);
    if(dist<.15||stuck>2.5){goal=null;stuck=0;steer=0;wait=3+Math.random()*4}
    else{const ux=dx/dist,uz=dz/dist,dir=a=>[ux*Math.cos(a)-uz*Math.sin(a),ux*Math.sin(a)+uz*Math.cos(a)],ok=a=>{const [vx,vz]=dir(a);return clear(pappi.position.x+vx*.5,pappi.position.z+vz*.5)};
     // Keep the current angle while it stays clear; drift back to straight only once straight has been clear for a moment.
@@ -110,12 +118,12 @@ export function nightClub(c){
     const w=Math.sin(time*.01)*Math.min(1,sp/1.2),[l,r,al,ar]=pappi.userData.limbs;l.rotation.x=w*.5;r.rotation.x=-w*.5;al.rotation.x=-w*.4;al.rotation.z=0;ar.rotation.x=-.6;pappi.position.y=0}}
   else{wait-=dt;vel.x=vel.z=0;const [l,r,al]=pappi.userData.limbs,e=1-Math.exp(-dt*8);l.rotation.x*=1-e;r.rotation.x*=1-e;al.rotation.x*=1-e;al.rotation.z+=((reduced()?.3:.4+Math.sin(time*.003)*.3)-al.rotation.z)*e;pappi.position.y=0;
    if(wait<=0){let next;do next=pick(spots);while(next===pappi.userData.spot);pappi.userData.spot=next;goal=next}}
-  yieldSpace();
+  yieldSpace()}
   if(time-(dodgeAt||0)>250){dodgeAt=time;dodge()}
   if(time-lastCheck>1000){lastCheck=time;boost=Math.max(0,boost-.6);const p=party();fillEl.style.width=p+'%';pct.textContent=p+'%';meter.setAttribute('aria-valuenow',p);meter.classList.toggle('hot',p>=75);
-   const first=!seen.primed;seen.primed=true;for(const r of c.remotes())if(!seen.has(r.id)){seen.add(r.id);if(!first&&r.name)setTimeout(()=>say(fill(pick(LINES.join),{n:r.name})),400)}
-   if(performance.now()>nextBanter){nextBanter=performance.now()+16000+Math.random()*14000;const roll=Math.random();if(roll<.12&&!duel){duel=performance.now()+15000;say(pick(LINES.duel),6000)}else if(roll<.4&&window.ChinaLifeAudio?.playing)say(pick(LINES.dj));else if(realOn&&roll<.6)say(pick(["I'm online, pull up! 🍾","Pappi is live tonight. Tap my name and follow! 🍾"]));else say(pick(c.remotes().length?LINES.banter:[...LINES.banter,...LINES.quiet]))}}}
- let dodgeAt=0;const emoteBar=hud.querySelector('.club-emotes');function dodge(){const e=bubble.el;if(e.classList.contains('quiet')){e.style.marginLeft='';return}const b=e.getBoundingClientRect(),r=emoteBar.getBoundingClientRect(),cur=parseFloat(e.style.marginLeft)||0;const over=b.right-cur-(r.left-10);e.style.marginLeft=(b.bottom>r.top&&b.top<r.bottom&&over>0)?(-over)+'px':''}
- function dispose(){window.removeEventListener('chinalife:players',onPlayers);if(window.ChinaLifeClubHost?.pappi===pappi)window.ChinaLifeClubHost=null;clearTimeout(sayTimer);life?.dispose();hud.remove();curtain.remove();for(const d of disposers)d.dispose?.();const out=document.createElement('div');out.className='club-curtain leaving'+(clubSign.length>6?' brand':'');out.innerHTML='<b>'+escH(clubSign==='007'?'007':clubName)+'</b>';document.body.append(out);setTimeout(()=>out.remove(),700)}
- const api={_obs:()=>c.obstacles(),keep:[pappi,bouncer,...tiles,...beams,...(life?.keep||[])],tick:(t,d)=>{tick(t,d);life?.tick(t,d,{tiles,mats:floorMats})},life,clubName,dispose,menu,say,party,pappi,me:()=>c.getPlayer()};window.ChinaLifeClubHost=api;return api;
+   const first=!seen.primed;seen.primed=true;for(const r of c.remotes())if(!seen.has(r.id)){seen.add(r.id);if(!first&&r.name&&pappiOn)setTimeout(()=>say(fill(pick(LINES.join),{n:r.name})),400)}
+   if(pappiOn&&performance.now()>nextBanter){nextBanter=performance.now()+16000+Math.random()*14000;const roll=Math.random();if(roll<.12&&!duel){duel=performance.now()+15000;say(pick(LINES.duel),6000)}else if(roll<.4&&window.ChinaLifeAudio?.playing)say(pick(LINES.dj));else if(realOn&&roll<.6)say(pick(["I'm online, pull up! 🍾","Pappi is live tonight. Tap my name and follow! 🍾"]));else say(pick(c.remotes().length?LINES.banter:[...LINES.banter,...LINES.quiet]))}}}
+ let dodgeAt=0;const emoteBar=hud.querySelector('.club-emotes');function dodge(){if(!bubble)return;const e=bubble.el;if(e.classList.contains('quiet')){e.style.marginLeft='';return}const b=e.getBoundingClientRect(),r=emoteBar.getBoundingClientRect(),cur=parseFloat(e.style.marginLeft)||0;const over=b.right-cur-(r.left-10);e.style.marginLeft=(b.bottom>r.top&&b.top<r.bottom&&over>0)?(-over)+'px':''}
+ function dispose(){window.removeEventListener('chinalife:players',onPlayers);if(window.ChinaLifeClubHost?.pappi===pappi)window.ChinaLifeClubHost=null;clearTimeout(sayTimer);life?.dispose();hype?.dispose();hud.remove();curtain.remove();for(const d of disposers)d.dispose?.();const out=document.createElement('div');out.className='club-curtain leaving'+(clubSign.length>6?' brand':'');out.innerHTML='<b>'+escH(clubSign==='007'?'007':clubName)+'</b>';document.body.append(out);setTimeout(()=>out.remove(),700)}
+ const api={_obs:()=>c.obstacles(),keep:[...(pappiOn?[pappi]:[]),bouncer,...tiles,...beams,...(life?.keep||[]),...(hype?.keep||[])],tick:(t,d)=>{tick(t,d);life?.tick(t,d,{tiles,mats:floorMats});hype?.tick(t,d)},life,clubName,dispose,menu,say,party,pappi:pappiOn?pappi:null,hypeman:hype,me:()=>c.getPlayer()};window.ChinaLifeClubHost=api;return api;
 }

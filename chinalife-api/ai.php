@@ -6,6 +6,9 @@ declare(strict_types=1);
 // player and character; each player has a daily message limit.
 require_once __DIR__.'/common.php';
 cl_methods(['GET','POST','DELETE']);
+// Oct 2026: AI characters sit behind the admin switch ai_characters (appadmin Features, default OFF). Code, config and
+// saved conversations are kept; while it is off every call gets a clean 403 and Claude is never called.
+if(!(cl_hafrik_features()['ai_characters']??false)){http_response_code(403);json_response('error',['enabled'=>false,'disabled'=>true],'AI characters are switched off');exit;}
 $cfg=is_file(__DIR__.'/ai-config.php')?(require __DIR__.'/ai-config.php'):[];
 $enabled=is_array($cfg)&&is_string($cfg['api_key']??null)&&$cfg['api_key']!==''&&$cfg['api_key']!=='YOUR_ANTHROPIC_API_KEY'&&($cfg['enabled']??true)!==false;
 $limit=max(1,(int)($cfg['daily_limit']??40));

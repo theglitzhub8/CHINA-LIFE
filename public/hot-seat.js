@@ -135,6 +135,8 @@ function revealView(){
   const r=round,t=r.true+r.cap||1,tp=Math.round(r.true/t*100),cp=100-tp,res=r.result;
   const stamp=res==='true'?'<div class="hs-stamp t">TRUE ✅</div>':res==='cap'?'<div class="hs-stamp c">CAP 🧢</div>':'<div class="hs-stamp s">SPLIT 🤝</div>';
   const won=r.reward>0;
+  // Oct 2026: tell the Club Hypeman (hypeman.js) about a win, once per round.
+  if(won&&!r.cheered){r.cheered=true;try{root.dispatchEvent?.(new root.CustomEvent('chinalife:winner',{detail:{kind:'hotseat',reward:r.reward}}))}catch{}}
   const line=r.own?(res==='true'?'The room believed you.':res==='cap'?'The room called cap on you.':'The room couldn\'t decide.'):
     (!r.myVote?'You didn\'t vote this round.':res==='tie'?'Dead heat. No winners this time.':r.myVote===res?'You read the room!':'The room went the other way.');
   const voters=(r.votes||[]).map(v=>'<span class="hs-chip '+(v.vote==='true'?'t':'c')+'">'+esc(v.who)+' · '+(v.vote==='true'?'True':'Cap')+'</span>').join('');

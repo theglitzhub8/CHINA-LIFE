@@ -1,0 +1,6 @@
+/* Oct 2026 one-city phone: Hafrik brand wallpaper (Honeydew #F7FFF7, Black #121212, Java #1F8E93, Cyprus #0C3F44)
+   and one consistent tile set. Scoped to .oc-phone, which game.js sets only in one-city mode; classic is unchanged. */
+html:root body #phoneDialog.oc-phone .phone-frame{background:url(assets/phone/hafrik-wallpaper.svg) center/cover no-repeat,linear-gradient(165deg,#1F8E93 0%,#0C3F44 62%,#121212 100%)!important}
+html:root body #phoneDialog.oc-phone .phone-app:nth-child(8n+4)>b{background:linear-gradient(145deg,#ffffff,#F7FFF7 55%,#cfe9e4)!important}
+html:root body #phoneDialog.oc-phone .phone-home-heading h3,html:root body #phoneDialog.oc-phone .phone-app span{color:#F7FFF7!important;text-shadow:0 1px 2px rgba(18,18,18,.45)}
+html:root body #phoneDialog.oc-phone .pw4>*{background:rgba(247,255,247,.16)!important;color:#F7FFF7}

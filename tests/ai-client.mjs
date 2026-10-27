@@ -1,6 +1,8 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';import {harness,fixture} from './game-harness.mjs';
 function setup(enabled=true,post=()=>({reply:'Try **Taiyuan Street Market** for street food! [[go:market]] [[go:nowhere]]',remaining:39})){const t=harness({...fixture(),place:'plaza'}),c=t.context,calls=[];
  c.ChinaLifeCloud={ready:Promise.resolve(),signedIn:true,open(){}};
+ // The cast is behind the admin switch ai_characters (default off); these tests cover it switched on.
+ c.ChinaLifeFlags={off:()=>false,appOff:()=>false,placeOff:()=>false,...(c.ChinaLifeFlags||{}),cast:k=>k==='ai_characters'};
  c.ChinaLifeAuth={async request(path,method,data){calls.push({path,method,data});if(method==='GET')return {data:{enabled,messages:[],remaining:40}};if(method==='POST')return {data:post(data)};return {data:{}}}};
  vm.runInContext('(()=>{'+fs.readFileSync('public/ai-agents.js','utf8')+'})()',c);const dialog=t.document.getElementById('aiDialog');Object.defineProperty(dialog,'open',{get(){return this.hasAttribute('open')}});dialog.showModal=function(){this.setAttribute('open','')};dialog.close=function(){this.removeAttribute('open')};
  let went=null;t.game.travel=id=>{went=id};return {...t,ai:c.ChinaLifeAI,dialog,calls,get went(){return went}}}

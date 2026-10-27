@@ -288,7 +288,7 @@
   let finished = false;
   async function fullTime(srv) {
     if (finished || !match) return; finished = true; const m = match; clearInterval(netT); netT = null;
-    const s = m.state, mine = m.myTeam, won = s.winner === mine, isDraw = s.winner === null;
+    const s = m.state, mine = m.myTeam, won = s.winner === mine, isDraw = s.winner === null; if (won) try { window.dispatchEvent(new CustomEvent('chinalife:winner', { detail: { kind: 'football' } })); } catch {} // Club Hypeman
     let note = '';
     if (!m.local) {
       try {

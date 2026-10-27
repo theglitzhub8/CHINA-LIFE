@@ -14,8 +14,23 @@
  const keepPlace=id=>{const s=window.ChinaLife?.state;if(!s)return false;const job=window.ChinaLife?.jobPlace?.(s.job);return s.place===id||s.student?.campus===id||s.home===id||job===id||(s.job==='roach-farmer'||s.job==='roach-manager')&&id==='roachfarm'};
  // One-city mode (one-city.js): every venue outside the seven destinations is hidden, never deleted. Homes stay.
  const oneCityOff=id=>!!window.ChinaLifeOneCity&&!window.ChinaLifeOneCity.allows(id)&&!window.ChinaLife?.isResidence?.(id);
- window.ChinaLifeFlags={OFF,
-  appOff:id=>OFF.apps.includes(id)&&!on().has(id),
+ // Oct 2026 cast switches from appadmin Features (hafrik-features.php): ai_characters (default OFF), club_pappi (one-city
+ // Club, default OFF) and club_hypeman (one-city Club, default ON). Until the server answers (or for guests) the defaults
+ // apply. For testing, localStorage 'chinalife-flags-on' / 'chinalife-flags-off' (comma lists) override either way.
+ // One-city phone (founder, 28 Oct 2026): the apps kept on the one-city phone. Everything else is hidden there, grouped
+ // under one appadmin switch each (APP_GROUPS, default OFF). Classic mode keeps the R1 list above. 'police' stays
+ // as "My reports" (the player report system) inside the Court app.
+ const ONE_CITY_APPS=['whereto','people','football','hotseat','gossiptv','wallet','exchange','marketplace','hafrikEvents','services','hafrikBusiness','spaces','tasks','goals','rank','work','jobs','earn','studio','chinese','skills','academy','community','police','court','shop','settings','notifications','admin'];
+ const APP_GROUPS={app_launches:['celebrate'],app_travel:['travel','guide','driving'],app_homes:['home','homes'],app_cantaball:['cantaball'],app_story:['story'],app_politics:['politics'],app_delivery:['delivery'],app_needs:['needs'],app_together:['together'],app_opportunities:['fortune'],app_journal:['journal','cloud'],app_meet:['meet'],app_firstday:['firstday'],app_events:['events']};
+ const CAST={ai_characters:false,club_pappi:false,club_hypeman:true,...Object.fromEntries(Object.keys(APP_GROUPS).map(k=>[k,false]))};
+ const oneCityApp=id=>{if(ONE_CITY_APPS.includes(id))return true;const g=Object.keys(APP_GROUPS).find(k=>APP_GROUPS[k].includes(id));return g?cast(g):false};let served={};
+ const offList=()=>{try{return new Set((localStorage.getItem('chinalife-flags-off')||'').split(',').map(s=>s.trim()).filter(Boolean))}catch{return new Set()}};
+ const cast=key=>{if(!(key in CAST))return false;if(on().has(key))return true;if(offList().has(key))return false;return typeof served[key]==='boolean'?served[key]:CAST[key]};
+ const castKey=()=>Object.keys(CAST).map(cast).join();
+ window.addEventListener?.('chinalife:hafrik-features',e=>{const before=castKey();served={...(e.detail||{})};if(castKey()!==before)window.dispatchEvent(new CustomEvent('chinalife:cast'))});
+ window.ChinaLifeFlags={OFF,CAST,cast,
+  ONE_CITY_APPS,APP_GROUPS,
+  appOff:id=>id==='ai'?!cast('ai_characters'):window.ChinaLifeOneCity?.active?.()?!oneCityApp(id)&&!on().has(id):OFF.apps.includes(id)&&!on().has(id),
   placeOff:id=>(OFF.places.includes(id)&&!on().has(id)||oneCityOff(id))&&!keepPlace(id),
   off:name=>OFF.features.includes(name)&&!on().has(name)};
 })();

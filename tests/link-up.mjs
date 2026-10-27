@@ -103,7 +103,7 @@ test('football and hot seat expose read-only summaries for Link Up; Where to? ex
 
 test('the admin Features list carries legacy_people_nearby, off by default; profile.php adds the record without gist authorship',()=>{
  const php=fs.readFileSync('chinalife-api/hafrik-features.php','utf8');
- assert.match(php,/'legacy_people_nearby'=>/);assert.match(php,/cl_hafrik_features_default_off\(\): array \{return \['legacy_people_nearby'\];\}/);
+ assert.match(php,/'legacy_people_nearby'=>/);assert.match(php,/cl_hafrik_features_default_off\(\): array \{return \['legacy_people_nearby'[,\]]/);assert.ok(!/default_off[^\n]*club_hypeman/.test(php),'Hypeman starts on');
  const prof=fs.readFileSync('chinalife-api/profile.php','utf8');
  assert.match(prof,/'football'=>/);assert.match(prof,/'hotSeat'=>/);assert.match(prof,/chinalife_hot_seat_votes/);assert.doesNotMatch(prof,/author_id/);
  assert.match(src('index.dev.html'),/link-up\.css/);assert.match(src('index.dev.html'),/<\/svg><\/span>Link Up<\/button>/);

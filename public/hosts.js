@@ -29,7 +29,14 @@ export const HOSTS=[
   topics:{school:['Check the School day board: classes run 8 to 4, homework any time, exam on Friday.','Do the tones class first, it makes everything else easier.','Grades come from your quiz scores. Keep practising and they go up.'],chinese:['Learn the radicals: 氵 is water, 口 is mouth, 木 is tree. They unlock characters.','Practise dialogues out loud, even if you feel silly.','Third tone dips down then up: mǎ. Try it!'],exam:['Sleep well before the exam, revise the review quiz in the morning.','Don’t panic on hard questions. Skip and come back.'],money:['Homework pays a little every day. It adds up!'],club:['One night out is fine. Just not the night before the exam 😉'],love:['Focus on yourself first. The right person will love that.'],help:['Of course. What are you stuck on?']},
   bye:['Good luck, {n}! You’ve got this 💪','See you in class.','Bye {n}, keep going!']}];
 const KEYS={food:/food|eat|hungry|jollof|rice|dumpling|restaurant|cook|chop/i,school:/school|class|study|homework|lesson|teacher|grade/i,exam:/exam|test|quiz/i,club:/club|party|dance|007|night|dj|music|rex/i,love:/love|crush|date|girlfriend|boyfriend|relationship|single/i,money:/money|coin|rich|broke|job|work|pay|hustle|business|deal|price/i,home:/home|house|apartment|miss|family/i,weather:/weather|cold|snow|hot|rain/i,chinese:/chinese|mandarin|tone|character|hanzi|pinyin|word/i,gossip:/gossip|gist|rumou?r|news|tea/i,car:/car|scooter|drive/i,health:/sick|ill|tired|health|doctor/i,help:/help|how|where|what should|advice|lost/i,hello:/^(hi|hey|hello|yo|good (morning|evening)|sup|wassup)\b/i,bye:/bye|later|see you|good ?night|gotta go/i};
-export function reply(h,text,name){const t=String(text||'').trim(),fill=s=>String(globalThis.ChinaLifeOneCity?.brand?.(s)??s).replace(/\{n\}/g,name||'friend');if(!t)return fill(pick(h.hello));
+// One-city: ChampagnePappi is switched off (flag club_pappi) and REX is not on the one-city map, so lines about them get
+// Club wording instead (007 itself is already rewritten by ChinaLifeOneCity.brand). Classic keeps the originals.
+export const ONE_CITY_LINES=new Map([
+ ['007 is the move tonight, ChampagnePappi is a whole vibe 😂','The Club is the move tonight, the DJ is cooking 🔥'],
+ ['Rumour has it Pappi’s shades are prescription.','Rumour has it the Club DJ has a secret playlist 👀'],
+ ['007 is for the after-party. REX for the bars. Choose your fighter.','The Club is the after-party. Dance floor first, bar second 😂']]);
+export function oneCityLine(s){return globalThis.ChinaLifeOneCity?.active?.()?ONE_CITY_LINES.get(s)??s:s}
+export function reply(h,text,name){const t=String(text||'').trim(),fill=s=>String(globalThis.ChinaLifeOneCity?.brand?.(oneCityLine(s))??oneCityLine(s)).replace(/\{n\}/g,name||'friend');if(!t)return fill(pick(h.hello));
  if(KEYS.bye.test(t))return fill(pick(h.bye));if(KEYS.hello.test(t)&&t.length<16)return fill(pick(h.hello));
  for(const [k,re] of Object.entries(KEYS)){if(k==='hello'||k==='bye')continue;if(re.test(t)&&h.topics[k])return fill(pick(h.topics[k]))}
  if(/\?$/.test(t))return fill(pick(['Hmm, good question! ','Honestly? ','Let me think… ']))+fill(pick(h.small));
