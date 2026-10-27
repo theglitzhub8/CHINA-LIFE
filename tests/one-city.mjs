@@ -100,3 +100,13 @@ test('world.js scales venue crowds, caps hosts and keeps characters apart every 
  // NPC definitions stay: every Hafrik host and AI character is still defined.
  assert.match(fs.readFileSync('public/hosts.js','utf8'),/id:'tunde'/);
 });
+
+test('other players are separated through a display offset, never by moving their synced position',()=>{
+ const w=fs.readFileSync('public/world.js','utf8');
+ // The lerp aims at target + offset; the push writes only the offset.
+ assert.match(w,/const goal=r\.off\?remoteGoal\.copy\(r\.target\)\.add\(r\.off\):r\.target/);
+ assert.match(w,/r\.body\.position\.lerp\(goal,k\)/);
+ assert.doesNotMatch(w,/c\.r\.target\.x\+=/);
+ // Every character in the room counts (scripted club people too), and each remote is listed once.
+ assert.match(w,/for\(const a of root\.children\)addBody\(a\)/);
+});
