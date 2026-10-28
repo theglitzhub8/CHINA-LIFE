@@ -4,7 +4,7 @@
 // action 'hospital'). "🩺 Your health" (the hospital's place bar) shows what is wrong right now and how to fix it.
 // Game interpretation, never medical advice.
 (()=>{const $=id=>document.getElementById(id),G=()=>window.ChinaLife;
-const on=()=>window.ChinaLifeFlags?.cast?.('hospital_care')===true,checkOn=()=>on()&&window.ChinaLifeFlags?.cast?.('hospital_checkup')===true,pharmOn=()=>on()&&window.ChinaLifeFlags?.cast?.('hospital_pharmacy')===true;
+const on=()=>window.ChinaLifeFlags?.cast?.('hospital_care')===true,checkOn=()=>on()&&window.ChinaLifeFlags?.cast?.('hospital_checkup')===true,pharmOn=()=>on()&&window.ChinaLifeFlags?.cast?.('hospital_pharmacy')===true,staffOn=()=>on()&&window.ChinaLifeFlags?.cast?.('hospital_staff')===true;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const show=(...a)=>{G().showScreen(...a);const c=$('activityContent');if(c){c.scrollTop=0;c.dispatchEvent(new Event('scroll'))}};
 const STORY={'faint-hunger':['😵 You fainted from hunger','You went too long without food. A nurse brought you a warm bowl of congee while you came round.'],
@@ -31,8 +31,8 @@ function health(){const s=G().state,n=s.needs||{},rows=[],here=s.place==='cityho
  show('🩺 Your health','How your character is doing right now. A game, not medical advice.',
   (rows.length?'<ul class="hp-list">'+rows.map(([i,l,f])=>'<li><span>'+i+'</span><b>'+esc(l)+'</b><small>'+esc(f)+'</small></li>').join('')+'</ul>':'<div class="hp-card"><p>✅ You’re in good shape. Keep eating, resting and going out.</p></div>')+
   (vitUntil>Date.now()?'<p class="hp-note">💊 Vitamins working: needs drop 30% slower until '+clock(vitUntil)+'.</p>':'')+
-  ((checkOn()&&here)||pharmOn()?'<div class="hp-actions">'+(checkOn()&&here?'<button type="button" id="hpCheck">👩‍⚕️ Free weekly check-up</button>':'')+(pharmOn()?'<button type="button" id="hpPharm">💊 '+(here?'Pharmacy':'Your medicine')+'</button>':'')+'</div>':''));
- const b=$('hpCheck');if(b)b.onclick=checkup;const m=$('hpPharm');if(m)m.onclick=pharmacy}
+  ((checkOn()&&here)||pharmOn()||(staffOn()&&here)?'<div class="hp-actions">'+(staffOn()&&here?'<button type="button" id="hpAsk">🧑‍⚕️ Ask the doctor on shift</button>':'')+(checkOn()&&here?'<button type="button" id="hpCheck">👩‍⚕️ Free weekly check-up</button>':'')+(pharmOn()?'<button type="button" id="hpPharm">💊 '+(here?'Pharmacy':'Your medicine')+'</button>':'')+(staffOn()&&here?'<button type="button" id="hpWork" class="hp-soft">🩺 Work at the hospital</button>':'')+'</div>':''));
+ const b=$('hpCheck');if(b)b.onclick=checkup;const m=$('hpPharm');if(m)m.onclick=pharmacy;const a=$('hpAsk');if(a)a.onclick=askStaff;const w=$('hpWork');if(w)w.onclick=work}
 // Hospital Phase 1 (switch hospital_checkup): the free weekly check-up. The doctor asks 5 questions in simple Chinese
 // (economy.php action 'checkup', questions and marking in hospital-lib.php); XP on the server, Chinese progress here.
 const req=body=>window.ChinaLifeAuth.request('/chinalife/economy.php','POST',body).then(r=>r?.data||r);
@@ -69,7 +69,66 @@ function vitamins(){const n=G()?.state?.needs;if(!n||vitUntil<=Date.now()){snap=
 setInterval(vitamins,20000);
 // After a reload, ask once whether vitamins are still working.
 setTimeout(()=>{if(pharmOn()&&window.ChinaLifeCloud?.signedIn)req({action:'pharmacy',op:'stock'}).then(d=>{vitUntil=(d.vitaminsUntil||0)*1000}).catch(()=>{})},8000);
-window.ChinaLifeHospital={on,wake,health,checkup,pharmacy,vitamins,STORY,FIX};
+// Hospital Phase 3 (switch hospital_staff): player doctors and nurses (hospital-staff.php). Patients ask the staff on
+// shift and wait in a queue; staff read each chart and pick the treatment for the most urgent problem.
+const staffApi=body=>window.ChinaLifeAuth.request('/chinalife/hospital-staff.php',body?'POST':'GET',body).then(r=>r?.data||r);
+const signed=()=>window.ChinaLifeCloud?.signedIn&&window.ChinaLifeAuth?.request;
+const NEED={hunger:'Hunger',energy:'Energy',hygiene:'Hygiene',bladder:'Bladder',fun:'Fun',social:'Social'};
+// What the treatment does for the patient (the ward staff step in when the treatment was wrong, so it always works).
+const CURE={sick:s=>{if(s.food?.sick)s.food.sick=null},drunk:s=>{s.drunk=Math.max(0,(s.drunk||0)-50)},bladder:(s,n)=>{n.bladder=100}};
+const cure=(problem,s)=>{const n=s.needs;if(CURE[problem])CURE[problem](s,n);else if(problem in n)n[problem]=Math.min(100,(n[problem]??0)+(problem==='fun'||problem==='social'?30:40))};
+let waiting=false,waitTimer=0;
+async function askStaff(){const g=G(),s=g.state;if(!signed())return g.toast?.('Sign in to see the doctor on shift.');
+ try{const d=await staffApi({action:'request',chart:{needs:s.needs,drunk:s.drunk||0,sick:!!s.food?.sick}});waiting=true;waitScreen(d.patient)}
+ catch(e){g.toast?.((e.message||'Nobody can see you right now.')+(/shift/.test(e.message||'')?' The ward staff can help: rest on the ward or see a doctor (¥150).':''))}}
+function waitScreen(p){show('🧑‍⚕️ Waiting for the doctor','You’re in the queue. Someone on shift will see you soon (up to 10 minutes).',
+ '<div class="hp-card"><p>Your chart says: <b>'+esc(p?.label||'')+'</b>.</p><p class="hp-note">You can close this: we’ll tell you when you’ve been seen.</p></div><div class="hp-actions"><button type="button" id="hpLeave" class="hp-soft">Leave the queue</button></div>');
+ $('hpLeave').onclick=async()=>{try{await staffApi({action:'cancel'})}catch{}waiting=false;$('activityDialog')?.close()};pollPatient()}
+async function pollPatient(){clearTimeout(waitTimer);if(!waiting)return;let d;try{d=await staffApi()}catch{d=null}
+ if(d&&d.patient?.status==='treated')return collect(d.patient);if(d&&!d.patient){waiting=false;return G().toast?.('Nobody on shift could see you in time. The ward staff can help: rest on the ward or see a doctor (¥150).')}
+ waitTimer=setTimeout(pollPatient,$('hpLeave')?5000:20000)}
+async function collect(p){const g=G();waiting=false;let r;try{r=await staffApi({action:'ack',id:p.id})}catch{return}
+ const s=g.state;cure(p.problem,s);g.applyServerTotals?.(r);s.logs?.unshift(p.staff+' treated you at the City Hospital ('+p.treatmentName+').');g.save?.();g.refresh?.();
+ show('🩺 '+esc(p.staff)+' treated you',p.correct?'The right treatment · +10 XP':'The ward staff stepped in',
+  '<div class="hp-card"><p>Your problem: <b>'+esc(p.label)+'</b>.</p><p>Treatment: <b>'+esc(p.treatmentName)+'</b>.</p>'+(p.correct?'':'<p>That wasn’t quite right, so a nurse sorted it out. You’re fine now.</p>')+'</div><div class="hp-actions"><button type="button" id="hpDone2" class="hp-soft">Thanks</button></div>');
+ $('hpDone2').onclick=()=>$('activityDialog')?.close()}
+// Staff: qualification, the Health worker test, the shift and the queue.
+let queueTimer=0,queueKey='';
+async function work(){const g=G();if(!signed())return g.toast?.('Sign in to work at the hospital.');let d;try{d=await staffApi()}catch(e){return g.toast?.(e.message||'The hospital office is closed.')}
+ const me=d.me,pay=d.pay,role=me.role==='doctor'?'Doctor':'Nurse';
+ if(me.onShift)return queueScreen(d);
+ if(!me.role)return show('🩺 Work at the hospital','Only qualified players treat patients here.',
+  '<ul class="hp-list hp-meds"><li><span>🎓</span><b>Doctor</b><small>Choose a University major (Year 3). Pays ¥'+pay.doctor+' for each right treatment.</small></li><li><span>📝</span><b>Nurse</b><small>Pass the Health worker test: 8 questions, 7 right, one try a day. Pays ¥'+pay.nurse+' for each right treatment.</small></li></ul>'+
+  '<div class="hp-actions"><button type="button" id="hpTest"'+(me.testToday?' disabled':'')+'>📝 '+(me.testToday?'Test taken today: try again tomorrow':'Take the Health worker test')+'</button></div>'),$('hpTest').onclick=healthTest;
+ show('🩺 Work at the hospital','You’re qualified: '+role+'.','<div class="hp-card"><p>A shift is '+pay.shift+' minutes at the City Hospital. Read each patient’s chart and pick the treatment for the most urgent problem.</p><p class="hp-bill">¥'+(me.role==='doctor'?pay.doctor:pay.nurse)+' + '+pay.xp+' XP for each right treatment (paid for '+pay.perDay+' patients a day).</p><p class="hp-note">Treated today: '+me.treatedToday+'</p></div><div class="hp-actions"><button type="button" id="hpShift">Start my shift</button></div>');
+ $('hpShift').onclick=async()=>{try{await staffApi({action:'shift_start'});work()}catch(e){g.toast?.(e.message||'Could not start the shift.')}}}
+function chartText(c){const n=c.needs||{},bits=[];if(c.sick)bits.push('<i class="hp-hot">🤢 Food sickness</i>');if((c.drunk||0)>0)bits.push('<i'+(c.drunk>=60?' class="hp-hot"':'')+'>Drunk '+c.drunk+'%</i>');
+ for(const [k,l] of Object.entries(NEED))bits.push('<i'+((n[k]??100)<35?' class="hp-hot"':'')+'>'+l+' '+(n[k]??100)+'%</i>');return bits.join('')}
+function queueScreen(d){const me=d.me;queueKey='';
+ show('🩺 On shift','Until '+clock(me.shiftUntil*1000)+' · treated today '+me.treatedToday+' · paid '+me.paidToday+'/'+d.pay.perDay,
+  '<p class="hp-note">Treat the most urgent: food sickness first, then drunk (60%+), then the lowest need.</p><div id="hpQueue"></div><div class="hp-actions"><button type="button" id="hpEnd" class="hp-soft">End my shift</button></div>');
+ $('hpEnd').onclick=async()=>{clearTimeout(queueTimer);try{await staffApi({action:'shift_end'})}catch{}$('activityDialog')?.close()};paintQueue(d)}
+function paintQueue(d){const box=$('hpQueue');if(!box)return;const key=d.queue.map(p=>p.id).join(',');
+ if(key!==queueKey){queueKey=key;box.innerHTML=d.queue.length?d.queue.map(p=>'<div class="hp-card hp-patient"><p><b>'+esc(p.name)+'</b> <small>waiting '+Math.max(1,Math.round((Date.now()/1000-p.waitingSince)/60))+' min</small></p><p class="hp-chart">'+chartText(p.chart)+'</p><div class="hp-choices">'+p.options.map(([k,l])=>'<button type="button" data-hp-treat="'+p.id+':'+k+'">'+esc(l)+'</button>').join('')+'</div></div>').join(''):'<div class="hp-card"><p>No patients right now. Stay on this screen: new patients appear here.</p></div>';
+  box.querySelectorAll('[data-hp-treat]').forEach(b=>b.onclick=()=>treat(...b.dataset.hpTreat.split(':')))}
+ clearTimeout(queueTimer);if(d.me.onShift)queueTimer=setTimeout(async()=>{if(!$('hpQueue'))return;try{paintQueue(await staffApi())}catch{}},5000)}
+async function treat(id,k){const g=G();lockTreat(true);let r;try{r=await staffApi({action:'treat',id:Number(id),treatment:k})}catch(e){lockTreat(false);g.toast?.(e.message||'Could not treat this patient.');try{paintQueue(await staffApi())}catch{}return}
+ g.applyServerTotals?.(r);g.save?.();g.refresh?.();const x=r.result;g.toast?.(x.correct?'✅ Right treatment · +'+(x.paid?'¥'+x.paid+' · +':'')+x.xp+' XP':'❌ Not quite: '+x.label+' needed '+x.right+' · +'+x.xp+' XP');queueKey='';try{paintQueue(await staffApi())}catch{}}
+const lockTreat=on=>document.querySelectorAll('[data-hp-treat]').forEach(b=>b.disabled=on);
+// The Health worker test (nurses): 8 questions marked on the server, 7 right to pass.
+async function healthTest(){const g=G();let t;try{t=await staffApi({action:'test_start'})}catch(e){return g.toast?.(e.message||'The test is not available.')}
+ const q=t.questions,answers=[];let i=0;
+ const ask=()=>{const x=q[i];show('📝 Health worker test','Question '+(i+1)+' of '+q.length+' · '+t.pass+' right to pass',
+  '<div class="hp-card"><p class="hp-q">'+esc(x.prompt)+'</p>'+(x.pinyin?'<p class="hp-py">'+esc(x.pinyin)+'</p>':'')+'</div><div class="hp-choices">'+x.options.map((o,n)=>'<button type="button" data-hp-a="'+n+'">'+esc(o)+'</button>').join('')+'</div>');
+  document.querySelectorAll('[data-hp-a]').forEach(b=>b.onclick=()=>{answers.push(x.options[Number(b.dataset.hpA)]);i++;i<q.length?ask():submit()})};
+ const submit=async()=>{let r;try{r=await staffApi({action:'test_submit',answers})}catch(e){return g.toast?.(e.message||'The test could not be marked.')}
+  show(r.passed?'🎉 You’re a nurse':'📝 Not this time',r.right+'/'+r.total+' right'+(r.passed?' · Health worker certificate':' · try again tomorrow'),
+   '<ol class="hp-list hp-marked">'+q.map((x,n)=>'<li class="'+(answers[n]===r.answers[n]?'ok':'')+'"><span>'+(answers[n]===r.answers[n]?'✅':'❌')+'</span><b>'+esc(x.prompt)+'</b><small>'+esc(r.answers[n])+'</small></li>').join('')+'</ol><div class="hp-actions">'+(r.passed?'<button type="button" id="hpGoWork">🩺 Start working</button>':'')+'<button type="button" id="hpDone3" class="hp-soft">Done</button></div>');
+  if($('hpGoWork'))$('hpGoWork').onclick=work;$('hpDone3').onclick=()=>$('activityDialog')?.close()};
+ ask()}
+// After a reload, pick up a visit that is still waiting (or was treated while you were away).
+setTimeout(()=>{if(staffOn()&&signed())staffApi().then(d=>{if(d?.patient){waiting=true;pollPatient()}}).catch(()=>{})},9000);
+window.ChinaLifeHospital={on,wake,health,checkup,pharmacy,vitamins,askStaff,work,healthTest,STORY,FIX};
 const css=document.createElement('style');css.textContent='.hp-card{padding:14px 16px;border-radius:18px;background:#f3fbf8;border:1px solid #d6ebe5}.hp-card p{margin:0 0 8px}.hp-bill{font-weight:700}.hp-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.hp-actions button{min-height:44px;padding:0 16px;border:0;border-radius:22px;background:#1F8E93;color:#fff;font-weight:700}.hp-actions .hp-soft{background:#fff;color:#0C3F44;border:1px solid #cfe3dd}'+
- '.hp-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}.hp-list li{display:grid;grid-template-columns:32px 1fr;gap:2px 8px;padding:10px 12px;border-radius:14px;background:#fff4f1;border:1px solid #ffd6cc}.hp-list span{grid-row:span 2;font-size:22px}.hp-list small{color:#43666b}.hp-list li.ok{background:#f3fbf8;border-color:#d6ebe5}.hp-q{font-size:20px;font-weight:700}.hp-py{color:#43666b}.hp-choices{display:grid;gap:8px;margin-top:12px}.hp-choices button{min-height:48px;padding:10px 14px;border-radius:14px;border:1px solid #cfe3dd;background:#fff;font-weight:700;text-align:left}.hp-note{color:#43666b;margin:12px 0 0}.hp-meds li{background:#fff;border-color:#d6ebe5}.hp-med-btns{grid-column:2;display:flex;gap:8px;margin-top:6px}.hp-med-btns button{min-height:40px;padding:0 14px;border:0;border-radius:20px;background:#1F8E93;color:#fff;font-weight:700}.hp-med-btns .hp-soft{background:#fff;color:#0C3F44;border:1px solid #cfe3dd}.hp-med-btns button:disabled{opacity:.45}';document.head?.append(css);
+ '.hp-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}.hp-list li{display:grid;grid-template-columns:32px 1fr;gap:2px 8px;padding:10px 12px;border-radius:14px;background:#fff4f1;border:1px solid #ffd6cc}.hp-list span{grid-row:span 2;font-size:22px}.hp-list small{color:#43666b}.hp-list li.ok{background:#f3fbf8;border-color:#d6ebe5}.hp-q{font-size:20px;font-weight:700}.hp-py{color:#43666b}.hp-choices{display:grid;gap:8px;margin-top:12px}.hp-choices button{min-height:48px;padding:10px 14px;border-radius:14px;border:1px solid #cfe3dd;background:#fff;font-weight:700;text-align:left}.hp-note{color:#43666b;margin:12px 0 0}.hp-meds li{background:#fff;border-color:#d6ebe5}.hp-med-btns{grid-column:2;display:flex;gap:8px;margin-top:6px}.hp-med-btns button{min-height:40px;padding:0 14px;border:0;border-radius:20px;background:#1F8E93;color:#fff;font-weight:700}.hp-med-btns .hp-soft{background:#fff;color:#0C3F44;border:1px solid #cfe3dd}.hp-med-btns button:disabled{opacity:.45}.hp-patient{margin-bottom:10px}.hp-patient small{color:#43666b;font-weight:400}.hp-chart{display:flex;flex-wrap:wrap;gap:6px}.hp-chart i{font-style:normal;font-size:13px;padding:3px 8px;border-radius:10px;background:#fff;border:1px solid #d6ebe5}.hp-chart .hp-hot{background:#fff4f1;border-color:#ffb8a6;font-weight:700}';document.head?.append(css);
 })();

@@ -59,6 +59,16 @@ used in the economy log: no migration); prices in hospital-lib.php `cl_pharmacy_
 **Phase 3 · Real doctors and nurses.** A Hospital job with shifts. Players on shift see patients who come in (a queue,
 like the Hot Seat): pick the right treatment from what the "Your health" screen shows, and both are rewarded. When no
 player is on shift, the hospital's staff treat you as today.
+✅ Done 29 Oct 2026 (switch `hospital_staff`, off; needs `hospital_care` on and **migrate.php run first**:
+migration-hospital.sql adds chinalife_hospital_staff and chinalife_hospital_patients). Qualified (owner's decision):
+**doctors** are players with a University major (Year 3); **nurses** pass the Health worker test at the hospital
+(8 questions: 4 hospital Chinese, 4 "what do you give?"; 7 right; one try a day). In Your health at the hospital:
+"🧑‍⚕️ Ask the doctor on shift" (patients) and "🩺 Work at the hospital" (staff). A shift is 60 minutes at the hospital;
+the queue refreshes every 5 s and shows each patient's chart (needs, drunk, food sickness) with four treatments. The
+right one is for the most urgent problem (food sickness, then drunk 60%+, then the lowest need): doctor ¥120 / nurse ¥80
++ 20 XP (5 XP when wrong), paid for 20 patients a day and once a day per patient; the patient gets 10 XP. The patient is
+treated either way (the ward staff step in after a wrong pick). Patients wait up to 10 minutes, one visit at a time,
+20 minutes between visits; staff can't be patients. Code: chinalife-api/hospital-staff.php, hospital-lib.php, hospital.js.
 
 **Phase 4 · Visiting the ward.** See which friends are recovering on the ward, visit them, bring flowers or fruit
 (their fun and social go up), and a "Get well" message.

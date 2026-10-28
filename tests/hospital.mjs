@@ -7,10 +7,11 @@ const r=f=>fs.readFileSync(f,'utf8');const tick=()=>new Promise(res=>setImmediat
 const PAPER=['fever','head','stomach','cough','register'].map(id=>({id,prompt:'问 '+id,pinyin:'wèn',options:['right '+id,'wrong a','wrong b','wrong c']}));
 const ITEMS={painkiller:[60,'Painkillers','止痛药','zhǐtòng yào','+20 energy'],ors:[40,'Rehydration salts','口服补液盐','kǒufú bǔyè yán','−40 drunk, +5 energy'],vitamins:[80,'Vitamins','维生素','wéishēngsù','Needs drop 30% slower for 24 hours'],stomach:[90,'Stomach medicine','肠胃药','chángwèi yào','Cures food sickness']};
 let shelf={},vit=0;const pharm=b=>{if(b.op==='buy')shelf[b.item]=(shelf[b.item]||0)+1;if(b.op==='use'){shelf[b.item]--;if(b.item==='vitamins')vit=Math.floor(Date.now()/1000)+86400}return {items:ITEMS,max:5,stock:{painkiller:0,ors:0,vitamins:0,stomach:0,...shelf},vitaminsUntil:vit,money:2940,xp:0}};
+let staff=()=>({});
 function hospital(on,state={}){
  const t=harness({...fixture(),place:'football',...state}),c=t.context,calls=[],trips=[];
  const keys=on===true?['hospital_care']:on||[];c.ChinaLifeFlags={cast:k=>keys.includes(k),appOff:()=>false};c.ChinaLifeCloud={signedIn:true};
- c.ChinaLifeAuth={request:async(path,method,body)=>{if(/economy\.php/.test(path))calls.push([path,body]);if(body?.action==='pharmacy')return {data:pharm(body)};if(body?.action==='checkup')return {data:body.step==='start'?{questions:PAPER}:{money:3000,xp:500,checkup:{right:4,total:5,xp:32,marked:PAPER.map((q,i)=>({id:q.id,prompt:q.prompt,pinyin:q.pinyin,answer:q.options[0],right:i>0}))}}};return {data:{charged:200,bill:200,first:false,recovering:false,money:3000,xp:0}}}};
+ c.ChinaLifeAuth={request:async(path,method,body)=>{if(/economy\.php/.test(path))calls.push([path,body]);if(/hospital-staff\.php/.test(path)){calls.push([path,body]);return {data:staff(method,body)}}if(body?.action==='pharmacy')return {data:pharm(body)};if(body?.action==='checkup')return {data:body.step==='start'?{questions:PAPER}:{money:3000,xp:500,checkup:{right:4,total:5,xp:32,marked:PAPER.map((q,i)=>({id:q.id,prompt:q.prompt,pinyin:q.pinyin,answer:q.options[0],right:i>0}))}}};return {data:{charged:200,bill:200,first:false,recovering:false,money:3000,xp:0}}}};
  c.ChinaLifeWorld={journey:(o,done)=>{trips.push(o);done()}};
  vm.runInContext(r('public/hospital.js'),c);return {t,c,calls,trips};
 }
@@ -76,4 +77,30 @@ test('pharmacy: buy at the hospital, take anywhere, each medicine does what it s
  await click(d.querySelector('[data-hp-use="vitamins"]'));assert.match(d.getElementById('activityContent').textContent,/Vitamins working until/);
  s.needs.hunger=80;H.vitamins();s.needs.hunger=70;H.vitamins();assert.equal(s.needs.hunger,73,'30% of the drop given back');
  assert.match(r('public/game.js'),/needs:\['💊','Wellbeing',\(\)=>window\.ChinaLifeHospital\?\.on\?\.\(\)\?window\.ChinaLifeHospital\.health\(\):\$\('needsBtn'\)\.onclick\(\)\]/);
+});
+
+// Hospital Phase 3 (switch hospital_staff): a patient asks the staff on shift; a nurse takes the test and treats.
+test('player doctors and nurses: ask the doctor on shift, wait, get treated; the test, the shift and the queue',async()=>{
+ const keys=['hospital_care','hospital_staff'],me={role:null,onShift:false,testToday:false,treatedToday:0,paidToday:0,shiftUntil:0},pay={doctor:120,nurse:80,xp:20,perDay:20,shift:60};
+ let patient=null;const P={id:7,problem:'sick',label:'Food sickness',status:'waiting'};
+ staff=(m,b)=>{if(!b)return {enabled:true,me,pay,staffOn:1,patient,queue:me.onShift?[{id:9,name:'user9',chart:{needs:{hunger:20,energy:80},drunk:70,sick:false},options:[['energy','Rest on the ward'],['drunk','Rehydration salts 口服补液盐'],['fun','TV'],['hunger','Congee']],waitingSince:Date.now()/1000-120}]:[]};
+  if(b.action==='request'){patient={...P};return {patient}}if(b.action==='ack'){patient=null;return {money:3000,xp:510}}
+  if(b.action==='test_start')return {questions:[{id:'a',prompt:'挂号',pinyin:'guàhào',options:['to register','x','y','z']}],pass:7};if(b.action==='test_submit'){me.role='nurse';return {right:1,total:1,passed:true,answers:['to register']}}
+  if(b.action==='shift_start'){me.onShift=true;me.shiftUntil=Date.now()/1000+3600;return {me}}if(b.action==='treat')return {money:3080,xp:520,result:{correct:true,paid:80,xp:20,problem:'drunk',label:'Drunk',right:'Rehydration salts'},me};return {}};
+ const off=hospital(['hospital_care'],{place:'cityhospital'});off.c.ChinaLifeHospital.health();assert.equal(off.t.document.getElementById('hpAsk'),null,'hospital_staff off');
+ const {t,c,calls}=hospital(keys,{place:'cityhospital'}),d=t.document,s=t.game.state,H=c.ChinaLifeHospital,click=async el=>{el.onclick();await tick();await tick();await tick()};
+ s.food={sick:{until:Date.now()+1e6,next:Date.now()+1e6,why:''}};s.drunk=0;
+ // The patient: ask, wait, and collect once treated (the cure is applied here).
+ H.health();await click(d.getElementById('hpAsk'));const ask=calls.find(x=>x[1]?.action==='request')[1];assert.equal(ask.chart.sick,true);assert.ok('hunger' in ask.chart.needs);
+ assert.match(d.querySelector('#activityContent h2').textContent,/Waiting for the doctor/);
+ patient={...P,status:'treated',staff:'user57',treatment:'sick',treatmentName:'Stomach medicine 肠胃药',correct:true};
+ const poll=t.timers.pop();await poll();await tick();await tick();await tick();
+ assert.match(d.querySelector('#activityContent h2').textContent,/user57 treated you/);assert.equal(s.food.sick,null,'cured');assert.equal(s.xp,510,'XP from the server');
+ // The nurse: not qualified, the test, the shift, the queue and a treatment.
+ await click({onclick:H.work});assert.match(d.getElementById('activityContent').textContent,/Only qualified players/);
+ await click(d.getElementById('hpTest'));await click(d.querySelector('[data-hp-a="0"]'));assert.match(d.querySelector('#activityContent h2').textContent,/You’re a nurse/);
+ await click(d.getElementById('hpGoWork'));assert.match(d.getElementById('activityContent').textContent,/qualified: Nurse/);
+ await click(d.getElementById('hpShift'));assert.match(d.querySelector('#activityContent h2').textContent,/On shift/);
+ const text=d.getElementById('hpQueue').textContent;assert.match(text,/user9/);assert.match(text,/Drunk 70%/);assert.match(text,/Hunger 20%/);
+ await click(d.querySelector('[data-hp-treat="9:drunk"]'));assert.deepEqual(JSON.parse(JSON.stringify(calls.find(x=>x[1]?.action==='treat')[1])),{action:'treat',id:9,treatment:'drunk'});assert.equal(s.money,3080);
 });

@@ -1491,3 +1491,54 @@ test('pharmacy: off by default, buy from the ledger, up to 5 of each, take what 
   sql("USE chinalife_test; UPDATE chinalife_balances SET coins=10 WHERE user_id=55");const poor=await ph('buy','stomach');assert.equal(poor.httpStatus,409);assert.match(poor.message,/¥90/);
  }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{hospital_pharmacy:false}})}
 });
+
+// Hospital Phase 3 (switch hospital_staff): player doctors (University major) and nurses (Health worker test) on
+// shift treat patients from a queue; the right treatment pays the staff and gives the patient XP.
+test('hospital staff: qualified only, the Health worker test, shifts at the hospital, the queue, pay and limits',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(56,'user56'),(57,'user57'),(58,'user58')");
+ for(const id of [56,57,58])assert.equal((await call(id,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China',name:'Player'+id}}})).httpStatus,200);
+ sql("USE chinalife_test; UPDATE chinalife_saves SET game_state=JSON_SET(game_state,'$.university',JSON_OBJECT('start','2026-10-01','major','cs')) WHERE user_id=57");
+ const hs=(id,body)=>body?call(id,'hospital-staff.php','POST',body):call(id,'hospital-staff.php');
+ const at=(id,place)=>sql("USE chinalife_test; REPLACE INTO chinalife_presence(user_id,name,city,place,seen_at) VALUES("+id+",'p','China','"+place+"',NOW())");
+ const bal=id=>sql('USE chinalife_test; SELECT coins,xp FROM chinalife_balances WHERE user_id='+id).trim().split(/\s+/).map(Number);
+ assert.equal((await hs(56)).data.enabled,false,'switched off by default');assert.equal((await hs(56,{action:'shift_start'})).httpStatus,403);
+ const flip=v=>call(1,'admin.php','POST',{action:'set_hafrik_features',features:{hospital_care:v,hospital_staff:v}});
+ try{
+  await flip(true);
+  let me=(await hs(56)).data.me;assert.equal(me.role,null);assert.equal((await hs(57)).data.me.role,'doctor','a University major makes a doctor');
+  at(56,'cityhospital');assert.equal((await hs(56,{action:'shift_start'})).httpStatus,403,'not qualified yet');
+  // The Health worker test: wrong answers fail, one try a day.
+  const t1=await hs(56,{action:'test_start'});assert.equal(t1.httpStatus,200,t1.message);assert.equal(t1.data.questions.length,8);assert.equal(t1.data.questions[0].answer,undefined);
+  const fail=await hs(56,{action:'test_submit',answers:t1.data.questions.map(()=>'nope')});assert.equal(fail.data.passed,false);assert.equal(fail.data.right,0);
+  assert.equal((await hs(56,{action:'test_start'})).httpStatus,409,'one try a day');
+  sql("USE chinalife_test; UPDATE chinalife_hospital_staff SET test_day=DATE_SUB(CURDATE(),INTERVAL 1 DAY) WHERE user_id=56");
+  const t2=await hs(56,{action:'test_start'});const pass=await hs(56,{action:'test_submit',answers:(await (async()=>JSON.parse(Buffer.from(sql('USE chinalife_test; SELECT HEX(test_answers) FROM chinalife_hospital_staff WHERE user_id=56').trim(),'hex').toString('utf8')))())});
+  void t2;assert.equal(pass.data.passed,true);assert.equal(pass.data.me.role,'nurse');
+  // Shifts only at the hospital; nobody on shift means no request.
+  assert.equal((await hs(58,{action:'request',chart:{needs:{energy:5}}})).httpStatus,409,'nobody on shift');
+  at(57,'football');assert.equal((await hs(57,{action:'shift_start'})).httpStatus,409,'at the hospital only');
+  at(57,'cityhospital');const shift=await hs(57,{action:'shift_start'});assert.equal(shift.httpStatus,200,shift.message);assert.equal(shift.data.me.onShift,true);
+  assert.equal((await hs(58)).data.staffOn,1);
+  // A patient asks; the doctor sees the chart and four treatments; the most urgent problem is food sickness here.
+  const req=await hs(58,{action:'request',chart:{needs:{hunger:10,energy:50},drunk:70,sick:true}});assert.equal(req.httpStatus,200,req.message);assert.equal(req.data.patient.status,'waiting');assert.equal(req.data.patient.problem,'sick');
+  assert.equal((await hs(58,{action:'request',chart:{}})).httpStatus,409,'one request at a time');
+  const q=(await hs(57)).data.queue;assert.equal(q.length,1);assert.equal(q[0].name,'user58');assert.equal(q[0].options.length,4);assert.ok(q[0].options.some(o=>o[0]==='sick'));assert.equal(q[0].problem,undefined,'the staff decide');
+  const [c0,x0]=bal(57);const treat=await hs(57,{action:'treat',id:q[0].id,treatment:'sick'});assert.equal(treat.httpStatus,200,treat.message);
+  assert.equal(treat.data.result.correct,true);assert.equal(treat.data.result.paid,120,'a doctor earns ¥120');assert.deepEqual(bal(57),[c0+120,x0+20]);
+  assert.equal((await hs(56,{action:'treat',id:q[0].id,treatment:'sick'})).httpStatus,403,'not on shift');
+  // The patient collects once: +10 XP for the right treatment.
+  const mine=(await hs(58)).data.patient;assert.equal(mine.status,'treated');assert.equal(mine.staff,'user57');assert.equal(mine.correct,true);
+  const [,px]=bal(58);const ack=await hs(58,{action:'ack',id:mine.id});assert.equal(ack.httpStatus,200,ack.message);assert.equal(bal(58)[1],px+10);
+  assert.equal((await hs(58,{action:'ack',id:mine.id})).httpStatus,409,'only once');
+  assert.equal((await hs(58,{action:'request',chart:{}})).httpStatus,409,'rest a little first');
+  // Same pair again today pays nothing; a wrong treatment pays nothing and 5 XP.
+  sql("USE chinalife_test; UPDATE chinalife_hospital_patients SET treated_at=DATE_SUB(NOW(),INTERVAL 1 HOUR) WHERE user_id=58");
+  const again=await hs(58,{action:'request',chart:{needs:{hunger:5}}});assert.equal(again.data.patient.problem,'hunger');
+  const [c1,x1]=bal(57);const wrong=await hs(57,{action:'treat',id:again.data.patient.id,treatment:'energy'});assert.equal(wrong.data.result.correct,false);assert.equal(wrong.data.result.paid,0);assert.deepEqual(bal(57),[c1,x1+5]);
+  // Staff can't be patients; ending the shift empties the staff count; waiting too long means the patient left.
+  assert.equal((await hs(57,{action:'request',chart:{}})).httpStatus,409);
+  await hs(57,{action:'shift_end'});assert.equal((await hs(58)).data.staffOn,0);
+  sql("USE chinalife_test; INSERT INTO chinalife_hospital_patients(user_id,chart,problem,created_at) VALUES(56,'{}','energy',DATE_SUB(NOW(),INTERVAL 11 MINUTE))");
+  await hs(56);assert.equal(sql("USE chinalife_test; SELECT status FROM chinalife_hospital_patients WHERE user_id=56").trim(),'left');
+ }finally{await flip(false)}
+});

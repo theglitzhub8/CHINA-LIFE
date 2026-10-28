@@ -58,3 +58,40 @@ function cl_pharmacy_stock(int $uid): array {
  $until=(int)($v['t']??0);$until=$until?$until+CL_VITAMIN_HOURS*3600:0;
  return ['stock'=>array_map(fn($n)=>max(0,$n),$stock),'vitaminsUntil'=>$until>time()?$until:0];
 }
+// Hospital Phase 3 (switch hospital_staff): what player doctors and nurses give for each problem on a patient's chart.
+// problem => [what the chart says, the right treatment]. The most urgent problem is food sickness, then drunk (60%+),
+// then the lowest need.
+const CL_HS_SHIFT_MIN=60, CL_HS_WAIT_MIN=10, CL_HS_PAY_DOCTOR=120, CL_HS_PAY_NURSE=80, CL_HS_XP=20, CL_HS_XP_WRONG=5,
+ CL_HS_PATIENT_XP=10, CL_HS_PAID_DAY=20, CL_HS_TEST_Q=8, CL_HS_TEST_PASS=7, CL_HS_AGAIN_MIN=20;
+function cl_hs_treatments(): array {return [
+ 'sick'=>['Food sickness','Stomach medicine 肠胃药'],'drunk'=>['Drunk','Rehydration salts 口服补液盐'],
+ 'energy'=>['Exhausted','Rest on the ward'],'hunger'=>['Hungry','A bowl of congee 粥'],
+ 'hygiene'=>['Needs a wash','A wash and clean clothes'],'bladder'=>['Needs the toilet','Show them to the toilet'],
+ 'fun'=>['Bored','TV and games in the lounge'],'social'=>['Lonely','Sit and talk with them'],
+];}
+// A chart from the client, cleaned: six needs 0–100, drunk 0–100, sick yes/no.
+function cl_hs_chart(mixed $c): array {
+ $c=is_array($c)?$c:[];$n=is_array($c['needs']??null)?$c['needs']:[];$out=['needs'=>[]];
+ foreach (['hunger','energy','hygiene','bladder','fun','social'] as $k) $out['needs'][$k]=max(0,min(100,(int)round((float)($n[$k]??100))));
+ $out['drunk']=max(0,min(100,(int)round((float)($c['drunk']??0))));$out['sick']=($c['sick']??false)===true;return $out;
+}
+function cl_hs_problem(array $chart): string {
+ if ($chart['sick']) return 'sick';if ($chart['drunk']>=60) return 'drunk';
+ $n=$chart['needs'];asort($n);return (string)array_key_first($n);
+}
+// Four treatments to choose from (the right one and three others), in a fixed order for this patient.
+function cl_hs_options(int $id, string $problem): array {
+ $t=cl_hs_treatments();$others=array_values(array_diff(array_keys($t),[$problem]));usort($others,fn($a,$b)=>crc32($id.$a)<=>crc32($id.$b));
+ $keys=[$problem,...array_slice($others,0,3)];usort($keys,fn($a,$b)=>crc32($id.':'.$a)<=>crc32($id.':'.$b));
+ return array_map(fn($k)=>[$k,$t[$k][1]],$keys);
+}
+// The Health worker test: 4 hospital Chinese questions (the check-up bank) and 4 "what do you give?" questions.
+function cl_hs_test(): array {
+ $qs=[];$answers=[];
+ foreach (array_slice(cl_checkup_paper(),0,4) as $q) {$qs[]=$q;$answers[]=null;}
+ $bank=[];foreach (cl_checkup_bank() as $b) $bank[$b[0]]=$b[3];foreach ($qs as $i=>$q) $answers[$i]=$bank[$q['id']];
+ $t=cl_hs_treatments();$keys=array_keys($t);shuffle($keys);
+ foreach (array_slice($keys,0,4) as $k) {$o=array_values(array_diff(array_keys($t),[$k]));shuffle($o);$opts=array_map(fn($x)=>$t[$x][1],[$k,...array_slice($o,0,3)]);shuffle($opts);
+  $qs[]=['id'=>'treat-'.$k,'prompt'=>'A patient’s chart says: '.$t[$k][0].'. What do you give?','pinyin'=>'','options'=>$opts];$answers[]=$t[$k][1];}
+ return [$qs,$answers];
+}
