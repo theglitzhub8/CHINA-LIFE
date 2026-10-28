@@ -19,7 +19,7 @@ document.addEventListener('click',e=>{const b=e.target.closest?.('[data-r4-go],#
 /* ---------- Intro tips: once per screen, dismissible, at most one a minute ---------- */
 const TIPS={phone:'Your apps, all on one page. Tap one to open it.',people:'See who’s around. Tap someone to say hi.',map:'Tap a place to travel there.',club:'Tap Party to dance, toast or order drinks.',voting:'Voting is paused. You can still read the ballot.',home:'Rest, cook and shower here to refill your needs.',street:'Walk around to meet other players.',
  // First-time explanations (docs/UI-UX-REVIEW.md task 5): shown once, the first time they matter.
- needs:'The bars under the top bar are your needs. When one runs low it says so. Tap them to see how to refill.',xp:'XP comes from classes, work and going out. It raises your rank: Phone → Goals → Rank.'};
+ needs:'The bars under the top bar are your needs. When one runs low it says so. Tap them to see how to refill.',xp:'XP comes from classes, work and going out. It raises your rank: Phone → Today → Rank.'};
 const KEY='chinalife-tips';const seen=()=>{try{return JSON.parse(localStorage.getItem(KEY))||[]}catch{return []}};let lastTip=0,tipEl=null,tipFor='';
 function where(){const st=G()?.state,ui=$('worldUI');if(!st?.created||!ui)return null;
  if($('phoneDialog')?.open)return 'phone';if($('socialDialog')?.open)return 'people';if(document.querySelector('dialog[open]'))return null;

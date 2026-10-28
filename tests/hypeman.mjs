@@ -46,7 +46,7 @@ test('one-city phone keeps the founder\'s apps; the rest is hidden, not deleted,
  for(const id of ['travel','guide','driving','home','homes','cantaball','story','politics','delivery','needs','celebrate','together','fortune','journal','cloud','meet','firstday','events','ai'])assert.equal(F.appOff(id),true,id+' hidden');
  c.dispatchEvent(new c.CustomEvent('chinalife:hafrik-features',{detail:{app_travel:true}}));assert.equal(F.appOff('travel'),false,'appadmin switch brings it back');
  const classic=flags({oneCity:false}).ChinaLifeFlags;assert.equal(classic.appOff('travel'),false);assert.equal(classic.appOff('court'),true,'classic keeps the R1 list');
- const g=r('public/game.js');for(const n of ['Where to?','Link Up','Football','Gossip','Wallet','Hafrik','Goals','Work','Learning','Weekly','Court','Store','Settings','Admin'])assert.ok(g.includes("'"+n+"'"),n);
+ const g=r('public/game.js');for(const n of ['Where to?','Link Up','Football','Gossip','Wallet','Hafrik','Today','Work','Study','Court','Store','Settings','Admin'])assert.ok(g.includes("'"+n+"'"),n);
  assert.match(g,/const fallback=window\.ChinaLifeOneCity\?\.active\?\.\(\)\?'assets\/phone\/hafrik-wallpaper\.svg'/);const svg=r('public/assets/phone/hafrik-wallpaper.svg');for(const col of ['#F7FFF7','#121212','#1F8E93','#0C3F44'])assert.ok(svg.includes(col),col);
  for(const f of ['soccer_ball_3d.png','fire_3d.png','globe_showing_europe-africa_3d.png','bullseye_3d.png','spiral_calendar_3d.png'])assert.ok(fs.existsSync('public/assets/phone/'+f),f)});
 test('Work routes by background: students get side jobs, others work or their own business',()=>{const g=r('public/game.js'),w=g.slice(g.indexOf('function workApp(){'),g.indexOf('function hotSeatApp(){'));

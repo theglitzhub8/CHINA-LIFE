@@ -125,6 +125,11 @@ Each task is small, keeps the approved map look, and can ship behind no switch (
    to play page. Not done: merging the 13 teal shades and 5 font families. That touches every screen and is better
    done with a design system, so it's left as a follow-up.
 7. **Study app and one "Today" list (C6, D3).** One place for school; one to-do list for new players.
+   ✅ Done 29 Oct (one-city phone, 12 tiles instead of 13): a "Today" folder holds every to-do list (Daily tasks,
+   Goals, Weekly activities, Rank; the Goals and Weekly folders are merged into it); a "Study" folder holds University
+   (only for students while University Years is on), Chinese, Skills & certificates and Learning Hub; the app called
+   "Classes"/"Learn" is "Skills & certificates" on its icon and its screen, and no longer says "Shenyang". Left as
+   is: the gossip features already share the Gossip folder, and "gist" stays (players use the word).
 8. **Phone widgets (D1).**
 
 Then the next location work, using the same rules for any new screens.

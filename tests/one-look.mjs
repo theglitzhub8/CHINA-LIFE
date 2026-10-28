@@ -27,3 +27,21 @@ test('the help sheet describes today\'s game',()=>{
  const html=r('index.dev.html'),help=html.match(/<dialog id="helpDialog">([^]*?)<\/dialog>/)[1];
  assert.doesNotMatch(help,/single-player|personality → dream/);assert.match(help,/Where to\?/);assert.match(help,/Link Up/);assert.match(help,/hafrik\.com\/how-to-play/);
 });
+
+// UI review task 7: one Study folder (University for students while it is on, Chinese, Skills & certificates, Learning
+// Hub) and one Today folder for every to-do list (tasks, goals, weekly activities, rank).
+test('phone: one Today folder for to-do lists and one Study folder with matching names',()=>{
+ const g=r('game.js');
+ assert.match(g,/\['today','Today','bullseye_3d\.png',\['tasks','goals','community','rank'\]\]/);
+ assert.match(g,/\['study','Study','graduation_cap_3d\.png',\['university','chinese','skills','academy'\]\]/);
+ assert.doesNotMatch(g,/\['weekly','Weekly'/);assert.doesNotMatch(g,/\['learning','Learning'/);
+ assert.match(g,/k!=='university'\|\|state\.background==='Student'&&window\.ChinaLifeFlags\?\.cast\?\.\('uni_years'\)===true/);
+ assert.match(g,/skills:\['📚','Skills & certificates',skillsScreen\]/);assert.match(g,/screen\('Skills & certificates','Take courses and practise at places across the city/);
+ assert.match(r('r4.js'),/Phone → Today → Rank/);
+});
+
+test('the University app exists only for students while University Years is on',async()=>{
+ const {harness,fixture}=await import('./game-harness.mjs');
+ const apps=(flag,background)=>{const t=harness({...fixture(),background});t.context.ChinaLifeFlags={cast:k=>k==='uni_years'&&flag,appOff:()=>false};t.game.phone();return [...t.document.querySelectorAll('[data-phone]')].map(b=>b.dataset.phone)};
+ assert.ok(!apps(false,'Student').includes('university'),'switch off');assert.ok(!apps(true,'Worker').includes('university'),'not a student');assert.ok(apps(true,'Student').includes('university'));
+});
