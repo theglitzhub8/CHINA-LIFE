@@ -356,6 +356,7 @@ function cl_rank_status(int $userId): array {
 }
 
 require_once __DIR__.'/hafrik-features.php';
+require_once __DIR__.'/gossip-settings.php';
 require_once __DIR__.'/gossip-city-lib.php';
 
 // Record winners of finished elections once (ties go to the earliest candidate). Safe to call often:

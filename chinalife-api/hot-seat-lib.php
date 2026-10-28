@@ -14,7 +14,7 @@ const HS_HIDE_REPORTS=3;      // reports that hide a gist until an admin looks
 const HS_PLACES=['gist'];
 // Hot Seat Hour (docs/GOSSIP-ROOM-PLAN.md Phase 1, switch gossip_show): a nightly show on Beijing time. During it a
 // busy seat queues the next gists; they go live one after another. Queued gists left when the show ends are dropped.
-const HS_SHOW_START=20, HS_SHOW_END=22, HS_QUEUE_MAX=10;
+const HS_SHOW_START=20, HS_SHOW_END=22, HS_QUEUE_MAX=10; // defaults; hot-seat.php reads the admin's values (gossip-settings.php)
 // Beijing hour, pinned on local test stacks (CHINALIFE_TEST_SOCKET) by an "X-Test-Today: Y-m-d H:i" header.
 function hs_beijing_hour(): int {
     $t=$_SERVER['HTTP_X_TEST_TODAY']??'';

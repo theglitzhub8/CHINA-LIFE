@@ -84,6 +84,16 @@ players' profiles, because a rep jump right after a True round would reveal who 
 **Phase 6 · Admin and safety.** A Gossip tab in appadmin: Hot Seat Hour times, rewards, daily caps, the word list,
 and one moderation queue for reports from the wall and Hot Seat (hide, restore, warn). Anonymous stays anonymous to
 players; admins can see who posted a reported item.
+✅ Done 29 Oct (appadmin 🫖 Gossip Room tab; `chinalife-api/gossip-settings.php`, admin.php `gossip_*`): Hot Seat Hour
+start and end, queue size, the three Truth teller prizes, City buzz per hour, and extra blocked words (Hot Seat, wall
+tips and replies, on top of the built-in list; the built-in list also applies to wall tips while the better wall is
+on). Players can report a wall tip (⚑, with the better wall on; 3 reports hide it, like Hot Seat). One queue lists
+reported or hidden Hot Seat gists and wall tips with their author, with Hide / Restore / Delete. Not built: per-item
+Hot Seat reward amounts (the client and server share them, tests/hot-seat.mjs) and "warn a player". Needs
+`migrate.php` (the reports table and the wall's hidden/reports columns).
+
+**All seven phases are done** (0–6), each behind its own switch: gossip_room, gossip_show, gossip_wall, gossip_city,
+gossip_rep (Phase 6 has no switch; its admin tab is always there and its reports follow gossip_wall).
 
 ## Owner's decisions (29 Oct 2026)
 

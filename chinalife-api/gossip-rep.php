@@ -10,5 +10,5 @@ if (!cl_gist_rep_on()) json_response('success',['on'=>false]);
 cl_gist_award_due();
 $last=json_decode((string)(cl_one("SELECT value FROM chinalife_settings WHERE name='gossip_award'")['value']??'{}'),true)?:[];
 $place=array_search((string)$uid,$last['winners']??[],true);
-json_response('success',['on'=>true,'week'=>cl_gist_rep($uid,cl_gist_week(0)),'total'=>cl_gist_rep($uid),'prizes'=>CL_GIST_PRIZES,
-    'last_week'=>$place===false?null:['place'=>$place+1,'prize'=>CL_GIST_PRIZES[$place]]]);
+json_response('success',['on'=>true,'week'=>cl_gist_rep($uid,cl_gist_week(0)),'total'=>cl_gist_rep($uid),'prizes'=>cl_gist_prizes(),
+    'last_week'=>$place===false?null:['place'=>$place+1,'prize'=>cl_gist_prizes()[$place]]]);

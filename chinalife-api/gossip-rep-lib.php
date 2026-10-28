@@ -5,10 +5,12 @@ declare(strict_types=1);
 //   Hot Seat: a gist the room called True +10, Cap -5 (rounds with HS_MIN_VOTES votes or more, as for coins);
 //   Gossip wall: +1 for every 5 reactions on your anonymous tips, at most +5 a tip.
 // Rep is only ever shown to its owner (it would hint at who wrote which gist). Each Monday (Beijing) the top three of
-// last week get a 🏆 badge and CL_GIST_PRIZES, paid once on the server ledger; the week is recorded in
+// last week get a 🏆 badge and cl_gist_prizes(), paid once on the server ledger; the week is recorded in
 // chinalife_settings 'gossip_award' so it is never paid twice.
 require_once __DIR__.'/hot-seat-lib.php';
-const CL_GIST_PRIZES=[1000,500,250];
+require_once __DIR__.'/gossip-settings.php';
+// Prizes for 1st, 2nd and 3rd (appadmin Gossip tab; default ¥1,000 / ¥500 / ¥250).
+function cl_gist_prizes(): array {return cl_gossip_settings()['prizes'];}
 function cl_gist_rep_on(): bool {return (bool)(cl_hafrik_features()['gossip_rep']??false);}
 // Beijing Monday 00:00 of this week (0) or an earlier one (-1 = last week), as a Unix time (so the database's own
 // time zone never matters: rows are compared with UNIX_TIMESTAMP(created_at)).
@@ -43,7 +45,7 @@ function cl_gist_award_due(): array {
         $label=(new DateTimeImmutable('@'.$from))->setTimezone(new DateTimeZone('Asia/Shanghai'))->format('j M');
         foreach ($winners as $i=>$id) {
             if (!cl_one('SELECT user_id FROM chinalife_saves WHERE user_id=?','i',[$id])) continue;
-            cl_credit($id,CL_GIST_PRIZES[$i]);
+            if (cl_gist_prizes()[$i]>0) cl_credit($id,cl_gist_prizes()[$i]);
             if ((int)cl_one('SELECT COUNT(*) n FROM chinalife_badges WHERE user_id=?','i',[$id])['n']<30)
                 cl_run('INSERT INTO chinalife_badges(user_id,icon,name,awarded_by,created_at) VALUES(?,?,?,0,NOW())','iss',[$id,['🥇','🥈','🥉'][$i],'Truth teller · week of '.$label]);
         }

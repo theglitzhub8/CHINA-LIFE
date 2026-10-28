@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__.'/common.php';
 require_once __DIR__.'/hot-seat-lib.php';
+require_once __DIR__.'/gossip-settings.php';
 cl_methods(['GET','POST']);
 // Gossip wall Phase 2 (docs/GOSSIP-ROOM-PLAN.md, appadmin switch gossip_wall): more reactions, anonymous replies,
 // "Gist of the day" (today's most-reacted tip, at least 3 reactions) and place tags written in the post (#club …).
@@ -16,7 +17,10 @@ function gist_handle(int $userId, string $city): string {
 function gist_night_feed(string $city): array {
     global $uid;
     $admin=cl_is_admin();
-    $posts=cl_rows('SELECT id,user_id,body,official,UNIX_TIMESTAMP(created_at)*1000 at FROM chinalife_gist_night WHERE city=? ORDER BY id DESC LIMIT 40','s',[$city]);
+    // With the better wall on (Phase 6), tips hidden by reports or an admin leave the feed; admins still see them, marked.
+    $posts=gist_wall_on()
+        ?cl_rows('SELECT id,user_id,body,official,hidden,UNIX_TIMESTAMP(created_at)*1000 at FROM chinalife_gist_night WHERE city=? AND (hidden=0 OR ?=1) ORDER BY id DESC LIMIT 40','si',[$city,$admin?1:0])
+        :cl_rows('SELECT id,user_id,body,official,UNIX_TIMESTAMP(created_at)*1000 at FROM chinalife_gist_night WHERE city=? ORDER BY id DESC LIMIT 40','s',[$city]);
     if (!$posts) return gist_legacy_posts($city,$admin);
     $ids=array_map(fn($p)=>(int)$p['id'],$posts);
     $in=implode(',',array_fill(0,count($ids),'?'));
@@ -53,7 +57,7 @@ function gist_night_feed(string $city): array {
         foreach (gist_kinds() as $kind) $item['reactions'][$kind]=(int)($item['reactions'][$kind]??0);
         if (gist_wall_on()) {$item['place']=gist_place((string)$post['body']);$item['replies']=$replies[$post['id']]??[];$item['reply_count']=(int)($replyCounts[$post['id']]??0);}
         // Players only ever see 'Anonymous tip'. Admins can still trace the author.
-        if ($admin) {$item['user_id']=(string)$post['user_id'];$item['handle']=gist_handle((int)$post['user_id'],$city);}
+        if ($admin) {$item['user_id']=(string)$post['user_id'];if (!empty($post['hidden'])) $item['hidden']=true;$item['handle']=gist_handle((int)$post['user_id'],$city);}
         if (isset($polls[$post['id']])) {
             $poll=$polls[$post['id']];$options=json_decode((string)$poll['options'],true)?:[];
             $item['poll']=['id'=>(string)$poll['id'],'question'=>$poll['question'],'voted'=>array_key_exists($poll['id'],$voted)?$voted[$poll['id']]:null,'options'=>[]];
@@ -100,6 +104,8 @@ if ($action==='post') {
     cl_rate('gist_night',6,3600);
     $body=trim((string)($input['body']??''));
     if ($body===''||mb_strlen($body)>280) cl_fail('Write a short gossip');
+    // The admin's extra blocked words (appadmin Gossip tab); with the better wall on, also the built-in swear list.
+    if (cl_gossip_blocked($body)||(gist_wall_on()&&hs_profane($body))) cl_fail('Keep it friendly: no swearing or insults',422);
     $poll=$input['poll']??null;$clean=null;$question='';
     if ($poll!==null) {
         if (!is_array($poll)) cl_fail('Check the poll');
@@ -138,12 +144,24 @@ if ($action==='reply') {
     $id=(int)($input['id']??0);$text=trim(preg_replace('/\s+/u',' ',(string)($input['body']??'')));
     if (!$id) cl_fail('Choose a tip to reply to');
     if (mb_strlen($text)<2||mb_strlen($text)>140) cl_fail('Replies are 2 to 140 characters',422);
-    if (hs_profane($text)) cl_fail('Keep it friendly: no swearing or insults',422);
+    if (hs_profane($text)||cl_gossip_blocked($text)) cl_fail('Keep it friendly: no swearing or insults',422);
     if (hs_personal($text)) cl_fail('No names, links, @handles or phone numbers',422);
     $post=cl_one('SELECT id,city FROM chinalife_gist_night WHERE id=?','i',[$id]);
     if (!$post||$post['city']!==$city) cl_fail('That gossip is gone',404);
     cl_run('INSERT INTO chinalife_gist_night_replies(post_id,user_id,body,created_at) VALUES(?,?,?,NOW())','iis',[$id,$uid,$text]);
     json_response('success',['posts'=>gist_night_feed($city)],'Reply posted anonymously.');
+}
+if ($action==='report') {
+    // Phase 6 (with the better wall on): one report per player per tip; 3 hide it until an admin looks (appadmin Gossip tab).
+    if (!gist_wall_on()) cl_fail('Reports are switched off',403);
+    cl_rate('gist_night_report',10,3600);
+    $id=(int)($input['id']??0);$post=cl_one('SELECT id,city,official FROM chinalife_gist_night WHERE id=?','i',[$id]);
+    if (!$post||$post['city']!==$city) cl_fail('That gossip is gone',404);if ((int)$post['official']===1) cl_fail('Hafrik posts cannot be reported');
+    $reason=mb_substr(trim((string)($input['reason']??'player')),0,40)?:'player';
+    cl_run('INSERT IGNORE INTO chinalife_gist_night_reports(post_id,user_id,reason,created_at) VALUES(?,?,?,NOW())','iis',[$id,$uid,$reason]);
+    $n=(int)cl_one('SELECT COUNT(*) n FROM chinalife_gist_night_reports WHERE post_id=?','i',[$id])['n'];
+    cl_run('UPDATE chinalife_gist_night SET reports=?,hidden=IF(?>=3,1,hidden) WHERE id=?','iii',[$n,$n,$id]);
+    json_response('success',['posts'=>gist_night_feed($city)],'Thanks. The ChinaLife team will look at it.');
 }
 if ($action==='vote') {
     cl_rate('gist_night_tap',30,60);

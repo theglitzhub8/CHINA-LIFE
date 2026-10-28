@@ -176,3 +176,12 @@ test('your gist rep card: this week, all time, how it is earned, and last week\'
  assert.equal(c.ChinaLifeGossipRoom.rep.total,40);
  assert.match(r('public/profile-v6.js'),/own&&Number\.isFinite\(window\.ChinaLifeGossipRoom\?\.rep\?\.total\)\?stat\(window\.ChinaLifeGossipRoom\.rep\.total,'Gist rep'\)/);
 });
+
+// Phase 6: players can report a tip (not their own, not Hafrik's) after a confirm; the admin app has a Gossip tab.
+test('wall tips have a Report button (not on your own or Hafrik posts) that confirms before sending; admin Gossip tab',async()=>{
+ const {t,c,sent}=wall(true,[...tips.slice(0,2),{...tips[2],own:true}]);c.ChinaLifeSheet={confirm:async()=>true};
+ await t.game.gistNight();await tick();const d=t.document;
+ const btns=[...d.querySelectorAll('[data-gw-report]')].map(b=>b.dataset.gwReport);assert.deepEqual(btns,['2'],'only on other players\' tips');
+ await d.querySelector('[data-gw-report]').onclick();await tick();assert.equal(sent.at(-1).action,'report');assert.equal(sent.at(-1).id,2);
+ const admin=r('public/admin.js');assert.match(admin,/\['gossip','🫖','Gossip Room',/);assert.match(admin,/admin\('gossip_queue'\)/);assert.match(admin,/admin\('gossip_moderate',\{id:Number\(id\),op:mod\}\)/);
+});

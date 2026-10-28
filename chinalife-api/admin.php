@@ -101,6 +101,39 @@ if ($action==='set_hot_seat') {
     cl_run("UPDATE chinalife_settings SET value=?,updated_at=NOW() WHERE name='hot_seat'",'s',[json_encode(['enabled'=>$on])]);
     admin_log('set_hot_seat',null,null,$on?'on':'off');$db->commit();json_response('success',['enabled'=>$on]);
 }
+// Gossip Room Phase 6 (appadmin Gossip tab): settings over the defaults (gossip-settings.php) and one moderation queue
+// for reported Hot Seat gists and wall tips. Admins see who posted; players never do.
+if ($action==='gossip_settings') {
+    require_once __DIR__.'/gossip-settings.php';
+    json_response('success',['settings'=>cl_gossip_settings(),'defaults'=>cl_gossip_defaults(),
+        'switches'=>array_intersect_key(cl_hafrik_features(),array_flip(['gossip_room','gossip_show','gossip_wall','gossip_city','gossip_rep']))]);
+}
+if ($action==='set_gossip_settings') {
+    require_once __DIR__.'/gossip-settings.php';
+    $s=cl_gossip_valid(is_array($input['settings']??null)?$input['settings']:[],$error);if (!$s) cl_fail($error??'Check the settings');
+    $d=cl_gossip_defaults();$changed=array_filter($s,fn($v,$k)=>$v!==$d[$k],ARRAY_FILTER_USE_BOTH);$before=cl_gossip_settings();
+    cl_run("INSERT INTO chinalife_settings(name,value,updated_at) VALUES('gossip',?,NOW()) ON DUPLICATE KEY UPDATE value=VALUES(value),updated_at=NOW()",'s',[json_encode((object)$changed,JSON_UNESCAPED_UNICODE)]);
+    admin_log('set_gossip_settings',null,null,implode(' · ',array_map(fn($k)=>$k.': '.json_encode($before[$k],JSON_UNESCAPED_UNICODE).' → '.json_encode($s[$k],JSON_UNESCAPED_UNICODE),array_keys(array_filter($s,fn($v,$k)=>$v!==$before[$k],ARRAY_FILTER_USE_BOTH))))?:'No changes');
+    json_response('success',['settings'=>$s]);
+}
+if ($action==='gossip_queue') {
+    $hs=cl_optional_rows("SELECT h.id,h.user_id,u.user_name,h.body,h.status,h.reports,h.created_at FROM chinalife_hot_seat h LEFT JOIN users u ON u.user_id=h.user_id WHERE h.reports>0 OR h.status='hidden' ORDER BY h.id DESC LIMIT 50");
+    $wall=cl_optional_rows("SELECT g.id,g.user_id,u.user_name,g.body,g.hidden,g.reports,g.created_at FROM chinalife_gist_night g LEFT JOIN users u ON u.user_id=g.user_id WHERE g.reports>0 OR g.hidden=1 ORDER BY g.id DESC LIMIT 50");
+    $items=[];
+    foreach ($hs as $r) $items[]=['kind'=>'hotseat','id'=>(string)$r['id'],'author'=>$r['user_name'],'author_id'=>(string)$r['user_id'],'body'=>$r['body'],'hidden'=>$r['status']==='hidden','reports'=>(int)$r['reports'],'at'=>$r['created_at']];
+    foreach ($wall as $r) $items[]=['kind'=>'wall','id'=>(string)$r['id'],'author'=>$r['user_name'],'author_id'=>(string)$r['user_id'],'body'=>$r['body'],'hidden'=>(int)$r['hidden']===1,'reports'=>(int)$r['reports'],'at'=>$r['created_at']];
+    usort($items,fn($a,$b)=>strcmp($b['at'],$a['at']));
+    json_response('success',['items'=>$items]);
+}
+if ($action==='gossip_moderate') {
+    $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);$op=$input['op']??'';
+    if (!$id||!in_array($op,['hide','restore','delete'],true)) cl_fail('Choose a tip and hide, restore or delete');
+    $row=cl_one('SELECT body FROM chinalife_gist_night WHERE id=?','i',[$id]);if (!$row) cl_fail('That tip is gone',404);
+    if ($op==='delete') cl_run('DELETE FROM chinalife_gist_night WHERE id=?','i',[$id]);
+    elseif ($op==='hide') cl_run('UPDATE chinalife_gist_night SET hidden=1 WHERE id=?','i',[$id]);
+    else {cl_run('UPDATE chinalife_gist_night SET hidden=0,reports=0 WHERE id=?','i',[$id]);cl_run('DELETE FROM chinalife_gist_night_reports WHERE post_id=?','i',[$id]);}
+    admin_log('gossip_wall_'.$op,$id,null,mb_substr($row['body'],0,120));json_response('success',['id'=>(string)$id,'op'=>$op]);
+}
 if ($action==='hot_seat_moderate') {
     $id=filter_var($input['id']??null,FILTER_VALIDATE_INT);$op=$input['op']??'';
     if (!$id||!in_array($op,['hide','unhide','delete'],true)) cl_fail('Choose a gist and hide, unhide or delete');

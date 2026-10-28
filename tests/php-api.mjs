@@ -1370,7 +1370,7 @@ test('City buzz: a real rank-up posts anonymous city news only with the switch, 
 
 test('City buzz stays off by default and posts at most 4 of a kind per city per hour',async()=>{
  const lib=fs.readFileSync('chinalife-api/gossip-city-lib.php','utf8');
- assert.match(lib,/const CL_CITY_GOSSIP_HOURLY=4;/);assert.match(lib,/if \(\$recent>=CL_CITY_GOSSIP_HOURLY\) return false;/);
+ assert.match(lib,/const CL_CITY_GOSSIP_HOURLY=4;/);assert.match(lib,/\$cap=function_exists\('cl_gossip_settings'\)\?cl_gossip_settings\(\)\['buzz_hourly'\]:CL_CITY_GOSSIP_HOURLY;if \(\$recent>=\$cap\) return false;/);
  assert.match(lib,/cl_hafrik_features\(\)\['gossip_city'\]\?\?false/);
  for(const [f,k] of [['common.php','rank'],['university.php','grad'],['football.php','football'],['hot-seat.php','hotseat']])assert.match(fs.readFileSync('chinalife-api/'+f,'utf8'),new RegExp("cl_city_gossip\\([^;]*'"+k+"','Someone|cl_city_gossip\\([^;]*'"+k+"','Full time"),f);
 });
@@ -1395,4 +1395,33 @@ test('gist rep and the weekly Truth teller award: top three of last week paid on
   await call(46,'gossip-rep.php');assert.equal(money(46)-before[46],500,'paid once a week');
   assert.ok(!('gist_rep' in (await call(46,'profile.php?id=45')).data.profile),'never shown on other players\' profiles');
  }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{gossip_rep:false}});sql('USE chinalife_test; DELETE FROM chinalife_hot_seat WHERE user_id IN (45,46,47); DELETE FROM chinalife_gist_night WHERE user_id=48')}
+});
+
+// Gossip Room Phase 6: admin settings (Hot Seat Hour, queue, prizes, City buzz, blocked words), wall reports and one
+// moderation queue. Admins see who posted; three reports hide a wall tip.
+test('Gossip admin: settings checked and applied, extra blocked words, wall reports hide a tip, one moderation queue',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(49,'user49'),(50,'user50'),(51,'user51'),(52,'user52'); DELETE FROM chinalife_rate_limits WHERE user_id=1");
+ const set=settings=>call(1,'admin.php','POST',{action:'set_gossip_settings',settings});
+ assert.equal((await call(2,'admin.php','POST',{action:'gossip_settings'})).httpStatus,403);
+ const d=(await call(1,'admin.php','POST',{action:'gossip_settings'})).data;assert.deepEqual(d.settings,{show_start:20,show_end:22,queue_max:10,prizes:[1000,500,250],buzz_hourly:4,words:[]});
+ try{
+  for(const bad of [{show_start:22,show_end:20},{queue_max:0},{prizes:[1,2]},{words:['x']},{buzz_hourly:99}])assert.equal((await set(bad)).httpStatus,400,JSON.stringify(bad));
+  assert.equal((await set({show_start:18,show_end:19,prizes:[2000,800,300],words:['Jollofgate']})).httpStatus,200);
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{gossip_show:true,gossip_wall:true}});await call(1,'admin.php','POST',{action:'set_hot_seat',enabled:true});
+  assert.equal((await call(49,'hot-seat.php?city=China&place=gist')).data.show.start,'18:00');
+  assert.equal((await call(49,'gist-night.php','POST',{city:'China',action:'post',body:'Big jollofgate news at the club'})).httpStatus,422,'admin word blocked on the wall');
+  // Three players report a tip: it leaves the feed, and the queue shows it with its author.
+  const post=await call(49,'gist-night.php','POST',{city:'China',action:'post',body:'A tip that people will report'});const id=+post.data.id;
+  for(const u of [50,51])assert.equal((await call(u,'gist-night.php','POST',{city:'China',action:'report',id})).httpStatus,200);
+  assert.ok((await call(52,'gist-night.php?city=China')).data.posts.some(p=>+p.id===id),'two reports: still there');
+  assert.equal((await call(52,'gist-night.php','POST',{city:'China',action:'report',id})).httpStatus,200);
+  assert.ok(!(await call(50,'gist-night.php?city=China')).data.posts.some(p=>+p.id===id),'three reports: hidden from players');
+  assert.ok((await call(1,'gist-night.php?city=China')).data.posts.find(p=>+p.id===id).hidden,'admins still see it, marked');
+  const q=(await call(1,'admin.php','POST',{action:'gossip_queue'})).data.items.find(i=>i.kind==='wall'&&+i.id===id);
+  assert.equal(q.author,'user49');assert.equal(q.reports,3);assert.equal(q.hidden,true);
+  assert.equal((await call(1,'admin.php','POST',{action:'gossip_moderate',id,op:'restore'})).httpStatus,200);
+  assert.ok((await call(50,'gist-night.php?city=China')).data.posts.some(p=>+p.id===id),'restored');
+  assert.equal((await call(1,'admin.php','POST',{action:'gossip_moderate',id,op:'delete'})).httpStatus,200);
+  assert.equal((await call(1,'admin.php','POST',{action:'gossip_moderate',id,op:'hide'})).httpStatus,404);
+ }finally{await set(d.defaults);await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{gossip_show:false,gossip_wall:false}});sql('USE chinalife_test; DELETE FROM chinalife_gist_night WHERE user_id=49')}
 });

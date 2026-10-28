@@ -14,13 +14,17 @@ function decorate(feed,posts,send){if(!on()||!feed)return;const cards=[...feed.q
   const row=card.querySelector('.gossip-reacts');if(row)row.outerHTML='<footer class="gossip-reacts gw-reacts">'+KINDS.map(([k,e])=>'<button type="button" data-gw-react="'+esc(p.id)+'" data-kind="'+k+'" class="'+(p.mine===k?'mine':'')+'" aria-label="'+k+'">'+e+' <span>'+(p.reactions?.[k]||0)+'</span></button>').join('')+'</footer>';
   const n=p.reply_count||0,list=(p.replies||[]).map(r=>'<li><b>'+(r.op?'Tipster':r.own?'You':'Anonymous')+'</b> '+esc(r.body)+'</li>').join('');
   card.insertAdjacentHTML('beforeend','<div class="gw-replies"><button type="button" class="gw-open" data-gw-open>💬 '+(n?n+' repl'+(n===1?'y':'ies'):'Reply')+'</button>'+(list?'<ul>'+(n>3?'<li class="gw-more">'+(n-3)+' earlier</li>':'')+list+'</ul>':'')+
-   '<form class="gw-form" data-gw-form="'+esc(p.id)+'" hidden><input maxlength="140" placeholder="Reply anonymously…" aria-label="Your reply"><button>Send</button></form></div>')});
+   '<form class="gw-form" data-gw-form="'+esc(p.id)+'" hidden><input maxlength="140" placeholder="Reply anonymously…" aria-label="Your reply"><button>Send</button></form>'+
+   // Phase 6: anyone can report a tip that isn't theirs; 3 reports hide it until the ChinaLife team looks.
+   (p.official||p.own?'':'<button type="button" class="gw-report" data-gw-report="'+esc(p.id)+'">⚑ Report</button>')+'</div>')});
  // Today's top tip goes first, under any pinned Hafrik posts.
  const top=feed.querySelector('.gw-top');if(top){const pinned=[...feed.querySelectorAll('article.gossip-card.official')].pop();pinned?pinned.after(top):feed.prepend(top)}
  feed.querySelectorAll('[data-gw-react]').forEach(b=>b.onclick=()=>send({action:'react',id:+b.dataset.gwReact,kind:b.dataset.kind}));
  feed.querySelectorAll('[data-gw-open]').forEach(b=>b.onclick=()=>{const f=b.parentElement.querySelector('form');f.hidden=!f.hidden;if(!f.hidden)f.querySelector('input').focus()});
  feed.querySelectorAll('[data-gw-form]').forEach(f=>f.onsubmit=e=>{e.preventDefault();const t=f.querySelector('input').value.trim();if(t.length<2)return;f.querySelector('button').disabled=true;
   send({action:'reply',id:+f.dataset.gwForm,body:t}).catch(()=>{}).finally(()=>{if(f.isConnected)f.querySelector('button').disabled=false})});
+ feed.querySelectorAll('[data-gw-report]').forEach(b=>b.onclick=async()=>{const ok=window.ChinaLifeSheet?await window.ChinaLifeSheet.confirm({title:'Report this tip?',message:'The ChinaLife team will review it. Three reports hide it.',ok:'Report',destructive:true}):confirm('Report this tip?');
+  if(ok)send({action:'report',id:+b.dataset.gwReport,reason:'player'}).catch(()=>{})});
  chips(feed)}
 // Place chips above the feed: All, or one place (from the #tag in each tip).
 function chips(feed){let bar=feed.parentElement?.querySelector('.gw-chips');
@@ -33,5 +37,5 @@ window.ChinaLifeGossipWall={on,decorate,KINDS,PLACES};
 const css=document.createElement('style');css.textContent='.gw-chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px}.gw-chips button{flex:none;min-height:40px;padding:0 12px;border-radius:18px;border:1px solid #d6ebe5;background:#fff;font-weight:600}.gw-chips button.on{background:#0C3F44;color:#fff;border-color:#0C3F44}'+
  '.gw-place{font-size:12px;font-weight:700;color:#1F8E93}.gw-crown{font-size:12px;font-weight:800;color:#b07a00;background:#fff4c2;padding:2px 8px;border-radius:10px}.gossip-card.gw-top{box-shadow:0 0 0 2px #f2c14e}'+
  '.gw-reacts{flex-wrap:wrap}.gw-replies{margin-top:8px}.gw-replies ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:4px}.gw-replies li{font-size:13px;padding:6px 10px;border-radius:12px;background:rgba(12,63,68,.06)}.gw-replies li b{margin-right:4px}.gw-more{opacity:.7}'+
- '.gw-open{min-height:36px;border:0;background:none;color:#1F8E93;font-weight:700;padding:0}.gw-form{display:flex;gap:6px;margin-top:6px}.gw-form input{flex:1;min-height:40px;border-radius:12px;border:1px solid #cfe3dd;padding:0 10px}.gw-form button{min-height:40px;padding:0 14px;border:0;border-radius:12px;background:#1F8E93;color:#fff;font-weight:700}.gw-hint{display:block;font-size:12px;opacity:.75;margin-top:4px}';document.head?.append(css);
+ '.gw-open{min-height:36px;border:0;background:none;color:#1F8E93;font-weight:700;padding:0}.gw-form{display:flex;gap:6px;margin-top:6px}.gw-form input{flex:1;min-height:40px;border-radius:12px;border:1px solid #cfe3dd;padding:0 10px}.gw-form button{min-height:40px;padding:0 14px;border:0;border-radius:12px;background:#1F8E93;color:#fff;font-weight:700}.gw-hint{display:block;font-size:12px;opacity:.75;margin-top:4px}.gw-report{min-height:36px;margin-left:8px;border:0;background:none;color:#8a5a5a;font-size:13px;font-weight:600}';document.head?.append(css);
 })();
