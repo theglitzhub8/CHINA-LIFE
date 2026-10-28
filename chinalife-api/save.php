@@ -2,6 +2,8 @@
 declare(strict_types=1);
 require_once __DIR__.'/common.php';
 cl_methods(['GET','POST','PUT','DELETE']);
+// Hafrik profile gender (users.user_gender: 1 male, 2 female, 3 other), read-only. Null when not male/female.
+function cl_profile_gender(int $id): ?string {$r=cl_one('SELECT user_gender FROM users WHERE user_id=?','i',[$id]);$g=(string)($r['user_gender']??'');return $g==='1'?'male':($g==='2'?'female':null);}
 function cl_save_result(int $id): array {
     $row=cl_one('SELECT character_data,game_state,revision,created_at,updated_at FROM chinalife_saves WHERE user_id=?','i',[$id]);
     if (!$row) return ['exists'=>false,'save'=>null,'revision'=>0];
@@ -16,7 +18,7 @@ if ($method==='GET') {
         $url=function_exists('fix_url')?fix_url($picture):(preg_match('~^https?://~i',$picture)?$picture:'https://s3.ap-northeast-1.wasabisys.com/hafriksocial/uploads/'.preg_replace('~^uploads/~','',ltrim($picture,'/')));
         if(is_string($url)&&filter_var($url,FILTER_VALIDATE_URL)&&strtolower(parse_url($url,PHP_URL_SCHEME)??'')==='https'&&!parse_url($url,PHP_URL_USER)&&!parse_url($url,PHP_URL_PASS))$avatar=$url;
     }
-    json_response('success',cl_save_result($uid)+['account'=>['id'=>(string)$uid,'username'=>$auth['user_name']??'Hafrik user','avatar'=>$avatar]]);
+    json_response('success',cl_save_result($uid)+['account'=>['id'=>(string)$uid,'username'=>$auth['user_name']??'Hafrik user','avatar'=>$avatar,'gender'=>cl_profile_gender($uid)]]);
 }
 if ($method==='DELETE') {
     cl_run('DELETE FROM chinalife_economy_actions WHERE user_id=?','i',[$uid]);
@@ -33,6 +35,8 @@ if ($username===''||mb_strlen($username)>64) cl_fail('Your Hafrik account needs 
 $game['name']=$username;$character['name']=$username;
 cl_room($game);
 if(!in_array($game['gender']??null,[null,'male','female'],true))cl_fail('Choose a valid gender');
+// A save without a game gender takes the Hafrik profile gender, so a male account always gets a male character.
+if(($game['gender']??null)===null){$pg=cl_profile_gender($uid);if($pg!==null)$game['gender']=$pg;}
 foreach (['money','xp','day','hour'] as $key) if (!is_numeric($game[$key]??null)||!is_finite((float)$game[$key])) cl_fail('Invalid character save');
 foreach (['energy','hunger','hygiene','bladder','fun','social'] as $key) if (!is_numeric($game['needs'][$key]??null)||$game['needs'][$key]<0||$game['needs'][$key]>100) cl_fail('Invalid character needs');
 $stored=cl_one('SELECT game_state,TIMESTAMPDIFF(SECOND,updated_at,NOW()) elapsed FROM chinalife_saves WHERE user_id=?','i',[$uid]);
