@@ -81,7 +81,7 @@ function haptic(){if(!reduce.matches&&navigator.vibrate)try{navigator.vibrate(8)
 // the HUD: only the most important one shows, the others wait (class lane-wait) and come back when it goes. Banners
 // (toast, game and message notifications) use the same spot; while one shows the cards wait, and the newest banner wins.
 const CARD_SEL='#coachCard,.r5-attend,.r4-tip:not(.inline),.street-chip',BANNER_SEL='#toast,.message-notification';
-const rank=el=>el.id==='coachCard'?100:el.classList.contains('uni-now')?90:el.classList.contains('kitchen-chip')?60:el.classList.contains('uni-chip')?50:el.classList.contains('r5-attend')?80:el.classList.contains('r4-tip')?40:30;
+const rank=el=>el.id==='coachCard'?100:el.classList.contains('uni-now')?90:el.classList.contains('kitchen-chip')?60:el.classList.contains('uni-chip')?50:el.classList.contains('r5-attend')?80:el.classList.contains('r4-tip')?70:30;
 const bannerUp=el=>el.id==='toast'?el.classList.contains('show'):!el.hidden;const since=new Map();let laneRaf=0;
 function lane(){laneRaf=0;const banners=[...document.querySelectorAll(BANNER_SEL)];
  for(const b of banners){if(bannerUp(b)){if(!since.has(b))since.set(b,performance.now())}else since.delete(b)}

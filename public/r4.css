@@ -239,3 +239,12 @@ html:root body .message-notification{top:calc(max(8px,env(safe-area-inset-top)) 
    (voice.js .voice-useful); jump shows while walking the streets. */
 html:root body #worldUI #quickVoice:not(.voice-useful){display:none!important}
 html:root body #worldUI:not(.tp-walking) .tp-jump{display:none!important}
+/* Plain words (docs/UI-UX-REVIEW.md task 5): a low need shows a word instead of its bar (world.js hudNeeds), and
+   scripted characters lose the " · NPC" suffix (real players still show " · Player"). */
+html:root body #worldUI .hud-needs .hn-low{flex:1.6 1 0}
+html:root body #worldUI .hud-needs .hn-low i{display:none}
+html:root body #worldUI .hud-needs .hn em{font:600 11px/1 var(--io-font,system-ui);font-style:normal;color:#ffb39e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html:root body .scene-label.npc:after{content:none!important}
+/* The card spot and banners sit below the needs strip when it shows, so a card never hides "Hungry" or "Tired". */
+html:root body #worldUI.has-needs:not(.map-view) .lane-first{top:calc(max(8px,env(safe-area-inset-top)) + 96px)!important}
+html:root body:has(#worldUI.has-needs:not(.map-view)) #toast,html:root body:has(#worldUI.has-needs:not(.map-view)) .message-notification{top:calc(max(8px,env(safe-area-inset-top)) + 96px)!important}

@@ -292,8 +292,8 @@
     let note = '';
     if (!m.local) {
       try {
-        if (m.isHost) { const r = await call('POST', { action: 'result', id: m.id, report: E.report(s) }); note = r.status === 'done' ? 'Result confirmed ✓' : r.status === 'disputed' ? 'Result disputed: an admin will check it' : 'Waiting for the other players to confirm…'; }
-        else { const r = await call('POST', { action: 'confirm', id: m.id, score: s.score }); note = r.status === 'done' ? 'Result confirmed ✓' : r.status === 'disputed' ? 'Scores did not match: an admin will check it' : 'Result sent ✓'; }
+        if (m.isHost) { const r = await call('POST', { action: 'result', id: m.id, report: E.report(s) }); note = r.status === 'done' ? 'Result confirmed ✓' : r.status === 'disputed' ? 'Result disputed: the ChinaLife team will check it' : 'Waiting for the other players to confirm…'; }
+        else { const r = await call('POST', { action: 'confirm', id: m.id, score: s.score }); note = r.status === 'done' ? 'Result confirmed ✓' : r.status === 'disputed' ? 'Scores did not match: the ChinaLife team will check it' : 'Result sent ✓'; }
       } catch (e) { note = e.message; }
     } else {
       const st = stats(); st.played++; if (won) st.won++; else if (!isDraw) st.lost++; else st.drawn++; localStorage.setItem(STATS_KEY(), JSON.stringify(st));

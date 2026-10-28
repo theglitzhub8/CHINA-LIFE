@@ -110,6 +110,12 @@ Each task is small, keeps the approved map look, and can ship behind no switch (
    Voice button still joins); jump shows while walking the streets.
 5. **Plain words pass (A3, B5–B7, D2, F).** ¥ only, no "NPC"/"admin", readable dates, needs with words, first-time
    explanations.
+   ✅ Done 29 Oct: the phone widget says "Money"; club gifts are "virtual yuan"; players read "the ChinaLife team"
+   instead of "admin"; no " · NPC" suffix (players still show " · Player"); hosts no longer claim "● Online"; the
+   University card reads "classes start Mon 2 Nov" and shows attendance only once classes start; a low need shows a
+   word ("Hungry", "Tired", "Bored", "Lonely", "Shower", "Toilet") on the needs strip (world.js `hudNeeds`, small
+   edit); one-time tips explain needs and XP; the card spot and banners now sit below the needs strip, and one-time
+   tips go ahead of the always-on University and kitchen cards. Gossip feature names (F) are left for task 7.
 6. **One look for sheets (E2–E5).** Close/back buttons, tap sizes, fonts and colours, in-game confirm, new help.
 7. **Study app and one "Today" list (C6, D3).** One place for school; one to-do list for new players.
 8. **Phone widgets (D1).**

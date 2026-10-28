@@ -17,10 +17,13 @@ document.addEventListener('click',e=>{const b=e.target.closest?.('[data-r4-go],#
  document.querySelectorAll('dialog[open]').forEach(d=>d.close());G()?.walkIn?.(b.dataset.r4Go)},true);
 
 /* ---------- Intro tips: once per screen, dismissible, at most one a minute ---------- */
-const TIPS={phone:'Your apps, all on one page. Tap one to open it.',people:'See who’s around. Tap someone to say hi.',map:'Tap a place to travel there.',club:'Tap Party to dance, toast or order drinks.',voting:'Voting is paused. You can still read the ballot.',home:'Rest, cook and shower here to refill your needs.',street:'Walk around to meet other players.'};
+const TIPS={phone:'Your apps, all on one page. Tap one to open it.',people:'See who’s around. Tap someone to say hi.',map:'Tap a place to travel there.',club:'Tap Party to dance, toast or order drinks.',voting:'Voting is paused. You can still read the ballot.',home:'Rest, cook and shower here to refill your needs.',street:'Walk around to meet other players.',
+ // First-time explanations (docs/UI-UX-REVIEW.md task 5): shown once, the first time they matter.
+ needs:'The bars under the top bar are your needs. When one runs low it says so. Tap them to see how to refill.',xp:'XP comes from classes, work and going out. It raises your rank: Phone → Goals → Rank.'};
 const KEY='chinalife-tips';const seen=()=>{try{return JSON.parse(localStorage.getItem(KEY))||[]}catch{return []}};let lastTip=0,tipEl=null,tipFor='';
 function where(){const st=G()?.state,ui=$('worldUI');if(!st?.created||!ui)return null;
  if($('phoneDialog')?.open)return 'phone';if($('socialDialog')?.open)return 'people';if(document.querySelector('dialog[open]'))return null;
+ if(!seen().includes('needs')&&Object.values(st.needs||{}).some(v=>v<25))return 'needs';if(!seen().includes('xp')&&Number(st.xp||0)>0)return 'xp';
  if(ui.classList.contains('map-view'))return 'map';if(window.ChinaLifeWorld?.street?.())return 'street';if(document.querySelector('.club-hud'))return 'club';
  if(st.place==='voting')return 'voting';if(st.place==='home'||String(st.place).startsWith('home-'))return 'home';return null}
 function tip(){const step=window.ChinaLifeOnboarding?.step;const touring=step&&!/^(skip|done|wait)$/.test(step);const k=where();

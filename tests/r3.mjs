@@ -31,9 +31,10 @@ test('one card spot: the most important card shows, banners take the spot, the n
  const shown=()=>[...d.querySelectorAll('.r5-attend,.r4-tip,.message-notification,#toast')].filter(e=>!e.classList.contains('lane-wait'));
  assert.deepEqual(shown().filter(e=>e!==d.getElementById('toast')),[school],'daily attendance before kitchen, university info and tips');
  uni.classList.add('uni-now');c.ChinaLifeLane.update();assert.ok(uni.classList.contains('lane-first'),'an open class check-in goes first');
- school.remove();uni.classList.remove('uni-now');c.ChinaLifeLane.update();assert.ok(kitchen.classList.contains('lane-first'),'the next card comes back when one goes');
+ school.remove();uni.classList.remove('uni-now');c.ChinaLifeLane.update();assert.ok(tip.classList.contains('lane-first'),'a one-time tip goes before the kitchen and University cards');
+ tip.remove();c.ChinaLifeLane.update();assert.ok(kitchen.classList.contains('lane-first'),'the next card comes back when one goes');
  // A banner takes the spot: every card waits. Two banners: the newest shows.
- const toast=d.getElementById('toast');toast.classList.add('show');c.ChinaLifeLane.update();assert.ok([uni,kitchen,tip].every(e=>e.classList.contains('lane-wait')));
+ const toast=d.getElementById('toast');toast.classList.add('show');c.ChinaLifeLane.update();assert.ok([uni,kitchen].every(e=>e.classList.contains('lane-wait')));
  const note=d.createElement('button');note.className='message-notification';note.hidden=false;d.body.append(note);c.ChinaLifeLane.update();
  assert.ok(toast.classList.contains('lane-wait'));assert.ok(!note.classList.contains('lane-wait'));
  note.hidden=true;toast.classList.remove('show');c.ChinaLifeLane.update();assert.ok(kitchen.classList.contains('lane-first'),'cards return when banners go');

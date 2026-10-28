@@ -211,7 +211,7 @@ async function vote(v){
 async function report(){
   if(!round)return;if(!confirm('Report this gist to the admins?'))return;
   if(round.local){const st=load();const g=(st.list||[]).find(x=>x.body===round.body);if(g)g.hidden=true;store(st);emit();toast('Reported. It won\'t show on Gossip TV.');round=null;return composer()}
-  try{fromServer(await call('POST',{action:'report',id:round.id,reason:'player'}));toast('Thanks. An admin will look at it.');round=null;composer()}catch(e){toast(e.message||'Report failed')}
+  try{fromServer(await call('POST',{action:'report',id:round.id,reason:'player'}));toast('Thanks. The ChinaLife team will look at it.');round=null;composer()}catch(e){toast(e.message||'Report failed')}
 }
 function open(){
   if(!enabled())return toast('The hot seat is closed right now');

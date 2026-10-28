@@ -17,7 +17,9 @@ const now=()=>st?st.minute+Math.floor((Date.now()-at)/60000):0;
 const mins=t=>{const [h,m]=String(t).split(':').map(Number);return h*60+m};
 // Today's classes with a status worked out live: attended (from the server), now (check-in open), missed or later.
 const today=()=>!st?.classDay?[]:st.timetable.map(c=>{const m=now(),s=mins(c.time);return {...c,status:c.status==='attended'?'attended':m>=s+45?'missed':m>=s-2?'now':'later'}});
-const headline=s=>s.orientation?'Orientation week · Year 1 starts '+s.start:'Year '+s.year+' of 4 · '+s.dayName+' · '+s.hsk;
+// Dates read as "Mon 2 Nov", not 2026-11-02.
+const day=d=>{const t=new Date(d+'T12:00:00Z');return isNaN(t)?d:t.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'}).replace(',','')};
+const headline=s=>s.orientation?'Orientation week · classes start '+day(s.start):'Year '+s.year+' of 4 · '+s.dayName+' · '+s.hsk;
 // Sit under the daily attendance chip whenever that one shows (it can appear after this one).
 const place=()=>{if(chip)chip.style.top=document.querySelector('.r5-attend:not(.uni-chip)')?'calc(max(8px, env(safe-area-inset-top)) + 176px)':''};
 function render(){const show=on()&&st&&campus(G()?.state?.place)&&!document.querySelector('dialog[open]');if(!show){chip?.remove();chip=null;return}
@@ -28,7 +30,7 @@ function render(){const show=on()&&st&&campus(G()?.state?.place)&&!document.quer
  chip.classList.toggle('uni-now',!!cls);if(chip.dataset.k===k)return;chip.dataset.k=k;
  const [icon,title,small,button]=cls?['📳','Class now: '+cls.time+' '+cls.subject,'Check in from the classroom · +'+st.classReward.xp+' XP · ¥'+st.classReward.coins,busy?'…':'Check in']:
   exam?['📝','Exam day: '+st.exams.map(y=>'Year '+y).join(', ')+' open','Pass mark '+(st.passMarks[String(st.exams[0])]??st.passMark)+'/'+st.questions+' · +'+st.reward.xp+' XP · ¥'+st.reward.coins,'Take exam']:
-  ['🎓','Year '+st.year+' · '+st.dayName,headline(st)+' · attendance '+st.attendance,'Open'];
+  ['🎓','Year '+st.year+' · '+st.dayName,headline(st)+(st.orientation?'':' · attendance '+st.attendance+'/100'),'Open'];
  chip.innerHTML='<span class="r5-ic">'+icon+'</span><p><b>'+esc(title)+'</b><small>'+esc(small)+'</small></p><button type="button"'+(busy?' disabled':'')+'>'+button+'</button>';
  chip.querySelector('button').onclick=()=>cls?attend():open()}
 async function attend(){const g=G();if(busy)return;busy=true;render();try{await C().presenceNow?.();const d=await C().university({action:'attend'});st=d;at=Date.now();g.toast?.('✓ Checked in to '+d.attended.subject+' · +'+d.attended.xp+' XP · ¥'+d.attended.coins);
@@ -44,7 +46,7 @@ async function open(){const g=G();if(!g)return;if(!st)await load(true);if(!st)re
  const L=s.library||{};const lib=L.open?'<h3>📚 Library</h3><p class="uni-next">Read quietly: 3 words, then 3 questions. 2 right wins back '+L.points+' attendance points'+(L.points>5?' (Saturday is library day)':' (10 on Saturday)')+'. Sessions today: '+L.today+'/'+L.perDay+' · knowledge '+(s.knowledge||0)+'</p>'+(L.today<L.perDay?'<div class="uni-exams"><button data-uni-library>📚 Start a reading session</button></div>':''):'';
  const B=s.lab||{};const labHtml=!B.open?'':!B.major?'<h3>🔬 Laboratory</h3><p class="uni-next">Year 3: choose your major. Lab work is in Chinese: terms, experiment steps and instructions. You choose once.</p><div class="uni-exams">'+(B.majors||[]).map(m=>'<button data-uni-major="'+esc(m.id)+'">'+m.icon+' '+esc(m.name)+'</button>').join('')+'</div>':
   '<h3>🔬 Laboratory · '+esc(B.majorName)+'</h3><p class="uni-next">One lab session a day: 2 terms, an experiment to put in order and an instruction in Chinese. 3 of 4 earns a lab credit and 20 XP. Credits: '+B.credits+'</p>'+(B.today<B.perDay?'<div class="uni-exams"><button data-uni-lab>🔬 Start a lab session</button></div>':'<p class="uni-next">Today\'s lab session is done. Come back tomorrow.</p>');
- const D=s.graduation||{};const gradHtml=!D.open?'':D.graduated?'<h3>🎓 Graduated</h3><p class="uni-next">You graduated on '+esc(D.graduated)+'.</p><div class="uni-exams"><button data-uni-cert>📜 Your degree certificate</button></div>':
+ const D=s.graduation||{};const gradHtml=!D.open?'':D.graduated?'<h3>🎓 Graduated</h3><p class="uni-next">You graduated on '+esc(day(D.graduated))+'.</p><div class="uni-exams"><button data-uni-cert>📜 Your degree certificate</button></div>':
   !D.ready?'<h3>🎓 Graduation hall</h3><p class="uni-next">Before you can graduate: '+D.missing.map(esc).join(' · ')+'.</p>':'<h3>🎓 Graduation hall</h3><p class="uni-next">Your last task: introduce yourself in Chinese, then read it on stage.</p><div class="uni-exams"><button data-uni-grad>✍️ Write your self-introduction</button></div>';
  const score='<div class="uni-score'+(s.truancy?' risk':'')+'"><b>Attendance this year: '+s.attendance+'/100</b><span><i style="width:'+s.attendance+'%"></i></span><small>'+(s.truancy?'⚠️ Truancy risk: your exam pass mark is '+s.passMark+'/'+s.questions+'. Go to every class to bring it back up.':'Exam pass mark '+s.passMark+'/'+s.questions+'. A missed class costs 10, a class you attend gives 5 back.')+'</small></div>';
  show('🎓 University','<b>'+esc(headline(s))+'</b> · '+s.passedYears+'/4 years passed',
