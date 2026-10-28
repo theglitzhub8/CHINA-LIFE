@@ -141,12 +141,18 @@ Every phase sits behind an admin switch (default OFF) so the live game is unchan
 - [x] Starter set reviewed: Everyday tee, Slim jeans and Canvas sneakers stay neat and are never locked.
 
 ### Phase 10. Micro-customization, switch `micro_style`
-- [ ] Per-item details: button colour, stitching colour, collar type, bag colourway and graphic, trouser length
-      and fit (standard, shorts, joggers, cropped).
-- [ ] Saved per owned item, validated on the server, shared through presence so other players see them.
-- [ ] Rare colourways tied to milestones for status signalling.
-- [ ] Tint the Rocketbox clothing (top, trousers, shoes) per player on every graphics level (owner's decision),
-      then add details where the model allows; Low / classic bodies get the full set.
+- [x] Per-item details (`public/micro-style.js`): button colour, collar (classic, mandarin, spread, V) and hem stitching
+      on shirts, suits and jackets (stitching on every top); length (full, cropped), fit (slim, regular, wide) and seam
+      stitching on jeans, chinos and joggers; colourway and graphic (star, stripe, heart, panda) on backpack and handbag.
+      Customised from the store under an owned item; choosing an option again clears it.
+- [x] Saved in `state.wardrobe.details`, cleaned on load and on every save (`chinalife-api/micro-style.php`, same lists,
+      kept equal by a test), and returned by `presence.php` for the items a player wears, so others see them.
+- [x] Rare options tied to milestones: jade buttons (graduation / Regular rank), bright gold stitching (Insider), gold bag
+      (Shenyang Star), panda graphic (Year 2 / Local). Locked in the store and refused by `save.php`.
+- [x] Classic bodies (`characters.js`) draw every detail. Rocketbox avatars on High / Medium get the player's top,
+      trouser and shoe colours painted over their clothes (`realism.js` rbTint, as the Hypeman), for the player and
+      other real players, never the crowd.
+- [ ] Later: buttons, collars and bags drawn on the Rocketbox avatars too (needs a per-avatar texture mask).
 
 ## Rules for every phase
 - Tests for every phase, `npm test` green before each commit, try it locally with `scripts/local-stack.mjs`.
