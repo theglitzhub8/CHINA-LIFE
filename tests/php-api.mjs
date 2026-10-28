@@ -1294,3 +1294,34 @@ test('micro-customization: saves keep only valid details, rare options need thei
   assert.deepEqual(p.details,{'shirt-oxford':{btn:'#3fae8a',collar:'v'},jeans:{len:'crop'},backpack:{graphic:'star'}});
  }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{micro_style:false}})}
 });
+
+// Gossip Room Phase 1 (docs/GOSSIP-ROOM-PLAN.md, switch gossip_show): Hot Seat Hour, 20:00-22:00 Beijing time. A busy
+// seat queues gists (one per player); after each reveal the next goes live; the queue is dropped when the show ends.
+test('Hot Seat Hour: queue during the show, next gist after the reveal, queue dropped after 22:00, off by default',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(36,'user36'),(37,'user37'),(38,'user38')");
+ const hs=(id,now,data)=>fetch(base+'/api/v4/chinalife/hot-seat.php'+(data?'':'?city=China&place=gist'),{method:data?'POST':'GET',headers:{Authorization:'Bearer test-'+id,'X-Test-Today':now,...(data?{'content-type':'application/json'}:{})},body:data?JSON.stringify({city:'China',place:'gist',...data}):undefined}).then(async r=>{const j=await r.json();return {...j,...(j.data||{}),httpStatus:r.status}});
+ for(const id of [36,37,38])assert.equal((await call(id,'save.php','POST',{revision:0,save:{character:{},game:game()}})).httpStatus,200);
+ for(const id of [36,37,38])assert.equal((await call(id,'presence.php','POST',presence('China','gist'))).httpStatus,200);
+ const night='2026-11-02 20:30';
+ assert.equal((await call(1,'admin.php','POST',{action:'set_hot_seat',enabled:true})).httpStatus,200);
+ assert.deepEqual((await hs(36,night)).show,{on:false},'switched off by default');
+ const t0=await hs(36,night,{action:'take',body:'Someone at the club paid for everybody tonight'});assert.equal(t0.httpStatus,200,t0.message);
+ assert.equal((await hs(37,night,{action:'take',body:'The football captain is learning Chinese in secret'})).httpStatus,409,'no queue while the switch is off');
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{gossip_show:true}});
+  const q1=await hs(37,night,{action:'take',body:'The football captain is learning Chinese in secret'});assert.equal(q1.httpStatus,200,q1.message);assert.equal(q1.queued,true);assert.equal(q1.show.my_queue,1);
+  assert.match(q1.message,/#1 in the queue/);
+  assert.equal((await hs(38,night,{action:'take',body:'A student cooked jollof for the whole dorm floor'})).show.my_queue,2);
+  assert.equal((await hs(37,night,{action:'take',body:'Another gist from the same person here'})).httpStatus,409,'one waiting gist per player');
+  const view=await hs(36,night);assert.equal(view.show.live,true);assert.equal(view.show.queue,2);assert.equal(view.show.start,'20:00');assert.equal(view.show.end,'22:00');assert.ok(view.show.audience>=1);
+  assert.match(view.round.body,/paid for everybody/);
+  // The first round ends; during its reveal the seat stays busy, then the next queued gist goes live.
+  sql("USE chinalife_test; UPDATE chinalife_hot_seat SET closes_at=DATE_SUB(NOW(),INTERVAL 5 SECOND) WHERE user_id=36 AND status='voting'");
+  assert.equal((await hs(36,night)).round.status,'revealed','the reveal is not cut short');
+  sql("USE chinalife_test; UPDATE chinalife_hot_seat SET closes_at=DATE_SUB(NOW(),INTERVAL 60 SECOND) WHERE user_id=36");
+  const next=await hs(37,night);assert.equal(next.round.status,'voting');assert.match(next.round.body,/football captain/);assert.equal(next.round.own,true);assert.equal(next.show.queue,1);
+  // After the show the waiting gist is dropped, never shown.
+  const late=await hs(38,'2026-11-02 23:00');assert.equal(late.show.live,false);assert.equal(late.show.queue,0);
+  assert.equal(sql("USE chinalife_test; SELECT status FROM chinalife_hot_seat WHERE user_id=38").trim(),'dropped');
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{gossip_show:false}});sql("USE chinalife_test; DELETE FROM chinalife_hot_seat WHERE user_id IN (36,37,38)")}
+});

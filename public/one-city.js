@@ -157,6 +157,8 @@
     // Venue crowd share for world.js; localStorage 'chinalife-npc-density' (0–1) overrides it for testing.
     npcDensity: () => {
       try { const o = root.localStorage?.getItem('chinalife-npc-density'); if (o !== null && o !== undefined && o !== '') return density(o, layout.npcDensity); } catch {}
+      // Hot Seat Hour (switch gossip_show): the Gossip Room fills up with its full crowd while the show is on.
+      if (root.ChinaLifeHotSeat?.show?.()?.live && root.ChinaLife?.state?.place === 'gist') return 1;
       return layout.npcDensity ?? 1;
     },
     NPC_DENSITY, CLUB, clubName, brand, walkCity, QUEST_PLACES, questPlace,

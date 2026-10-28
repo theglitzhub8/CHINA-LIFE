@@ -36,6 +36,15 @@ buttons did nothing in one-city mode; they now start the Where to? trip. Names: 
 **Phase 1 · Hot Seat Hour.** A nightly show at set Beijing times (default 20:00–22:00): the room's host runs it,
 players queue for the seat, the TV shows the live round and the audience count, and the phone buzzes players who
 opted in when it starts. Outside the hour Hot Seat works as today.
+✅ Done 29 Oct (switch `gossip_show`, off): 20:00–22:00 Beijing (`HS_SHOW_START/END` in hot-seat-lib.php). During it a
+busy seat queues gists (one per player, 10 in all); after each reveal the next goes live; at the end the queue is
+dropped, never shown. The sheet and the Gossip Room screen show "🔴 Hot Seat Hour until 22:00 · N in the room · M
+waiting" (or the nightly times), the host calls each round, and "Join the queue" opens the composer. One reminder a
+night at 20:00 while the game is open (a phone push for closed games is not built). **Found and fixed:** the game
+never exposed `ChinaLifeCloud.api`, so Hot Seat has always run offline (simulated voters) in the real game; with
+`gossip_show` on it now uses the signed-in request and is truly multiplayer. Football has the same problem and still
+runs offline (not changed here). Before switching `gossip_show` on, the Hot Seat tables must exist on the server
+(`migration-hot-seat.sql`, run by `migrate.php`).
 
 **Phase 2 · A better Gossip wall.** Reactions (😂 🔥 🫢 👀 🧢), short replies, and "Gist of the day" chosen by
 reactions. Tags for the other places (#club #campus #football #hq) so the wall reads like the city's feed.
@@ -45,6 +54,10 @@ reactions. Tags for the other places (#club #campus #football #hq) so the wall r
 
 **Phase 4 · A room that feels alive.** The crowd reacts to Hot Seat reveals (cheer for True, boo for Cap), the TV
 shows the live round, sitting at the tea table opens the wall, and the room fills up during Hot Seat Hour.
+✅ Done 29 Oct (same switch): Gossip TV shows a live round ("🔴 LIVE · HOT SEAT HOUR", the gist and the vote count;
+the split stays hidden); every reveal sends a burst over the room (👏🎉 for True, 😂🧢 for Cap, 🤔 for a tie), bigger
+with a bigger audience; the Gossip Room uses its full crowd during the Hour (one-city.js). The tea table opens the
+Gossip Room (Phase 0), not a sit-down; NPCs don't animate (only the player has emotes), so the reaction is the burst.
 
 **Phase 5 · Gist reputation.** Posts that the room calls True, and wall posts with many reactions, raise your gist
 rep; Cap verdicts lower it. A weekly "Truth teller" award for the top three: badge + ¥1,000 / ¥500 / ¥250, paid

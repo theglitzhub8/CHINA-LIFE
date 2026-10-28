@@ -76,6 +76,8 @@ test('client wiring: loaded in the game, entry points in the Gossip Room, Gossip
  assert.ok(fs.readFileSync('public/admin.js','utf8').includes("ChinaLifeHotSeat?.mountAdmin($('hsCard')")&&fs.readFileSync('public/game.js','utf8').includes("ChinaLifeHotSeat?.mountAdmin($('adminHotSeat')"));
  // Offline never calls the API; online only talks to hot-seat.php.
  assert.ok(/const online=\(\)=>!sandbox\(\)\?\.localOnly&&!!root\.ChinaLifeCloud\?\.joined/.test(js));
- assert.equal((js.match(/ChinaLifeCloud\.api\(/g)||[]).length,1);assert.ok(js.includes("'/chinalife/hot-seat.php'"));
+ // One network path: net() is ChinaLifeCloud.api if it exists, else the signed-in request while gossip_show is on.
+ assert.equal((js.match(/net\(\)\('\/chinalife\/hot-seat\.php'/g)||[]).length,1);assert.ok(js.includes("'/chinalife/hot-seat.php'"));
+ assert.match(js,/const net=\(\)=>root\.ChinaLifeCloud\?\.api\|\|\(root\.ChinaLifeFlags\?\.cast\?\.\('gossip_show'\)===true\?root\.ChinaLifeAuth\?\.request:null\)\|\|null;/);
  assert.ok(js.includes("ChinaLifeFlags?.off?.('hotseat')"),'flag kill switch');
 });

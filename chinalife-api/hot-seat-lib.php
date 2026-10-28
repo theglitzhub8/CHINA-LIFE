@@ -12,6 +12,16 @@ const HS_AUTHOR_REWARD=10;    // coins for the author when the room says True
 const HS_DAILY_REWARDS=10;    // most paid votes per player per Beijing day
 const HS_HIDE_REPORTS=3;      // reports that hide a gist until an admin looks
 const HS_PLACES=['gist'];
+// Hot Seat Hour (docs/GOSSIP-ROOM-PLAN.md Phase 1, switch gossip_show): a nightly show on Beijing time. During it a
+// busy seat queues the next gists; they go live one after another. Queued gists left when the show ends are dropped.
+const HS_SHOW_START=20, HS_SHOW_END=22, HS_QUEUE_MAX=10;
+// Beijing hour, pinned on local test stacks (CHINALIFE_TEST_SOCKET) by an "X-Test-Today: Y-m-d H:i" header.
+function hs_beijing_hour(): int {
+    $t=$_SERVER['HTTP_X_TEST_TODAY']??'';
+    if (getenv('CHINALIFE_TEST_SOCKET')&&preg_match('/^\d{4}-\d{2}-\d{2} (\d{2}):\d{2}$/',$t,$m)) return (int)$m[1];
+    return (int)(new DateTimeImmutable('now',new DateTimeZone('Asia/Shanghai')))->format('G');
+}
+function hs_show_live(int $hour): bool {return $hour>=HS_SHOW_START&&$hour<HS_SHOW_END;}
 // Lower-case roots. EXACT words match a whole word; PREFIX roots also match longer words (fucking, bitches).
 const HS_EXACT=['dick','dicks','dickhead','prick','twat','cock','cocks','slag','hoe','hoes','mumu','olodo','ashawo','arse','arsehole'];
 const HS_PREFIX=['fuck','fuk','motherf','shit','bitch','cunt','asshole','whore','slut','nigg','fag','retard','wank','bastard','pussy','rape','rapist','kys'];

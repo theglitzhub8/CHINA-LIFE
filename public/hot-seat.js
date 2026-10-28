@@ -66,7 +66,18 @@ const $=id=>document.getElementById(id),game=()=>root.ChinaLife,sandbox=()=>root
 const PREFIX_KEY=()=>(sandbox()?.storagePrefix||''),STORE=()=>PREFIX_KEY()+'chinalife-hotseat',OFF_KEY=()=>PREFIX_KEY()+'chinalife-hotseat-off';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 let serverOn=null,serverFeatured=null,round=null,timer=null,poll=null,busy=false;
-const online=()=>!sandbox()?.localOnly&&!!root.ChinaLifeCloud?.joined&&!!root.ChinaLifeCloud?.api;
+// Hot Seat Hour (switch gossip_show, from hot-seat.php): {on, live, start, end, audience, queue, my_queue}.
+let serverShow=null;
+// A round that goes from voting to revealed tells the room (gossip-room.js cheers or boos).
+const revealed=r=>{try{root.dispatchEvent?.(new root.CustomEvent('chinalife:hotseat-reveal',{detail:{result:r.result,true:r.true,cap:r.cap}}))}catch{}};
+const HOST_LINES=['True or Cap? You have the clock. Vote now!','Ooh, this one is spicy. What does the room say?','The room decides. True or Cap?','Hands up if you believe it. Vote!'];
+function showBanner(){const s=serverShow;if(!s?.on)return '';
+  return s.live?'<p class="hs-show live">🔴 Hot Seat Hour · until '+esc(s.end)+' · '+s.audience+' in the room'+(s.queue?' · '+s.queue+' waiting':'')+(s.my_queue?' · you are #'+s.my_queue:'')+'</p>'
+   :'<p class="hs-show">Hot Seat Hour: every night '+esc(s.start)+'–'+esc(s.end)+'</p>'}
+// The game never exposed ChinaLifeCloud.api, so Hot Seat has run offline (simulated voters). With Hot Seat Hour on
+// (switch gossip_show) it uses the signed-in request (ChinaLifeAuth.request, the same function) and goes multiplayer.
+const net=()=>root.ChinaLifeCloud?.api||(root.ChinaLifeFlags?.cast?.('gossip_show')===true?root.ChinaLifeAuth?.request:null)||null;
+const online=()=>!sandbox()?.localOnly&&!!root.ChinaLifeCloud?.joined&&!!net();
 const seconds=()=>{const v=+localStorage.getItem(PREFIX_KEY()+'chinalife-hotseat-seconds');return v>=5&&v<=120?v:LIMITS.seconds};
 function load(){try{const s=JSON.parse(localStorage.getItem(STORE()));if(s&&typeof s==='object')return s}catch{}return {list:[],paid:{}}}
 function store(s){s.list=(s.list||[]).filter(g=>g.day>=beijingDay(new Date(Date.now()-3*864e5))).slice(-40);try{localStorage.setItem(STORE(),JSON.stringify(s))}catch{}}
@@ -87,6 +98,12 @@ function voters(){
 function wrap(x,str,maxW,px,lineH,y0,maxLines){x.font='800 '+px+'px system-ui,sans-serif';const words=String(str).split(' ');let line='',y=y0,n=0;
   for(const w of words){const test=line?line+' '+w:w;if(x.measureText(test).width>maxW&&line){x.fillText(line,24,y);y+=lineH;line=w;if(++n>=maxLines-1){line=line+' …';break}}else line=test}x.fillText(line,24,y);return y}
 // Gossip TV slot (rooms.js passes its canvas and text helper).
+// Gossip TV during a live round (rooms.js): the gist on the seat and how many have voted. The split stays hidden.
+function liveTV(){return round&&round.status==='voting'&&!round.local?round:null}
+function paintLive(x,w,h,text){const r=liveTV();if(!r)return false;
+  x.fillStyle='#1a0f1f';x.fillRect(0,0,w,h);x.fillStyle='#e0263b';x.fillRect(0,0,w,56);text(x,'🔴 LIVE · HOT SEAT'+(serverShow?.live?' HOUR':''),22,38);
+  x.fillStyle='#ffcf5a';text(x,r.count+' vote'+(r.count===1?'':'s')+' · True or Cap? Vote in the room',20,88);
+  x.fillStyle='#fff';x.textAlign='left';wrap(x,'“'+r.body+'”',w-48,24,30,128,5);return true}
 function paintTV(x,w,h,g,text){
   // The shop awning in front of the TV hides its lower third, so the verdict and quote sit high.
   const t=g.true+g.cap||1,tp=Math.round(g.true/t*100);
@@ -104,7 +121,7 @@ function sheet(){
   document.body.appendChild(d);return d;
 }
 const toast=t=>game()?.toast?.(t);
-function view(html){const d=sheet();d.querySelector('.hs-body').innerHTML=html;if(!d.open)try{d.showModal()}catch{d.setAttribute('open','')}return d}
+function view(html){const d=sheet();d.querySelector('.hs-body').innerHTML=showBanner()+html;if(!d.open)try{d.showModal()}catch{d.setAttribute('open','')}return d}
 function composer(note){
   const L=online()?{...LIMITS}:LIMITS;
   const d=view('<p class="hs-lead">Take the seat, drop a gist. The room has <b>'+seconds()+' seconds</b> to vote <b class="t">True</b> or <b class="c">Cap</b>.</p>'+
@@ -124,12 +141,15 @@ function voteView(){
   const who=r.own?'You are on the hot seat':'🔥 Someone in the room is on the hot seat';
   const chips=(r.shown||[]).map(v=>'<span class="hs-chip">'+esc(v.who)+' voted</span>').join('');
   const mine=r.myVote;
-  return '<p class="hs-who">'+who+'</p><blockquote class="hs-gist">“'+esc(r.body)+'”</blockquote>'+
+  // Hot Seat Hour: the room's host calls the round, and anyone not on the seat or in the queue can join the queue.
+  const live=serverShow?.live&&!r.local,host=live?'<p class="hs-host">🎙️ Host: '+esc(HOST_LINES[[...String(r.id)].reduce((a,c)=>a+c.charCodeAt(0),0)%HOST_LINES.length])+'</p>':'';
+  const queue=live&&!r.own&&!serverShow.my_queue?'<button class="hs-ghost" id="hsQueue">🔥 Join the queue for the seat</button>':'';
+  return '<p class="hs-who">'+who+'</p><blockquote class="hs-gist">“'+esc(r.body)+'”</blockquote>'+host+
     '<div class="hs-timer" style="--p:'+pct.toFixed(3)+'"><span>'+Math.ceil(left/1000)+'s</span></div>'+
     (r.own?'<p class="hs-note">Sit tight. You can\'t vote on your own gist.</p>':
     '<div class="hs-votes"><button class="hs-true'+(mine==='true'?' on':'')+'" data-v="true" '+(mine?'disabled':'')+'>✅ True</button><button class="hs-cap'+(mine==='cap'?' on':'')+'" data-v="cap" '+(mine?'disabled':'')+'>🧢 Cap</button></div>')+
     '<p class="hs-count">'+r.count+' vote'+(r.count===1?'':'s')+' in'+(mine?' · yours is locked':'')+'</p><div class="hs-chips">'+chips+'</div>'+
-    (r.own?'':'<button class="hs-report" data-report>⚑ Report</button>');
+    queue+(r.own?'':'<button class="hs-report" data-report>⚑ Report</button>');
 }
 function revealView(){
   const r=round,t=r.true+r.cap||1,tp=Math.round(r.true/t*100),cp=100-tp,res=r.result;
@@ -152,6 +172,7 @@ function paint(){
   const d=view(round.status==='voting'?voteView():revealView());
   d.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>vote(b.dataset.v));
   d.querySelector('[data-report]')?.addEventListener('click',report);
+  const q=d.querySelector('#hsQueue');if(q)q.onclick=()=>composer('The seat is busy. Write your gist now and it goes on the seat when it is your turn.');
   const again=d.querySelector('#hsAgain');if(again)again.onclick=()=>{round=null;composer()};
 }
 // ---------- offline round (NPCs vote) ----------
@@ -174,7 +195,7 @@ function revealLocal(){
   if(st.paid?.day!==day)st.paid={day,n:0};
   const votes=r.votes.map(v=>({who:v.who,vote:v.vote}));if(r.myVote)votes.push({who:me,vote:r.myVote});
   const author=r.own?me:r.author,out=payouts(votes,author,{[me]:st.paid.n>=LIMITS.daily?LIMITS.daily:0});
-  Object.assign(r,{status:'revealed',true:out.true,cap:out.cap,result:out.result,reward:out.pay[me]||0,votes:r.votes.concat(r.myVote?[{who:'You',vote:r.myVote}]:[])});
+  Object.assign(r,{status:'revealed',true:out.true,cap:out.cap,result:out.result,reward:out.pay[me]||0,votes:r.votes.concat(r.myVote?[{who:'You',vote:r.myVote}]:[])});revealed(r);
   if(r.reward){const g=game();if(g?.state){g.state.money=(+g.state.money||0)+r.reward;g.save?.();g.refresh?.();dispatchEvent(new CustomEvent('chinalife:update'))}if(!r.own||out.pay[me]>LIMITS.author)st.paid.n++}
   st.list=(st.list||[]).concat([{day,body:r.body,true:out.true,cap:out.cap,result:out.result,at:Date.now(),own:r.own}]);store(st);
   if(!$('hotSeatDialog')?.open&&r.reward)toast('🔥 Hot seat: '+(r.result==='true'?'TRUE':'CAP')+' · +¥'+r.reward);
@@ -182,12 +203,15 @@ function revealLocal(){
 }
 // ---------- online round (hot-seat.php) ----------
 const where=()=>({city:game()?.state?.city||'Shenyang',place:'gist'});
-async function call(method,body){const res=await root.ChinaLifeCloud.api('/chinalife/hot-seat.php',method,method==='GET'?where():{...where(),...body});return res?.data||res}
+async function call(method,body){const res=await net()('/chinalife/hot-seat.php',method,method==='GET'?where():{...where(),...body});return res?.data||res}
 function fromServer(d){
   if(!d)return;if(typeof d.enabled==='boolean')setEnabled(d.enabled);
   const before=JSON.stringify(serverFeatured);serverFeatured=d.featured||null;if(JSON.stringify(serverFeatured)!==before)emit();
   if(Number.isFinite(+d.money))game()?.applyServerTotals?.({money:d.money});
-  const r=d.round;if(!r){if(round&&!round.local)round=null;return}
+  serverShow=d.show||null;
+  const r=d.round,prev=round&&!round.local?{id:round.id,status:round.status}:null;if(!r){if(round&&!round.local){round=null;emit()}return}
+  if(prev&&prev.id===r.id&&prev.status==='voting'&&r.status==='revealed')queueMicrotask(()=>revealed(round));
+  if(!prev||prev.id!==r.id||prev.status!==r.status)queueMicrotask(emit);
   round={id:r.id,body:r.body,own:r.own,author:null,seconds:r.seconds,closesAt:Date.now()+r.closes_in,status:r.status,count:r.votes,myVote:r.my_vote,shown:[],true:r.true,cap:r.cap,result:r.result,reward:r.reward||0};
 }
 async function refresh(){if(busy)return;try{fromServer(await call('GET'));if($('hotSeatDialog')?.open&&!$('hsText'))paint()}catch(e){/* keep the last view */}}
@@ -195,7 +219,7 @@ async function refresh(){if(busy)return;try{fromServer(await call('GET'));if($('
 async function take(raw){
   const c=checkText(raw);if(!c.ok){const e=$('hsErr');if(e)e.textContent=c.error;return}
   if(!online())return startLocal(c.text,true,null);
-  busy=true;try{fromServer(await call('POST',{action:'take',body:c.text}));paint()}catch(e){const el=$('hsErr');if(el)el.textContent=e.message||'Could not take the seat'}finally{busy=false}
+  busy=true;try{const d=await call('POST',{action:'take',body:c.text});fromServer(d);if(d?.queued)toast('🔥 You are #'+(d.show?.my_queue||1)+' in the queue. Your gist goes on the seat when it is your turn.');paint()}catch(e){const el=$('hsErr');if(el)el.textContent=e.message||'Could not take the seat'}finally{busy=false}
 }
 function watch(){
   if(online())return refresh().then(()=>{if(!round)composer('Nobody is on the seat right now. Take it!')});
@@ -241,5 +265,5 @@ function mountAdmin(el,admin,say=toast){
 }
 // Link Up (social.js) "Happening now": the live round, if any. Online it is the same GET the seat polls; the True/Cap split stays hidden.
 async function peek(){if(!enabled())return null;if(online()&&!busy){try{fromServer(await call('GET'))}catch{}}const r=round;if(!r||r.status!=='voting')return null;const left=Math.max(0,Math.round((r.closesAt-Date.now())/1000));return left?{id:r.id,votes:+r.count||0,secondsLeft:left,own:!!r.own,voted:!!r.myVote,local:!!r.local}:null}
-root.ChinaLifeHotSeat={...api,enabled,setEnabled,featured,open,peek,paintTV,mountAdmin,voters,get round(){return round},_finish(){if(round?.local&&round.status==='voting'){round.closesAt=Date.now();round.startedAt-=round.seconds*1000;tickLocal()}}};
+root.ChinaLifeHotSeat={...api,enabled,setEnabled,featured,open,peek,paintTV,paintLive,liveTV,show:()=>serverShow,mountAdmin,voters,get round(){return round},_finish(){if(round?.local&&round.status==='voting'){round.closesAt=Date.now();round.startedAt-=round.seconds*1000;tickLocal()}}};
 })(typeof window!=='undefined'?window:globalThis);

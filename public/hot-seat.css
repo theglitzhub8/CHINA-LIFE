@@ -58,3 +58,7 @@
 .hs-admin-row{border:1px solid #ddd;border-radius:10px;padding:8px}.hs-admin-row.hidden{opacity:.55}
 .hs-admin-row p{margin:0 0 4px;font-weight:700}.hs-admin-row span{display:flex;gap:6px;margin-top:6px}
 .hs-admin-row .danger{color:#b00020}
+/* Hot Seat Hour (switch gossip_show): the show banner at the top of the sheet and the host's line under the gist. */
+.hs-show{margin:0 0 10px;padding:6px 12px;border-radius:12px;background:rgba(255,255,255,.1);font-size:13px;font-weight:700}
+.hs-show.live{background:#e0263b;color:#fff}
+.hs-host{margin:8px 0 0;font-size:14px;font-style:italic;opacity:.9}
