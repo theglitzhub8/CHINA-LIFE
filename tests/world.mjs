@@ -139,6 +139,8 @@ test('the city sky runs a fast shared day and night cycle, each city has daily w
  const dayOf=want=>{for(let d=1;d<400;d++)if(W.weatherFor('Shenyang',d)===want)return d};t.game.state.day=dayOf('clear');
  // The sky runs a 2-hour day: move real time until the sky reaches the wanted hour (5 real minutes per sky hour).
  const sky=h=>t.passMinutes(Math.round(((h-W.skyHour())%24+24)%24*5));
+ // The live sky takes the weather of the real (Beijing) day, so move the test clock to a clear real day first.
+ for(let i=0;i<60&&W.weatherFor('Shenyang')!=='clear';i++)t.passDays(1);
  const clear=dayOf('clear');sky(13);t.game.state.day=clear;t.world.map();const noon=W.lighting().sun;sky(23);t.game.state.day=clear;t.world.map();const night=W.lighting().sun;assert.ok(noon>2.5&&night<1,'noon '+noon+' night '+night);assert.ok(Math.abs(W.skyHour()-23)<.2);
  assert.equal(W.weatherFor('Shenyang',5),W.weatherFor('Shenyang',5),'weather is stable for the day');assert.ok(['clear','cloudy','rain','snow'].includes(W.weatherFor('Guangzhou',3)));
  for(let d=1;d<200;d++)assert.notEqual(W.weatherFor('Guangzhou',d),'snow','no snow in Guangzhou');
@@ -171,3 +173,41 @@ test('AI characters stand at their venue with an AI tag, and tapping one opens t
  t.game.state.place='plaza';t.world.venue('plaza');const tag=t.document.querySelector('.ai-label');assert.ok(tag,'Mei is in Hafrik Square');assert.match(tag.textContent,/Mei · City guide/);tag.onclick({stopPropagation(){}});assert.equal(opened,'guide');
  t.world.venue('gym');assert.equal(t.document.querySelector('.ai-label'),null,'only at her venue')});
 test('a mystery clue object appears only in the venue the route names',()=>{const t=setup();assert.equal(t.document.querySelectorAll('.mystery-clue').length,0);t.game.setMysteryClue({place:'plaza',object:'plaza-lantern',x:1.2,z:0.4,label:'Paper lantern'});t.world.venue('park');assert.equal(t.document.querySelectorAll('.mystery-clue').length,0);t.world.venue('plaza');assert.equal(t.document.querySelectorAll('.mystery-clue').length,1);assert.match(t.document.querySelector('.mystery-clue').textContent,/🔍/)});
+
+test('University Years: a student lives in the 2-person dorm with a roommate who keeps a daily routine (switch uni_years)',()=>{
+ const t=setup();t.world.venue('home');assert.equal(t.world.homeStyle,'rental','switch off: starter home');
+ t.context.ChinaLifeFlags={cast:k=>k==='uni_years'};
+ const mate=()=>[...t.document.querySelectorAll('.hafrik-host')].map(l=>l.textContent).join('|');
+ t.game.state.hour=20*60;t.internal.render();t.world.venue('home');assert.equal(t.world.homeStyle,'dorm');assert.equal(t.document.getElementById('worldVenueTitle').textContent,'Your student dorm');assert.match(mate(),/roommate · studying/);
+ t.game.state.hour=2*60;t.world.venue('home');assert.match(mate(),/roommate · asleep/);t.tick(2);assert.equal([...t.document.querySelectorAll('.hafrik-host')].length,1);
+ t.game.state.hour=10*60;t.world.venue('home');assert.match(mate(),/is at class · back at 12:00/);
+ t.game.state.hour=20*60;t.world.venue('home');let completed=0;t.world.perform({kind:'cook',label:'Cook'},()=>completed++);t.tick(20);assert.equal(completed,1,'kitchen reachable');
+ t.game.state.properties={...(t.game.state.properties||{}),[t.game.state.city]:'apartment'};t.world.venue('home');assert.equal(t.world.homeStyle,'apartment','a bought home replaces the dorm');
+ t.game.state.properties={};t.game.state.student={...(t.game.state.student||{}),graduated:'2026-11-23'};t.world.venue('home');assert.equal(t.world.homeStyle,'rental','a graduate has moved out of the dorm');
+ t.game.state.student.graduated=null;t.game.state.properties={};t.game.state.background='Worker';t.world.venue('home');assert.equal(t.world.homeStyle,'rental','only students live in the dorm');
+});
+
+test('real sitting (switch real_sitting): walk beside the chair, turn, slide onto the seat, stand up beside it; off = the old snap',()=>{
+ const t=setup();const walkTo=(x,z)=>{t.world.perform({kind:'phone',x,z,duration:.05},()=>{});t.tick(10)};const seat={x:-4.3,z:1.6};
+ const dist=(p,q)=>Math.hypot(p.x-q.x,p.z-q.z);
+ // Switch off: Sit snaps onto the nearest seat at once.
+ t.world.venue('home');walkTo(-3.2,1.6);t.world.emote('sit');assert.equal(t.world.seated,true);assert.ok(dist(t.world.position,seat)<.05);t.world.emote('stop');
+ // Switch on: nothing happens at once; the player walks, turns, then sits.
+ t.context.ChinaLifeFlags={cast:k=>k==='real_sitting'};t.world.venue('home');walkTo(-3.2,1.6);t.world.emote('sit');
+ assert.equal(t.world.seated,false);assert.equal(t.world.sitting,'walk');t.tick(6);assert.equal(t.world.seated,true);assert.equal(t.world.sitting,null);assert.ok(dist(t.world.position,seat)<.05,'on the seat');
+ // Standing up puts the player beside the chair, not inside it.
+ t.world.emote('stop');assert.equal(t.world.seated,false);const d=dist(t.world.position,seat);assert.ok(d>.5&&d<.75,'beside the chair: '+d.toFixed(2));
+ // Walking somewhere else on the way cancels the sit.
+ walkTo(-3,.6);t.world.emote('sit');assert.equal(t.world.sitting,'walk');walkTo(0,1);assert.equal(t.world.sitting,null);assert.equal(t.world.seated,false);
+});
+
+test('no walking through furniture (switch real_sitting): in every home the body (15 cm each side) never overlaps furniture',async()=>{
+ const t=setup();t.context.ChinaLifeFlags={cast:k=>k==='real_sitting'};const {buildHome}=await import('../public/home-interiors.js');
+ let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+ for(const type of ['dorm','rental','apartment','townhouse','villa','penthouse','mansion']){
+  t.game.state.properties={[t.game.state.city]:type};if(type==='dorm'){t.game.state.properties={};t.context.ChinaLifeFlags={cast:k=>k==='real_sitting'||k==='uni_years'}}
+  t.world.venue('home');assert.equal(t.world.homeStyle,type);const h=buildHome(type,{}),B=h.bounds,R=.15,inside=p=>h.colliders.find(o=>Math.abs(p.x-o.x)<o.w/2+R&&Math.abs(p.z-o.z)<o.d/2+R);
+  for(let i=0;i<25;i++){t.world.perform({kind:'phone',x:(rnd()*2-1)*B.x,z:(rnd()*2-1)*B.z,duration:.05},()=>{});
+   for(let f=0;f<200&&t.world.busy;f++){t.tick(.05);const hit=inside(t.world.position);assert.ok(!hit,type+': inside furniture at '+t.world.position.x.toFixed(2)+','+t.world.position.z.toFixed(2)+' '+JSON.stringify(hit))}t.world.cancel()}
+  t.context.ChinaLifeFlags={cast:k=>k==='real_sitting'}}
+});

@@ -16,6 +16,8 @@ window.ChinaLifeStore={
   {id:'qipao-silk',cat:'clothes',slot:'top',style:'qipao',name:'Silk qipao',price:1800,colors:['#b22222','#1e4c73','#d9b24a']},
   {id:'jacket-leather',cat:'clothes',slot:'top',style:'jacket',name:'Leather jacket',price:2400,colors:['#1d1d1d','#5b3b28']},
   {id:'suit-tailored',cat:'clothes',slot:'top',style:'suit',name:'Tailored suit jacket',price:6800,colors:['#1f2a38','#3a3f45','#d8cdb8']},
+  // University Years: given at graduation, never sold (award items are hidden from the store lists).
+  {id:'grad-blazer',cat:'clothes',slot:'top',style:'suit',name:'Graduation blazer',price:0,award:'graduation',colors:['#1d2b4a','#5a1f2b','#1f3a2e']},
   {id:'gown-evening',cat:'clothes',slot:'top',style:'gown',name:'Evening gown',price:9800,colors:['#1d1d1d','#7a1f2b','#c9a24a']},
   {id:'shorts',cat:'clothes',slot:'bottom',style:'shorts',name:'Summer shorts',price:150,colors:['#c9b38a','#2f4a6b','#1d1d1d']},
   {id:'joggers',cat:'clothes',slot:'bottom',style:'joggers',name:'Joggers',price:200,colors:['#3c3c46','#6b7c86']},

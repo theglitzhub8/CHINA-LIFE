@@ -1,3 +1,4 @@
+import {placeRoommate} from './dorm.js';
 // v10: Hafrik host personas. Five permanent hosts stand at fitting venues and chat with canned lines only
 // (no AI calls): greetings, small talk and keyword-matched topic replies, each in their own voice.
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -42,7 +43,7 @@ export function reply(h,text,name){const t=String(text||'').trim(),fill=s=>Strin
  if(/\?$/.test(t))return fill(pick(['Hmm, good question! ','Honestly? ','Let me think… ']))+fill(pick(h.small));
  return fill(pick(h.small))}
 // Places hosts in the current venue: a person with a "Hafrik host" tag and an online dot.
-export function placeHosts(c,id){const out=[];for(const h of HOSTS.filter(h=>h.place===id)){const body=c.person(h.spot[0],h.spot[1],h.shirt,h.skin,h.name+' · Hafrik host','host:'+h.id,{skin:h.skin,hair:h.hair,top:{s:'tee',c:h.shirt},bottom:{s:'jeans',c:0x28394b}});body.rotation.y=Math.PI*.1;c.addActor(body);const l=c.labelFor(body);if(l){l.el.classList.add('hafrik-host');l.el.onclick=e=>{e.stopPropagation();chat(c.game,h)}}out.push(body)}return out}
+export function placeHosts(c,id){const out=[...placeRoommate(c,id)];for(const h of HOSTS.filter(h=>h.place===id)){const body=c.person(h.spot[0],h.spot[1],h.shirt,h.skin,h.name+' · Hafrik host','host:'+h.id,{skin:h.skin,hair:h.hair,top:{s:'tee',c:h.shirt},bottom:{s:'jeans',c:0x28394b}});body.rotation.y=Math.PI*.1;c.addActor(body);const l=c.labelFor(body);if(l){l.el.classList.add('hafrik-host');l.el.onclick=e=>{e.stopPropagation();chat(c.game,h)}}out.push(body)}return out}
 const logs=new Map();
 export function chat(game,h){const name=game.state.name||'friend',log=logs.get(h.id)||[];if(!log.length)log.push(['h',reply(h,'',name)]);logs.set(h.id,log);
  const draw=()=>{game.showScreen('💬 '+h.name,'<span class="host-online">● Online</span> · Hafrik host · '+esc(globalThis.ChinaLifeOneCity?.brand?.(h.vibe)??h.vibe),'<div class="host-chat"><div class="host-log" id="hostLog">'+log.slice(-14).map(([w,t])=>'<p class="'+w+'">'+esc(t)+'</p>').join('')+'</div><div class="host-chips">'+['How are you?','Any gist?','Food tips?','Help with school','Where should I go tonight?'].map(t=>'<button data-chip>'+t+'</button>').join('')+'</div><form id="hostForm" class="host-form"><input id="hostIn" maxlength="200" placeholder="Message '+esc(h.name)+'…" autocomplete="off"><button>Send</button></form></div>');

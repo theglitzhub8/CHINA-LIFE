@@ -20,9 +20,10 @@
  // One-city phone (founder, 28 Oct 2026): the apps kept on the one-city phone. Everything else is hidden there, grouped
  // under one appadmin switch each (APP_GROUPS, default OFF). Classic mode keeps the R1 list above. 'police' stays
  // as "My reports" (the player report system) inside the Court app.
+ // University Years plan (docs/UNIVERSITY-YEARS-PLAN.md): uni_years, uni_food, wardrobe_locks, micro_style and real_sitting, all default OFF.
  const ONE_CITY_APPS=['whereto','people','football','hotseat','gossiptv','wallet','exchange','marketplace','hafrikEvents','services','hafrikBusiness','spaces','tasks','goals','rank','work','jobs','earn','studio','chinese','skills','academy','community','police','court','shop','settings','notifications','admin'];
  const APP_GROUPS={app_launches:['celebrate'],app_travel:['travel','guide','driving'],app_homes:['home','homes'],app_cantaball:['cantaball'],app_story:['story'],app_politics:['politics'],app_delivery:['delivery'],app_needs:['needs'],app_together:['together'],app_opportunities:['fortune'],app_journal:['journal','cloud'],app_meet:['meet'],app_firstday:['firstday'],app_events:['events']};
- const CAST={ai_characters:false,club_pappi:false,club_hypeman:true,...Object.fromEntries(Object.keys(APP_GROUPS).map(k=>[k,false]))};
+ const CAST={ai_characters:false,club_pappi:false,club_hypeman:true,uni_years:false,uni_food:false,wardrobe_locks:false,micro_style:false,real_sitting:false,...Object.fromEntries(Object.keys(APP_GROUPS).map(k=>[k,false]))};
  const oneCityApp=id=>{if(ONE_CITY_APPS.includes(id))return true;const g=Object.keys(APP_GROUPS).find(k=>APP_GROUPS[k].includes(id));return g?cast(g):false};let served={};
  const offList=()=>{try{return new Set((localStorage.getItem('chinalife-flags-off')||'').split(',').map(s=>s.trim()).filter(Boolean))}catch{return new Set()}};
  const cast=key=>{if(!(key in CAST))return false;if(on().has(key))return true;if(offList().has(key))return false;return typeof served[key]==='boolean'?served[key]:CAST[key]};

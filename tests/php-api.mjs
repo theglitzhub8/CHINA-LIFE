@@ -1020,16 +1020,237 @@ test('Party Night runs a timed dance, takes one vote each and names the winner',
  assert.equal(done.data.round.phase,'closed');assert.equal(done.data.round.winner,'6');assert.match(done.data.round.title,/user6 · Dance Champion/);
 });
 
-test('attendance: the reward paid by the server stays paid and the attendance record survives device saves',async()=>{
+// University Years Phase 3: calendar from the enrolment date, Sunday exams made and graded on the server, resits.
+test('university years: enrolment, weekly calendar, server-graded Sunday exam, resit and saves that keep progress',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(21,'user21')");
+ const uni=(today,data)=>fetch(base+'/api/v4/chinalife/university.php',{method:data?'POST':'GET',headers:{Authorization:'Bearer test-21','X-Test-Today':today,...(data?{'content-type':'application/json'}:{})},body:data?JSON.stringify(data):undefined}).then(async r=>{const j=await r.json();return {...j,...(j.data||{}),httpStatus:r.status}});
+ const ctx={window:{}};vm.createContext(ctx);vm.runInContext(fs.readFileSync('public/chinese-course.js','utf8'),ctx);const words=ctx.window.ChinaLifeChinese.allWords;
+ const solve=q=>{const m=q.prompt.match(/^What does (.+) \(/),w=q.prompt.match(/^How do you write “(.+)” in Chinese/),p=q.prompt.match(/^How do you say (.+)\?$/);
+  const hit=m?words.find(x=>x.han===m[1]):w?words.find(x=>x.en===w[1]&&q.options.includes(x.han)):words.find(x=>x.han===p[1]);return m?hit.en:w?hit.han:hit.pin};
+ assert.equal((await uni('2026-11-04')).httpStatus,403,'switched off by default');
+ try{
+  assert.equal((await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:true}})).status,'success');
+  assert.equal((await call(21,'save.php','POST',{revision:0,save:{character:{},game:game()}})).httpStatus,200);
+  // Wednesday 4 Nov 2026: Year 1 started on Monday the 2nd. Rooms of later years are locked. No exam on a class day.
+  let s=await uni('2026-11-04');assert.equal(s.student,true);assert.equal(s.start,'2026-11-02');assert.equal(s.year,1);assert.equal(s.dayName,'Class day');assert.equal(s.examDay,false);
+  assert.deepEqual(s.rooms.filter(r=>r.open).map(r=>r.id),['classrooms','dorm','store']);
+  assert.equal((await call(21,'save.php')).data.revision,1,'enrolling does not move the save revision, so an open game keeps saving');
+  assert.equal((await uni('2026-11-04',{action:'start_exam',year:1})).httpStatus,409);
+  // Sunday: the Year 1 exam opens; questions come without answers; a wrong paper fails and cannot be retaken that day.
+  s=await uni('2026-11-08');assert.equal(s.examDay,true);assert.deepEqual(s.exams,[1]);
+  let e=await uni('2026-11-08',{action:'start_exam',year:1});assert.equal(e.exam.questions.length,10);assert.ok(!JSON.stringify(e.exam).includes('answer'));
+  let r=await uni('2026-11-08',{action:'submit_exam',answers:[]});assert.equal(r.result.passed,false);assert.equal(r.result.score,0);assert.deepEqual(r.exams,[]);
+  assert.equal((await uni('2026-11-08',{action:'start_exam',year:1})).httpStatus,409);
+  // A device save never wipes university progress or attendance (both written only by their endpoints).
+  sql("USE chinalife_test; UPDATE chinalife_saves SET game_state=JSON_SET(game_state,'$.attendance',JSON_OBJECT('since','2026-11-02','days',JSON_ARRAY('2026-11-04'))) WHERE user_id=21");
+  const saved=await call(21,'save.php');assert.equal((await call(21,'save.php','POST',{revision:saved.data.revision,save:{character:{},game:{...saved.data.save.game,university:null}}})).httpStatus,200);
+  assert.equal(JSON.parse(sql("USE chinalife_test; SELECT JSON_EXTRACT(game_state,'$.attendance.days') FROM chinalife_saves WHERE user_id=21")).join(),'2026-11-04');
+  // Next Sunday is Year 2: the library opens, Year 1 is a resit next to the Year 2 exam. Passing pays XP and coins once.
+  s=await uni('2026-11-15');assert.equal(s.year,2);assert.deepEqual(s.resits,[1]);assert.deepEqual(s.exams,[1,2]);assert.equal(s.rooms.find(x=>x.id==='library').open,true);
+  e=await uni('2026-11-15',{action:'start_exam',year:1});r=await uni('2026-11-15',{action:'submit_exam',answers:e.exam.questions.map(solve)});
+  assert.equal(r.result.passed,true,JSON.stringify(r.result));assert.equal(r.result.score,10);assert.equal(r.result.xp,60);assert.equal(r.result.coins,120);assert.deepEqual(r.exams,[2]);assert.deepEqual(r.resits,[]);
+  // Thursday enrolment is orientation until next Monday; after four weeks the year stays at 4.
+  sql("USE chinalife_test; UPDATE chinalife_saves SET game_state=JSON_REMOVE(game_state,'$.university') WHERE user_id=21");
+  s=await uni('2026-11-05');assert.equal(s.orientation,true);assert.equal(s.start,'2026-11-09');assert.equal(s.dayName,'Orientation');
+  s=await uni('2026-12-30');assert.equal(s.year,4);
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:false}})}
+});
+
+test('university and attendance rewards paid by the server stay paid after the game saves again',async()=>{
  sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(22,'user22')");
- assert.equal((await call(22,'save.php','POST',{revision:0,save:{character:{},game:{...game(),place:'campus'}}})).httpStatus,200);
- const t=harness(null),c=t.context;c.HafrikSession={token:'test-22',user:{id:22}};c.URLSearchParams=URLSearchParams;c.fetch=(url,opts)=>fetch(base+new URL(url).pathname+new URL(url).search,opts);
- await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);await c.ChinaLifeCloud.ready;
- const money=t.game.state.money,xp=t.game.state.xp;
- await call(22,'presence.php','POST',{...presence('Shenyang','campus')});const a=await c.ChinaLifeCloud.attendance(true);assert.equal(a.event,'present');assert.equal(a.today,true);
- assert.equal(t.game.state.money,money+30);assert.equal(t.game.state.xp,xp+15);
- // The next device save must not read the old totals as spending, nor drop the attendance record.
- t.game.state.needs.fun=Math.max(0,t.game.state.needs.fun-1);await c.ChinaLifeCloud.upload();
- const s=(await call(22,'save.php')).data.save.game;assert.equal(s.money,money+30);assert.equal(s.xp,xp+15);assert.equal(s.attendance.days.length,1);
- assert.equal((await call(22,'attendance.php')).data.today,true);
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:true}});
+  assert.equal((await call(22,'save.php','POST',{revision:0,save:{character:{},game:{...game(),place:'campus'}}})).httpStatus,200);
+  const t=harness(null),c=t.context;c.HafrikSession={token:'test-22',user:{id:22}};c.URLSearchParams=URLSearchParams;
+  c.fetch=(url,opts={})=>{const u=new URL(url);return fetch(base+u.pathname+u.search,u.pathname.endsWith('university.php')?{...opts,headers:{...(opts.headers||{}),'X-Test-Today':today}}:opts)};let today='2026-11-04';
+  await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);await c.ChinaLifeCloud.ready;
+  const ctx={window:{}};vm.createContext(ctx);vm.runInContext(fs.readFileSync('public/chinese-course.js','utf8'),ctx);const W=ctx.window.ChinaLifeChinese.allWords;
+  const solve=q=>{const m=q.prompt.match(/^What does (.+) \(/),w=q.prompt.match(/^How do you write “(.+)” in Chinese/),p=q.prompt.match(/^How do you say (.+)\?$/);return m?W.find(x=>x.han===m[1]).en:w?W.find(x=>x.en===w[1]&&q.options.includes(x.han)).han:W.find(x=>x.han===p[1]).pin};
+  await c.ChinaLifeCloud.university();today='2026-11-08';
+  const money=t.game.state.money,xp=t.game.state.xp;
+  const paper=(await c.ChinaLifeCloud.university({action:'start_exam',year:1})).exam;const d=await c.ChinaLifeCloud.university({action:'submit_exam',answers:paper.questions.map(solve)});
+  assert.equal(d.result.passed,true);assert.equal(t.game.state.money,money+120);assert.equal(t.game.state.xp,xp+60);
+  // Attendance at the campus pays ¥30 + 15 XP on the server; the device shows it at once.
+  await call(22,'presence.php','POST',{...presence('China','campus')});const a=await c.ChinaLifeCloud.attendance(true);assert.equal(a.event,'present');
+  assert.equal(t.game.state.money,money+150);assert.equal(t.game.state.xp,xp+75);
+  // The next device save must not read the old totals as spending.
+  t.game.state.needs.fun=Math.max(0,t.game.state.needs.fun-1);await c.ChinaLifeCloud.upload();
+  const s=(await call(22,'save.php')).data.save.game;assert.equal(s.money,money+150);assert.equal(s.xp,xp+75);
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:false}})}
+});
+
+// University Years Phase 4: timetable, class check-in from the classroom, attendance score and the exam pass mark.
+test('university classes: check-in window, presence at campus, attendance score, truancy risk and a harder exam',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(23,'user23')");
+ const uni=(now,data)=>fetch(base+'/api/v4/chinalife/university.php',{method:data?'POST':'GET',headers:{Authorization:'Bearer test-23','X-Test-Today':now,...(data?{'content-type':'application/json'}:{})},body:data?JSON.stringify(data):undefined}).then(async r=>{const j=await r.json();return {...j,...(j.data||{}),httpStatus:r.status}});
+ const st=s=>s.timetable.map(c=>c.id+':'+c.status).join(' ');
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:true}});
+  assert.equal((await call(23,'save.php','POST',{revision:0,save:{character:{},game:{...game(),place:'campus'}}})).httpStatus,200);
+  // Monday 2 Nov, 08:00: enrolled, Year 1 starts today; two classes ahead, full attendance, the easiest pass mark.
+  let s=await uni('2026-11-02 08:00');assert.equal(s.start,'2026-11-02');assert.equal(st(s),'am:later pm:later');assert.equal(s.timetable[0].time,'09:00');assert.equal(s.attendance,100);assert.equal(s.passMark,5);
+  assert.equal((await uni('2026-11-02 08:00',{action:'attend'})).httpStatus,409,'too early');
+  // 08:58: check-in opens (the phone buzzes now). Only from the campus.
+  await call(23,'presence.php','POST',{...presence('China','home')});assert.match((await uni('2026-11-02 08:58',{action:'attend'})).message,/Go to your campus/);
+  await call(23,'presence.php','POST',{...presence('China','campus')});let a=await uni('2026-11-02 08:58',{action:'attend'});
+  assert.equal(a.httpStatus,200);assert.deepEqual(a.attended,{id:'am',subject:'Chinese class',xp:10,coins:10});assert.equal(st(a),'am:attended pm:later');
+  assert.match((await uni('2026-11-02 09:10',{action:'attend'})).message,/already checked in/);
+  // 15:00: the 14:00 lecture was missed: 100 → 90, still the easy mark.
+  s=await uni('2026-11-02 15:00');assert.equal(st(s),'am:attended pm:missed');assert.equal(s.attendance,90);assert.equal(s.passMark,5);
+  // Tuesday evening, both missed: 70, pass mark 6. Friday evening: 10, truancy risk, pass mark 7.
+  s=await uni('2026-11-03 18:00');assert.equal(s.attendance,70);assert.equal(s.passMark,6);assert.equal(s.truancy,false);
+  s=await uni('2026-11-06 18:00');assert.equal(s.attendance,10);assert.equal(s.truancy,true);assert.equal(s.passMark,7);
+  s=await uni('2026-11-07 10:00');assert.equal(s.classDay,false);assert.deepEqual(s.timetable,[]);
+  // Sunday: the Year 1 exam needs 7/10 now.
+  s=await uni('2026-11-08 10:00');assert.equal(s.passMarks['1'],7);assert.equal((await uni('2026-11-08 10:00',{action:'start_exam',year:1})).exam.passMark,7);
+  // Year 2 starts fresh at 100.
+  s=await uni('2026-11-09 08:00');assert.equal(s.year,2);assert.equal(s.attendance,100);
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:false}})}
+});
+
+// University Years Phase 5: the ¥100 daily student allowance is paid on the server and stays paid after device saves.
+test('student allowance: switch, once per Beijing day, students only, and the money survives the next save',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(24,'user24'),(25,'user25')");
+ const pay=(id,today,post=true)=>fetch(base+'/api/v4/chinalife/allowance.php',{method:post?'POST':'GET',headers:{Authorization:'Bearer test-'+id,'X-Test-Today':today,...(post?{'content-type':'application/json'}:{})},body:post?'{}':undefined}).then(async r=>{const j=await r.json();return {...j,...(j.data||{}),httpStatus:r.status}});
+ assert.equal((await pay(24,'2026-11-02')).httpStatus,403,'switched off by default');
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_food:true}});
+  assert.equal((await call(24,'save.php','POST',{revision:0,save:{character:{},game:game()}})).httpStatus,200);
+  assert.equal((await call(25,'save.php','POST',{revision:0,save:{character:{},game:{...game(),background:'Worker'}}})).httpStatus,200);
+  assert.equal((await pay(25,'2026-11-02')).student,false,'only students');
+  // Through a real game client: the ¥100 shows at once and stays after the next device save.
+  const t=harness(null),c=t.context;c.HafrikSession={token:'test-24',user:{id:24}};c.URLSearchParams=URLSearchParams;
+  c.fetch=(url,opts={})=>{const u=new URL(url);return fetch(base+u.pathname+u.search,u.pathname.endsWith('allowance.php')?{...opts,headers:{...(opts.headers||{}),'X-Test-Today':'2026-11-02'}}:opts)};
+  await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);await c.ChinaLifeCloud.ready;
+  const money=t.game.state.money;assert.equal((await pay(24,'2026-11-02',false)).waiting,true);
+  const d=await c.ChinaLifeCloud.allowance();assert.equal(d.paid,100);assert.equal(t.game.state.money,money+100);
+  assert.equal((await c.ChinaLifeCloud.allowance()).paid,0,'once a day');assert.equal(t.game.state.money,money+100);
+  t.game.state.needs.fun=Math.max(0,t.game.state.needs.fun-1);await c.ChinaLifeCloud.upload();
+  const s=(await call(24,'save.php')).data.save.game;assert.equal(s.money,money+100);assert.equal(s.allowance.day,'2026-11-02');
+  // The next Beijing day pays again.
+  const next=await pay(24,'2026-11-03');assert.equal(next.paid,100);assert.equal(next.total,200);
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_food:false}})}
+});
+
+// University Years Phase 6: library reading sessions win back attendance points from Year 2.
+test('university library: opens in Year 2, on campus, 2 sessions a day, wins back attendance (double on Saturday)',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(26,'user26')");
+ const uni=(now,data)=>fetch(base+'/api/v4/chinalife/university.php',{method:data?'POST':'GET',headers:{Authorization:'Bearer test-26','X-Test-Today':now,...(data?{'content-type':'application/json'}:{})},body:data?JSON.stringify(data):undefined}).then(async r=>{const j=await r.json();return {...j,...(j.data||{}),httpStatus:r.status}});
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:true}});
+  assert.equal((await call(26,'save.php','POST',{revision:0,save:{character:{},game:{...game(),place:'campus'}}})).httpStatus,200);
+  await call(26,'presence.php','POST',{...presence('China','campus')});
+  let s=await uni('2026-11-02 08:00');assert.equal(s.library.open,false);assert.match((await uni('2026-11-02 08:00',{action:'start_library'})).message,/opens in Year 2/);
+  // Monday of Year 2, 15:00: both classes missed (80). A good session: 3 words read, 3 right, +5 attendance, +15 knowledge.
+  s=await uni('2026-11-09 15:00');assert.equal(s.year,2);assert.equal(s.attendance,80);assert.deepEqual(s.library,{open:true,today:0,perDay:2,points:5});
+  let l=await uni('2026-11-09 15:00',{action:'start_library'});assert.equal(l.session.words.length,3);assert.ok(!JSON.stringify(l.session.questions).includes('answer'));
+  let r=await uni('2026-11-09 15:00',{action:'submit_library',answers:l.session.words.map(w=>w.en)});
+  assert.deepEqual({...r.libraryResult,answers:undefined},{right:3,total:3,passed:true,points:5,knowledge:15,answers:undefined});assert.equal(r.attendance,85);assert.equal(r.knowledge,15);
+  // A poor session wins nothing; a third one that day is refused.
+  l=await uni('2026-11-09 16:00',{action:'start_library'});r=await uni('2026-11-09 16:00',{action:'submit_library',answers:[]});assert.equal(r.libraryResult.passed,false);assert.equal(r.attendance,85);
+  assert.match((await uni('2026-11-09 17:00',{action:'start_library'})).message,/read enough today/);
+  // Saturday is library day: a good session is worth 10.
+  s=await uni('2026-11-14 10:00');assert.equal(s.library.points,10);const before=s.attendance;
+  l=await uni('2026-11-14 10:00',{action:'start_library'});r=await uni('2026-11-14 10:00',{action:'submit_library',answers:l.session.words.map(w=>w.en)});assert.equal(r.attendance,before+10);
+  // Only from the campus.
+  await call(26,'presence.php','POST',{...presence('China','home')});assert.match((await uni('2026-11-15 10:00',{action:'start_library'})).message,/on your campus/);
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:false}})}
+});
+
+// University Years Phase 7: choose a major in Year 3, then daily lab sessions marked on the server.
+test('university lab: major chosen once in Year 3, one session a day on campus, terms, experiment order and instruction',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(27,'user27')");
+ const uni=(now,data)=>fetch(base+'/api/v4/chinalife/university.php',{method:data?'POST':'GET',headers:{Authorization:'Bearer test-27','X-Test-Today':now,...(data?{'content-type':'application/json'}:{})},body:data?JSON.stringify(data):undefined}).then(async r=>{const j=await r.json();return {...j,...(j.data||{}),httpStatus:r.status}});
+ const php=fs.readFileSync('chinalife-api/university-lab.php','utf8');const terms=new Map([...php.matchAll(/\['([^']+)','([^']+)','([^']+)'\]/g)].map(m=>[m[1],m[3]]));
+ const instr=new Map([...php.matchAll(/\['(请[^']+)','[^']+','([^']+)',\[/g)].map(m=>[m[1],m[2]]));
+ const solve=l=>({action:'submit_lab',terms:l.terms.map(q=>terms.get(q.prompt.match(/^What does (.+) \(/)[1])),order:l.experiment.steps.map(s=>s.id).sort(),instruction:instr.get(l.instruction.han)});
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:true}});
+  assert.equal((await call(27,'save.php','POST',{revision:0,save:{character:{},game:{...game(),place:'campus'}}})).httpStatus,200);
+  await call(27,'presence.php','POST',{...presence('China','campus')});
+  await uni('2026-11-02 08:00');assert.match((await uni('2026-11-09 10:00',{action:'choose_major',major:'cs'})).message,/in Year 3/);
+  let s=await uni('2026-11-16 10:00');assert.equal(s.year,3);assert.equal(s.lab.open,true);assert.equal(s.lab.major,null);assert.deepEqual(s.lab.majors.map(m=>m.id),['cs','physics']);
+  assert.match((await uni('2026-11-16 10:00',{action:'start_lab'})).message,/Choose your major first/);
+  assert.equal((await uni('2026-11-16 10:00',{action:'choose_major',major:'chemistry'})).httpStatus,400);
+  s=await uni('2026-11-16 10:00',{action:'choose_major',major:'cs'});assert.equal(s.major.name,'Computer Science');assert.equal(s.lab.majorName,'Computer Science');
+  assert.match((await uni('2026-11-16 10:00',{action:'choose_major',major:'physics'})).message,/already chose/);
+  // A session: 2 terms, 4 shuffled steps, 1 instruction; answers never sent. All right: pass, a credit, 20 XP, 20 knowledge.
+  let l=(await uni('2026-11-16 10:00',{action:'start_lab'})).labSession;assert.equal(l.major,'Computer Science');assert.equal(l.terms.length,2);assert.equal(l.experiment.steps.length,4);assert.equal(l.instruction.options.length,4);
+  assert.ok(!JSON.stringify(l).includes('answer'));
+  let r=await uni('2026-11-16 10:00',solve(l));assert.equal(r.labResult.right,4,JSON.stringify(r.labResult));assert.equal(r.labResult.passed,true);assert.equal(r.labResult.xp,20);assert.equal(r.lab.credits,1);assert.equal(r.knowledge,20);
+  assert.match((await uni('2026-11-16 15:00',{action:'start_lab'})).message,/One lab session a day/);
+  // Next day: terms right but the experiment in the wrong order and the wrong action: 2 of 4, no credit.
+  l=(await uni('2026-11-17 10:00',{action:'start_lab'})).labSession;const bad={...solve(l),order:solve(l).order.reverse(),instruction:'nope'};
+  r=await uni('2026-11-17 10:00',bad);assert.equal(r.labResult.right,2);assert.equal(r.labResult.passed,false);assert.equal(r.labResult.order,false);assert.equal(r.lab.credits,1);
+  await call(27,'presence.php','POST',{...presence('China','home')});assert.match((await uni('2026-11-18 10:00',{action:'start_lab'})).message,/on your campus/);
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:false}})}
+});
+
+// University Years Phase 8: graduation with a self-introduction in Chinese, checked on the server.
+test('university graduation: needs four passed years and a major, opens in Year 4, checks the Chinese self-introduction, pays once',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(28,'user28')");
+ const uni=(now,data)=>fetch(base+'/api/v4/chinalife/university.php',{method:data?'POST':'GET',headers:{Authorization:'Bearer test-28','X-Test-Today':now,...(data?{'content-type':'application/json'}:{})},body:data?JSON.stringify(data):undefined}).then(async r=>{const j=await r.json();return {...j,...(j.data||{}),httpStatus:r.status}});
+ const good='我叫Ada。我是尼日利亚人。我在东北大学学习。我的专业是物理。毕业以后我想在中国工作。';
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:true}});
+  assert.equal((await call(28,'save.php','POST',{revision:0,save:{character:{},game:game()}})).httpStatus,200);
+  let s=await uni('2026-11-02 08:00');assert.equal(s.graduation.open,false);
+  s=await uni('2026-11-23 10:00');assert.equal(s.year,4);assert.equal(s.graduation.open,true);assert.equal(s.graduation.ready,false);
+  assert.deepEqual(s.graduation.missing,['Pass the Year 1 exam','Pass the Year 2 exam','Pass the Year 3 exam','Pass the Year 4 exam','Choose your major in the laboratory']);
+  assert.match((await uni('2026-11-23 10:00',{action:'graduate',text:good})).message,/Pass the Year 1 exam/);
+  sql(`USE chinalife_test; UPDATE chinalife_saves SET game_state=JSON_SET(game_state,'$.university.results',JSON_OBJECT('1',JSON_OBJECT('passed',true),'2',JSON_OBJECT('passed',true),'3',JSON_OBJECT('passed',true),'4',JSON_OBJECT('passed',true)),'$.university.major','physics') WHERE user_id=28`);
+  assert.match((await uni('2026-11-16 10:00',{action:'graduate',text:good})).message,/opens in Year 4/);
+  s=await uni('2026-11-23 10:00');assert.equal(s.graduation.ready,true);
+  // Too short and missing parts: nothing paid, the checklist says what is missing.
+  let r=await uni('2026-11-23 10:00',{action:'graduate',text:'我叫Ada。我是学生。'});assert.equal(r.introResult.passed,false);assert.equal(r.introResult.han,8);
+  assert.deepEqual(r.introResult.parts,{name:true,country:false,university:false,major:false,plan:false});assert.equal(r.graduation.graduated,null);
+  // The major must be the student's own (Physics here, not computer science words).
+  r=await uni('2026-11-23 10:00',{action:'graduate',text:good.replace('物理','计算机')});assert.equal(r.introResult.parts.major,false);
+  r=await uni('2026-11-23 10:00',{action:'graduate',text:good});assert.equal(r.introResult.passed,true);assert.equal(r.introResult.coins,500);assert.equal(r.introResult.xp,200);
+  assert.equal(r.graduation.graduated,'2026-11-23');assert.equal(r.graduation.intro,good);
+  assert.match((await uni('2026-11-24 10:00',{action:'graduate',text:good})).message,/already graduated/);
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:false}})}
+});
+
+// University Years Phase 9: the server refuses new locked clothes in a save; items owned before stay.
+test('wardrobe locks: a save cannot add a locked item before its milestone; owned items stay; first home unlocks',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(29,'user29')");
+ const wardrobe=(owned,acc=[])=>({owned:['tee-basic','jeans','canvas',...owned],wearing:{top:'tee-basic',bottom:'jeans',shoes:'canvas',acc},colors:{}});
+ const save=async g=>{const cur=await call(29,'save.php');return call(29,'save.php','POST',{revision:cur.data?.revision??0,save:{character:{},game:g}})};
+ const base={...game(),background:'Worker'};
+ // Before the switch: a gold chain is bought.
+ assert.equal((await save({...base,wardrobe:wardrobe(['chain'])})).httpStatus,200);
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{wardrobe_locks:true}});
+  assert.equal((await save({...base,wardrobe:wardrobe(['chain','luxwatch','leather-white'],['chain','luxwatch'])})).httpStatus,200);
+  let w=(await call(29,'save.php')).data.save.game.wardrobe;
+  assert.deepEqual(w.owned,['tee-basic','jeans','canvas','chain'],'the watch (Legend) and leather sneakers (first home) are refused; the chain stays');assert.deepEqual(w.wearing.acc,['chain']);
+  // A first home unlocks the leather sneakers.
+  assert.equal((await save({...base,properties:{Shenyang:'apartment'},wardrobe:wardrobe(['chain','leather-white'])})).httpStatus,200);
+  w=(await call(29,'save.php')).data.save.game.wardrobe;assert.ok(w.owned.includes('leather-white'));
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{wardrobe_locks:false}})}
+});
+
+// University Years Phase 10: micro-customization details are cleaned on save, rare options need milestones, and other
+// players receive the details of what you wear.
+test('micro-customization: saves keep only valid details, rare options need their milestone, and presence shares them',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(30,'user30'),(31,'user31')");
+ const save=async(id,g)=>{const cur=await call(id,'save.php');return call(id,'save.php','POST',{revision:cur.data?.revision??0,save:{character:{},game:g}})};
+ const wardrobe=details=>({owned:['tee-basic','jeans','canvas','shirt-oxford','backpack'],wearing:{top:'shirt-oxford',bottom:'jeans',shoes:'canvas',acc:['backpack']},colors:{},details});
+ const base={...game(),background:'Worker',city:'China',place:'campus'};
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{micro_style:true}});
+  assert.equal((await save(30,{...base,wardrobe:wardrobe({'shirt-oxford':{btn:'#3fae8a',collar:'v',glitter:'yes'},jeans:{len:'crop',fit:'huge'},backpack:{col:'#c9a24a',graphic:'star'},handbag:{col:'#7a1f2b'}})})).httpStatus,200);
+  // Jade buttons (Regular rank) and the gold bag (Shenyang Star) are refused at 0 XP; unknown fields and values go.
+  let d=(await call(30,'save.php')).data.save.game.wardrobe.details;
+  assert.deepEqual(d,{'shirt-oxford':{collar:'v'},jeans:{len:'crop'},backpack:{graphic:'star'}});
+  // At Regular rank the jade buttons are allowed.
+  sql("USE chinalife_test; UPDATE chinalife_balances SET xp=1600 WHERE user_id=30");
+  await save(30,{...base,xp:1600,wardrobe:wardrobe({'shirt-oxford':{btn:'#3fae8a',collar:'v'},jeans:{len:'crop'},backpack:{graphic:'star'}})});
+  d=(await call(30,'save.php')).data.save.game.wardrobe.details;assert.equal(d['shirt-oxford'].btn,'#3fae8a');
+  // Another player in the same place sees the details of what user 30 wears.
+  assert.equal((await save(31,{...base})).httpStatus,200);
+  await call(30,'presence.php','POST',{...presence('China','campus')});const p=(await call(31,'presence.php','POST',{...presence('China','campus')})).data.players.find(x=>String(x.id)==='30');
+  assert.deepEqual(p.details,{'shirt-oxford':{btn:'#3fae8a',collar:'v'},jeans:{len:'crop'},backpack:{graphic:'star'}});
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{micro_style:false}})}
 });

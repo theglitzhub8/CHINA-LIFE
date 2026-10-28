@@ -397,12 +397,29 @@ R._rbRetarget=(a,b)=>rbRetarget(a,b);R._tpl=tpl;
  // R9d: every adult is the same real height whatever the source model's own size: 1.75 m men, 1.65 m women (bind-pose bounding box),
  // inside the shared person group scale (world.js AVATAR = .8). NPCs get their small natural variation from the group scale, never the player.
  const PERSON_BASE=.8,ADULT_H={m:1.75,f:1.65},rbScale=(fem,h)=>(fem?ADULT_H.f:ADULT_H.m)/(PERSON_BASE*(h||1.806));R.adultHeight=ADULT_H;
+ // University Years micro-customization (switch micro_style): Rocketbox clothes live in one texture with the body, so the
+ // player's top, trouser and shoe colours are painted over it by height band (as the Hypeman's outfit, hypeman.js),
+ // keeping skin and the cloth's own shading. Real players only, never the crowd. Chains onto earlier shader edits.
+ const rbTintOn=o=>window.ChinaLifeFlags?.cast?.('micro_style')===true&&!o.crowd&&(o.self||/^(remote|street):/.test(String(o.id||'')));
+ function rbTint(m,L){const key=[L.top,L.bottom,L.shoes].join('-');m.traverse(c=>{if(!c.isSkinnedMesh||c.userData.ghost)return;const mats=Array.isArray(c.material)?c.material:[c.material];
+  const nm=mats.map(src=>{if(!src||!/body/i.test(src.name||'')||src.userData.rbTint===key)return src;const g=c.geometry;g.computeBoundingBox();const bb=g.boundingBox,size=bb.getSize(new THREE.Vector3());
+   const axis=size.y>=size.z&&size.y>=size.x?new THREE.Vector3(0,1,0):size.z>=size.x?new THREE.Vector3(0,0,1):new THREE.Vector3(1,0,0),lo=bb.min.dot(axis),hi=bb.max.dot(axis);
+   const n=src.clone(),prev=src.onBeforeCompile,prevKey=src.customProgramCacheKey?.()||'';n.userData={...src.userData,rbTint:key};n.customProgramCacheKey=()=>prevKey+'|rbTint';
+   n.onBeforeCompile=(sh,r)=>{prev.call(src,sh,r);Object.assign(sh.uniforms,{tAxis:{value:axis},tLo:{value:lo},tHi:{value:hi},tTop:{value:new THREE.Color(L.top)},tBot:{value:new THREE.Color(L.bottom)},tShoe:{value:new THREE.Color(L.shoes)}});
+    sh.vertexShader='uniform vec3 tAxis;uniform float tLo;uniform float tHi;varying float vTY;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvTY=(dot(position,tAxis)-tLo)/max(tHi-tLo,1e-4);');
+    sh.fragmentShader='uniform vec3 tTop;uniform vec3 tBot;uniform vec3 tShoe;varying float vTY;\n'+sh.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
+{vec3 c=diffuseColor.rgb;float mx=max(c.r,max(c.g,c.b)),mn=min(c.r,min(c.g,c.b)),sat=(mx-mn)/(mx+1e-4),lum=dot(c,vec3(.3,.59,.11));
+ float skin=step(c.b,c.g)*step(c.g,c.r)*smoothstep(.16,.28,sat)*(1.-smoothstep(.78,.9,sat))*step(.012,lum);
+ float torso=smoothstep(.49,.53,vTY)*(1.-smoothstep(.885,.91,vTY)),legs=smoothstep(.055,.075,vTY)*(1.-smoothstep(.49,.53,vTY)),feet=1.-smoothstep(.055,.075,vTY);
+ vec3 o=tTop*clamp(.45+lum*2.4,.35,1.35)*torso+tBot*(.7+lum*1.6)*legs+tShoe*clamp(.4+lum*1.8,.4,1.)*feet;
+ diffuseColor.rgb=mix(c,o,(1.-skin)*clamp(torso+legs+feet,0.,1.));}`)};return n});c.material=Array.isArray(c.material)?nm:nm[0]})}
+ R.rbTint=rbTint;R.rbTintOn=rbTintOn;
  function dressRB(g,o,L){const lo=!!o.crowd,name=rbPick({...o,gender:L.fem?'female':'male'});const k=(lo?'lo/':'')+name;const sc=RBT[k+'#'];
   if(!sc){if(!rbPend.has(g)){rbPend.set(g,1);rbLoad(name,lo).then(t=>{RBT[k+'#']=t;rbPend.delete(g);if(g.parent&&!g.userData.real)dress(g,o)}).catch(e=>{console.warn('rocketbox',name,e);rbPend.delete(g);g.userData.rbFail=1;if(g.parent)dress(g,o)})}return true}
   const m=cloneSkinned(sc);m.traverse(c=>{if(c.isSkinnedMesh)c.userData.r7person=1});
   if(o.self)m.traverse(c=>{if(!c.isSkinnedMesh||c.userData.ghost)return;const gh=new THREE.SkinnedMesh(c.geometry,ghostMat);gh.userData.ghost=gh.userData.r7person=1;gh.frustumCulled=false;gh.renderOrder=1;gh.bind(c.skeleton,c.bindMatrix);c.parent.add(gh)});
   {const sh=rbScale(L.fem,sc.userData.h);m.scale.setScalar(sh);m.position.y=.022-(sc.userData.y0||0)*sh}m.userData.r7person=1;m.userData.rb=name;for(const c of g.children)if(!c.userData.r7keep&&c.name!=='emote-prop'){c.userData.r7hidden=c.visible;c.visible=false}
-  g.add(m);if(o.self){selfLit(m);g.traverse(c=>{if(c.isMesh&&!c.userData.ghost&&c.userData.r7person)c.renderOrder=2})}
+  g.add(m);if(o.self){selfLit(m);g.traverse(c=>{if(c.isMesh&&!c.userData.ghost&&c.userData.r7person)c.renderOrder=2})}if(rbTintOn(o))rbTint(m,L);
   const mixer=new THREE.AnimationMixer(m),act={};for(const n of o.crowd?['Idle_Loop','Idle_Talking_Loop','Dance_Loop','Walk_Loop','Sitting_Idle_Loop']:['Idle_Loop','Walk_Loop','Walk_Fast_Loop','Jog_Fwd_Loop','Dance_Loop','Sitting_Idle_Loop'])if(sc.userData.clips[n]){act[n]=mixer.clipAction(sc.userData.clips[n]);act[n].setEffectiveWeight(n==='Idle_Loop'?1:0);if(n==='Idle_Loop')act[n].play()}if(act.Dance_Loop)act.Dance_Loop.timeScale=.85+Math.random()*.3;
   for(const a of Object.values(act))a.time=Math.random()*a.getClip().duration;mixer.update(0);m.updateMatrixWorld(true);g.userData.real={m,mixer,act,w:{Idle_Loop:1},acc:0,frozen:false,posed:0,lod:lo,rb:name,fem:!!L.fem};people.add(g);return true}
  function dress(g,o){if(!R.ready){pending.push({g,o});return}if(g.userData.r7person||!g.parent&&!g.userData.keep)return;const L=lookOf(o);if(!rbOff()&&!g.userData.rbFail&&dressRB(g,o,L))return;const lo=o.crowd&&tpl.manLo,src=lo?(L.fem?tpl.womanLo:tpl.manLo):L.fem?tpl.woman:tpl.man,m=cloneSkinned(src);
