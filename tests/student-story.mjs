@@ -19,3 +19,17 @@ test('stale story callbacks cannot advance a restored account character',()=>{co
 test('older empty study level restores without losing student progress',()=>{const t=create();const old=JSON.parse(JSON.stringify(t.game.state));old.student.studyLevel='';old.money='3200';t.game.loadSave(old);assert.equal(t.game.state.student.studyLevel,'Undergraduate');assert.equal(t.game.state.money,3200);assert.equal(t.game.state.story.index,1)});
 
 test('students choose any real Shenyang university and retain it across reloads',()=>{const catalog=harness().game.cityContent;for(const school of catalog.universities){const t=harness(null);t.document.querySelector('[data-start="inside"]').onclick();t.click('nextStep');t.document.querySelector('[data-role="Student"]').onclick();t.click('nextStep');t.document.getElementById('onSchool').onchange({target:{value:school.id}});t.document.getElementById('onName').oninput({target:{value:'Student'}});t.click('nextStep');assert.equal(t.game.state.place,school.id);assert.equal(t.game.state.student.university,school.name);const restored=harness(JSON.parse(JSON.stringify(t.game.state)));assert.equal(restored.game.state.student.campus,school.id);restored.game.profile();restored.click('profileUniversity');restored.click('school-campus');assert.equal(restored.game.state.student.university,'Northeastern University')}});
+
+// UI review A1-A6: gender is one pill choice that never submits the form, a signed-in player starts with the Hafrik
+// profile gender and does not see the sign-in links, and each step opens at the top.
+test('character step: one gender choice that does not start the game, Hafrik gender first, no sign-in links once signed in',()=>{
+ const t=harness(null),d=t.document;d.querySelector('[data-start="inside"]').onclick();t.click('nextStep');d.querySelector('[data-role="Student"]').onclick();
+ t.context.ChinaLifeCloud={signedIn:true,profileGender:'female'};d.getElementById('onboardContent').scrollTop=500;t.click('nextStep');
+ assert.equal(d.getElementById('onGender'),null,'no second gender question');assert.equal(d.getElementById('onboardContent').scrollTop,0);
+ const pills=[...d.querySelectorAll('#onboardContent [data-gender]')];assert.deepEqual(pills.map(b=>b.dataset.gender),['male','female']);assert.ok(pills.every(b=>b.getAttribute('type')==='button'));
+ assert.ok(d.querySelector('[data-gender="female"]').className.includes('selected'),'Hafrik profile gender preselected');
+ assert.equal(d.getElementById('onboardCloud').hidden,true);assert.equal(d.getElementById('onboardLinks').children[0].hidden,true);
+ d.querySelector('[data-gender="male"]').onclick();assert.equal(t.game.state.created,false,'choosing a gender does not start the game');
+ assert.ok(d.querySelector('[data-gender="male"]').className.includes('selected'));
+ d.getElementById('onName').oninput({target:{value:'Ada'}});t.click('nextStep');assert.equal(t.game.state.created,true);assert.equal(t.game.state.gender,'male');
+});

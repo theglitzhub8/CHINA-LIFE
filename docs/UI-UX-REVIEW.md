@@ -87,6 +87,9 @@ Student, plus a code map of every on-screen element. The approved city map itsel
 Each task is small, keeps the approved map look, and can ship behind no switch (they are fixes), unless marked.
 
 1. **Sign-up fixes (A1–A6, E6).** Biggest win for new players; mostly game.js onboarding and cloud.js.
+   ✅ Done 29 Oct: one gender row that no longer submits the form (signed-in players start with their Hafrik gender),
+   no one-option city picker or "admin" wording, each step opens at the top, no sign-in links once signed in, the
+   Student card no longer says "Shenyang". Still open: A5 (a live character preview) and E6 (registration's gender).
 2. **Tour that works (C1–C5).** Fix the stuck step, real button names, honest suggestions, students start at campus,
    reward after the tour.
 3. **One card at a time (B1–B3, E1).** A tiny queue for chips, cards and banners: tour > class now > reward >
