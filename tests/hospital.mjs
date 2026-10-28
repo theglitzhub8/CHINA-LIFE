@@ -7,11 +7,11 @@ const r=f=>fs.readFileSync(f,'utf8');const tick=()=>new Promise(res=>setImmediat
 const PAPER=['fever','head','stomach','cough','register'].map(id=>({id,prompt:'问 '+id,pinyin:'wèn',options:['right '+id,'wrong a','wrong b','wrong c']}));
 const ITEMS={painkiller:[60,'Painkillers','止痛药','zhǐtòng yào','+20 energy'],ors:[40,'Rehydration salts','口服补液盐','kǒufú bǔyè yán','−40 drunk, +5 energy'],vitamins:[80,'Vitamins','维生素','wéishēngsù','Needs drop 30% slower for 24 hours'],stomach:[90,'Stomach medicine','肠胃药','chángwèi yào','Cures food sickness']};
 let shelf={},vit=0;const pharm=b=>{if(b.op==='buy')shelf[b.item]=(shelf[b.item]||0)+1;if(b.op==='use'){shelf[b.item]--;if(b.item==='vitamins')vit=Math.floor(Date.now()/1000)+86400}return {items:ITEMS,max:5,stock:{painkiller:0,ors:0,vitamins:0,stomach:0,...shelf},vitaminsUntil:vit,money:2940,xp:0}};
-let staff=()=>({}),visits=()=>({});
+let staff=()=>({}),visits=()=>({}),insure=()=>({}),bill=null;
 function hospital(on,state={}){
  const t=harness({...fixture(),place:'football',...state}),c=t.context,calls=[],trips=[];
  const keys=on===true?['hospital_care']:on||[];c.ChinaLifeFlags={cast:k=>keys.includes(k),appOff:()=>false};c.ChinaLifeCloud={signedIn:true};
- c.ChinaLifeAuth={request:async(path,method,body)=>{if(/economy\.php/.test(path))calls.push([path,body]);if(/hospital-visits\.php/.test(path)){calls.push([path,body]);return {data:visits(method,body)}}if(/hospital-staff\.php/.test(path)){calls.push([path,body]);return {data:staff(method,body)}}if(body?.action==='pharmacy')return {data:pharm(body)};if(body?.action==='checkup')return {data:body.step==='start'?{questions:PAPER}:{money:3000,xp:500,checkup:{right:4,total:5,xp:32,marked:PAPER.map((q,i)=>({id:q.id,prompt:q.prompt,pinyin:q.pinyin,answer:q.options[0],right:i>0}))}}};return {data:{charged:200,bill:200,first:false,recovering:false,money:3000,xp:0}}}};
+ c.ChinaLifeAuth={request:async(path,method,body)=>{if(/economy\.php/.test(path))calls.push([path,body]);if(/hospital-visits\.php/.test(path)){calls.push([path,body]);return {data:visits(method,body)}}if(/hospital-staff\.php/.test(path)){calls.push([path,body]);return {data:staff(method,body)}}if(body?.action==='pharmacy')return {data:pharm(body)};if(body?.action==='insurance')return {data:insure(body)};if(body?.action==='checkup')return {data:body.step==='start'?{questions:PAPER}:{money:3000,xp:500,checkup:{right:4,total:5,xp:32,marked:PAPER.map((q,i)=>({id:q.id,prompt:q.prompt,pinyin:q.pinyin,answer:q.options[0],right:i>0}))}}};return {data:bill||{charged:200,bill:200,first:false,recovering:false,money:3000,xp:0}}}};
  c.ChinaLifeWorld={journey:(o,done)=>{trips.push(o);done()}};
  vm.runInContext(r('public/hospital.js'),c);return {t,c,calls,trips};
 }
@@ -124,4 +124,18 @@ test('ward visits: list friends on the ward, visit with flowers and a card, and 
  assert.equal(s.needs.hunger,55);assert.equal(s.needs.social,55);const banner=d.getElementById('gameNotification');assert.match(banner.textContent,/user59 visited you on the ward/);
  banner.onclick();assert.match(d.getElementById('activityContent').textContent,/我们想你/);
  await c.ChinaLifeHospital.collectVisits();assert.equal(s.needs.hunger,55,'only once');
+});
+
+// Hospital Phase 5 (switch hospital_insurance): students join the campus insurance; the bill shows what it saved.
+test('student insurance: offered to students only, join for ¥200, and the wake-up bill shows the saving',async()=>{
+ const keys=['hospital_care','hospital_insurance'];let until=0;
+ insure=b=>{if(b.op==='join')until=Math.floor(Date.now()/1000)+30*86400;return {money:2800,xp:0,insurance:{until,student:true,fee:200,days:30,billCut:80,pharmacyCut:25,bill:200,renewDays:7}}};
+ const worker=hospital(keys,{background:'Worker'});worker.c.ChinaLifeHospital.health();assert.equal(worker.t.document.getElementById('hpIns'),null,'students only');
+ const {t,c,calls}=hospital(keys),d=t.document,s=t.game.state,click=async el=>{el.onclick();await tick();await tick();await tick()};
+ c.ChinaLifeHospital.health();await click(d.getElementById('hpIns'));const text=d.getElementById('activityContent').textContent;
+ assert.match(text,/Not covered yet/);assert.match(text,/¥40 instead of ¥200/);assert.match(text,/25% off/);assert.match(text,/never renews by itself/);
+ await click(d.getElementById('hpJoin'));assert.deepEqual(JSON.parse(JSON.stringify(calls.filter(x=>x[1]?.action==='insurance').map(x=>x[1].op))),['status','join','status']);
+ assert.equal(s.money,2800);assert.match(d.getElementById('activityContent').textContent,/Covered until/);assert.ok(d.getElementById('hpJoin').disabled,'renew only in the last week');
+ bill={charged:40,bill:40,insured:true,saved:160,first:false,recovering:false,money:2760,xp:0};s.needs.energy=0;t.game.refresh();await tick();await tick();
+ assert.match(d.getElementById('activityContent').textContent,/Bill: ¥40 · 🛡️ your insurance saved ¥160/);bill=null;
 });

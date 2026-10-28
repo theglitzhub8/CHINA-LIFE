@@ -82,6 +82,12 @@ applies the gift once and shows a banner. Blocked players can't visit. Code: chi
 
 **Phase 5 · Student health insurance.** Students can join the campus insurance plan (a small monthly fee from their
 allowance), which cuts hospital bills, as it works for international students in China.
+✅ Done 29 Oct 2026 (switch `hospital_insurance`, off; needs `hospital_care` on; no migration): "🛡️ Student insurance"
+in Your health (anywhere, students who haven't graduated only). ¥200 for 30 days, paid from your money when you join
+and never renewed by itself; renew in the last 7 days (30 more days from the end of the current cover). While covered:
+waking up at the hospital costs ¥40 instead of ¥200 (the wake-up screen says what it saved) and the pharmacy is 25%
+off. Cover lives in the economy log (economy.php action `insurance`); numbers in hospital-lib.php `CL_INS_*`. Paid
+from the player's money rather than taken out of the daily student allowance, so nothing is charged without a tap.
 
 **Phase 6 · Admin.** A Hospital tab in appadmin: prices and bills, the check-up questions, pharmacy prices, job pay
 and shifts, insurance fee and cover.

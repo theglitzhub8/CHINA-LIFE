@@ -105,3 +105,14 @@ function cl_hv_gifts(): array {return [
 function cl_hv_cards(): array {return [
  'getwell'=>'早日康复！ Get well soon!','rest'=>'多喝水，多休息！ Drink water and rest!','miss'=>'我们想你！ We miss you!','jiayou'=>'加油！ You’ve got this!',
 ];}
+// Hospital Phase 5 (switch hospital_insurance): campus health insurance for students (owner, 29 Oct 2026). Join for
+// CL_INS_FEE (paid from your money, never renewed by itself) for CL_INS_DAYS; while covered the wake-up hospital bill
+// is CL_INS_BILL_CUT% off and pharmacy prices CL_INS_PHARMACY_CUT% off. Cover is worked out from the economy log
+// (action 'insurance'): each payment adds CL_INS_DAYS from the later of now and the current end.
+const CL_INS_FEE=200, CL_INS_DAYS=30, CL_INS_BILL_CUT=80, CL_INS_PHARMACY_CUT=25, CL_INS_RENEW_DAYS=7;
+function cl_insurance_until(int $uid): int {
+ $until=0;foreach (cl_rows("SELECT UNIX_TIMESTAMP(created_at) t FROM chinalife_economy_actions WHERE user_id=? AND action='insurance' ORDER BY id",'i',[$uid]) as $r) $until=max($until,(int)$r['t'])+CL_INS_DAYS*86400;
+ return $until>time()?$until:0;
+}
+function cl_insured(int $uid): bool {return (cl_hafrik_features()['hospital_insurance']??false)&&cl_insurance_until($uid)>0;}
+function cl_student(array $game): bool {return ($game['background']??'')==='Student'&&empty($game['student']['graduated']);}

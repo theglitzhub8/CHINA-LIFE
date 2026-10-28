@@ -39,7 +39,7 @@ if ($method==='GET') {
 cl_rate('economy',30,60);
 $input=cl_body();
 $action=(string)($input['action']??'');
-if (!in_array($action,['job','mission','purchase','accident','hospital','checkup','pharmacy','club-drink','club-spray','school','jet'],true)) cl_fail('Choose a job, mission or purchase');
+if (!in_array($action,['job','mission','purchase','accident','hospital','checkup','pharmacy','insurance','club-drink','club-spray','school','jet'],true)) cl_fail('Choose a job, mission or purchase');
 // v9: ChampagnePappi's bar in 007 Club. Price and XP live here only; one drink per 90 s, XP for the first 8 a day.
 $clubDrinks=['pappi-fizz'=>[120,10],'gold-rush'=>[300,25],'zero-proof'=>[40,5],'water'=>[0,0]];
 
@@ -89,9 +89,24 @@ try {
     }
     // Hospital Phase 2 (switch hospital_pharmacy): op 'stock' (what you keep), 'buy' (at the hospital; up to
     // CL_PHARMACY_MAX of each, paid from the ledger) and 'use' (anywhere; the client applies the effect).
+    // Hospital Phase 5 (switch hospital_insurance): op 'status' or 'join' (students only; renew in the last week).
+    if ($action==='insurance') {
+        if (!(cl_hafrik_features()['hospital_insurance']??false)) cl_fail('Student insurance is switched off',403);
+        $until=cl_insurance_until($uid);$moved=economy_totals($game);
+        if (($input['op']??'status')==='join') {
+            if (!cl_student($game)) cl_fail('Campus insurance is for students',403);
+            if ($until>time()+CL_INS_RENEW_DAYS*86400) cl_fail('You are covered until '.date('j M',$until).'. Renew in the last week.',409);
+            if (cl_balances_lock($uid)['coins']<CL_INS_FEE) cl_fail('You need ¥'.CL_INS_FEE.' to join',409);
+            $moved=cl_move_totals($uid,$game,-CL_INS_FEE,0);economy_note('insurance','join:'.time().':'.bin2hex(random_bytes(3)),-CL_INS_FEE,0);cl_store_totals($uid,$game);
+            $until=cl_insurance_until($uid);
+        }
+        $db->commit();
+        json_response('success',$moved+['insurance'=>['until'=>$until,'student'=>cl_student($game),'fee'=>CL_INS_FEE,'days'=>CL_INS_DAYS,'billCut'=>CL_INS_BILL_CUT,'pharmacyCut'=>CL_INS_PHARMACY_CUT,'bill'=>CL_HOSPITAL_BILL,'renewDays'=>CL_INS_RENEW_DAYS],'duplicate'=>false,'bonus'=>false],'Your insurance.');
+    }
     if ($action==='pharmacy') {
         if (!(cl_hafrik_features()['hospital_pharmacy']??false)) cl_fail('The pharmacy is switched off',403);
         $op=(string)($input['op']??'stock');$items=cl_pharmacy_items();$id=(string)($input['item']??'');
+        if ($insured=cl_insured($uid)) foreach ($items as &$it) $it[0]=(int)round($it[0]*(100-CL_INS_PHARMACY_CUT)/100);unset($it);
         if ($op!=='stock' && !isset($items[$id])) cl_fail('Choose a medicine');
         $have=cl_pharmacy_stock($uid);$moved=economy_totals($game);
         if ($op==='buy') {
@@ -104,18 +119,19 @@ try {
             economy_note('pharmacy','use:'.$id.':'.time().':'.bin2hex(random_bytes(3)),0,0);
         } elseif ($op!=='stock') cl_fail('Choose stock, buy or use');
         $after=cl_pharmacy_stock($uid);$db->commit();
-        json_response('success',$moved+$after+['items'=>$items,'max'=>CL_PHARMACY_MAX,'used'=>$op==='use'?$id:null,'duplicate'=>$op==='stock','bonus'=>false],$op==='buy'?'Bought.':($op==='use'?'Taken.':'Your medicine.'));
+        json_response('success',$moved+$after+['items'=>$items,'insured'=>$insured,'max'=>CL_PHARMACY_MAX,'used'=>$op==='use'?$id:null,'duplicate'=>$op==='stock','bonus'=>false],$op==='buy'?'Bought.':($op==='use'?'Taken.':'Your medicine.'));
     }
     if ($action==='hospital') {
         if (!(cl_hafrik_features()['hospital_care']??false)) cl_fail('The hospital service is switched off',403);
         $cause=(string)($input['cause']??'');if (!in_array($cause,['faint','blackout','sick'],true)) cl_fail('Choose why you are at the hospital');
         $visits=(int)cl_one('SELECT COUNT(*) n FROM chinalife_economy_actions WHERE user_id=? AND action="hospital"','i',[$uid])['n'];
         $recent=(bool)cl_one('SELECT id FROM chinalife_economy_actions WHERE user_id=? AND action="hospital" AND created_at>=DATE_SUB(NOW(),INTERVAL 10 MINUTE)','i',[$uid]);
-        $held=cl_balances_lock($uid);$fee=$visits===0||$recent?0:max(0,min(CL_HOSPITAL_BILL,$held['coins']));
+        $insured=cl_insured($uid);$bill=$insured?(int)round(CL_HOSPITAL_BILL*(100-CL_INS_BILL_CUT)/100):CL_HOSPITAL_BILL;
+        $held=cl_balances_lock($uid);$fee=$visits===0||$recent?0:max(0,min($bill,$held['coins']));
         $moved=$fee?cl_move_totals($uid,$game,-$fee,0):economy_totals($game);
         economy_note('hospital',$cause.':'.time().':'.bin2hex(random_bytes(3)),-$fee,0);if ($fee) cl_store_totals($uid,$game);
         $db->commit();
-        json_response('success',$moved+['charged'=>$fee,'first'=>$visits===0,'recovering'=>$recent,'bill'=>CL_HOSPITAL_BILL,'duplicate'=>false,'bonus'=>false],$fee?'Treated at the hospital.':'Treated free of charge.');
+        json_response('success',$moved+['charged'=>$fee,'first'=>$visits===0,'recovering'=>$recent,'bill'=>$bill,'insured'=>$insured,'saved'=>$visits===0||$recent?0:CL_HOSPITAL_BILL-$bill,'duplicate'=>false,'bonus'=>false],$fee?'Treated at the hospital.':'Treated free of charge.');
     }
     if ($action==='accident') {
         $walk=cl_optional_rows('SELECT city FROM chinalife_presence WHERE user_id=? AND street_at>=DATE_SUB(NOW(),INTERVAL 30 SECOND)','i',[$uid]);

@@ -1571,3 +1571,35 @@ test('ward visits: friends on the ward only, from the hospital, once a day, paid
   assert.deepEqual((await hv(59)).data.ward,[],'off the ward after 3 hours');
  }finally{await flip(false)}
 });
+
+// Hospital Phase 5 (switch hospital_insurance): campus health insurance for students. ¥200 for 30 days; the wake-up
+// bill ¥40 instead of ¥200 and pharmacy 25% off while covered; renew only in the last week; never for non-students.
+test('student insurance: students only, ¥200 for 30 days, cheaper hospital bill and pharmacy, renew in the last week',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(62,'user62'),(63,'user63')");
+ assert.equal((await call(62,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China'}}})).httpStatus,200);
+ assert.equal((await call(63,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China',background:'Worker'}}})).httpStatus,200);
+ const coins=id=>Number(sql('USE chinalife_test; SELECT coins FROM chinalife_balances WHERE user_id='+id).trim());
+ const ins=(id,op)=>call(id,'economy.php','POST',{action:'insurance',op});
+ assert.equal((await ins(62,'status')).httpStatus,403,'switched off by default');
+ const flip=v=>call(1,'admin.php','POST',{action:'set_hafrik_features',features:{hospital_care:v,hospital_pharmacy:v,hospital_insurance:v}});
+ try{
+  await flip(true);
+  assert.equal((await ins(62,'status')).data.insurance.until,0);assert.equal((await ins(63,'join')).httpStatus,403,'students only');
+  const start=coins(62);const j=await ins(62,'join');assert.equal(j.httpStatus,200,j.message);assert.equal(coins(62),start-200);
+  const days=(j.data.insurance.until-Date.now()/1000)/86400;assert.ok(days>29.9&&days<=30,'30 days');
+  assert.equal((await ins(62,'join')).httpStatus,409,'renew only in the last week');
+  // The hospital bill: first visit free as always, then ¥40 instead of ¥200.
+  const visit=()=>call(62,'economy.php','POST',{action:'hospital',cause:'faint'});await visit();
+  sql("USE chinalife_test; UPDATE chinalife_economy_actions SET created_at=DATE_SUB(NOW(),INTERVAL 1 HOUR) WHERE user_id=62 AND action='hospital'");
+  const before=coins(62);const v=await visit();assert.equal(v.data.charged,40);assert.equal(v.data.insured,true);assert.equal(v.data.saved,160);assert.equal(coins(62),before-40);
+  // Pharmacy 25% off: painkillers ¥45 instead of ¥60.
+  const st=await call(62,'economy.php','POST',{action:'pharmacy',op:'stock'});assert.equal(st.data.items.painkiller[0],45);assert.equal(st.data.insured,true);
+  const b0=coins(62);await call(62,'economy.php','POST',{action:'pharmacy',op:'buy',item:'painkiller'});assert.equal(coins(62),b0-45);
+  // In the last week you can renew: 30 more days from the end of the current cover.
+  sql("USE chinalife_test; UPDATE chinalife_economy_actions SET created_at=DATE_SUB(NOW(),INTERVAL 25 DAY) WHERE user_id=62 AND action='insurance'");
+  const r=await ins(62,'join');assert.equal(r.httpStatus,200,r.message);const left=(r.data.insurance.until-Date.now()/1000)/86400;assert.ok(left>34.9&&left<=35,'5 days left + 30');
+  // Expired cover: full prices again.
+  sql("USE chinalife_test; UPDATE chinalife_economy_actions SET created_at=DATE_SUB(NOW(),INTERVAL 70 DAY) WHERE user_id=62 AND action='insurance'");
+  assert.equal((await call(62,'economy.php','POST',{action:'pharmacy',op:'stock'})).data.items.painkiller[0],60);
+ }finally{await flip(false)}
+});
