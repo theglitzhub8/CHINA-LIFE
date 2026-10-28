@@ -30,6 +30,8 @@ existing map elements, run `npm test`, and tell the owner what changed on the ma
 To restore the approved map files: `git checkout map-approved-2026-10-10 -- <file>`.
 
 ## Deploying to the server
+ChinaLife moved on 21 Oct 2026: deploy only to the NEW server 167.104.97.44 (game `/home/china-life.hafrik.com/public_html`,
+API `/home/hafrik.com/public_html/api/v4/chinalife`). The old server 45.91.95.13 is a rollback copy only.
 Read `docs/DEPLOY.md` before preparing any deploy: server paths, the update and migration commands, backups,
 verification, rollback, the polling switch, and how to write commands the owner pastes into the server terminal.
 Only `main` is deployed; keep unapproved features on their own branch.
