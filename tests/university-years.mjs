@@ -39,16 +39,33 @@ test('dorm bond is saved, clamped and survives reloads',async()=>{const {harness
 test('university client: campus chip, University screen with locked rooms, and a Sunday exam marked by the server',async()=>{
  const {harness,fixture}=await import('./game-harness.mjs');const t=harness({...fixture(),place:'university'});const c=t.context,d=t.document;
  const rooms=y=>[['classrooms',1],['dorm',1],['store',1],['library',2],['lab',3],['hall',4]].map(([id,n])=>({id,name:id,year:n,open:y>=n}));
- const view=(over={})=>({student:true,enrolled:'2026-11-02',start:'2026-11-02',orientation:false,year:1,week:1,weekday:3,dayName:'Class day',hsk:'HSK 1',examDay:false,resits:[],exams:[],results:{},passedYears:0,rooms:rooms(1),passMark:6,questions:10,reward:{xp:60,coins:120},...over});
+ const view=(over={})=>({student:true,enrolled:'2026-11-02',start:'2026-11-02',orientation:false,year:1,week:1,weekday:3,dayName:'Class day',hsk:'HSK 1',examDay:false,resits:[],exams:[],results:{},passedYears:0,rooms:rooms(1),passMark:6,passMarks:{},questions:10,reward:{xp:60,coins:120},minute:720,classDay:true,timetable:[{id:'am',time:'09:00',end:'09:45',subject:'Chinese class',status:'missed'},{id:'pm',time:'14:00',end:'14:45',subject:'Lecture',status:'later'}],classTimes:[{id:'am',time:'09:00',subject:'Chinese class'},{id:'pm',time:'14:00',subject:'Lecture'}],attendance:90,truancy:false,classReward:{xp:10,coins:10},...over});
  const calls=[];let now=view();
  c.ChinaLifeCloud={university:async data=>{calls.push(data);if(!data)return now;if(data.action==='start_exam')return {...now,exam:{year:1,questions:[{prompt:'What does 你好 (nǐ hǎo) mean?',options:['sorry','hello','thanks','bye']},{prompt:'How do you say 我?',options:['nǐ','wǒ','tā','shì']}]}};
-  return {...view({examDay:true,weekday:7,dayName:'Exam day',results:{1:{passed:true,score:2,total:2}},passedYears:1}),result:{year:1,passed:true,score:2,total:2,answers:['hello','wǒ'],xp:60,coins:120}}}};
+  return {...view({examDay:true,weekday:7,classDay:false,timetable:[],dayName:'Exam day',results:{1:{passed:true,score:2,total:2}},passedYears:1}),result:{year:1,passed:true,score:2,total:2,answers:['hello','wǒ'],xp:60,coins:120}}}};
  c.MutationObserver??=class{observe(){}};c.ChinaLifeFlags={cast:()=>false};vm.runInContext(r('public/university.js'),c);const U=c.ChinaLifeUniversity;
  assert.equal(await U.load(true),null,'switch off: nothing loads');assert.equal(calls.length,0);
  c.ChinaLifeFlags={cast:k=>k==='uni_years'};await U.load(true);assert.match(d.querySelector('.uni-chip').textContent,/Year 1 · Class day/);
  await U.open();const screen=()=>d.getElementById('activityContent').textContent;assert.match(screen(),/Year 1 of 4 · Class day · HSK 1/);assert.match(screen(),/library · opens in Year 2/);assert.match(screen(),/Next exam: Sunday/);
- d.getElementById('activityDialog').close();now=view({examDay:true,weekday:7,dayName:'Exam day',exams:[1]});await U.load(true);assert.match(d.querySelector('.uni-chip').textContent,/Exam day: Year 1 open/);
+ d.getElementById('activityDialog').close();now=view({examDay:true,weekday:7,dayName:'Exam day',exams:[1],passMarks:{1:6},classDay:false,timetable:[]});await U.load(true);assert.match(d.querySelector('.uni-chip').textContent,/Exam day: Year 1 open/);
  await U.open();d.querySelector('[data-uni-exam="1"]').onclick();await new Promise(r=>setTimeout(r,0));assert.match(screen(),/What does 你好/);
  [...d.querySelectorAll('[data-uni-a]')].find(b=>b.textContent==='hello').onclick();[...d.querySelectorAll('[data-uni-a]')].find(b=>b.textContent==='wǒ').onclick();await new Promise(r=>setTimeout(r,0));
  assert.equal(JSON.stringify(calls.at(-1)),JSON.stringify({action:'submit_exam',answers:['hello','wǒ']}));assert.match(screen(),/Year 1 passed/);assert.match(screen(),/\+60 XP · ¥120/);
+});
+
+test('university client: class chip and check-in, a buzz 2 minutes before class (once), and the truancy warning',async()=>{
+ const {harness,fixture}=await import('./game-harness.mjs');const t=harness({...fixture(),place:'campus'});const c=t.context,d=t.document;
+ const tt=(am='later',pm='later')=>[{id:'am',time:'09:00',end:'09:45',subject:'Chinese class',status:am},{id:'pm',time:'14:00',end:'14:45',subject:'Lecture',status:pm}];
+ const view=(over={})=>({student:true,start:'2026-11-02',today:'2026-11-02',orientation:false,year:1,week:1,weekday:1,dayName:'Class day',hsk:'HSK 1',examDay:false,resits:[],exams:[],results:{},passedYears:0,rooms:[],passMark:5,passMarks:{},questions:10,reward:{xp:60,coins:120},minute:538,classDay:true,timetable:tt(),classTimes:[{id:'am',time:'09:00',subject:'Chinese class'},{id:'pm',time:'14:00',subject:'Lecture'}],attendance:100,truancy:false,classReward:{xp:10,coins:10},...over});
+ const calls=[];let now=view();c.ChinaLifeCloud={presenceNow:async()=>{},university:async data=>{calls.push(data);if(!data)return now;now=view({timetable:tt('attended')});return {...now,attended:{id:'am',subject:'Chinese class',xp:10,coins:10}}}};
+ const notes=[];c.ChinaLife.notify=(text,open)=>notes.push(text);c.navigator??={};c.MutationObserver??=class{observe(){}};c.ChinaLifeFlags={cast:k=>k==='uni_years'};
+ vm.runInContext(r('public/university.js'),c);const U=c.ChinaLifeUniversity;await U.load(true);
+ // 08:58: check-in is open, the chip says so; the phone buzzes once, not on every tick.
+ assert.match(d.querySelector('.uni-chip').textContent,/Class now: 09:00 Chinese class/);U.tick();U.tick();assert.equal(notes.length,1);assert.match(notes[0],/Chinese class at 09:00, in 2 min/);
+ d.querySelector('.uni-chip button').onclick();await new Promise(r=>setTimeout(r,0));await new Promise(r=>setTimeout(r,0));
+ assert.equal(JSON.stringify(calls.at(-1)),JSON.stringify({action:'attend'}));assert.match(d.querySelector('.uni-chip').textContent,/Year 1 · Class day/);
+ // The University screen lists today's classes and the score; a low score shows the truancy warning and the harder mark.
+ await U.open();const screen=()=>d.getElementById('activityContent').textContent;assert.match(screen(),/09:00–09:45 Chinese class · ✅ attended/);assert.match(screen(),/Attendance this year: 100\/100/);
+ d.getElementById('activityDialog').close();now=view({minute:900,attendance:40,truancy:true,passMark:7,timetable:tt('missed','missed')});await U.load(true);await U.open();
+ assert.match(screen(),/14:00–14:45 Lecture · ❌ missed/);assert.match(screen(),/Truancy risk: your exam pass mark is 7\/10/);
 });

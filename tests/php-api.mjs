@@ -1078,3 +1078,32 @@ test('university and attendance rewards paid by the server stay paid after the g
   const s=(await call(22,'save.php')).data.save.game;assert.equal(s.money,money+150);assert.equal(s.xp,xp+75);
  }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:false}})}
 });
+
+// University Years Phase 4: timetable, class check-in from the classroom, attendance score and the exam pass mark.
+test('university classes: check-in window, presence at campus, attendance score, truancy risk and a harder exam',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(23,'user23')");
+ const uni=(now,data)=>fetch(base+'/api/v4/chinalife/university.php',{method:data?'POST':'GET',headers:{Authorization:'Bearer test-23','X-Test-Today':now,...(data?{'content-type':'application/json'}:{})},body:data?JSON.stringify(data):undefined}).then(async r=>{const j=await r.json();return {...j,...(j.data||{}),httpStatus:r.status}});
+ const st=s=>s.timetable.map(c=>c.id+':'+c.status).join(' ');
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:true}});
+  assert.equal((await call(23,'save.php','POST',{revision:0,save:{character:{},game:{...game(),place:'campus'}}})).httpStatus,200);
+  // Monday 2 Nov, 08:00: enrolled, Year 1 starts today; two classes ahead, full attendance, the easiest pass mark.
+  let s=await uni('2026-11-02 08:00');assert.equal(s.start,'2026-11-02');assert.equal(st(s),'am:later pm:later');assert.equal(s.timetable[0].time,'09:00');assert.equal(s.attendance,100);assert.equal(s.passMark,5);
+  assert.equal((await uni('2026-11-02 08:00',{action:'attend'})).httpStatus,409,'too early');
+  // 08:58: check-in opens (the phone buzzes now). Only from the campus.
+  await call(23,'presence.php','POST',{...presence('China','home')});assert.match((await uni('2026-11-02 08:58',{action:'attend'})).message,/Go to your campus/);
+  await call(23,'presence.php','POST',{...presence('China','campus')});let a=await uni('2026-11-02 08:58',{action:'attend'});
+  assert.equal(a.httpStatus,200);assert.deepEqual(a.attended,{id:'am',subject:'Chinese class',xp:10,coins:10});assert.equal(st(a),'am:attended pm:later');
+  assert.match((await uni('2026-11-02 09:10',{action:'attend'})).message,/already checked in/);
+  // 15:00: the 14:00 lecture was missed: 100 → 90, still the easy mark.
+  s=await uni('2026-11-02 15:00');assert.equal(st(s),'am:attended pm:missed');assert.equal(s.attendance,90);assert.equal(s.passMark,5);
+  // Tuesday evening, both missed: 70, pass mark 6. Friday evening: 10, truancy risk, pass mark 7.
+  s=await uni('2026-11-03 18:00');assert.equal(s.attendance,70);assert.equal(s.passMark,6);assert.equal(s.truancy,false);
+  s=await uni('2026-11-06 18:00');assert.equal(s.attendance,10);assert.equal(s.truancy,true);assert.equal(s.passMark,7);
+  s=await uni('2026-11-07 10:00');assert.equal(s.classDay,false);assert.deepEqual(s.timetable,[]);
+  // Sunday: the Year 1 exam needs 7/10 now.
+  s=await uni('2026-11-08 10:00');assert.equal(s.passMarks['1'],7);assert.equal((await uni('2026-11-08 10:00',{action:'start_exam',year:1})).exam.passMark,7);
+  // Year 2 starts fresh at 100.
+  s=await uni('2026-11-09 08:00');assert.equal(s.year,2);assert.equal(s.attendance,100);
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:false}})}
+});

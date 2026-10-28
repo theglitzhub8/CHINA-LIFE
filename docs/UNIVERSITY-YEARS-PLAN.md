@@ -81,10 +81,14 @@ Every phase sits behind an admin switch (default OFF) so the live game is unchan
 - [ ] Exam buff (harder or easier by attendance) comes with Phase 4.
 
 ### Phase 4. Timetable, attendance 100 and the phone buzz
-- [ ] Daily timetable (Beijing time), for example 09:00 and 14:00 classes of 45 minutes each, shown on the phone.
-- [ ] Attendance 100 per year, server-checked by being in the classroom during the class (presence, like today).
-- [ ] Phone buzz 2 minutes before class; optional web push reminder (needs a push payload change in `sw.js`).
-- [ ] Truancy Risk lowers the exam buff; library sessions restore it.
+- [x] Timetable on class days (Beijing time): 09:00 Chinese class and 14:00 Lecture, 45 minutes each, on the
+      University screen with each class's status (attended, on now, missed, later).
+- [x] Check-in from 2 minutes before a class until it ends, only from a campus (live presence): +10 XP, ¥10.
+- [x] Attendance score per year: starts at 100, a missed class costs 10, an attended class gives 5 back (max 100).
+      It sets that year's exam pass mark: 90+ is 5/10, 60+ is 6/10, below 60 is Truancy Risk and 7/10.
+- [x] Phone buzz in the game 2 minutes before each class (banner + vibration), once per class, anywhere in the game.
+- [ ] Web push reminder to the real phone (needs a push payload change in `sw.js` and a cron): later.
+- [ ] Library sessions win back attendance points: Phase 6.
 
 ### Phase 5. Year 1 food economy, switch `uni_food`
 - [ ] Student allowance ¥100 per real (Beijing) day, about ¥3,000 a month (owner's decision).
