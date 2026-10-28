@@ -219,3 +219,14 @@ test('signed-in players go online: Football asks football.php for the lobby thro
  assert.equal(await c.ChinaLifeFootball.refreshFlag(),false,'the server switch decides');
  assert.doesNotMatch(readFileSync('public/football.js','utf8'),/root\.ChinaLifeCloud\.api\(/);
 });
+
+// Live fix: the startup check runs before the player joins, so the server's answer is often still unknown. Football
+// stays available meanwhile (and asks), and opening it waits for the answer.
+test('online but not asked yet: Football stays available, asks the server once, and opening it waits for the answer',async()=>{
+ const {harness,fixture}=await import('./game-harness.mjs');const vm=await import('node:vm');
+ const t=harness({...fixture(),place:'football'}),c=t.context,calls=[];let on=false;
+ c.ChinaLifeCloud={joined:false,signedIn:true};c.ChinaLifeAuth={request:async(path,method,body)=>{calls.push(body?.action);return {data:{enabled:on}}}};
+ vm.runInContext(readFileSync('public/football-engine.js','utf8'),c);vm.runInContext(readFileSync('public/football.js','utf8'),c);
+ c.ChinaLifeCloud.joined=true;assert.equal(c.ChinaLifeFootball.enabled(),true,'unknown: stays available');c.ChinaLifeFootball.enabled();
+ assert.equal(calls.length,1,'asks once');await new Promise(r=>setTimeout(r,0));assert.equal(c.ChinaLifeFootball.enabled(),false,'the server said off');
+});

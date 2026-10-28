@@ -18,9 +18,13 @@
   const online = () => !sandbox()?.localOnly && !!root.ChinaLifeCloud?.joined && !!net();
   let serverOn = null; // null = not asked yet
   const meName = () => String(game()?.state?.name || game()?.state?.player?.name || root.ChinaLifeCloud?.profile?.user_name || 'You').slice(0, 18);
+  // Online and not asked yet (the game joins after load, so the startup check is often too early): ask now and stay
+  // available meanwhile; open() checks again and says "closed" if the server's football_matches switch is off.
+  let asking = false;
   function enabled() {
     if (root.ChinaLifeFlags?.off?.('football')) return false;
     if (!online()) return localStorage.getItem(OFF_KEY()) !== '1';
+    if (serverOn === null) { if (!asking) { asking = true; refreshFlag().finally(() => { asking = false; }); } return true; }
     return serverOn === true;
   }
   async function call(method, body) { const r = await net()('/chinalife/football.php', method, body); return r?.data || r; }
@@ -47,7 +51,8 @@
   function stopLoops() { clearInterval(poll); poll = null; cancelAnimationFrame(loop); loop = null; clearInterval(netT); netT = null; SND.stop(); }
   // ---------- home ----------
   async function open() {
-    if (!enabled()) { if (online() && serverOn === null && await refreshFlag()) return open(); return toastOut('Football matches are closed right now'); }
+    if (online() && serverOn === null) await refreshFlag();
+    if (!enabled()) return toastOut('Football matches are closed right now');
     home();
   }
   function toastOut(m) { (game()?.toast || root.toast || ((x) => console.info(x)))(m); }
