@@ -1470,3 +1470,24 @@ test('hospital check-up: off by default, 5 questions without answers, marked on 
   assert.equal((await visit({answers})).httpStatus,409,'no second reward this week');assert.equal(xp(),start+c.xp);
  }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{hospital_checkup:false}})}
 });
+
+// Hospital Phase 2 (switch hospital_pharmacy): medicine kept on the server (bought minus used), paid from the ledger.
+test('pharmacy: off by default, buy from the ledger, up to 5 of each, take what you have, vitamins once a day',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(55,'user55')");
+ assert.equal((await call(55,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China'}}})).httpStatus,200);
+ const coins=()=>Number(sql('USE chinalife_test; SELECT coins FROM chinalife_balances WHERE user_id=55').trim());
+ const ph=(op,item)=>call(55,'economy.php','POST',{action:'pharmacy',op,item});
+ assert.equal((await ph('stock')).httpStatus,403,'switched off by default');
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{hospital_pharmacy:true}});
+  const first=await ph('stock');assert.equal(first.httpStatus,200,first.message);assert.deepEqual(first.data.stock,{painkiller:0,ors:0,vitamins:0,stomach:0});assert.equal(first.data.items.painkiller[0],60);
+  assert.equal((await ph('use','painkiller')).httpStatus,409,'nothing to take');
+  assert.equal((await ph('buy','magic')).httpStatus,400);
+  const start=coins();const b=await ph('buy','painkiller');assert.equal(b.httpStatus,200,b.message);assert.equal(b.data.stock.painkiller,1);assert.equal(coins(),start-60);assert.equal(b.data.money,start-60);
+  for(let i=0;i<4;i++)await ph('buy','painkiller');assert.equal((await ph('buy','painkiller')).httpStatus,409,'up to 5');assert.equal(coins(),start-300);
+  const u=await ph('use','painkiller');assert.equal(u.data.stock.painkiller,4);assert.equal(u.data.used,'painkiller');assert.equal(coins(),start-300,'taking is free');
+  await ph('buy','vitamins');await ph('buy','vitamins');const v=await ph('use','vitamins');assert.ok(v.data.vitaminsUntil>Date.now()/1000+86000);
+  assert.equal((await ph('use','vitamins')).httpStatus,409,'still working');
+  sql("USE chinalife_test; UPDATE chinalife_balances SET coins=10 WHERE user_id=55");const poor=await ph('buy','stomach');assert.equal(poor.httpStatus,409);assert.match(poor.message,/¥90/);
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{hospital_pharmacy:false}})}
+});

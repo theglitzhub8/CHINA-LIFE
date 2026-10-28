@@ -49,6 +49,12 @@ every right answer with pinyin and meaning. No sign-in, no check-up.
 **Phase 2 · Pharmacy.** Buy medicine to keep: painkillers (energy), oral rehydration salts (after drinking), vitamins
 (slower needs drop for a day), stomach medicine (cures food sickness anywhere). Used from the phone; priced so that
 coming to the hospital is still worth it.
+✅ Done 29 Oct 2026 (switch `hospital_pharmacy`, off; needs `hospital_care` on too): "💊 Pharmacy" in Your health at the
+City Hospital (buy) and "💊 Your medicine" anywhere else (take). The phone's 💊 Wellbeing app opens Your health while
+`hospital_care` is on (one line in game.js). Painkillers 止痛药 ¥60 (+20 energy), rehydration salts 口服补液盐 ¥40 (−40
+drunk, +5 energy), vitamins 维生素 ¥80 (needs drop 30% slower for 24 hours, one course at a time), stomach medicine
+肠胃药 ¥90 (cures food sickness). Up to 5 of each. Stock lives on the server (economy.php action `pharmacy`, bought minus
+used in the economy log: no migration); prices in hospital-lib.php `cl_pharmacy_items`.
 
 **Phase 3 · Real doctors and nurses.** A Hospital job with shifts. Players on shift see patients who come in (a queue,
 like the Hot Seat): pick the right treatment from what the "Your health" screen shows, and both are rewarded. When no

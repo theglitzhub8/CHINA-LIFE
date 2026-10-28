@@ -38,3 +38,23 @@ function cl_checkup_mark(array $answers): ?array {
  foreach ($answers as $id=>$a) {$q=$bank[(string)$id]??null;if (!$q) return null;$ok=(string)$a===$q[3];$right+=$ok?1:0;$marked[]=['id'=>$q[0],'prompt'=>$q[1],'pinyin'=>$q[2],'answer'=>$q[3],'right'=>$ok];}
  return ['right'=>$right,'total'=>CL_CHECKUP_QUESTIONS,'marked'=>$marked,'xp'=>$right*CL_CHECKUP_XP+($right===CL_CHECKUP_QUESTIONS?CL_CHECKUP_PERFECT:0)];
 }
+// Hospital Phase 2 (switch hospital_pharmacy): medicine you buy at the City Hospital and keep, used from the phone.
+// Stock = bought minus used, counted from chinalife_economy_actions (action 'pharmacy', refs 'buy:<id>:…' / 'use:<id>:…').
+// id => [price, name, Chinese, pinyin, what it does]. Priced so that a visit (rest free, doctor ¥150) is still worth it.
+const CL_PHARMACY_MAX=5, CL_VITAMIN_HOURS=24;
+function cl_pharmacy_items(): array {return [
+ 'painkiller'=>[60,'Painkillers','止痛药','zhǐtòng yào','+20 energy'],
+ 'ors'=>[40,'Rehydration salts','口服补液盐','kǒufú bǔyè yán','−40 drunk, +5 energy'],
+ 'vitamins'=>[80,'Vitamins','维生素','wéishēngsù','Needs drop 30% slower for 24 hours'],
+ 'stomach'=>[90,'Stomach medicine','肠胃药','chángwèi yào','Cures food sickness'],
+];}
+// Stock per item and when today's vitamins wear off (0 = none).
+function cl_pharmacy_stock(int $uid): array {
+ $stock=array_fill_keys(array_keys(cl_pharmacy_items()),0);
+ foreach (cl_rows('SELECT ref FROM chinalife_economy_actions WHERE user_id=? AND action="pharmacy"','i',[$uid]) as $r) {
+  [$op,$id]=array_pad(explode(':',(string)$r['ref']),2,'');if (isset($stock[$id])) $stock[$id]+=$op==='buy'?1:($op==='use'?-1:0);
+ }
+ $v=cl_one('SELECT UNIX_TIMESTAMP(MAX(created_at)) t FROM chinalife_economy_actions WHERE user_id=? AND action="pharmacy" AND ref LIKE "use:vitamins:%"','i',[$uid]);
+ $until=(int)($v['t']??0);$until=$until?$until+CL_VITAMIN_HOURS*3600:0;
+ return ['stock'=>array_map(fn($n)=>max(0,$n),$stock),'vitaminsUntil'=>$until>time()?$until:0];
+}

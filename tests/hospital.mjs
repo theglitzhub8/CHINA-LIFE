@@ -5,10 +5,12 @@ import {harness,fixture} from './game-harness.mjs';
 const r=f=>fs.readFileSync(f,'utf8');const tick=()=>new Promise(res=>setImmediate(res));
 
 const PAPER=['fever','head','stomach','cough','register'].map(id=>({id,prompt:'问 '+id,pinyin:'wèn',options:['right '+id,'wrong a','wrong b','wrong c']}));
+const ITEMS={painkiller:[60,'Painkillers','止痛药','zhǐtòng yào','+20 energy'],ors:[40,'Rehydration salts','口服补液盐','kǒufú bǔyè yán','−40 drunk, +5 energy'],vitamins:[80,'Vitamins','维生素','wéishēngsù','Needs drop 30% slower for 24 hours'],stomach:[90,'Stomach medicine','肠胃药','chángwèi yào','Cures food sickness']};
+let shelf={},vit=0;const pharm=b=>{if(b.op==='buy')shelf[b.item]=(shelf[b.item]||0)+1;if(b.op==='use'){shelf[b.item]--;if(b.item==='vitamins')vit=Math.floor(Date.now()/1000)+86400}return {items:ITEMS,max:5,stock:{painkiller:0,ors:0,vitamins:0,stomach:0,...shelf},vitaminsUntil:vit,money:2940,xp:0}};
 function hospital(on,state={}){
  const t=harness({...fixture(),place:'football',...state}),c=t.context,calls=[],trips=[];
  const keys=on===true?['hospital_care']:on||[];c.ChinaLifeFlags={cast:k=>keys.includes(k),appOff:()=>false};c.ChinaLifeCloud={signedIn:true};
- c.ChinaLifeAuth={request:async(path,method,body)=>{if(/economy\.php/.test(path))calls.push([path,body]);if(body?.action==='checkup')return {data:body.step==='start'?{questions:PAPER}:{money:3000,xp:500,checkup:{right:4,total:5,xp:32,marked:PAPER.map((q,i)=>({id:q.id,prompt:q.prompt,pinyin:q.pinyin,answer:q.options[0],right:i>0}))}}};return {data:{charged:200,bill:200,first:false,recovering:false,money:3000,xp:0}}}};
+ c.ChinaLifeAuth={request:async(path,method,body)=>{if(/economy\.php/.test(path))calls.push([path,body]);if(body?.action==='pharmacy')return {data:pharm(body)};if(body?.action==='checkup')return {data:body.step==='start'?{questions:PAPER}:{money:3000,xp:500,checkup:{right:4,total:5,xp:32,marked:PAPER.map((q,i)=>({id:q.id,prompt:q.prompt,pinyin:q.pinyin,answer:q.options[0],right:i>0}))}}};return {data:{charged:200,bill:200,first:false,recovering:false,money:3000,xp:0}}}};
  c.ChinaLifeWorld={journey:(o,done)=>{trips.push(o);done()}};
  vm.runInContext(r('public/hospital.js'),c);return {t,c,calls,trips};
 }
@@ -54,4 +56,24 @@ test('check-up: offered in Your health at the hospital only with both switches, 
  assert.deepEqual(JSON.parse(JSON.stringify(calls[1][1])),{action:'checkup',answers:{fever:'right fever',head:'right head',stomach:'right stomach',cough:'right cough',register:'right register'}});
  const text=d.getElementById('activityContent').textContent;assert.match(text,/4\/5 right · \+32 XP · Chinese \+20/);assert.match(text,/next free check-up is on Monday/);
  assert.equal(t.game.state.money,3000);assert.equal(chinese()-before,20,'+5 Chinese per right answer');
+});
+
+// Hospital Phase 2 (switch hospital_pharmacy): buy at the hospital, take anywhere (Your health / the phone's Wellbeing).
+test('pharmacy: buy at the hospital, take anywhere, each medicine does what it says, vitamins slow the drop',async()=>{
+ shelf={};vit=0;const keys=['hospital_care','hospital_pharmacy'];
+ const off=hospital(['hospital_care'],{place:'cityhospital'});off.c.ChinaLifeHospital.health();assert.equal(off.t.document.getElementById('hpPharm'),null,'hospital_pharmacy off');
+ const {t,c,calls}=hospital(keys,{place:'cityhospital'}),d=t.document,s=t.game.state,H=c.ChinaLifeHospital,click=async el=>{el.onclick();await tick();await tick()};
+ H.health();assert.match(d.getElementById('hpPharm').textContent,/Pharmacy/);await click(d.getElementById('hpPharm'));
+ assert.match(d.getElementById('activityContent').textContent,/止痛药/);assert.ok(d.querySelector('[data-hp-use="painkiller"]').disabled,'nothing to take yet');
+ for(const id of ['painkiller','ors','vitamins','stomach'])await click(d.querySelector('[data-hp-buy="'+id+'"]'));
+ assert.equal(s.money,2940,'money from the server');assert.deepEqual(calls.filter(x=>x[1].op==='buy').map(x=>x[1].item),['painkiller','ors','vitamins','stomach']);
+ s.place='football';s.needs.energy=30;s.drunk=70;s.food={sick:{until:Date.now()+1e6,next:Date.now()+1e6,why:''}};
+ H.health();assert.match(d.getElementById('hpPharm').textContent,/Your medicine/);await click(d.getElementById('hpPharm'));
+ assert.equal(d.querySelector('[data-hp-buy]'),null,'buy only at the hospital');
+ await click(d.querySelector('[data-hp-use="painkiller"]'));assert.equal(s.needs.energy,50);
+ await click(d.querySelector('[data-hp-use="ors"]'));assert.equal(s.drunk,30);assert.equal(s.needs.energy,55);
+ await click(d.querySelector('[data-hp-use="stomach"]'));assert.equal(s.food.sick,null);
+ await click(d.querySelector('[data-hp-use="vitamins"]'));assert.match(d.getElementById('activityContent').textContent,/Vitamins working until/);
+ s.needs.hunger=80;H.vitamins();s.needs.hunger=70;H.vitamins();assert.equal(s.needs.hunger,73,'30% of the drop given back');
+ assert.match(r('public/game.js'),/needs:\['💊','Wellbeing',\(\)=>window\.ChinaLifeHospital\?\.on\?\.\(\)\?window\.ChinaLifeHospital\.health\(\):\$\('needsBtn'\)\.onclick\(\)\]/);
 });

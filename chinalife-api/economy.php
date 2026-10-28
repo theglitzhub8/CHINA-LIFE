@@ -39,7 +39,7 @@ if ($method==='GET') {
 cl_rate('economy',30,60);
 $input=cl_body();
 $action=(string)($input['action']??'');
-if (!in_array($action,['job','mission','purchase','accident','hospital','checkup','club-drink','club-spray','school','jet'],true)) cl_fail('Choose a job, mission or purchase');
+if (!in_array($action,['job','mission','purchase','accident','hospital','checkup','pharmacy','club-drink','club-spray','school','jet'],true)) cl_fail('Choose a job, mission or purchase');
 // v9: ChampagnePappi's bar in 007 Club. Price and XP live here only; one drink per 90 s, XP for the first 8 a day.
 $clubDrinks=['pappi-fizz'=>[120,10],'gold-rush'=>[300,25],'zero-proof'=>[40,5],'water'=>[0,0]];
 
@@ -86,6 +86,25 @@ try {
         cl_store_totals($uid,$game);
         $db->commit();
         json_response('success',$moved+['checkup'=>$r,'duplicate'=>false,'bonus'=>false],'Check-up done.');
+    }
+    // Hospital Phase 2 (switch hospital_pharmacy): op 'stock' (what you keep), 'buy' (at the hospital; up to
+    // CL_PHARMACY_MAX of each, paid from the ledger) and 'use' (anywhere; the client applies the effect).
+    if ($action==='pharmacy') {
+        if (!(cl_hafrik_features()['hospital_pharmacy']??false)) cl_fail('The pharmacy is switched off',403);
+        $op=(string)($input['op']??'stock');$items=cl_pharmacy_items();$id=(string)($input['item']??'');
+        if ($op!=='stock' && !isset($items[$id])) cl_fail('Choose a medicine');
+        $have=cl_pharmacy_stock($uid);$moved=economy_totals($game);
+        if ($op==='buy') {
+            if ($have['stock'][$id]>=CL_PHARMACY_MAX) cl_fail('You already keep '.CL_PHARMACY_MAX.' of these',409);
+            $price=$items[$id][0];if (cl_balances_lock($uid)['coins']<$price) cl_fail('You need ¥'.$price.' for '.$items[$id][1],409);
+            $moved=cl_move_totals($uid,$game,-$price,0);economy_note('pharmacy','buy:'.$id.':'.time().':'.bin2hex(random_bytes(3)),-$price,0);cl_store_totals($uid,$game);
+        } elseif ($op==='use') {
+            if ($have['stock'][$id]<1) cl_fail('You have no '.$items[$id][1].' left',409);
+            if ($id==='vitamins' && $have['vitaminsUntil']) cl_fail('Your vitamins are still working',409);
+            economy_note('pharmacy','use:'.$id.':'.time().':'.bin2hex(random_bytes(3)),0,0);
+        } elseif ($op!=='stock') cl_fail('Choose stock, buy or use');
+        $after=cl_pharmacy_stock($uid);$db->commit();
+        json_response('success',$moved+$after+['items'=>$items,'max'=>CL_PHARMACY_MAX,'used'=>$op==='use'?$id:null,'duplicate'=>$op==='stock','bonus'=>false],$op==='buy'?'Bought.':($op==='use'?'Taken.':'Your medicine.'));
     }
     if ($action==='hospital') {
         if (!(cl_hafrik_features()['hospital_care']??false)) cl_fail('The hospital service is switched off',403);
