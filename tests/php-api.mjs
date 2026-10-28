@@ -1107,3 +1107,27 @@ test('university classes: check-in window, presence at campus, attendance score,
   s=await uni('2026-11-09 08:00');assert.equal(s.year,2);assert.equal(s.attendance,100);
  }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:false}})}
 });
+
+// University Years Phase 5: the ¥100 daily student allowance is paid on the server and stays paid after device saves.
+test('student allowance: switch, once per Beijing day, students only, and the money survives the next save',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(24,'user24'),(25,'user25')");
+ const pay=(id,today,post=true)=>fetch(base+'/api/v4/chinalife/allowance.php',{method:post?'POST':'GET',headers:{Authorization:'Bearer test-'+id,'X-Test-Today':today,...(post?{'content-type':'application/json'}:{})},body:post?'{}':undefined}).then(async r=>{const j=await r.json();return {...j,...(j.data||{}),httpStatus:r.status}});
+ assert.equal((await pay(24,'2026-11-02')).httpStatus,403,'switched off by default');
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_food:true}});
+  assert.equal((await call(24,'save.php','POST',{revision:0,save:{character:{},game:game()}})).httpStatus,200);
+  assert.equal((await call(25,'save.php','POST',{revision:0,save:{character:{},game:{...game(),background:'Worker'}}})).httpStatus,200);
+  assert.equal((await pay(25,'2026-11-02')).student,false,'only students');
+  // Through a real game client: the ¥100 shows at once and stays after the next device save.
+  const t=harness(null),c=t.context;c.HafrikSession={token:'test-24',user:{id:24}};c.URLSearchParams=URLSearchParams;
+  c.fetch=(url,opts={})=>{const u=new URL(url);return fetch(base+u.pathname+u.search,u.pathname.endsWith('allowance.php')?{...opts,headers:{...(opts.headers||{}),'X-Test-Today':'2026-11-02'}}:opts)};
+  await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);await c.ChinaLifeCloud.ready;
+  const money=t.game.state.money;assert.equal((await pay(24,'2026-11-02',false)).waiting,true);
+  const d=await c.ChinaLifeCloud.allowance();assert.equal(d.paid,100);assert.equal(t.game.state.money,money+100);
+  assert.equal((await c.ChinaLifeCloud.allowance()).paid,0,'once a day');assert.equal(t.game.state.money,money+100);
+  t.game.state.needs.fun=Math.max(0,t.game.state.needs.fun-1);await c.ChinaLifeCloud.upload();
+  const s=(await call(24,'save.php')).data.save.game;assert.equal(s.money,money+100);assert.equal(s.allowance.day,'2026-11-02');
+  // The next Beijing day pays again.
+  const next=await pay(24,'2026-11-03');assert.equal(next.paid,100);assert.equal(next.total,200);
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_food:false}})}
+});

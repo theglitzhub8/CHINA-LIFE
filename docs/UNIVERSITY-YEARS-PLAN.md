@@ -91,13 +91,16 @@ Every phase sits behind an admin switch (default OFF) so the live game is unchan
 - [ ] Library sessions win back attendance points: Phase 6.
 
 ### Phase 5. Year 1 food economy, switch `uni_food`
-- [ ] Student allowance ¥100 per real (Beijing) day, about ¥3,000 a month (owner's decision).
-- [ ] Campus store with ingredients (rice, noodles, egg, tomato, vegetables, meat, spices...), a small fridge
-      inventory. Prices make ordering food eat most of the allowance (about ¥80 a day) while cooking costs
-      about ¥25-35 a day, so cooking leaves money for everything else.
-- [ ] Cooking: known recipes, or free combination of 2-4 ingredients. Good combos feed more and train Cooking;
-      bad combos cause food sickness: hunger drops, urgent toilet trips (bladder), lower energy for a few hours.
-- [ ] Server ledger for allowance and purchases (same rules as other money).
+- [x] Student allowance ¥100 per Beijing day (about ¥3,000 a month), paid by `allowance.php` on the server ledger and
+      collected automatically when the game opens; kept in `game_state.allowance` (save.php keeps it).
+- [x] Campus store (`kitchen.js`): 17 ingredients at ¥1-12, bought only at a campus, a fridge of 30 items. Ordering a
+      meal costs ¥40 (two a day = ¥80 of the ¥100); the ten recipes cost ¥4-17 each.
+- [x] Cooking at home with the walk-to-the-kitchen animation: ten known recipes (Chinese and West African), or 2-4
+      ingredients of your own. Good mixes feed and train Cooking; bad ones (two meats, meat with nothing to cook it
+      with, seasoning only, clashing pairs) give 3 hours of food sickness: no real meal, less energy and fun, and an
+      urgent toilet cramp every 25 minutes, until it passes or a doctor at the City Hospital treats it.
+- [x] Purchases are spent on the device like every other purchase (the save rules record the spending).
+- [x] Fixed on the way: the sleeping roommate lay inside the mattress (the world's idle bob reset his height).
 
 ### Phase 6. Year 2 library
 - [ ] Library room: sit at a desk (uses real sit), read major books: knowledge points, restores exam buff,

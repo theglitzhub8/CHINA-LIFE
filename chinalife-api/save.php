@@ -40,8 +40,8 @@ $storedGame=$stored?json_decode($stored['game_state'],true):[];
 if(!$stored&&!in_array($game['city'],cl_open_cities(),true))cl_fail('Choose an available starting city',403);
 // Daily rewards are awarded by daily.php, never by an uploaded save.
 $game['lastVisit']=$storedGame['lastVisit']??'';$game['streak']=$storedGame['streak']??0;
-// Attendance and university progress are written only by attendance.php and university.php; a device save keeps them.
-foreach(['attendance','university'] as $key){if(isset($storedGame[$key]))$game[$key]=$storedGame[$key];else unset($game[$key]);}
+// Attendance, university progress and the student allowance are written only by their endpoints; a device save keeps them.
+foreach(['attendance','university','allowance'] as $key){if(isset($storedGame[$key]))$game[$key]=$storedGame[$key];else unset($game[$key]);}
 // Advance the saved day only at Beijing midnight, using the stored calendar anchor.
 $clockDay=intdiv(time()+8*3600,86400);$anchor=(int)($storedGame['chinaDay']??$clockDay);if($anchor<=0||$anchor>$clockDay)$anchor=$clockDay;
 $game['day']=$stored?(int)($storedGame['day']??1)+max(0,$clockDay-$anchor):1;

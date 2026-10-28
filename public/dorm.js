@@ -36,4 +36,5 @@ export function placeRoommate(c,id){const game=c.game;if(!dormActive(game,id))re
  body.userData.roommate=m.id;body.userData.doing=r.doing;
  // Asleep: lying on the bed, head to the headboard. At the desk: facing the desk on the wall. Cooking: facing the counter.
  if(r.at==='bed'){body.rotation.x=-Math.PI/2;body.position.set(x,.62,z+1)}else body.rotation.y=r.at==='desk'?-Math.PI/2:Math.PI;
- c.addActor(body);const l=c.labelFor(body);if(l){l.el.classList.add('hafrik-host');l.el.textContent=label+' · '+r.doing;l.el.onclick=e=>{e.stopPropagation();chat(game,m)}}return [body]}
+ // A sleeper is not an animated actor: the world's idle bob would reset his height into the mattress.
+ if(r.at!=='bed')c.addActor(body);const l=c.labelFor(body);if(l){l.el.classList.add('hafrik-host');l.el.textContent=label+' · '+r.doing;l.el.onclick=e=>{e.stopPropagation();chat(game,m)}}return [body]}

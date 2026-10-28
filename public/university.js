@@ -4,6 +4,8 @@
 // A chip appears at a campus (under the attendance chip when that one shows). Two minutes before a class the phone buzzes
 // anywhere in the game.
 (()=>{const $=id=>document.getElementById(id),G=()=>window.ChinaLife,C=()=>window.ChinaLifeCloud;
+// A new screen starts at the top (the sheet keeps the last scroll position, and r4.js's sticky title follows the scroll).
+const show=(...a)=>{G().showScreen(...a);const c=$('activityContent');if(c){c.scrollTop=0;c.dispatchEvent(new Event('scroll'))}};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const campus=p=>['campus','ef','university','liaoning','dongbei','academy'].includes(p)||/univ|campus/.test(String(p||''));
 const on=()=>window.ChinaLifeFlags?.cast?.('uni_years')===true&&G()?.state?.created&&G().state.background==='Student';
@@ -36,16 +38,17 @@ async function open(){const g=G();if(!g)return;if(!st)await load(true);if(!st)re
  const STATUS={attended:'✅ attended',now:'📳 on now: check in',missed:'❌ missed',later:'⏰ later'};
  const classes=s.classDay?'<ul class="uni-list">'+today().map(c=>'<li>'+esc(c.time+'–'+c.end+' '+c.subject)+' · '+STATUS[c.status]+'</li>').join('')+'</ul>'+(today().some(c=>c.status==='now')?'<div class="uni-exams"><button data-uni-attend>📳 Check in to class</button></div>':''):'<p class="uni-next">No classes today. Classes are Monday to Friday at '+s.classTimes.map(c=>c.time).join(' and ')+'.</p>';
  const score='<div class="uni-score'+(s.truancy?' risk':'')+'"><b>Attendance this year: '+s.attendance+'/100</b><span><i style="width:'+s.attendance+'%"></i></span><small>'+(s.truancy?'⚠️ Truancy risk: your exam pass mark is '+s.passMark+'/'+s.questions+'. Go to every class to bring it back up.':'Exam pass mark '+s.passMark+'/'+s.questions+'. A missed class costs 10, a class you attend gives 5 back.')+'</small></div>';
- g.showScreen('🎓 University','<b>'+esc(headline(s))+'</b> · '+s.passedYears+'/4 years passed',
-  '<div class="uni-card"><p>One real week is one university year: Monday to Friday classes, Saturday library and catch-up, Sunday exam. Missing a day never fails you out: a missed or failed exam becomes a resit.</p>'+score+exams+'<h3>Today</h3>'+classes+'<h3>Your years</h3><ul class="uni-list">'+results+'</ul><h3>Campus</h3><ul class="uni-list">'+rooms+'</ul></div>');
+ show('🎓 University','<b>'+esc(headline(s))+'</b> · '+s.passedYears+'/4 years passed',
+  '<div class="uni-card"><p>One real week is one university year: Monday to Friday classes, Saturday library and catch-up, Sunday exam. Missing a day never fails you out: a missed or failed exam becomes a resit.</p>'+score+exams+'<h3>Today</h3>'+classes+'<h3>Your years</h3><ul class="uni-list">'+results+'</ul><h3>Campus</h3><ul class="uni-list">'+rooms+'</ul>'+(window.ChinaLifeKitchen?.on?.()?'<div class="uni-exams"><button data-uni-store>🛒 Campus store</button><button data-uni-kitchen>🍳 Kitchen and fridge</button></div>':'')+'</div>');
  document.querySelectorAll('[data-uni-exam]').forEach(b=>b.onclick=()=>exam(Number(b.dataset.uniExam)));
+ const st2=document.querySelector('[data-uni-store]');if(st2)st2.onclick=()=>window.ChinaLifeKitchen.store();const k2=document.querySelector('[data-uni-kitchen]');if(k2)k2.onclick=()=>window.ChinaLifeKitchen.open();
  const a=document.querySelector('[data-uni-attend]');if(a)a.onclick=async()=>{await attend();open()}}
 async function exam(year){const g=G();let paper;try{paper=(await C().university({action:'start_exam',year})).exam}catch(e){return g.toast?.(e.message||'The exam could not start.')}
  const answers=[];let i=0;const q=paper.questions;
- const ask=()=>{const x=q[i];g.showScreen('📝 Year '+year+' exam','Question '+(i+1)+' of '+q.length+' · pass mark '+(paper.passMark??st?.passMark??6),'<div class="uni-card"><p class="uni-q">'+esc(x.prompt)+'</p><div class="uni-exams">'+x.options.map((o,n)=>'<button data-uni-a="'+n+'">'+esc(o)+'</button>').join('')+'</div></div>');
+ const ask=()=>{const x=q[i];show('📝 Year '+year+' exam','Question '+(i+1)+' of '+q.length+' · pass mark '+(paper.passMark??st?.passMark??6),'<div class="uni-card"><p class="uni-q">'+esc(x.prompt)+'</p><div class="uni-exams">'+x.options.map((o,n)=>'<button data-uni-a="'+n+'">'+esc(o)+'</button>').join('')+'</div></div>');
   document.querySelectorAll('[data-uni-a]').forEach(b=>b.onclick=()=>{answers.push(x.options[Number(b.dataset.uniA)]);i++;i<q.length?ask():submit()})};
  const submit=async()=>{let d;try{d=await C().university({action:'submit_exam',answers})}catch(e){return g.toast?.(e.message||'The exam could not be marked.')}st=d;at=Date.now();const r=d.result;
-  g.showScreen(r.passed?'🎉 Year '+r.year+' passed':'Year '+r.year+' not passed yet',r.score+'/'+r.total+' right'+(r.passed?' · +'+r.xp+' XP · ¥'+r.coins:' · resit on a later Sunday'),
+  show(r.passed?'🎉 Year '+r.year+' passed':'Year '+r.year+' not passed yet',r.score+'/'+r.total+' right'+(r.passed?' · +'+r.xp+' XP · ¥'+r.coins:' · resit on a later Sunday'),
    '<div class="uni-card"><ol class="uni-list">'+q.map((x,n)=>'<li>'+(answers[n]===r.answers[n]?'✅':'❌')+' '+esc(x.prompt)+' <b>'+esc(r.answers[n])+'</b></li>').join('')+'</ol><div class="uni-exams"><button data-uni-back>Back to University</button></div></div>');
   document.querySelector('[data-uni-back]').onclick=()=>open();render()};ask()}
 // The phone buzzes 2 minutes before each class (and once more if it has just started), anywhere in the game, once per class.

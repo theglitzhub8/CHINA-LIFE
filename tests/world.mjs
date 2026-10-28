@@ -177,7 +177,7 @@ test('University Years: a student lives in the 2-person dorm with a roommate who
  t.context.ChinaLifeFlags={cast:k=>k==='uni_years'};
  const mate=()=>[...t.document.querySelectorAll('.hafrik-host')].map(l=>l.textContent).join('|');
  t.game.state.hour=20*60;t.internal.render();t.world.venue('home');assert.equal(t.world.homeStyle,'dorm');assert.equal(t.document.getElementById('worldVenueTitle').textContent,'Your student dorm');assert.match(mate(),/roommate · studying/);
- t.game.state.hour=2*60;t.world.venue('home');assert.match(mate(),/roommate · asleep/);
+ t.game.state.hour=2*60;t.world.venue('home');assert.match(mate(),/roommate · asleep/);t.tick(2);assert.equal([...t.document.querySelectorAll('.hafrik-host')].length,1);
  t.game.state.hour=10*60;t.world.venue('home');assert.match(mate(),/is at class · back at 12:00/);
  t.game.state.hour=20*60;t.world.venue('home');let completed=0;t.world.perform({kind:'cook',label:'Cook'},()=>completed++);t.tick(20);assert.equal(completed,1,'kitchen reachable');
  t.game.state.properties={...(t.game.state.properties||{}),[t.game.state.city]:'apartment'};t.world.venue('home');assert.equal(t.world.homeStyle,'apartment','a bought home replaces the dorm');
