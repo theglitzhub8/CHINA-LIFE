@@ -35,3 +35,20 @@ test('dorm bond is saved, clamped and survives reloads',async()=>{const {harness
  const t=harness({...fixture(),dorm:{bond:250,eventDay:3}});assert.equal(JSON.stringify(t.game.state.dorm),'{"bond":100,"eventDay":3}');
  const u=harness(fixture());assert.equal(JSON.stringify(u.game.state.dorm),'{"bond":50,"eventDay":0}');
 });
+
+test('university client: campus chip, University screen with locked rooms, and a Sunday exam marked by the server',async()=>{
+ const {harness,fixture}=await import('./game-harness.mjs');const t=harness({...fixture(),place:'university'});const c=t.context,d=t.document;
+ const rooms=y=>[['classrooms',1],['dorm',1],['store',1],['library',2],['lab',3],['hall',4]].map(([id,n])=>({id,name:id,year:n,open:y>=n}));
+ const view=(over={})=>({student:true,enrolled:'2026-11-02',start:'2026-11-02',orientation:false,year:1,week:1,weekday:3,dayName:'Class day',hsk:'HSK 1',examDay:false,resits:[],exams:[],results:{},passedYears:0,rooms:rooms(1),passMark:6,questions:10,reward:{xp:60,coins:120},...over});
+ const calls=[];let now=view();
+ c.ChinaLifeCloud={university:async data=>{calls.push(data);if(!data)return now;if(data.action==='start_exam')return {...now,exam:{year:1,questions:[{prompt:'What does 你好 (nǐ hǎo) mean?',options:['sorry','hello','thanks','bye']},{prompt:'How do you say 我?',options:['nǐ','wǒ','tā','shì']}]}};
+  return {...view({examDay:true,weekday:7,dayName:'Exam day',results:{1:{passed:true,score:2,total:2}},passedYears:1}),result:{year:1,passed:true,score:2,total:2,answers:['hello','wǒ'],xp:60,coins:120}}}};
+ c.MutationObserver??=class{observe(){}};c.ChinaLifeFlags={cast:()=>false};vm.runInContext(r('public/university.js'),c);const U=c.ChinaLifeUniversity;
+ assert.equal(await U.load(true),null,'switch off: nothing loads');assert.equal(calls.length,0);
+ c.ChinaLifeFlags={cast:k=>k==='uni_years'};await U.load(true);assert.match(d.querySelector('.uni-chip').textContent,/Year 1 · Class day/);
+ await U.open();const screen=()=>d.getElementById('activityContent').textContent;assert.match(screen(),/Year 1 of 4 · Class day · HSK 1/);assert.match(screen(),/library · opens in Year 2/);assert.match(screen(),/Next exam: Sunday/);
+ d.getElementById('activityDialog').close();now=view({examDay:true,weekday:7,dayName:'Exam day',exams:[1]});await U.load(true);assert.match(d.querySelector('.uni-chip').textContent,/Exam day: Year 1 open/);
+ await U.open();d.querySelector('[data-uni-exam="1"]').onclick();await new Promise(r=>setTimeout(r,0));assert.match(screen(),/What does 你好/);
+ [...d.querySelectorAll('[data-uni-a]')].find(b=>b.textContent==='hello').onclick();[...d.querySelectorAll('[data-uni-a]')].find(b=>b.textContent==='wǒ').onclick();await new Promise(r=>setTimeout(r,0));
+ assert.equal(JSON.stringify(calls.at(-1)),JSON.stringify({action:'submit_exam',answers:['hello','wǒ']}));assert.match(screen(),/Year 1 passed/);assert.match(screen(),/\+60 XP · ¥120/);
+});

@@ -1019,3 +1019,62 @@ test('Party Night runs a timed dance, takes one vote each and names the winner',
  const done=await call(6,'party.php?city=Shenyang&place=night');
  assert.equal(done.data.round.phase,'closed');assert.equal(done.data.round.winner,'6');assert.match(done.data.round.title,/user6 · Dance Champion/);
 });
+
+// University Years Phase 3: calendar from the enrolment date, Sunday exams made and graded on the server, resits.
+test('university years: enrolment, weekly calendar, server-graded Sunday exam, resit and saves that keep progress',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(21,'user21')");
+ const uni=(today,data)=>fetch(base+'/api/v4/chinalife/university.php',{method:data?'POST':'GET',headers:{Authorization:'Bearer test-21','X-Test-Today':today,...(data?{'content-type':'application/json'}:{})},body:data?JSON.stringify(data):undefined}).then(async r=>{const j=await r.json();return {...j,...(j.data||{}),httpStatus:r.status}});
+ const ctx={window:{}};vm.createContext(ctx);vm.runInContext(fs.readFileSync('public/chinese-course.js','utf8'),ctx);const words=ctx.window.ChinaLifeChinese.allWords;
+ const solve=q=>{const m=q.prompt.match(/^What does (.+) \(/),w=q.prompt.match(/^How do you write “(.+)” in Chinese/),p=q.prompt.match(/^How do you say (.+)\?$/);
+  const hit=m?words.find(x=>x.han===m[1]):w?words.find(x=>x.en===w[1]&&q.options.includes(x.han)):words.find(x=>x.han===p[1]);return m?hit.en:w?hit.han:hit.pin};
+ assert.equal((await uni('2026-11-04')).httpStatus,403,'switched off by default');
+ try{
+  assert.equal((await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:true}})).status,'success');
+  assert.equal((await call(21,'save.php','POST',{revision:0,save:{character:{},game:game()}})).httpStatus,200);
+  // Wednesday 4 Nov 2026: Year 1 started on Monday the 2nd. Rooms of later years are locked. No exam on a class day.
+  let s=await uni('2026-11-04');assert.equal(s.student,true);assert.equal(s.start,'2026-11-02');assert.equal(s.year,1);assert.equal(s.dayName,'Class day');assert.equal(s.examDay,false);
+  assert.deepEqual(s.rooms.filter(r=>r.open).map(r=>r.id),['classrooms','dorm','store']);
+  assert.equal((await call(21,'save.php')).data.revision,1,'enrolling does not move the save revision, so an open game keeps saving');
+  assert.equal((await uni('2026-11-04',{action:'start_exam',year:1})).httpStatus,409);
+  // Sunday: the Year 1 exam opens; questions come without answers; a wrong paper fails and cannot be retaken that day.
+  s=await uni('2026-11-08');assert.equal(s.examDay,true);assert.deepEqual(s.exams,[1]);
+  let e=await uni('2026-11-08',{action:'start_exam',year:1});assert.equal(e.exam.questions.length,10);assert.ok(!JSON.stringify(e.exam).includes('answer'));
+  let r=await uni('2026-11-08',{action:'submit_exam',answers:[]});assert.equal(r.result.passed,false);assert.equal(r.result.score,0);assert.deepEqual(r.exams,[]);
+  assert.equal((await uni('2026-11-08',{action:'start_exam',year:1})).httpStatus,409);
+  // A device save never wipes university progress or attendance (both written only by their endpoints).
+  sql("USE chinalife_test; UPDATE chinalife_saves SET game_state=JSON_SET(game_state,'$.attendance',JSON_OBJECT('since','2026-11-02','days',JSON_ARRAY('2026-11-04'))) WHERE user_id=21");
+  const saved=await call(21,'save.php');assert.equal((await call(21,'save.php','POST',{revision:saved.data.revision,save:{character:{},game:{...saved.data.save.game,university:null}}})).httpStatus,200);
+  assert.equal(JSON.parse(sql("USE chinalife_test; SELECT JSON_EXTRACT(game_state,'$.attendance.days') FROM chinalife_saves WHERE user_id=21")).join(),'2026-11-04');
+  // Next Sunday is Year 2: the library opens, Year 1 is a resit next to the Year 2 exam. Passing pays XP and coins once.
+  s=await uni('2026-11-15');assert.equal(s.year,2);assert.deepEqual(s.resits,[1]);assert.deepEqual(s.exams,[1,2]);assert.equal(s.rooms.find(x=>x.id==='library').open,true);
+  e=await uni('2026-11-15',{action:'start_exam',year:1});r=await uni('2026-11-15',{action:'submit_exam',answers:e.exam.questions.map(solve)});
+  assert.equal(r.result.passed,true,JSON.stringify(r.result));assert.equal(r.result.score,10);assert.equal(r.result.xp,60);assert.equal(r.result.coins,120);assert.deepEqual(r.exams,[2]);assert.deepEqual(r.resits,[]);
+  // Thursday enrolment is orientation until next Monday; after four weeks the year stays at 4.
+  sql("USE chinalife_test; UPDATE chinalife_saves SET game_state=JSON_REMOVE(game_state,'$.university') WHERE user_id=21");
+  s=await uni('2026-11-05');assert.equal(s.orientation,true);assert.equal(s.start,'2026-11-09');assert.equal(s.dayName,'Orientation');
+  s=await uni('2026-12-30');assert.equal(s.year,4);
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:false}})}
+});
+
+test('university and attendance rewards paid by the server stay paid after the game saves again',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(22,'user22')");
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:true}});
+  assert.equal((await call(22,'save.php','POST',{revision:0,save:{character:{},game:{...game(),place:'campus'}}})).httpStatus,200);
+  const t=harness(null),c=t.context;c.HafrikSession={token:'test-22',user:{id:22}};c.URLSearchParams=URLSearchParams;
+  c.fetch=(url,opts={})=>{const u=new URL(url);return fetch(base+u.pathname+u.search,u.pathname.endsWith('university.php')?{...opts,headers:{...(opts.headers||{}),'X-Test-Today':today}}:opts)};let today='2026-11-04';
+  await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);await c.ChinaLifeCloud.ready;
+  const ctx={window:{}};vm.createContext(ctx);vm.runInContext(fs.readFileSync('public/chinese-course.js','utf8'),ctx);const W=ctx.window.ChinaLifeChinese.allWords;
+  const solve=q=>{const m=q.prompt.match(/^What does (.+) \(/),w=q.prompt.match(/^How do you write “(.+)” in Chinese/),p=q.prompt.match(/^How do you say (.+)\?$/);return m?W.find(x=>x.han===m[1]).en:w?W.find(x=>x.en===w[1]&&q.options.includes(x.han)).han:W.find(x=>x.han===p[1]).pin};
+  await c.ChinaLifeCloud.university();today='2026-11-08';
+  const money=t.game.state.money,xp=t.game.state.xp;
+  const paper=(await c.ChinaLifeCloud.university({action:'start_exam',year:1})).exam;const d=await c.ChinaLifeCloud.university({action:'submit_exam',answers:paper.questions.map(solve)});
+  assert.equal(d.result.passed,true);assert.equal(t.game.state.money,money+120);assert.equal(t.game.state.xp,xp+60);
+  // Attendance at the campus pays ¥30 + 15 XP on the server; the device shows it at once.
+  await call(22,'presence.php','POST',{...presence('China','campus')});const a=await c.ChinaLifeCloud.attendance(true);assert.equal(a.event,'present');
+  assert.equal(t.game.state.money,money+150);assert.equal(t.game.state.xp,xp+75);
+  // The next device save must not read the old totals as spending.
+  t.game.state.needs.fun=Math.max(0,t.game.state.needs.fun-1);await c.ChinaLifeCloud.upload();
+  const s=(await call(22,'save.php')).data.save.game;assert.equal(s.money,money+150);assert.equal(s.xp,xp+75);
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:false}})}
+});
