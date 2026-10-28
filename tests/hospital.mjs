@@ -7,11 +7,11 @@ const r=f=>fs.readFileSync(f,'utf8');const tick=()=>new Promise(res=>setImmediat
 const PAPER=['fever','head','stomach','cough','register'].map(id=>({id,prompt:'问 '+id,pinyin:'wèn',options:['right '+id,'wrong a','wrong b','wrong c']}));
 const ITEMS={painkiller:[60,'Painkillers','止痛药','zhǐtòng yào','+20 energy'],ors:[40,'Rehydration salts','口服补液盐','kǒufú bǔyè yán','−40 drunk, +5 energy'],vitamins:[80,'Vitamins','维生素','wéishēngsù','Needs drop 30% slower for 24 hours'],stomach:[90,'Stomach medicine','肠胃药','chángwèi yào','Cures food sickness']};
 let shelf={},vit=0;const pharm=b=>{if(b.op==='buy')shelf[b.item]=(shelf[b.item]||0)+1;if(b.op==='use'){shelf[b.item]--;if(b.item==='vitamins')vit=Math.floor(Date.now()/1000)+86400}return {items:ITEMS,max:5,stock:{painkiller:0,ors:0,vitamins:0,stomach:0,...shelf},vitaminsUntil:vit,money:2940,xp:0}};
-let staff=()=>({});
+let staff=()=>({}),visits=()=>({});
 function hospital(on,state={}){
  const t=harness({...fixture(),place:'football',...state}),c=t.context,calls=[],trips=[];
  const keys=on===true?['hospital_care']:on||[];c.ChinaLifeFlags={cast:k=>keys.includes(k),appOff:()=>false};c.ChinaLifeCloud={signedIn:true};
- c.ChinaLifeAuth={request:async(path,method,body)=>{if(/economy\.php/.test(path))calls.push([path,body]);if(/hospital-staff\.php/.test(path)){calls.push([path,body]);return {data:staff(method,body)}}if(body?.action==='pharmacy')return {data:pharm(body)};if(body?.action==='checkup')return {data:body.step==='start'?{questions:PAPER}:{money:3000,xp:500,checkup:{right:4,total:5,xp:32,marked:PAPER.map((q,i)=>({id:q.id,prompt:q.prompt,pinyin:q.pinyin,answer:q.options[0],right:i>0}))}}};return {data:{charged:200,bill:200,first:false,recovering:false,money:3000,xp:0}}}};
+ c.ChinaLifeAuth={request:async(path,method,body)=>{if(/economy\.php/.test(path))calls.push([path,body]);if(/hospital-visits\.php/.test(path)){calls.push([path,body]);return {data:visits(method,body)}}if(/hospital-staff\.php/.test(path)){calls.push([path,body]);return {data:staff(method,body)}}if(body?.action==='pharmacy')return {data:pharm(body)};if(body?.action==='checkup')return {data:body.step==='start'?{questions:PAPER}:{money:3000,xp:500,checkup:{right:4,total:5,xp:32,marked:PAPER.map((q,i)=>({id:q.id,prompt:q.prompt,pinyin:q.pinyin,answer:q.options[0],right:i>0}))}}};return {data:{charged:200,bill:200,first:false,recovering:false,money:3000,xp:0}}}};
  c.ChinaLifeWorld={journey:(o,done)=>{trips.push(o);done()}};
  vm.runInContext(r('public/hospital.js'),c);return {t,c,calls,trips};
 }
@@ -103,4 +103,25 @@ test('player doctors and nurses: ask the doctor on shift, wait, get treated; the
  await click(d.getElementById('hpShift'));assert.match(d.querySelector('#activityContent h2').textContent,/On shift/);
  const text=d.getElementById('hpQueue').textContent;assert.match(text,/user9/);assert.match(text,/Drunk 70%/);assert.match(text,/Hunger 20%/);
  await click(d.querySelector('[data-hp-treat="9:drunk"]'));assert.deepEqual(JSON.parse(JSON.stringify(calls.find(x=>x[1]?.action==='treat')[1])),{action:'treat',id:9,treatment:'drunk'});assert.equal(s.money,3080);
+});
+
+// Hospital Phase 4 (switch hospital_visits): visit a friend on the ward; your visitors' gifts reach you once.
+test('ward visits: list friends on the ward, visit with flowers and a card, and collect your own visitors',async()=>{
+ const keys=['hospital_care','hospital_visits'],gifts={card:[0,'Just a card','+10 social'],flowers:[50,'Flowers 鲜花','+15 fun, +20 social'],fruit:[30,'Fruit 水果','+15 hunger, +15 social']},cards={getwell:'早日康复！ Get well soon!',miss:'我们想你！ We miss you!'};
+ let waiting=0,visited=false;
+ visits=(m,b)=>{if(!b)return {enabled:true,hours:3,gifts,cards,waiting,ward:[{id:60,name:'user60',since:Date.now()/1000-600,until:Date.now()/1000+9000,visited}]};
+  if(b.action==='visit'){visited=true;return {money:2950,xp:0,visited:{id:60,name:'user60',gift:b.gift,card:cards[b.card],paid:50,xp:10}}}
+  if(b.action==='collect'){waiting=0;return {visits:[{from:'user59',gift:'fruit',giftName:'Fruit 水果',card:'我们想你！ We miss you!'}]}}return {}};
+ const off=hospital(['hospital_care'],{place:'cityhospital'});off.c.ChinaLifeHospital.health();assert.equal(off.t.document.getElementById('hpWard'),null,'hospital_visits off');
+ const {t,c,calls}=hospital(keys,{place:'cityhospital'}),d=t.document,s=t.game.state,click=async el=>{el.onclick();await tick();await tick();await tick()};
+ c.ChinaLifeHospital.health();await tick();await tick();assert.equal(calls.filter(x=>x[1]?.action==='collect').length,0,'nothing waiting: nothing collected');
+ await click(d.getElementById('hpWard'));assert.match(d.getElementById('activityContent').textContent,/user60/);
+ await click(d.querySelector('[data-hp-visit="60"]'));await click(d.querySelector('[data-hp-gift="flowers"]'));const social=s.needs.social;await click(d.querySelector('[data-hp-card="getwell"]'));
+ assert.deepEqual(JSON.parse(JSON.stringify(calls.find(x=>x[1]?.action==='visit')[1])),{action:'visit',to:60,gift:'flowers',card:'getwell'});
+ assert.equal(s.money,2950);assert.equal(s.needs.social,Math.min(100,social+10),'visiting cheers you up too');assert.ok(d.querySelector('[data-hp-visit="60"]').disabled,'visited today');
+ // Your own visitors: fruit gives +15 hunger and +15 social, once, with a banner that opens the list.
+ waiting=1;s.needs.hunger=40;s.needs.social=40;await c.ChinaLifeHospital.collectVisits();
+ assert.equal(s.needs.hunger,55);assert.equal(s.needs.social,55);const banner=d.getElementById('gameNotification');assert.match(banner.textContent,/user59 visited you on the ward/);
+ banner.onclick();assert.match(d.getElementById('activityContent').textContent,/我们想你/);
+ await c.ChinaLifeHospital.collectVisits();assert.equal(s.needs.hunger,55,'only once');
 });

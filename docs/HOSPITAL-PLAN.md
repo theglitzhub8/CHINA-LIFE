@@ -72,6 +72,13 @@ treated either way (the ward staff step in after a wrong pick). Patients wait up
 
 **Phase 4 · Visiting the ward.** See which friends are recovering on the ward, visit them, bring flowers or fruit
 (their fun and social go up), and a "Get well" message.
+✅ Done 29 Oct 2026 (switch `hospital_visits`, off; needs `hospital_care` on and **migrate.php run first**:
+migration-hospital.sql adds chinalife_hospital_visits). "💐 Visit the ward" in Your health at the City Hospital lists
+friends who woke up at the hospital or were treated by a player doctor/nurse in the last 3 hours. Visit each once a day
+from the hospital: just a card (free, +10 social), flowers 鲜花 ¥50 (+15 fun, +20 social) or fruit 水果 ¥30 (+15 hunger,
++15 social), with a set card (早日康复！, 多喝水，多休息！, 我们想你！, 加油！; no free text to moderate). The visitor gets
++10 XP and +10 social. The patient's game collects visits (on load, every 3 minutes, and when opening Your health),
+applies the gift once and shows a banner. Blocked players can't visit. Code: chinalife-api/hospital-visits.php.
 
 **Phase 5 · Student health insurance.** Students can join the campus insurance plan (a small monthly fee from their
 allowance), which cuts hospital bills, as it works for international students in China.

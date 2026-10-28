@@ -1542,3 +1542,32 @@ test('hospital staff: qualified only, the Health worker test, shifts at the hosp
   await hs(56);assert.equal(sql("USE chinalife_test; SELECT status FROM chinalife_hospital_patients WHERE user_id=56").trim(),'left');
  }finally{await flip(false)}
 });
+
+// Hospital Phase 4 (switch hospital_visits): friends recovering on the ward, visited from the hospital once a day with
+// a card, flowers or fruit; the patient collects each visit once.
+test('ward visits: friends on the ward only, from the hospital, once a day, paid gifts, collected once',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(59,'user59'),(60,'user60'),(61,'user61')");
+ for(const id of [59,60,61])assert.equal((await call(id,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China'}}})).httpStatus,200);
+ sql("USE chinalife_test; INSERT INTO chinalife_friends(first_id,second_id,requested_by,status,created_at) VALUES(59,60,59,'accepted',NOW()); DELETE FROM chinalife_rate_limits WHERE user_id IN (59,60,61)");
+ const hv=(id,body)=>body?call(id,'hospital-visits.php','POST',body):call(id,'hospital-visits.php');
+ const at=(id,place)=>sql("USE chinalife_test; REPLACE INTO chinalife_presence(user_id,name,city,place,seen_at) VALUES("+id+",'p','China','"+place+"',NOW())");
+ const coins=id=>Number(sql('USE chinalife_test; SELECT coins FROM chinalife_balances WHERE user_id='+id).trim());
+ assert.equal((await hv(59)).data.enabled,false,'switched off by default');
+ const flip=v=>call(1,'admin.php','POST',{action:'set_hafrik_features',features:{hospital_care:v,hospital_visits:v}});
+ try{
+  await flip(true);
+  assert.deepEqual((await hv(59)).data.ward,[],'nobody on the ward yet');
+  sql("USE chinalife_test; INSERT INTO chinalife_economy_actions(user_id,action,ref,coins,xp,created_at) VALUES(60,'hospital','faint:test',0,0,DATE_SUB(NOW(),INTERVAL 1 HOUR)),(61,'hospital','faint:test',0,0,NOW())");
+  const w=(await hv(59)).data;assert.equal(w.ward.length,1,'friends only');assert.equal(w.ward[0].id,60);assert.equal(w.ward[0].visited,false);assert.ok(w.gifts.flowers&&w.cards.getwell);
+  at(59,'football');assert.equal((await hv(59,{action:'visit',to:60,gift:'flowers',card:'getwell'})).httpStatus,409,'from the hospital only');
+  at(59,'cityhospital');assert.equal((await hv(59,{action:'visit',to:61,gift:'card',card:'getwell'})).httpStatus,403,'not a friend');
+  assert.equal((await hv(59,{action:'visit',to:60,gift:'gold',card:'getwell'})).httpStatus,400);
+  const start=coins(59);const v=await hv(59,{action:'visit',to:60,gift:'flowers',card:'getwell'});assert.equal(v.httpStatus,200,v.message);
+  assert.equal(coins(59),start-50);assert.equal(v.data.visited.xp,10);assert.equal((await hv(59)).data.ward[0].visited,true);
+  assert.equal((await hv(59,{action:'visit',to:60,gift:'card',card:'miss'})).httpStatus,409,'once a day');
+  assert.equal((await hv(60)).data.waiting,1);const got=await hv(60,{action:'collect'});assert.equal(got.data.visits.length,1);assert.equal(got.data.visits[0].from,'user59');assert.equal(got.data.visits[0].gift,'flowers');assert.match(got.data.visits[0].card,/早日康复/);
+  assert.equal((await hv(60,{action:'collect'})).data.visits.length,0,'collected once');
+  sql("USE chinalife_test; UPDATE chinalife_economy_actions SET created_at=DATE_SUB(NOW(),INTERVAL 4 HOUR) WHERE user_id=60 AND action='hospital'");
+  assert.deepEqual((await hv(59)).data.ward,[],'off the ward after 3 hours');
+ }finally{await flip(false)}
+});

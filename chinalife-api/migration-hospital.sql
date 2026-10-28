@@ -36,3 +36,20 @@ CREATE TABLE IF NOT EXISTS chinalife_hospital_patients (
     KEY hospital_patients_staff (staff_id, treated_at),
     CONSTRAINT fk_chinalife_hospital_patient_user FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Hospital Phase 4 (switch hospital_visits): friends visit you while you recover on the ward and leave flowers or fruit
+-- and a get-well card. seen_at is set when the patient's game collects it (the gift's effect is applied once there).
+CREATE TABLE IF NOT EXISTS chinalife_hospital_visits (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    visitor_id INT UNSIGNED NOT NULL,
+    patient_id INT UNSIGNED NOT NULL,
+    gift VARCHAR(12) NOT NULL,
+    card VARCHAR(12) NOT NULL,
+    created_at DATETIME NOT NULL,
+    seen_at DATETIME NULL,
+    PRIMARY KEY (id),
+    KEY hospital_visits_patient (patient_id, seen_at),
+    KEY hospital_visits_pair (visitor_id, patient_id, created_at),
+    CONSTRAINT fk_chinalife_hospital_visit_visitor FOREIGN KEY (visitor_id) REFERENCES users (user_id) ON DELETE CASCADE,
+    CONSTRAINT fk_chinalife_hospital_visit_patient FOREIGN KEY (patient_id) REFERENCES users (user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

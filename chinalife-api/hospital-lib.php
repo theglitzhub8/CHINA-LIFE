@@ -95,3 +95,13 @@ function cl_hs_test(): array {
   $qs[]=['id'=>'treat-'.$k,'prompt'=>'A patient’s chart says: '.$t[$k][0].'. What do you give?','pinyin'=>'','options'=>$opts];$answers[]=$t[$k][1];}
  return [$qs,$answers];
 }
+// Hospital Phase 4 (switch hospital_visits): visiting friends on the ward. You are "on the ward" for CL_HV_HOURS after
+// waking up at the hospital (economy action 'hospital') or being treated by a player doctor or nurse.
+// gift => [price, name, what it does for the patient]; cards are set phrases (no free text to moderate).
+const CL_HV_HOURS=3, CL_HV_XP=10;
+function cl_hv_gifts(): array {return [
+ 'card'=>[0,'Just a card','+10 social'],'flowers'=>[50,'Flowers 鲜花','+15 fun, +20 social'],'fruit'=>[30,'Fruit 水果','+15 hunger, +15 social'],
+];}
+function cl_hv_cards(): array {return [
+ 'getwell'=>'早日康复！ Get well soon!','rest'=>'多喝水，多休息！ Drink water and rest!','miss'=>'我们想你！ We miss you!','jiayou'=>'加油！ You’ve got this!',
+];}
