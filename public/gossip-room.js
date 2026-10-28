@@ -52,7 +52,14 @@ function remind(){const s=window.ChinaLifeHotSeat?.show?.(),g=G();if(!showOn()||
  if(hour!==Number(String(s?.start||'20:00').slice(0,2)))return;try{if(localStorage.getItem(KEY)===day)return;localStorage.setItem(KEY,day)}catch{}
  g.notify?.('🔥 Hot Seat Hour is on in the Gossip Room until '+(s?.end||'22:00')+'. Tap to see it.',()=>open())}
 setInterval?.(remind,60e3);
-window.ChinaLifeGossipRoom={on,open,react,remind};
+// Phase 3 (switch gossip_city): while you are in the Gossip Room, a new tip on the wall (a player's or the city's)
+// gives a small banner. It checks the newest tip's id every 30 seconds (gist-night.php?latest).
+let newestSeen=null;
+async function watchWall(){if(window.ChinaLifeFlags?.cast?.('gossip_city')!==true||!here()||!window.ChinaLifeCloud?.signedIn){newestSeen=null;return}
+ try{const r=await window.ChinaLifeAuth?.request?.('/chinalife/gist-night.php?latest=1&city='+encodeURIComponent(G().state.city)),id=Number((r?.data||r)?.latest||0);
+  if(newestSeen!==null&&id>newestSeen&&!$('gistNightFeed'))G().notify?.('🫖 New gist on the wall. Tap to read it.',()=>G().gistNight());newestSeen=Math.max(newestSeen??0,id)}catch{}}
+setInterval?.(watchWall,30e3);
+window.ChinaLifeGossipRoom={on,open,react,remind,watchWall};
 const css=document.createElement('style');css.textContent='.gr{display:grid;gap:12px}.gr-card{padding:14px 16px;border-radius:18px;background:#f3fbf8;border:1px solid #d6ebe5}.gr-card h3{margin:0 0 6px;font-size:16px}.gr-card p{margin:0 0 10px}.gr-hot{background:#fff4f1;border-color:#ffd6cc}.gr-actions{display:flex;flex-wrap:wrap;gap:8px}.gr-actions button{min-height:44px;padding:0 16px;border:0;border-radius:22px;background:#1F8E93;color:#fff;font-weight:700}.gr-actions .gr-soft{background:#fff;color:#0C3F44;border:1px solid #cfe3dd}.gr-tv{margin:0;padding:12px 14px;border-radius:14px;background:#0C3F44;color:#F7FFF7;font-style:italic}.gr-news{padding:8px 0;border-top:1px solid #d6ebe5}.gr-news:first-child{border-top:0}.gr-news p{margin:2px 0 0;font-size:13px;color:#43666b}.gr-muted{color:#587675;font-size:13px}.gr-show{margin:0 0 8px;padding:6px 10px;border-radius:12px;background:#fff;font-size:13px;font-weight:700;color:#0C3F44}.gr-show.live{background:#e0263b;color:#fff}'+
  '.gr-react{position:absolute;bottom:32%;z-index:35;font-size:28px;opacity:0;animation:grUp 2.6s ease-out forwards;pointer-events:none}@keyframes grUp{0%{opacity:0;transform:translateY(20px) scale(.6)}15%{opacity:1;transform:translateY(0) scale(1.2)}100%{opacity:0;transform:translateY(-180px) scale(1)}}'+
  '@media (prefers-reduced-motion:reduce){.gr-react{animation:none}}';document.head?.append(css);

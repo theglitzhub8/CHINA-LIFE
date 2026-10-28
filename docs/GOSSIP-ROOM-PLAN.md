@@ -57,6 +57,12 @@ shows on it, and place chips filter the wall. Needs the replies table: run `migr
 
 **Phase 3 · The city makes gossip.** Things that happen elsewhere post to the wall automatically, always as
 "someone", never a player's name: a club VIP night, a football result, a graduation, a new rank, a Hot Seat streak.
+✅ Done 29 Oct (switch `gossip_city`, off; `chinalife-api/gossip-city-lib.php`): the server posts "🏙️ City buzz" tips
+where each thing really happens: a new rank (cl_move_totals), a graduation (university.php), a football full-time
+score (football.php), and an author the Hot Seat room believed three times today (hot-seat.php). Always "Someone",
+never pinned or "yours"; admins can trace it; at most 4 of each kind per city per hour. A club VIP night is left out:
+VIP is bought on the device, so the server can't vouch for it. **Owner's answer (29 Oct): when a gossip is posted,
+players in the Gossip Room get a banner** ("🫖 New gist on the wall", checked every 30 s with gist-night.php?latest).
 
 **Phase 4 · A room that feels alive.** The crowd reacts to Hot Seat reveals (cheer for True, boo for Cap), the TV
 shows the live round, sitting at the tea table opens the wall, and the room fills up during Hot Seat Hour.

@@ -30,6 +30,9 @@ function hs_settle_due(string $city, string $place): array {
         $votes=cl_rows('SELECT v.user_id,v.vote,(SELECT COUNT(*) FROM chinalife_hot_seat_votes p WHERE p.user_id=v.user_id AND p.rewarded>0 AND p.day=?) paid_today FROM chinalife_hot_seat_votes v WHERE v.gist_id=?','si',[$day,(int)$g['id']]);
         $r=hs_payouts($votes,(int)$g['user_id']);
         cl_run("UPDATE chinalife_hot_seat SET status='revealed',true_votes=?,cap_votes=?,result=? WHERE id=?",'iisi',[$r['true'],$r['cap'],$r['result'],(int)$g['id']]);
+        // Gossip Room Phase 3 (switch gossip_city): the room believing the same anonymous author three times today is news.
+        if ($r['result']==='true'&&(int)(cl_one("SELECT COUNT(*) n FROM chinalife_hot_seat WHERE user_id=? AND city=? AND day=? AND status='revealed' AND result='true'",'iss',[(int)$g['user_id'],$city,$day])['n']??0)===3)
+            cl_city_gossip($city,(int)$g['user_id'],'hotseat','Someone has made the Hot Seat room believe them three times today. Truth teller or smooth talker? #gossip');
         foreach ($r['pay'] as $user=>$coins) {
             if (!cl_one('SELECT user_id FROM chinalife_saves WHERE user_id=?','i',[$user])) continue;
             $paid[$user]=cl_credit($user,$coins);

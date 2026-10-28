@@ -180,8 +180,10 @@ function cl_rank_bonus(array &$game, int $xp): int {
 // after cl_lock_character. Rank bonus is included in the coin delta when XP rises.
 function cl_move_totals(int $userId, array &$game, int $coinDelta, int $xpDelta): array {
     $bal=cl_balances_lock($userId);
-    $xp=max(0,$bal['xp']+$xpDelta);
+    $xp=max(0,$bal['xp']+$xpDelta);$rankBefore=(int)($game['rankClaimed']??0);
     $bonus=$xpDelta>0?cl_rank_bonus($game,$xp):0;
+    // Gossip Room Phase 3 (switch gossip_city): a new rank is city news, never with the player's name.
+    if ((int)($game['rankClaimed']??0)>$rankBefore&&function_exists('cl_city_gossip')) cl_city_gossip((string)($game['city']??'China'),$userId,'rank','Someone just reached the '.(cl_ranks()[(int)$game['rankClaimed']]['name']??'next').' rank. Who could it be? #gossip');
     $coins=$bal['coins']+$coinDelta+$bonus;
     cl_balance_write($userId,$coins,$xp);
     $game['money']=$coins;$game['xp']=$xp;
@@ -354,6 +356,7 @@ function cl_rank_status(int $userId): array {
 }
 
 require_once __DIR__.'/hafrik-features.php';
+require_once __DIR__.'/gossip-city-lib.php';
 
 // Record winners of finished elections once (ties go to the earliest candidate). Safe to call often:
 // only ended elections without a stored winner are looked at, and a missing table is ignored.

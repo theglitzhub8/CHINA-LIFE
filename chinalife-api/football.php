@@ -67,6 +67,8 @@ function fb_finalise(array $m): string {
     if ($verdict==='wait') return 'reported';
     if ($verdict==='dispute') {cl_run("UPDATE chinalife_football_matches SET status='disputed',updated_at=NOW() WHERE id=?",'i',[(int)$m['id']]);return 'disputed';}
     cl_run("UPDATE chinalife_football_matches SET status='done',ended_at=NOW(),updated_at=NOW() WHERE id=?",'i',[(int)$m['id']]);
+    // Gossip Room Phase 3 (switch gossip_city): the final score is city news, without names.
+    if (is_array($rep['score']??null)) cl_city_gossip((string)($m['city']??'China'),(int)$m['host_id'],'football','Full time at the Football Field: a '.(int)$m['size'].'v'.(int)$m['size'].' match ended '.(int)$rep['score'][0].'–'.(int)$rep['score'][1].'. Who was playing? #football');
     if ($m['tournament_id']!==null&&$rep['winner']!==null) fb_tournament_result((int)$m['tournament_id'],(string)$m['bracket_match'],(int)($rep['winner']===0?$m['team_a_id']:$m['team_b_id']),$rep['score']);
     return 'done';
 }

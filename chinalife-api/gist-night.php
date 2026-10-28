@@ -47,8 +47,9 @@ function gist_night_feed(string $city): array {
     }
     $out=[];
     foreach ($posts as $post) {
-        $official=(int)$post['official']===1;
-        $item=['id'=>(string)$post['id'],'tag'=>$official?'Hafrik':'Anonymous tip','official'=>$official,'own'=>(int)$post['user_id']===(int)$uid,'body'=>$post['body'],'at'=>(int)$post['at'],'reactions'=>$reactions[$post['id']]??['like'=>0,'fire'=>0,'laugh'=>0],'mine'=>$mine[$post['id']]??null];
+        // official: 1 = Hafrik (pinned), 2 = City buzz (gossip-city-lib.php, never pinned, never "yours"), 0 = anonymous tip.
+        $official=(int)$post['official']===1;$auto=(int)$post['official']===2;
+        $item=['id'=>(string)$post['id'],'tag'=>$official?'Hafrik':($auto?'City buzz':'Anonymous tip'),'official'=>$official,'auto'=>$auto,'own'=>!$auto&&(int)$post['user_id']===(int)$uid,'body'=>$post['body'],'at'=>(int)$post['at'],'reactions'=>$reactions[$post['id']]??['like'=>0,'fire'=>0,'laugh'=>0],'mine'=>$mine[$post['id']]??null];
         foreach (gist_kinds() as $kind) $item['reactions'][$kind]=(int)($item['reactions'][$kind]??0);
         if (gist_wall_on()) {$item['place']=gist_place((string)$post['body']);$item['replies']=$replies[$post['id']]??[];$item['reply_count']=(int)($replyCounts[$post['id']]??0);}
         // Players only ever see 'Anonymous tip'. Admins can still trace the author.
@@ -87,6 +88,8 @@ function gist_legacy_posts(string $city, bool $admin): array {
 $city=(string)($_GET['city']??'');
 if ($method==='GET') {
     if (!in_array($city,cl_open_cities(),true)) cl_fail('Choose an active city');
+    // The newest tip's id only, for the "New gist on the wall" banner in the Gossip Room (gossip-room.js).
+    if (isset($_GET['latest'])) json_response('success',['latest'=>(string)(cl_one('SELECT MAX(id) id FROM chinalife_gist_night WHERE city=?','s',[$city])['id']??0)]);
     json_response('success',['city'=>$city,'admin'=>cl_is_admin(),'posts'=>gist_night_feed($city)]);
 }
 $input=cl_body();

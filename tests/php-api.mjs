@@ -1348,3 +1348,29 @@ test('Gossip wall: new reactions and replies only with the switch, clean replies
   assert.equal((await gn(1)).data.posts.find(x=>+x.id===id).replies[0].user_id,'41','admins can trace a reply');
  }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{gossip_wall:false}});sql('USE chinalife_test; DELETE FROM chinalife_gist_night WHERE user_id=40')}
 });
+
+// Gossip Room Phase 3 (switch gossip_city): the city posts its own news to the Gossip wall, never with a name. Here a
+// student crosses the 200 XP rank by attending class, and a "City buzz" tip appears (not "yours", not pinned).
+test('City buzz: a real rank-up posts anonymous city news only with the switch, and a new tip id is cheap to check',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(44,'user44')");
+ const latest=async()=>Number((await call(44,'gist-night.php?city=China&latest=1')).data.latest);
+ assert.equal((await call(44,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China',background:'Student',xp:195,rankClaimed:0}}})).httpStatus,200);
+ sql("USE chinalife_test; UPDATE chinalife_balances SET xp=195 WHERE user_id=44");
+ assert.equal((await call(44,'presence.php','POST',presence('China','campus'))).httpStatus,200);
+ const before=await latest();
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{gossip_city:true}});
+  const att=await call(44,'attendance.php','POST',{});assert.equal(att.httpStatus,200,att.message);
+  assert.ok(await latest()>before,'a new tip');
+  const feed=(await call(44,'gist-night.php?city=China')).data.posts,buzz=feed.find(p=>p.auto);
+  assert.ok(buzz,'City buzz on the wall');assert.match(buzz.body,/^🏅 Someone just reached the .+ rank/);assert.doesNotMatch(buzz.body,/user44/);
+  assert.equal(buzz.tag,'City buzz');assert.equal(buzz.own,false,'never "yours", even for the player it is about');assert.equal(buzz.official,false,'not pinned');
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{gossip_city:false}});sql("USE chinalife_test; DELETE FROM chinalife_gist_night WHERE official=2")}
+});
+
+test('City buzz stays off by default and posts at most 4 of a kind per city per hour',async()=>{
+ const lib=fs.readFileSync('chinalife-api/gossip-city-lib.php','utf8');
+ assert.match(lib,/const CL_CITY_GOSSIP_HOURLY=4;/);assert.match(lib,/if \(\$recent>=CL_CITY_GOSSIP_HOURLY\) return false;/);
+ assert.match(lib,/cl_hafrik_features\(\)\['gossip_city'\]\?\?false/);
+ for(const [f,k] of [['common.php','rank'],['university.php','grad'],['football.php','football'],['hot-seat.php','hotseat']])assert.match(fs.readFileSync('chinalife-api/'+f,'utf8'),new RegExp("cl_city_gossip\\([^;]*'"+k+"','Someone|cl_city_gossip\\([^;]*'"+k+"','Full time"),f);
+});

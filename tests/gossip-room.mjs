@@ -14,8 +14,8 @@ function room(on,{place='gist',live=null}={}){
 }
 
 test('the switch starts off on the server and in the game',()=>{
- assert.match(r('chinalife-api/hafrik-features.php'),/'real_sitting','gossip_room','gossip_show','gossip_wall'\];\}/);
- assert.match(r('public/flags.js'),/gossip_room:false,gossip_show:false,gossip_wall:false/);
+ assert.match(r('chinalife-api/hafrik-features.php'),/'real_sitting','gossip_room','gossip_show','gossip_wall','gossip_city'\];\}/);
+ assert.match(r('public/flags.js'),/gossip_room:false,gossip_show:false,gossip_wall:false,gossip_city:false/);
 });
 
 test('switch off: the tea table opens the Gossip wall as before, and the phone keeps Hot Seat and Gossip TV',async()=>{
@@ -153,4 +153,16 @@ test('Gossip wall with the switch off: no new reactions, replies or chips',async
  const {t}=wall(false,tips);await t.game.gistNight();await tick();const d=t.document;
  assert.equal(d.querySelector('[data-gw-react]'),null);assert.equal(d.querySelector('.gw-replies'),null);assert.equal(d.querySelector('.gw-chips'),null);
  assert.equal(d.querySelectorAll('#gistNightFeed [data-react]').length,9,'the old three reactions on each of the three posts');
+});
+
+// Phase 3 (switch gossip_city): players in the Gossip Room get a banner when a new tip lands; City buzz posts are labelled.
+test('a new tip on the wall gives a banner to players in the Gossip Room (not elsewhere, not twice), and City buzz is labelled',async()=>{
+ const t=harness({...fixture(),place:'gist'}),c=t.context,notes=[];let latest=5;
+ c.ChinaLifeFlags={cast:k=>k==='gossip_city',appOff:()=>false};c.ChinaLifeCloud={signedIn:true};c.ChinaLifeAuth={request:async()=>({data:{latest:String(latest)}})};
+ vm.runInContext(r('public/gossip-room.js'),c);t.game.notify=text=>notes.push(text);const W=c.ChinaLifeGossipRoom;
+ await W.watchWall();assert.equal(notes.length,0,'the first check only sets the baseline');
+ latest=6;await W.watchWall();assert.equal(notes.length,1);assert.match(notes[0],/New gist on the wall/);
+ await W.watchWall();assert.equal(notes.length,1,'once per new tip');
+ t.game.state.place='football';latest=7;await W.watchWall();assert.equal(notes.length,1,'only in the Gossip Room');
+ assert.match(r('public/game.js'),/p\.auto\?'<span class="gossip-tag city">🏙️ City buzz<\/span>'/);
 });

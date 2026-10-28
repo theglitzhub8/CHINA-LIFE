@@ -172,7 +172,9 @@ try {
    $gv=$v['graduation'];if(!empty($u['graduated'])){$db->rollback();cl_fail('You have already graduated',409);}
    if(!$gv['open']){$db->rollback();cl_fail('The graduation hall opens in Year 4',409);}if(!$gv['ready']){$db->rollback();cl_fail(implode(' · ',$gv['missing']),409);}
    $text=mb_substr(trim((string)($input['text']??'')),0,300);$check=cl_uni_intro($text,$u['major']??null);
-   if($check['passed']){$u['graduated']=$today;$u['intro']=$text;$coins=CL_UNI_GRAD_COINS;$xp=CL_UNI_GRAD_XP;$changed=true;}
+   if($check['passed']){$u['graduated']=$today;$u['intro']=$text;$coins=CL_UNI_GRAD_COINS;$xp=CL_UNI_GRAD_XP;$changed=true;
+    // Gossip Room Phase 3 (switch gossip_city): city news, never the graduate's name.
+    cl_city_gossip((string)($g['city']??'China'),$uid,'grad','Someone just graduated from ChinaLife University. Congratulations, graduate! #campus');}
    $out=['introResult'=>$check+['date'=>$check['passed']?$today:null,'coins'=>$coins,'xp'=>$xp,'major'=>isset($u['major'])?cl_uni_lab()[$u['major']]['name']:null]];
   } else {$db->rollback();cl_fail('Unknown action');}
   $v=cl_uni_view($u,$today,$minute);
