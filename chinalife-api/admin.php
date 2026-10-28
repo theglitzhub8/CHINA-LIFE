@@ -118,7 +118,9 @@ if ($action==='set_gossip_settings') {
 }
 if ($action==='gossip_queue') {
     $hs=cl_optional_rows("SELECT h.id,h.user_id,u.user_name,h.body,h.status,h.reports,h.created_at FROM chinalife_hot_seat h LEFT JOIN users u ON u.user_id=h.user_id WHERE h.reports>0 OR h.status='hidden' ORDER BY h.id DESC LIMIT 50");
-    $wall=cl_optional_rows("SELECT g.id,g.user_id,u.user_name,g.body,g.hidden,g.reports,g.created_at FROM chinalife_gist_night g LEFT JOIN users u ON u.user_id=g.user_id WHERE g.reports>0 OR g.hidden=1 ORDER BY g.id DESC LIMIT 50");
+    // Before migrate.php adds the wall's hidden/reports columns (1054), the wall part of the queue is simply empty.
+    try {$wall=cl_optional_rows("SELECT g.id,g.user_id,u.user_name,g.body,g.hidden,g.reports,g.created_at FROM chinalife_gist_night g LEFT JOIN users u ON u.user_id=g.user_id WHERE g.reports>0 OR g.hidden=1 ORDER BY g.id DESC LIMIT 50");}
+    catch (mysqli_sql_exception $e) {if ($e->getCode()!==1054) throw $e;$wall=[];}
     $items=[];
     foreach ($hs as $r) $items[]=['kind'=>'hotseat','id'=>(string)$r['id'],'author'=>$r['user_name'],'author_id'=>(string)$r['user_id'],'body'=>$r['body'],'hidden'=>$r['status']==='hidden','reports'=>(int)$r['reports'],'at'=>$r['created_at']];
     foreach ($wall as $r) $items[]=['kind'=>'wall','id'=>(string)$r['id'],'author'=>$r['user_name'],'author_id'=>(string)$r['user_id'],'body'=>$r['body'],'hidden'=>(int)$r['hidden']===1,'reports'=>(int)$r['reports'],'at'=>$r['created_at']];
