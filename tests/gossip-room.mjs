@@ -14,8 +14,8 @@ function room(on,{place='gist',live=null}={}){
 }
 
 test('the switch starts off on the server and in the game',()=>{
- assert.match(r('chinalife-api/hafrik-features.php'),/'real_sitting','gossip_room','gossip_show','gossip_wall','gossip_city'\];\}/);
- assert.match(r('public/flags.js'),/gossip_room:false,gossip_show:false,gossip_wall:false,gossip_city:false/);
+ assert.match(r('chinalife-api/hafrik-features.php'),/'real_sitting','gossip_room','gossip_show','gossip_wall','gossip_city','gossip_rep'\];\}/);
+ assert.match(r('public/flags.js'),/gossip_room:false,gossip_show:false,gossip_wall:false,gossip_city:false,gossip_rep:false/);
 });
 
 test('switch off: the tea table opens the Gossip wall as before, and the phone keeps Hot Seat and Gossip TV',async()=>{
@@ -165,4 +165,14 @@ test('a new tip on the wall gives a banner to players in the Gossip Room (not el
  await W.watchWall();assert.equal(notes.length,1,'once per new tip');
  t.game.state.place='football';latest=7;await W.watchWall();assert.equal(notes.length,1,'only in the Gossip Room');
  assert.match(r('public/game.js'),/p\.auto\?'<span class="gossip-tag city">🏙️ City buzz<\/span>'/);
+});
+
+// Phase 5 (switch gossip_rep): the Gossip Room shows your own rep and the weekly award; a win last week is celebrated.
+test('your gist rep card: this week, all time, how it is earned, and last week\'s win',async()=>{
+ const {t,c}=room(true);c.ChinaLifeFlags={cast:k=>k==='gossip_room'||k==='gossip_rep',appOff:()=>false};
+ const base=c.ChinaLifeAuth.request;c.ChinaLifeAuth={request:async url=>/gossip-rep/.test(url)?{data:{on:true,week:12,total:40,prizes:[1000,500,250],last_week:{place:2,prize:500}}}:base(url)};
+ await t.game.gist();await tick();await tick();const text=t.document.getElementById('grRep').textContent;
+ assert.match(text,/🥈 You were Truth teller #2 last week: \+¥500/);assert.match(text,/12 this week · 40 all time/);assert.match(text,/Only you can see your rep/);
+ assert.equal(c.ChinaLifeGossipRoom.rep.total,40);
+ assert.match(r('public/profile-v6.js'),/own&&Number\.isFinite\(window\.ChinaLifeGossipRoom\?\.rep\?\.total\)\?stat\(window\.ChinaLifeGossipRoom\.rep\.total,'Gist rep'\)/);
 });

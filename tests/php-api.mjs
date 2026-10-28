@@ -1374,3 +1374,25 @@ test('City buzz stays off by default and posts at most 4 of a kind per city per 
  assert.match(lib,/cl_hafrik_features\(\)\['gossip_city'\]\?\?false/);
  for(const [f,k] of [['common.php','rank'],['university.php','grad'],['football.php','football'],['hot-seat.php','hotseat']])assert.match(fs.readFileSync('chinalife-api/'+f,'utf8'),new RegExp("cl_city_gossip\\([^;]*'"+k+"','Someone|cl_city_gossip\\([^;]*'"+k+"','Full time"),f);
 });
+
+// Gossip Room Phase 5 (switch gossip_rep): gist rep (only your own) and the weekly Truth teller award, paid once.
+test('gist rep and the weekly Truth teller award: top three of last week paid once with badges, rep only for yourself',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(45,'user45'),(46,'user46'),(47,'user47'),(48,'user48')");
+ for(const id of [45,46,47,48])assert.equal((await call(id,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China'}}})).httpStatus,200);
+ const hs=(u,result)=>`INSERT INTO chinalife_hot_seat(user_id,city,place,body,status,day,true_votes,cap_votes,result,created_at,closes_at) VALUES(${u},'China','gist','A test gist for the award','revealed',CURDATE(),${result==='true'?3:0},${result==='cap'?3:0},'${result}',DATE_SUB(NOW(),INTERVAL 7 DAY),DATE_SUB(NOW(),INTERVAL 7 DAY));`;
+ sql('USE chinalife_test; DELETE FROM chinalife_settings WHERE name="gossip_award"; '+hs(45,'true')+hs(45,'true')+hs(46,'true')+hs(47,'cap')+
+  "INSERT INTO chinalife_gist_night(user_id,city,body,official,created_at) VALUES(48,'China','A wall tip people liked',0,DATE_SUB(NOW(),INTERVAL 7 DAY));"+
+  "INSERT INTO chinalife_gist_night_reactions(post_id,user_id,kind,created_at) SELECT LAST_INSERT_ID(),u.user_id,'fire',NOW() FROM users u WHERE u.user_id BETWEEN 2 AND 6;");
+ const money=id=>Number(sql(`USE chinalife_test; SELECT coins FROM chinalife_balances WHERE user_id=${id}`).trim());
+ const before={45:money(45),46:money(46),47:money(47),48:money(48)};
+ assert.deepEqual((await call(45,'gossip-rep.php')).data,{on:false},'off by default');
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{gossip_rep:true}});
+  const meR=await call(45,'gossip-rep.php');assert.equal(meR.httpStatus,200,meR.message);const me=meR.data;assert.equal(me.on,true);assert.equal(me.total,20);assert.deepEqual(me.last_week,{place:1,prize:1000});
+  assert.equal(money(45)-before[45],1000);assert.equal(money(46)-before[46],500);assert.equal(money(48)-before[48],250);assert.equal(money(47),before[47],'a Cap author wins nothing');
+  assert.match(sql("USE chinalife_test; SELECT name FROM chinalife_badges WHERE user_id=45"),/Truth teller . week of /);assert.equal(sql("USE chinalife_test; SELECT HEX(icon) FROM chinalife_badges WHERE user_id=45").trim(),'F09FA587','🥇');
+  assert.deepEqual((await call(47,'gossip-rep.php')).data.total,-5);
+  await call(46,'gossip-rep.php');assert.equal(money(46)-before[46],500,'paid once a week');
+  assert.ok(!('gist_rep' in (await call(46,'profile.php?id=45')).data.profile),'never shown on other players\' profiles');
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{gossip_rep:false}});sql('USE chinalife_test; DELETE FROM chinalife_hot_seat WHERE user_id IN (45,46,47); DELETE FROM chinalife_gist_night WHERE user_id=48')}
+});

@@ -74,6 +74,12 @@ Gossip Room (Phase 0), not a sit-down; NPCs don't animate (only the player has e
 **Phase 5 · Gist reputation.** Posts that the room calls True, and wall posts with many reactions, raise your gist
 rep; Cap verdicts lower it. A weekly "Truth teller" award for the top three: badge + ¥1,000 / ¥500 / ¥250, paid
 on the server. Rep shows on profiles (as a number, never tied to which posts were yours).
+✅ Done 29 Oct (switch `gossip_rep`, off; `chinalife-api/gossip-rep-lib.php`, `gossip-rep.php`): rep is worked out from
+what happened, nothing new stored: Hot Seat gists the room believed +10, called Cap −5 (rounds with 3+ votes); every
+5 reactions on your wall tips +1, at most +5 a tip. The first rep request after a Beijing Monday pays last week's top
+three once (cl_credit on the ledger, 🥇🥈🥉 "Truth teller · week of …" badges), recorded in settings `gossip_award`.
+**Changed from the plan for anonymity:** rep shows only to its owner (Gossip Room card, own profile), never on other
+players' profiles, because a rep jump right after a True round would reveal who wrote it. The badge is public.
 
 **Phase 6 · Admin and safety.** A Gossip tab in appadmin: Hot Seat Hour times, rewards, daily caps, the word list,
 and one moderation queue for reports from the wall and Hot Seat (hide, restore, warn). Anonymous stays anonymous to

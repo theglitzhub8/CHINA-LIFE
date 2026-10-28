@@ -13,7 +13,7 @@ function card(p,{own=false,actions='',extra=''}={}){
  +'<div class="pv6-rank"><span>Lv '+lv+'</span><div class="pv6-bar"><i style="width:'+pct+'%"></i></div><small>'+pct+'/100 XP</small></div></div>'
  +(own&&p.coins!=null?'<div class="pv6-coins">¥'+Number(p.coins).toLocaleString()+'</div>':'')+'</header>'
  +(p.wealth||p.badges?.length?'<div class="pv6-badges">'+(p.wealth?'<span>'+esc(p.wealth)+'</span>':'')+(p.badges||[]).map(b=>'<span>'+esc(b.icon)+' '+esc(b.name)+'</span>').join('')+'</div>':'')
- +'<div class="pv6-stats">'+stat(p.days,'Days played')+stat(s.friends,'Friends')+stat(s.venues,'Venues')+stat(s.dance,'Dance titles')+stat(s.offices,'Offices')+'</div>'
+ +'<div class="pv6-stats">'+stat(p.days,'Days played')+stat(s.friends,'Friends')+stat(s.venues,'Venues')+stat(s.dance,'Dance titles')+stat(s.offices,'Offices')+(own&&Number.isFinite(window.ChinaLifeGossipRoom?.rep?.total)?stat(window.ChinaLifeGossipRoom.rep.total,'Gist rep'):'')+'</div>'
  +(extra||'') // e.g. the Link Up football / hot seat record, right under the stats row
  +(actions?'<div class="pv6-actions">'+actions+'</div>':'')
  +'<h4 class="pv6-h">Recent activity</h4>'+((p.recent||[]).length?'<ul class="pv6-recent">'+p.recent.map(r=>'<li>📍 '+esc(placeName(r.place,r.city))+(placeName(r.place,r.city).includes(r.city)?'':' · '+esc(r.city))+'<small>'+ago(r.at)+'</small></li>').join('')+'</ul>':'<p class="pv6-empty">No recent activity yet.</p>')
