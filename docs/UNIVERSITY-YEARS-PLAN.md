@@ -50,12 +50,15 @@ Every phase sits behind an admin switch (default OFF) so the live game is unchan
       `real_sitting`. Client reads them through `flags.js`, server through `cl_hafrik_features()`.
 
 ### Phase 1. Room realism (Ideas 2 and 3), switch `real_sitting`
-- [ ] Player collision padding so the body never enters furniture edges (also NPC walkers); every desk, chair,
-      bed and board gets a collider; a test that walks every venue and home and asserts no overlap.
-- [ ] Real sit: tap a chair, walk to the spot in front of it, turn to face the chair's direction (about 0.4 s),
-      play a short sit-down, then the seated loop. Standing up reverses it. Works for the sit emote, sit actions
-      and furniture with `userData.seat`.
-- [ ] Furniture placement keeps a walkable gap so a chair is always reachable.
+- [x] The player's body keeps 16 cm clear of furniture: paths keep that gap (`walkingPath` clearance) and every
+      step is checked with it; someone who starts inside furniture can still walk out. Measured over 25 random walks
+      in each home tier: the body overlapped furniture in 7% of frames before, 0 with the switch on (tested).
+      Every venue action still completes with the switch on.
+- [x] Real sit (sit emote, any chair or `userData.seat` furniture within reach): walk to a free spot beside the
+      chair (front, sides or back), turn to the chair's direction (0.4 s), slide onto the seat (0.3 s), then the
+      seated pose. Standing up puts you back on that spot instead of inside the chair. Walking away cancels it.
+- [ ] Later: NPC walkers with the same body gap, a sit-down animation clip, and colliders for wall boards and
+      thin props; furniture placement that always leaves a walkable gap to every chair.
 - Touches `world.js` (protected file): venue movement only, no map look change. Owner approved (28 Oct).
 
 ### Phase 2. The 2-person dorm
