@@ -53,6 +53,13 @@ const C=(colors,id,fallback)=>hex(colors[id]||fallback);
 
 // ---- Layouts per tier. Spots are where game actions and labels go (bed, desk, toilet, shower, shop, door). ----
 const HOMES={
+ // University Years: a shared two-person student dorm. Two single beds on the back wall, two desks on the left wall,
+ // a private toilet and shower, and a compact kitchen unit. The second bed and desk belong to the roommate (dorm.js).
+ dorm(p,o){const W=9,D=7;slabFloor(p,W,D,'laminate',0,0,.1,2);walls(p,W,D,2.8,0xe6e9e4);windowPane(p,-2.6,1.9,-3.38,0,1.2,.9);windowPane(p,-4.38,1.9,.85,Math.PI/2,1.1,.9);
+  bed(p,-3.6,-2.2,'single',C(o.colors,'bed',0x6f8fa6));bed(p,-1.6,-2.2,'single',0x9a7f62);desk(p,-4.1,0,Math.PI/2);desk(p,-4.1,1.7,Math.PI/2);
+  kitchen(p,.6,-3.1,0,1.6);bathroom(p,2.4,-3.5,2,2.5,2.2,false);fixture(p,'toilet',3,-2.9,o.colors,o.finish);fixture(p,'shower',3.9,-2.9,o.colors,o.finish);
+  rug(p,-.6,.9,2.4,1.6,0x8fa3b0);plant(p,1.9,-.6,.6);
+  return {W,D,scale:7.5,bounds:{x:4.1,z:3.1},ground:0xd9d2c4,colliders:[[-3.6,-2.2,1.6,2.6],[-1.6,-2.2,1.6,2.6],[-4.1,0,.8,1.6],[-4.1,1.7,.8,1.6],[1,-3.1,2.4,.8],[3.4,-2.25,2.1,2.6]],spots:{bed:[-3.6,-2.2],bedside:[-3.6,-.6],cook:[.6,-2.3],desk:[-3.3,0],toilet:[3,-2.9],shower:[3.9,-2.9],shop:[-.6,2.6],door:[3,2.8]}}},
  rental(p,o){const W=13,D=9;slabFloor(p,W,D,'laminate',0,0,.1,2);walls(p,W,D,3,0xe8e2d6);windowPane(p,-6.4,1.7,-1.5,Math.PI/2,1.6,1.1);windowPane(p,-1.2,1.8,-4.38,0,1.6,1);
   bed(p,-4.4,-3,'single',C(o.colors,'bed',0x6f8fa6));nightstand(p,-3.1,-3.9);wardrobe(p,-6.05,.8,Math.PI/2);desk(p,-1.2,-3.85,0);kitchen(p,2.2,-4.1,0,2.8);
   bathroom(p,4.5,-4.5,2,3.6,2.2,false);fixture(p,'toilet',5.6,-1.6,o.colors,o.finish);fixture(p,'shower',5.6,-3.6,o.colors,o.finish);
@@ -101,7 +108,7 @@ const HOMES={
   slab(p,W+4,9,'grass',0,.08,12.1,.06,3);slab(p,4,9,'paving',0,.13,12.1,.04,2);pool(p,-7,11.6,8,4);for(const x of [-9.5,-7.5,-5.5])lounger(p,x,14.6,Math.PI);umbrella(p,-3.6,14.3);fountain(p,7,11.6);for(const z of [9.2,14])hedge(p,11.5,z,5,.6);hedge(p,0,16.4,W+4,.7);for(const x of [-13.5,13.5])for(const z of [9,12,15])topiary(p,x,z);
   return {W,D,scale:16,bounds:{x:12,z:15},ground:0x8fb67e,colliders:[[0,-3.5,4.2,4.4],[0,-6.6,7,1.6],[-10,-5,2.8,2.7],[-7.4,-5.2,.4,4.6],[-12.25,2,.7,2.6],[-9.3,2,1.2,3],[-10,4.6,1,1],[-10,-.6,1,1],[-4.6,3.4,1.8,2.6],[7,.4,4.4,2.2],[7,-7,3.6,.7],[10.4,-7,4.4,.8],[12.3,-2.6,.7,2.8],[11.5,5.25,2.8,3.9],[-7,11.6,8.6,4.6],[7,11.6,3.4,3.4]],spots:{bed:[-10,-5],bedside:[-10,-3],cook:[10.2,-5.6],desk:[-4.6,1.8],toilet:[11.6,6.6],shower:[11.5,4.7],shop:[-2.6,6.6],door:[-11,7]}}}};
 // Build a home interior for a property tier. Owned/visited colours tint the bed and sofa.
-const DECOR={rental:[[-6,-3.9],[3.4,1.6],[-2.6,3.6],[.5,3.7],[-6,2.4],[4,3.6],[-1.4,1.9],[2.6,3.7],[-3.6,.2],[-.2,-1.6],[3.6,-1.4],[-5.4,-.6]],
+const DECOR={dorm:[[-.6,2.6],[1.6,1.4],[.4,.4],[2.6,1.4]],rental:[[-6,-3.9],[3.4,1.6],[-2.6,3.6],[.5,3.7],[-6,2.4],[4,3.6],[-1.4,1.9],[2.6,3.7],[-3.6,.2],[-.2,-1.6],[3.6,-1.4],[-5.4,-.6]],
  apartment:[[-1.9,-4.4],[3.2,2.6],[-4.6,3.8],[-3,1.2],[1.5,4.2],[-7,2.6],[3.6,-.1],[-4.4,1.4],[-1.4,4.4],[2.8,1],[-7,4.2],[.2,1]],
  townhouse:[[1,-5],[-3.5,1.6],[-1,1.8],[2,1.8],[-7.6,2.6],[1.6,4.6],[-3,4.2],[-.4,4.4],[-7.8,4.2],[3.4,4.4],[-4.2,6.4],[2.6,6.8],[5,6.8],[-1,6.8]],
  villa:[[-3.6,-5.4],[1.6,-5.4],[-7.6,-.8],[-4,2.8],[-1,3.4],[1.6,3.6],[-6.4,4.4],[-8.6,1.8],[-3,5],[.4,5.2],[3,4.8],[-6.4,2.2],[6.6,6.6],[-8.8,7.4]],

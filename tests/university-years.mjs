@@ -21,3 +21,17 @@ test('University Years switches start OFF on the client and follow the server an
  c=flags({on:'uni_food',off:'uni_years'});c.dispatchEvent(new c.CustomEvent('chinalife:hafrik-features',{detail:{uni_years:true}}));
  assert.equal(c.ChinaLifeFlags.cast('uni_food'),true);assert.equal(c.ChinaLifeFlags.cast('uni_years'),false);
 });
+
+test('dorm roommate: same gender, stable per player, Beijing-time routine and one moment a day',async()=>{
+ const d=await import('../public/dorm.js');const game=(gender,name='Ada')=>({state:{gender,name,student:{university:'campus'}}});
+ assert.match(d.roommate(game('female')).name,/^(Lin|Amara|Sofia)$/);assert.match(d.roommate(game('male')).name,/^(Wei|Kofi|Arjun)$/);
+ assert.equal(d.roommate(game('male','Bo')).id,d.roommate(game('male','Bo')).id);
+ assert.equal(d.routine(3).at,'bed');assert.equal(d.routine(7).at,'cook');assert.equal(d.routine(9).at,null);assert.equal(d.routine(12).at,'desk');
+ assert.equal(d.routine(15).back,'17:00');assert.equal(d.routine(18).at,'cook');assert.equal(d.routine(21).at,'desk');assert.equal(d.routine(23).at,'bed');
+ const ids=new Set(Array.from({length:5},(_,i)=>d.momentFor(i+1).id));assert.equal(ids.size,5);assert.equal(d.momentFor(6).id,d.momentFor(1).id);
+});
+
+test('dorm bond is saved, clamped and survives reloads',async()=>{const {harness,fixture}=await import('./game-harness.mjs');
+ const t=harness({...fixture(),dorm:{bond:250,eventDay:3}});assert.equal(JSON.stringify(t.game.state.dorm),'{"bond":100,"eventDay":3}');
+ const u=harness(fixture());assert.equal(JSON.stringify(u.game.state.dorm),'{"bond":50,"eventDay":0}');
+});

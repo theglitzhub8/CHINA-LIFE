@@ -59,10 +59,13 @@ Every phase sits behind an admin switch (default OFF) so the live game is unchan
 - Touches `world.js` (protected file): venue movement only, no map look change. Owner approved (28 Oct).
 
 ### Phase 2. The 2-person dorm
-- [ ] New home tier `dorm`: two beds, two desks, private toilet, compact kitchen unit, at the right scale.
-- [ ] Students live in the dorm of their campus until graduation (the story's "dorm key" step uses it).
-- [ ] One roommate: an NPC with a name, a routine (studies, sleeps, cooks) and small events (borrows food,
-      asks for quiet before exams). Later: a real player can be the roommate.
+- [x] New home tier `dorm`: two beds, two desks, private toilet and shower, compact kitchen unit, at the right scale.
+- [x] Students without a bought home in the city live in the dorm (the story's "dorm key" step uses it); the place
+      card says "Your student dorm". Moving out at graduation comes with Phase 8.
+- [x] One roommate (`public/dorm.js`): same gender, picked per player, routine on Beijing time (asleep, breakfast,
+      at class, studying, cooking), one small moment a day (share food, quiet before an exam, rubbish, cooked too
+      much, study together) that moves a saved bond (`state.dorm`).
+- [ ] Later: a real player can be the roommate.
 
 ### Phase 3. Academic calendar and years, switch `uni_years`
 - [ ] Server: enrolment date, current year 1-4, week number, results per year (new table + migration,

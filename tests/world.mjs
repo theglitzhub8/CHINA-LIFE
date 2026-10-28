@@ -171,3 +171,15 @@ test('AI characters stand at their venue with an AI tag, and tapping one opens t
  t.game.state.place='plaza';t.world.venue('plaza');const tag=t.document.querySelector('.ai-label');assert.ok(tag,'Mei is in Hafrik Square');assert.match(tag.textContent,/Mei · City guide/);tag.onclick({stopPropagation(){}});assert.equal(opened,'guide');
  t.world.venue('gym');assert.equal(t.document.querySelector('.ai-label'),null,'only at her venue')});
 test('a mystery clue object appears only in the venue the route names',()=>{const t=setup();assert.equal(t.document.querySelectorAll('.mystery-clue').length,0);t.game.setMysteryClue({place:'plaza',object:'plaza-lantern',x:1.2,z:0.4,label:'Paper lantern'});t.world.venue('park');assert.equal(t.document.querySelectorAll('.mystery-clue').length,0);t.world.venue('plaza');assert.equal(t.document.querySelectorAll('.mystery-clue').length,1);assert.match(t.document.querySelector('.mystery-clue').textContent,/🔍/)});
+
+test('University Years: a student lives in the 2-person dorm with a roommate who keeps a daily routine (switch uni_years)',()=>{
+ const t=setup();t.world.venue('home');assert.equal(t.world.homeStyle,'rental','switch off: starter home');
+ t.context.ChinaLifeFlags={cast:k=>k==='uni_years'};
+ const mate=()=>[...t.document.querySelectorAll('.hafrik-host')].map(l=>l.textContent).join('|');
+ t.game.state.hour=20*60;t.internal.render();t.world.venue('home');assert.equal(t.world.homeStyle,'dorm');assert.equal(t.document.getElementById('worldVenueTitle').textContent,'Your student dorm');assert.match(mate(),/roommate · studying/);
+ t.game.state.hour=2*60;t.world.venue('home');assert.match(mate(),/roommate · asleep/);
+ t.game.state.hour=10*60;t.world.venue('home');assert.match(mate(),/is at class · back at 12:00/);
+ t.game.state.hour=20*60;t.world.venue('home');let completed=0;t.world.perform({kind:'cook',label:'Cook'},()=>completed++);t.tick(20);assert.equal(completed,1,'kitchen reachable');
+ t.game.state.properties={...(t.game.state.properties||{}),[t.game.state.city]:'apartment'};t.world.venue('home');assert.equal(t.world.homeStyle,'apartment','a bought home replaces the dorm');
+ t.game.state.properties={};t.game.state.background='Worker';t.world.venue('home');assert.equal(t.world.homeStyle,'rental','only students live in the dorm');
+});
