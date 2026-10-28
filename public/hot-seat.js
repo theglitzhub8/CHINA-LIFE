@@ -209,7 +209,8 @@ async function vote(v){
   busy=true;try{fromServer(await call('POST',{action:'vote',id:round.id,vote:v}));paint()}catch(e){toast(e.message||'Vote failed')}finally{busy=false}
 }
 async function report(){
-  if(!round)return;if(!confirm('Report this gist to the admins?'))return;
+  if(!round)return;
+  const ask=window.ChinaLifeSheet?window.ChinaLifeSheet.confirm({title:'Report this gist?',message:'The ChinaLife team will review it.',ok:'Report',destructive:true}):Promise.resolve(confirm('Report this gist to the ChinaLife team?'));if(!await ask)return;
   if(round.local){const st=load();const g=(st.list||[]).find(x=>x.body===round.body);if(g)g.hidden=true;store(st);emit();toast('Reported. It won\'t show on Gossip TV.');round=null;return composer()}
   try{fromServer(await call('POST',{action:'report',id:round.id,reason:'player'}));toast('Thanks. The ChinaLife team will look at it.');round=null;composer()}catch(e){toast(e.message||'Report failed')}
 }

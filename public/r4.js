@@ -54,7 +54,8 @@ function sheetConfirm({title='',message='',ok='OK',destructive=false}={}){return
 window.ChinaLifeSheet={confirm:sheetConfirm};
 
 /* ---------- R4b: every sheet has a close, swipe-down and the Back button closes the top sheet ---------- */
-const SHEETS='#activityDialog,#phoneDialog,#helpDialog,#sharedDialog,#audioDialog,#voiceDialog,#socialDialog,#cloudDialog,#aiDialog,#radioDialog,#liveMapDialog,dialog.r4-where';
+const SHEETS='#activityDialog,#phoneDialog,#helpDialog,#sharedDialog,#audioDialog,#voiceDialog,#socialDialog,#cloudDialog,#aiDialog,#radioDialog,#liveMapDialog,#hotSeatDialog,dialog.r4-where';
+// Not here on purpose: #onboarding and #accidentDialog are steps that must be finished (sign-up, the ride to hospital).
 function sheetify(){document.querySelectorAll('dialog[open]').forEach(d=>{if(!d.matches(SHEETS)||d.dataset.r4s)return;d.dataset.r4s='1';
   const vis=e=>e&&e.offsetParent!==null&&getComputedStyle(e).visibility!=='hidden';
   if(![...d.querySelectorAll('.ios-close,[id^=close],[aria-label^=Close],[aria-label^=Minimize],.r4-x')].some(vis)){const x=document.createElement('button');x.type='button';x.className='r4-x';x.setAttribute('aria-label','Close');x.textContent='✕';x.onclick=()=>d.close();d.appendChild(x)}

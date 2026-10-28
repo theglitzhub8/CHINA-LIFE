@@ -117,6 +117,13 @@ Each task is small, keeps the approved map look, and can ship behind no switch (
    edit); one-time tips explain needs and XP; the card spot and banners now sit below the needs strip, and one-time
    tips go ahead of the always-on University and kitchen cards. Gossip feature names (F) are left for task 7.
 6. **One look for sheets (E2–E5).** Close/back buttons, tap sizes, fonts and colours, in-game confirm, new help.
+   ✅ Done 29 Oct: every close button is the same 44px circle (was 30, 32 and 38px); card and sheet buttons are at
+   least 44px tall; the HUD's account, wallet, city and place-bar buttons keep their look but get an invisible 44px
+   tap area; the sheet text measured under 12px (profile stats, Link Up "You're here", help cards) is 12–14px;
+   restoring a save and reporting a Hot Seat gist use the game's confirm sheet; Hot Seat closes with swipe-down and
+   Back (sign-up and the accident sheet stay must-finish); the help sheet describes today's game and links to the How
+   to play page. Not done: merging the 13 teal shades and 5 font families. That touches every screen and is better
+   done with a design system, so it's left as a follow-up.
 7. **Study app and one "Today" list (C6, D3).** One place for school; one to-do list for new players.
 8. **Phone widgets (D1).**
 
