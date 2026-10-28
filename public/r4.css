@@ -235,3 +235,7 @@ html:root body #toast{top:calc(max(8px,env(safe-area-inset-top)) + 56px)!importa
 html:root body #toast.show{opacity:1;transform:none!important;pointer-events:auto}
 html:root body .message-notification{top:calc(max(8px,env(safe-area-inset-top)) + 56px)!important}
 @media (max-width:760px){html:root body #toast,html:root body .message-notification{left:16px!important;right:72px!important;width:auto!important;max-width:none!important}html:root body .message-notification{transform:none!important}}
+/* Calm controls (docs/UI-UX-REVIEW.md task 4): the mic shows when someone else is in voice or you are talking
+   (voice.js .voice-useful); jump shows while walking the streets. */
+html:root body #worldUI #quickVoice:not(.voice-useful){display:none!important}
+html:root body #worldUI:not(.tp-walking) .tp-jump{display:none!important}

@@ -104,6 +104,10 @@ Each task is small, keeps the approved map look, and can ship behind no switch (
    check-in also marks the day's attendance, so "Class today" doesn't ask twice.
 4. **Calm place bar and controls (B4, mic/jump).** Collapsed by default; mic only after joining voice; jump on streets.
    (These live partly in world.js/world.css: the edits stay minimal and the owner sees before/after.)
+   ✅ Done 29 Oct: every room opens with the place bar collapsed (world.js `buildRoom`: one call changed from opening
+   it to closing it; the approved map tag did not open it either); the tour opens it once for its two steps inside it;
+   the mic shows when someone else is in the room's voice or you talk (listening alone keeps it hidden; the bar's
+   Voice button still joins); jump shows while walking the streets.
 5. **Plain words pass (A3, B5–B7, D2, F).** ¥ only, no "NPC"/"admin", readable dates, needs with words, first-time
    explanations.
 6. **One look for sheets (E2–E5).** Close/back buttons, tap sizes, fonts and colours, in-game confirm, new help.

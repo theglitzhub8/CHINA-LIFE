@@ -39,3 +39,19 @@ test('one card spot: the most important card shows, banners take the spot, the n
  note.hidden=true;toast.classList.remove('show');c.ChinaLifeLane.update();assert.ok(kitchen.classList.contains('lane-first'),'cards return when banners go');
  const css=r('public/r4.css');assert.match(css,/#toast\{top:calc\(max\(8px,env\(safe-area-inset-top\)\) \+ 56px\)!important;opacity:0/);assert.match(css,/\.lane-wait\{display:none!important\}/);
 });
+
+// UI review task 4: the place bar starts collapsed in every room (the tour opens it for its two steps inside it), the
+// mic shows only when someone else is in voice or you talk, and jump only while walking the streets.
+test('calm controls: rooms open with the place bar collapsed, tour opens it when needed, mic and jump only when useful',()=>{
+ const world=r('public/world.js'),voice=r('public/voice.js'),css=r('public/r4.css');
+ assert.match(world,/function buildRoom\(id\)\{[^]*?classList\.remove\('search-open','home-view','dock-open','dock-full'\)/);
+ assert.doesNotMatch(world,/classList\.add\('dock-open'\)/);
+ assert.match(voice,/classList\.toggle\('voice-useful',joining\|\|\(active&&!listening\)\|\|members\.some\(p=>p\.id!==me\)\)/);
+ assert.match(css,/#quickVoice:not\(\.voice-useful\)\{display:none!important\}/);assert.match(css,/#worldUI:not\(\.tp-walking\) \.tp-jump\{display:none!important\}/);
+ const t=harness({...fixture(),day:1,xp:0,visited:['university'],place:'university'}),c=t.context,on={};delete t.game.state.onboard;
+ const mem=new Map([['chinalife-onboard','1']]);Object.assign(c,{matchMedia:()=>({matches:true}),requestAnimationFrame:f=>f(),MutationObserver:class{observe(){}},addEventListener:(k,f)=>{on[k]=f},
+  localStorage:{getItem:k=>mem.get(k)??null,setItem:(k,v)=>mem.set(k,String(v)),removeItem:k=>mem.delete(k)},ChinaLifeWhereTo:{show(){}},ChinaLifeOneCity:{walkCity:()=>false}});
+ const ui=t.document.getElementById('worldUI');ui.classList.remove('dock-open');vm.runInContext(r('public/r3.js'),c);
+ assert.equal(c.ChinaLifeOnboarding.step,'order');assert.ok(ui.classList.contains('dock-open'),'"Try an activity" opens the bar');
+ ui.classList.remove('dock-open');on['chinalife:cloudready']();assert.ok(!ui.classList.contains('dock-open'),'only once: the player can close it again');
+});

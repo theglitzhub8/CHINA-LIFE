@@ -43,6 +43,8 @@ function coach(){const step=onboardStep();if(!step){card?.remove();card=null;spo
  if(!card){card=document.createElement('section');card.id='coachCard';card.className='coach-card';card.setAttribute('role','status');document.getElementById('worldUI')?.appendChild(card)}
  const i=steps().indexOf(step),html='<div class="coach-dots">'+steps().map((_,k)=>'<i'+(k<i?' class="done"':k===i?' class="now"':'')+'></i>').join('')+'</div><b>'+step.title+'</b><p>'+step.text+'</p><div class="coach-actions"><button type="button" data-coach="skip">Skip tour</button>'+(step.go?'<button type="button" class="primary" data-coach="go">Take me there</button>':'')+'</div>';
  if(card._html!==html){card.innerHTML=html;card._html=html;card.querySelector('[data-coach=skip]').onclick=()=>{setOnboard('skip');coach()};const g=card.querySelector('[data-coach=go]');if(g)g.onclick=()=>{step.go();}}
+ // The place bar starts collapsed; the steps that point inside it open it once.
+ if(['order','hi'].includes(step.id)&&coach.opened!==step.id){coach.opened=step.id;const ui=$('worldUI');if(ui&&!ui.classList.contains('dock-open'))ui.classList.add('dock-open')}
  spot(step.spot?document.querySelector(step.spot):null)}
 function spot(el){if(spotEl===el)return;spotEl?.classList.remove('coach-spot');spotEl=el;el?.classList.add('coach-spot')}
 function advance(id){const step=onboardStep();if(!step||step.id!==id)return;const i=steps().indexOf(step);setOnboard(i+1>=steps().length?'done':String(i+1));if(i+1>=steps().length)window.ChinaLifeToast?.('You’re all set. Enjoy your life in China.');coach();soon(pill)}

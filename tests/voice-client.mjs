@@ -32,3 +32,12 @@ test('an expired voice session reconnects by itself, and voice taken by another 
  reply=[403,'Voice session expired. Join again'];const pulse=a.context.ChinaLifeVoice.pulse();reply=null;await pulse;await new Promise(r=>setTimeout(r,20));assert.equal(a.context.ChinaLifeVoice.active,true,'reconnected');assert.equal(a.context.ChinaLifeVoice.listening,true,'still listen-only, no microphone');
  reply=[409,'Voice moved to your other device'];await a.context.ChinaLifeVoice.pulse();assert.equal(a.context.ChinaLifeVoice.active,false);assert.match(a.document.getElementById('venueVoiceStatus')?.textContent||'',/Off/);
 });
+
+// UI review task 4: the on-screen mic shows only when it is useful: someone else is in this room's voice, or you talk.
+test('the on-screen mic stays hidden while you only listen alone, and shows when someone else joins',async()=>{
+ const server=backend(),a=await setup(server,'alice'),b=await setup(server,'bob'),mic=a.document.getElementById('quickVoice');
+ await a.context.ChinaLifeVoice.join(true);await a.context.ChinaLifeVoice.pulse();assert.equal(mic.classList.contains('voice-useful'),false,'listening alone');
+ await b.context.ChinaLifeVoice.join();for(let i=0;i<3;i++){await a.context.ChinaLifeVoice.pulse();await b.context.ChinaLifeVoice.pulse()}
+ assert.equal(mic.classList.contains('voice-useful'),true,'someone else is in voice');
+ assert.equal(b.document.getElementById('quickVoice').classList.contains('voice-useful'),true,'talking');
+});
