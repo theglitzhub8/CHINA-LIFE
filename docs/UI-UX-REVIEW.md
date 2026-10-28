@@ -131,5 +131,10 @@ Each task is small, keeps the approved map look, and can ship behind no switch (
    "Classes"/"Learn" is "Skills & certificates" on its icon and its screen, and no longer says "Shenyang". Left as
    is: the gossip features already share the Gossip folder, and "gist" stays (players use the word).
 8. **Phone widgets (D1).**
+   ✅ Done 29 Oct: the day is short ("Thu 29 Oct"), widget text wraps to two or three lines instead of being cut, the
+   clock fits, and "Next up" says "Your next step" for a task instead of "Tonight at the clubs".
+
+All eight tasks are done. Left for later: one colour and font set across every screen (E2), a live character preview
+in sign-up (A5), and the Hafrik registration form's gender question (E6, owned by Hafrik).
 
 Then the next location work, using the same rules for any new screens.

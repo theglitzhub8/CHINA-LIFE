@@ -45,3 +45,11 @@ test('the University app exists only for students while University Years is on',
  const apps=(flag,background)=>{const t=harness({...fixture(),background});t.context.ChinaLifeFlags={cast:k=>k==='uni_years'&&flag,appOff:()=>false};t.game.phone();return [...t.document.querySelectorAll('[data-phone]')].map(b=>b.dataset.phone)};
  assert.ok(!apps(false,'Student').includes('university'),'switch off');assert.ok(!apps(true,'Worker').includes('university'),'not a student');assert.ok(apps(true,'Student').includes('university'));
 });
+
+// UI review task 8: phone widgets read in full (short day, two-line wrap) and the event subtitle matches what it shows.
+test('phone widgets: short day, text wraps instead of cutting, honest "Next up" subtitle',()=>{
+ const g=r('game.js'),css=r('r4.css');
+ assert.match(g,/const day=new Date\(\)\.toLocaleDateString\('en-GB',\{weekday:'short',day:'numeric',month:'short',timeZone:'Asia\/Shanghai'\}\)\.replace\(',',''\)/);
+ assert.match(g,/\(liveEv\.length\?'Live now':task\?'Your next step':'Tonight at the clubs'\)/);
+ assert.match(css,/#phoneDialog \.pw4 :is\(\.phone-widget b,\.pw-clock span,\.pw-clock small\)\{white-space:normal!important;display:-webkit-box!important;-webkit-line-clamp:2/);
+});
