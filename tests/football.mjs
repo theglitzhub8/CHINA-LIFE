@@ -206,3 +206,16 @@ test('wiring: one match at a time, admin switch, migration kept out of migrate.p
   assert.ok(dev.indexOf('football-engine.js') < dev.indexOf('football.js"'));
   assert.match(readFileSync(new URL('../public/world.js', import.meta.url), 'utf8'), /ChinaLifeFootball\?\.enabled/);
 });
+
+// The game never exposed ChinaLifeCloud.api, so Football ran offline for every player. It now uses the signed-in
+// request (ChinaLifeAuth.request) and asks football.php whether matches are open (the football_matches switch).
+test('signed-in players go online: Football asks football.php for the lobby through the signed-in request',async()=>{
+ const {harness,fixture}=await import('./game-harness.mjs');const vm=await import('node:vm');
+ const t=harness({...fixture(),place:'football'}),c=t.context,calls=[];
+ c.ChinaLifeCloud={joined:true,signedIn:true};c.ChinaLifeAuth={request:async(path,method,body)=>{calls.push([path,method,body]);return {data:{enabled:true}}}};
+ vm.runInContext(readFileSync('public/football-engine.js','utf8'),c);vm.runInContext(readFileSync('public/football.js','utf8'),c);
+ assert.equal(await c.ChinaLifeFootball.refreshFlag(),true);assert.equal(JSON.stringify(calls[0]),JSON.stringify(['/chinalife/football.php','GET',{action:'lobby'}]));assert.equal(c.ChinaLifeFootball.enabled(),true);
+ c.ChinaLifeAuth.request=async(path,method,body)=>{calls.push([path,method,body]);return {data:{enabled:false}}};
+ assert.equal(await c.ChinaLifeFootball.refreshFlag(),false,'the server switch decides');
+ assert.doesNotMatch(readFileSync('public/football.js','utf8'),/root\.ChinaLifeCloud\.api\(/);
+});

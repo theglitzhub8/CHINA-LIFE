@@ -73,6 +73,13 @@ Data is stored under the sandbox prefix in localStorage.
 Admin UI: the **⚽ Football matches** card in the admin panel and the in-game admin sheet. It has the on/off switch, create/edit/cancel tournaments, prize coins, and disputed results.
 
 ## Live status
+**29 Oct 2026: the game was offline for everyone until now.** football.js went online only when
+`ChinaLifeCloud.api` existed, and the game never defined it, so every player got the on-device version (you plus bots,
+local tournaments) even though the server was live. It now uses the signed-in request (`ChinaLifeAuth.request`, the
+same function), so lobbies, quick match, tournaments and results go through football.php, and the server switch
+`football_matches` decides whether matches are open (switch it off and the Football screen closes for players).
+Checked on the local stack: a second player joined a lobby and showed up on the host's screen.
+
 Went live 27 Oct 2026 18:19–18:20 CST (commit 8b52400): migration run on hafr_hafrikcom2, football.php / football-lib.php / football-admin.php + admin.php hook uploaded, front end deployed, switch `football_matches` = on. Tournament prize coins left at 0. Backup and RESTORE.txt: `/root/backups/chinalife-football-golive-20261027-101914/` (UTC stamp). Off switch without a restore: Admin > Football matches > Turn off. Still pending: a two-account online test (lobby, match, result confirm, tournament) with seed logins.
 
 ## Going live checklist

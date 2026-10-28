@@ -12,7 +12,10 @@
   const game = () => root.ChinaLife, sandbox = () => root.ChinaLifeSandbox;
   const PREFIX = () => sandbox()?.storagePrefix || '';
   const OFF_KEY = () => PREFIX() + 'chinalife-football-off', T_KEY = () => PREFIX() + 'chinalife-football-tournaments', STATS_KEY = () => PREFIX() + 'chinalife-football-stats';
-  const online = () => !sandbox()?.localOnly && !!root.ChinaLifeCloud?.joined && !!root.ChinaLifeCloud?.api;
+  // The game never exposed ChinaLifeCloud.api, so Football ran offline (you plus bots) for everyone. The signed-in request
+  // (ChinaLifeAuth.request) is the same function; the server's football_matches switch decides if matches are open.
+  const net = () => root.ChinaLifeCloud?.api || root.ChinaLifeAuth?.request || null;
+  const online = () => !sandbox()?.localOnly && !!root.ChinaLifeCloud?.joined && !!net();
   let serverOn = null; // null = not asked yet
   const meName = () => String(game()?.state?.name || game()?.state?.player?.name || root.ChinaLifeCloud?.profile?.user_name || 'You').slice(0, 18);
   function enabled() {
@@ -20,7 +23,7 @@
     if (!online()) return localStorage.getItem(OFF_KEY()) !== '1';
     return serverOn === true;
   }
-  async function call(method, body) { const r = await root.ChinaLifeCloud.api('/chinalife/football.php', method, body); return r?.data || r; }
+  async function call(method, body) { const r = await net()('/chinalife/football.php', method, body); return r?.data || r; }
   async function refreshFlag() { if (!online()) return enabled(); try { const d = await call('GET', { action: 'lobby' }); serverOn = d?.enabled === true; return serverOn; } catch { serverOn = false; return false; } }
   // ---------- screen ----------
   let el = null, view = 'home', poll = null, loop = null, msgT = null;
