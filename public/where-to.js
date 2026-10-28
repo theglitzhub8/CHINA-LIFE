@@ -26,6 +26,8 @@ function context() {
     minutes: s.hour || 0,
     needs: s.needs || {},
     student: !!s.student,
+    day: s.day || 1,
+    here: s.place,
     friendsOnline: window.ChinaLifeSocial?.friendsOnline || 0,
     counts: counts(),
   };

@@ -30,7 +30,8 @@ function render(view,d,root,caseId){
  }
  root.insertAdjacentHTML('beforeend',button('lifeRefresh','Refresh'));$('lifeRefresh').onclick=()=>open(view,caseId);
 }
-let prompted=new Set();async function welcome(){if(!game.state.created||!window.ChinaLifeCloud?.signedIn)return;const id=String(game.accountId??'');if(prompted.has(id))return;prompted.add(id);try{const d=await api('firstday');if(id!==String(game.accountId??''))return;if(!d.claimed)game.notify('🧭 Your first day · earn your welcome reward',()=>open('firstday'));}catch{prompted.delete(id)}}
+// The first-day banner waits until the first-time tour (r3.js) is finished or skipped.
+let prompted=new Set();async function welcome(){if(!game.state.created||!window.ChinaLifeCloud?.signedIn)return;if(window.ChinaLifeTour?.active?.()){clearTimeout(welcome.later);welcome.later=setTimeout(welcome,60000);return}const id=String(game.accountId??'');if(prompted.has(id))return;prompted.add(id);try{const d=await api('firstday');if(id!==String(game.accountId??''))return;if(!d.claimed)game.notify('🧭 Your first day · earn your welcome reward',()=>open('firstday'));}catch{prompted.delete(id)}}
 window.addEventListener('chinalife:cloudready',()=>{generation++;current=null;welcome()});window.addEventListener('chinalife:update',()=>{if($('communityRoot')&&(owner!==String(game.accountId??'')||!window.ChinaLifeCloud?.signedIn)){generation++;$('activityContent').replaceChildren();$('activityDialog').close();current=null;}welcome()});
 // Refresh is explicit: never replace a form, draft or reading position on a timer.
 window.ChinaLifeCommunity={open};

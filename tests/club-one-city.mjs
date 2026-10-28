@@ -54,7 +54,7 @@ test('no Jollof & Neon anywhere in the client, and Walk the city is off in one c
  for(const f of fs.readdirSync('public').filter(f=>/\.(js|css|html)$/.test(f)))assert.doesNotMatch(fs.readFileSync('public/'+f,'utf8'),/Jollof\s*(&|&amp;|and)\s*Neon|Jollof Log Drum/,f);
  const o=load();assert.equal(o.walkCity(),false);o.set({mode:'classic'});assert.equal(o.walkCity(),true);
  assert.match(fs.readFileSync('public/world.js','utf8'),/function setCityWalk\(on\)\{if\(on&&window\.ChinaLifeOneCity\?\.walkCity&&!window\.ChinaLifeOneCity\.walkCity\(\)\)return;/);
- const r3=fs.readFileSync('public/r3.js','utf8');assert.match(r3,/ONE_CITY_STEPS=ALL_STEPS\.filter\(s=>s\.id!=='walk'\)/);
+ const r3=fs.readFileSync('public/r3.js','utf8');assert.match(r3,/ONE_CITY_STEPS=ALL_STEPS\.filter\(s=>s\.id!=='walk'&&s\.id!=='map'\)/);
  assert.match(fs.readFileSync('public/r4.js','utf8'),/k==='street'&&window\.ChinaLifeOneCity\?\.walkCity\?\.\(\)===false/);
  assert.match(fs.readFileSync('public/social.js','utf8'),/walkCity\?\.\(\)===false\?'':'<button data-social="walk-now"/);
 });

@@ -79,16 +79,21 @@
   function suggest(ctx = {}) {
     const n = ctx.needs || {}, h = hourOf(ctx.minutes), out = [];
     const add = (id, why, score) => {
-      if (!layout.places.includes(id) || out.some((s) => s.id === id)) return;
-      out.push({ id, why, score: score + (isOpenAt(id, ctx.minutes) ? 0 : -50) });
+      // Never the place the player is already in.
+      if (!layout.places.includes(id) || out.some((s) => s.id === id) || (ctx.here && (id === ctx.here || questPlace(ctx.here) === id))) return;
+      const open = isOpenAt(id, ctx.minutes);
+      out.push({ id, why, open, score: score + (open ? 0 : -50) });
     };
-    const low = (k, t) => typeof n[k] === 'number' && n[k] < t;
+    const low = (k, t) => typeof n[k] === 'number' && n[k] < t, here = (id) => (ctx.counts || {})[id] || 0;
+    // A new student's first stop is their campus (UI review C3).
+    if (ctx.student && (ctx.day || 1) <= 2) add('university', 'Your campus. Meet your classmates', 85);
     if (low('energy', 25) || low('hygiene', 20) || low('hunger', 15)) add('cityhospital', 'You are running low. Get checked and rest', 90);
     if (ctx.friendsOnline > 0) add('gist', ctx.friendsOnline + (ctx.friendsOnline === 1 ? ' friend is' : ' friends are') + ' online. Catch up', 70);
     if (h >= 8 && h < 12) add('university', ctx.student ? 'Class time. Your lecture is on' : 'Morning lectures are on', ctx.student ? 80 : 55);
     if (h >= 14 && h < 17) add('university', 'Afternoon study session', 45);
-    if (h >= 16 && h < 21) add('football', h >= 18 ? 'Floodlit match tonight' : 'Kick-off soon on the pitch', 60);
-    if (h >= 20 || h < 3) add('night', h >= 22 || h < 3 ? 'The dance floor is full' : 'The night is starting', 65);
+    // Reasons never claim a crowd that isn't there: "full" only with people in the venue.
+    if (h >= 16 && h < 21) add('football', h >= 18 ? 'The pitch is open under the lights' : 'The pitch is open for a game', 60);
+    if (h >= 20 || h < 3) add('night', here('night') >= 3 ? 'The dance floor is full' : h >= 22 || h < 3 ? 'The music is on' : 'The night is starting', 65);
     if (low('fun', 35)) add(h >= 18 || h < 3 ? 'night' : 'football', 'You need some fun', 50);
     if (low('social', 35)) add('gist', 'You have been quiet. Go hear the news', 48);
     if (h >= 9 && h < 18) add('hq', 'Hafrik HQ is open for help and services', 30);
@@ -96,7 +101,10 @@
     // Busy places pull people in.
     for (const [id, c] of Object.entries(ctx.counts || {})) if (c >= 3) add(id, c + ' people are there now', 40 + Math.min(c, 20));
     if (!out.length) add('gist', 'See what is happening today', 20);
-    return out.sort((a, b) => b.score - a.score).slice(0, 3);
+    // Closed places are suggested only when nothing is open.
+    if (!out.some((s) => s.open)) for (const id of layout.places) if (isOpenAt(id, ctx.minutes)) { add(id, 'Open now', 10); break; }
+    const open = out.filter((s) => s.open);
+    return (open.length ? open : out).sort((a, b) => b.score - a.score).slice(0, 3);
   }
   // A save in a disabled city moves to the active city on load. The old city and place are kept on the save
   // (cityBeforeOneCity / placeBeforeOneCity) so an admin or a later update can send the player back.

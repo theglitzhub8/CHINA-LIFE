@@ -253,7 +253,7 @@ function tasksScreen(){if(window.ChinaLifeWeekly)return window.ChinaLifeWeekly.o
 let reminded='';
 function notify(text,open){let banner=$('gameNotification');if(!banner){banner=document.createElement('button');banner.id='gameNotification';banner.className='message-notification';document.body.append(banner)}banner.textContent=text;banner.hidden=false;banner.onclick=()=>{banner.hidden=true;open?.()};clearTimeout(notify.t);notify.t=setTimeout(()=>banner.hidden=true,8000);
  if(document.hidden&&'Notification' in window&&Notification.permission==='granted'){const show=()=>new Notification('ChinaLife',{body:text,icon:'icons/icon-192.png'});navigator.serviceWorker?.ready.then(r=>r.showNotification('ChinaLife',{body:text,icon:'icons/icon-192.png'})).catch(show)??show()}}
-function reminders(){if(!state.created)return;const fest=festivalToday();if(fest&&reminded!=='fest'+today()){reminded='fest'+today();setTimeout(()=>notify(fest+' · red envelopes pay double today!',huntScreen),4000);return}if(dailyReady()&&reminded!==today()){reminded=today();setTimeout(()=>notify('🎁 Your daily reward is ready. Tap to claim.',rankScreen),2500)}}
+function reminders(){if(!state.created)return;const fest=festivalToday();if(fest&&reminded!=='fest'+today()){reminded='fest'+today();setTimeout(()=>notify(fest+' · red envelopes pay double today!',huntScreen),4000);return}if(dailyReady()&&reminded!==today()&&!window.ChinaLifeTour?.active?.()){reminded=today();setTimeout(()=>notify('🎁 Your daily reward is ready. Tap to claim.',rankScreen),2500)}}
 setInterval(()=>{try{reminders()}catch{}},60000);
 setInterval(()=>{const container=$('gistPosts');if(container&&!document.hidden&&window.ChinaLifeCloud?.signedIn)refreshGistData(++gistRequest,container,state.city)},15000);
 // Events from the admin panel: details, a Join button at the venue, and a once-per-player reward.
@@ -744,7 +744,7 @@ function next(){
  if(onboard.role==='Student'){state.student=studentProfile(onboard.start);state.story={version:1,phase:'arrival',index:onboard.start==='outside'?0:1,season:'winter'};state.place=onboard.start==='outside'?'airport':state.student.campus}
  else state.place=onboard.start==='outside'?'airport':role.home;
  selected=state.place;state.visited=[state.place];state.logs=[onboard.start==='outside'?'You landed in '+state.city+' as a '+role.label.toLowerCase()+'.':'Your '+role.label.toLowerCase()+' life in '+state.city+' begins.'];
- studentSetupMode='create';save();$('onboarding').close();render();toast('Welcome to ChinaLife, '+state.name+'! Open your phone to see your goals.');
+ studentSetupMode='create';save();$('onboarding').close();render();if(!window.ChinaLifeTour?.active?.())toast('Welcome to ChinaLife, '+state.name+'! Open your phone to see your goals.');
 }
 
 function studentStory(){

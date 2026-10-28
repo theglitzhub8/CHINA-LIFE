@@ -24,12 +24,13 @@ function pill(){const side=document.querySelector('#worldUI .world-side');if(!si
 const ALL_STEPS=[
  {id:'walk',title:'Walk around',text:'Drag the joystick to move.',spot:'.tp-stick'},
  {id:'map',title:'Open the map',text:'Tap Map to see your city.',spot:'#navMap'},
- {id:'cafe',title:'Go to the café',text:'Tap the café, then go in. The first ride is free.',spot:null,go:()=>G().walkIn('cafe')},
+ {id:'cafe',title:'Go to the café',text:'Tap the café, then go in. Walking there is free.',spot:null,go:()=>G().walkIn('cafe')},
  {id:'order',title:'Order a drink',text:'Pick something from the sheet to refill your needs.',spot:'#worldActivities'},
  {id:'hi',title:'Say hi',text:'Tap “Say something” to chat with people here.',spot:'#venueSay'},
  {id:'phone',title:'Your phone',text:'Open Phone and claim your welcome reward.',spot:'#navPhone'}];
-// One city: no "Walk around" step, and the café step (a hidden venue) becomes the Where to? board.
-const ONE_CITY_STEPS=ALL_STEPS.filter(s=>s.id!=='walk').map(s=>s.id==='cafe'?{id:'cafe',title:'Pick a place',text:'Tap Where to? and choose where to go. The first ride is free.',spot:'#navMap',go:()=>window.ChinaLifeWhereTo?.show?.()}:s.id==='order'?{...s,title:'Try an activity'}:s);
+// One city: no "Walk around" step, and no "Open the map" step (the dock's #navMap is Where to?, which the next step
+// already points at). The café step (a hidden venue) becomes the Where to? board and completes on arrival anywhere.
+const ONE_CITY_STEPS=ALL_STEPS.filter(s=>s.id!=='walk'&&s.id!=='map').map(s=>s.id==='cafe'?{id:'cafe',title:'Pick a place',text:'Tap Where to? and choose a place. Walking there is free.',spot:'#navMap',go:()=>window.ChinaLifeWhereTo?.show?.()}:s.id==='order'?{...s,title:'Try an activity'}:s);
 function steps(){return window.ChinaLifeOneCity?.walkCity?.()===false?ONE_CITY_STEPS:ALL_STEPS}
 const LS='chinalife-onboard';
 function onboardState(){const st=G()?.state;if(!st?.created)return 'wait';if(st.onboard)return st.onboard;const ls=localStorage.getItem(LS);if(ls)return ls;
@@ -48,7 +49,12 @@ function advance(id){const step=onboardStep();if(!step||step.id!==id)return;cons
 // Step completion, from what the player actually does.
 document.addEventListener('pointerdown',e=>{const t=e.target;if(t.closest?.('.tp-stick'))setTimeout(()=>advance('walk'),900);if(t.closest?.('#navMap'))setTimeout(()=>advance('map'),300);if(t.closest?.('#worldActivities button'))setTimeout(()=>advance('order'),300);if(t.closest?.('#venueSay,#venueChatButton'))setTimeout(()=>advance('hi'),300);if(t.closest?.('#navPhone'))setTimeout(()=>advance('phone'),300)},{capture:true,passive:true});
 document.addEventListener('keydown',e=>{if(/^(Arrow|w$|a$|s$|d$)/i.test(e.key))advance('walk')});
-function placeWatch(){const st=G()?.state;if(st?.place==='cafe')advance('cafe')}
+let pickFrom=null;
+function placeWatch(){const st=G()?.state;if(!st)return;if(st.place==='cafe')return advance('cafe');
+ // "Pick a place" (one city) completes when the player arrives somewhere other than where the step began.
+ if(onboardStep()?.id!=='cafe'){pickFrom=null;return}if(pickFrom==null)pickFrom=st.place;else if(st.place!==pickFrom)advance('cafe')}
+// Other parts of the game stay quiet while the tour runs (game.js holds back the welcome and reward banners).
+window.ChinaLifeTour={active:()=>!!onboardStep()};
 
 /* ---------- Room sheet follows the finger, then snaps to peek / half / near-full ---------- */
 function drag(){const ui=$('worldUI'),c=$('infoPanel');if(!ui||!c||c.dataset.r3)return;c.dataset.r3='1';window.ChinaLifeSheetDrag=true;

@@ -92,6 +92,10 @@ Each task is small, keeps the approved map look, and can ship behind no switch (
    Student card no longer says "Shenyang". Still open: A5 (a live character preview) and E6 (registration's gender).
 2. **Tour that works (C1–C5).** Fix the stuck step, real button names, honest suggestions, students start at campus,
    reward after the tour.
+   ✅ Done 29 Oct: the one-city tour is 4 steps (no "Tap Map"); "Pick a place" completes on arrival anywhere; it no
+   longer promises a free first ride (walking is free); the welcome toast, daily-reward and first-day banners wait
+   for the tour to end; Where to? suggests only open places, never the place you are in, says "full" only with people
+   there, and points a new student to campus.
 3. **One card at a time (B1–B3, E1).** A tiny queue for chips, cards and banners: tour > class now > reward >
    everything else; one notification lane that never covers the HUD.
 4. **Calm place bar and controls (B4, mic/jump).** Collapsed by default; mic only after joining voice; jump on streets.

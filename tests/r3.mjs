@@ -5,3 +5,18 @@ test('one Next step pill and onboarding with skip',()=>{assert.match(js,/id='r3N
 test('the sheet follows the finger and snaps to 3 detents',()=>{assert.match(js,/touchmove/);assert.match(js,/\['peek',96\],\['half'/)});
 test('client only: no requests, no coins',()=>{assert.doesNotMatch(js,/fetch\(|ChinaLifeAuth|\.php|money\s*[+-]=|state\.money/)});
 test('no id clash with the character creator',()=>{assert.doesNotMatch(js,/'nextStep'/)});
+
+// UI review task 2: the one-city tour never waits for the hidden café, and the game stays quiet while it runs.
+import vm from 'node:vm';import {harness,fixture} from './game-harness.mjs';
+test('one-city tour: no "Tap Map" step, "Pick a place" completes on arrival anywhere, no reward banner during the tour',()=>{
+ const t=harness({...fixture(),day:1,xp:0,visited:['university'],place:'university'}),c=t.context,on={};delete t.game.state.onboard;
+ const mem=new Map();Object.assign(c,{matchMedia:()=>({matches:true}),requestAnimationFrame:f=>f(),MutationObserver:class{observe(){}},addEventListener:(k,f)=>{on[k]=f},
+  localStorage:{getItem:k=>mem.get(k)??null,setItem:(k,v)=>mem.set(k,String(v)),removeItem:k=>mem.delete(k)},ChinaLifeWhereTo:{show(){}}});
+ vm.runInContext(r('public/one-city.js'),c);vm.runInContext(r('public/r3.js'),c);const tick=()=>on['chinalife:cloudready']();
+ assert.equal(c.ChinaLifeOnboarding.step,'cafe','first step is Pick a place');assert.doesNotMatch(t.document.getElementById('coachCard').textContent,/Tap Map/);
+ assert.equal(c.ChinaLifeTour.active(),true);
+ tick();assert.equal(c.ChinaLifeOnboarding.step,'cafe','staying put does not complete it');
+ t.game.state.place='football';tick();assert.equal(c.ChinaLifeOnboarding.step,'order','arriving anywhere completes it');
+ c.ChinaLifeOnboarding.advance('order');c.ChinaLifeOnboarding.advance('hi');c.ChinaLifeOnboarding.advance('phone');assert.equal(c.ChinaLifeTour.active(),false);
+ assert.match(game,/dailyReady\(\)&&reminded!==today\(\)&&!window\.ChinaLifeTour\?\.active\?\.\(\)/,'reward banner waits for the tour');
+});

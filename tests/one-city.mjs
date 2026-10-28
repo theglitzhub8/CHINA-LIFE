@@ -110,3 +110,16 @@ test('other players are separated through a display offset, never by moving thei
  // Every character in the room counts (scripted club people too), and each remote is listed once.
  assert.match(w,/for\(const a of root\.children\)addBody\(a\)/);
 });
+
+// UI review C3: suggestions are honest. Closed places only when nothing is open, "full" only with people there,
+// and a new student is pointed to campus first.
+test('suggestions never claim a crowd, skip closed places and send new students to campus',()=>{
+ const {ChinaLifeOneCity:o}=load(),ok={energy:80,hunger:80,hygiene:80,bladder:80,fun:80,social:80};
+ const club=ctx=>o.suggest(ctx).find(s=>s.id==='night');
+ assert.doesNotMatch(club({minutes:H(23),needs:ok}).why,/full/);assert.match(club({minutes:H(23),needs:ok,counts:{night:5}}).why,/full|5 people/);
+ assert.ok(o.suggest({minutes:H(12),needs:{...ok,fun:10}}).every(s=>s.open),'only open places when some are open');
+ assert.equal(o.suggest({minutes:H(13),needs:ok,student:true,day:1})[0].id,'university');
+ assert.notEqual(o.suggest({minutes:H(13),needs:ok,student:true,day:9})[0]?.id,'university');
+ assert.ok(!o.suggest({minutes:H(13),needs:ok,student:true,day:1,here:'campus'}).some(s=>s.id==='university'),'never where you already are');
+ assert.ok(o.suggest({minutes:H(3)+30,needs:ok,here:'night'}).length>0);
+});
