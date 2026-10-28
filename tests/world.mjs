@@ -186,3 +186,28 @@ test('University Years: a student lives in the 2-person dorm with a roommate who
  t.game.state.properties={};t.game.state.student={...(t.game.state.student||{}),graduated:'2026-11-23'};t.world.venue('home');assert.equal(t.world.homeStyle,'rental','a graduate has moved out of the dorm');
  t.game.state.student.graduated=null;t.game.state.properties={};t.game.state.background='Worker';t.world.venue('home');assert.equal(t.world.homeStyle,'rental','only students live in the dorm');
 });
+
+test('real sitting (switch real_sitting): walk beside the chair, turn, slide onto the seat, stand up beside it; off = the old snap',()=>{
+ const t=setup();const walkTo=(x,z)=>{t.world.perform({kind:'phone',x,z,duration:.05},()=>{});t.tick(10)};const seat={x:-4.3,z:1.6};
+ const dist=(p,q)=>Math.hypot(p.x-q.x,p.z-q.z);
+ // Switch off: Sit snaps onto the nearest seat at once.
+ t.world.venue('home');walkTo(-3.2,1.6);t.world.emote('sit');assert.equal(t.world.seated,true);assert.ok(dist(t.world.position,seat)<.05);t.world.emote('stop');
+ // Switch on: nothing happens at once; the player walks, turns, then sits.
+ t.context.ChinaLifeFlags={cast:k=>k==='real_sitting'};t.world.venue('home');walkTo(-3.2,1.6);t.world.emote('sit');
+ assert.equal(t.world.seated,false);assert.equal(t.world.sitting,'walk');t.tick(6);assert.equal(t.world.seated,true);assert.equal(t.world.sitting,null);assert.ok(dist(t.world.position,seat)<.05,'on the seat');
+ // Standing up puts the player beside the chair, not inside it.
+ t.world.emote('stop');assert.equal(t.world.seated,false);const d=dist(t.world.position,seat);assert.ok(d>.5&&d<.75,'beside the chair: '+d.toFixed(2));
+ // Walking somewhere else on the way cancels the sit.
+ walkTo(-3,.6);t.world.emote('sit');assert.equal(t.world.sitting,'walk');walkTo(0,1);assert.equal(t.world.sitting,null);assert.equal(t.world.seated,false);
+});
+
+test('no walking through furniture (switch real_sitting): in every home the body (15 cm each side) never overlaps furniture',async()=>{
+ const t=setup();t.context.ChinaLifeFlags={cast:k=>k==='real_sitting'};const {buildHome}=await import('../public/home-interiors.js');
+ let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+ for(const type of ['dorm','rental','apartment','townhouse','villa','penthouse','mansion']){
+  t.game.state.properties={[t.game.state.city]:type};if(type==='dorm'){t.game.state.properties={};t.context.ChinaLifeFlags={cast:k=>k==='real_sitting'||k==='uni_years'}}
+  t.world.venue('home');assert.equal(t.world.homeStyle,type);const h=buildHome(type,{}),B=h.bounds,R=.15,inside=p=>h.colliders.find(o=>Math.abs(p.x-o.x)<o.w/2+R&&Math.abs(p.z-o.z)<o.d/2+R);
+  for(let i=0;i<25;i++){t.world.perform({kind:'phone',x:(rnd()*2-1)*B.x,z:(rnd()*2-1)*B.z,duration:.05},()=>{});
+   for(let f=0;f<200&&t.world.busy;f++){t.tick(.05);const hit=inside(t.world.position);assert.ok(!hit,type+': inside furniture at '+t.world.position.x.toFixed(2)+','+t.world.position.z.toFixed(2)+' '+JSON.stringify(hit))}t.world.cancel()}
+  t.context.ChinaLifeFlags={cast:k=>k==='real_sitting'}}
+});

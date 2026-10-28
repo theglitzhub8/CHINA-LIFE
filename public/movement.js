@@ -3,11 +3,11 @@ export function safeRoomEntry(entry,obstacles,bounds){
  const valid=Math.abs(entry.x)<=bounds.x&&Math.abs(entry.z)<=bounds.z&&!obstacles.some(o=>Math.abs(entry.x-o.x)<o.w/2+.08&&Math.abs(entry.z-o.z)<o.d/2+.08);
  return valid?entry:(walkingPath(entry,entry,obstacles,bounds)[0]||{x:0,z:0});
 }
-// Walking uses a half-metre navigation grid with clearance around furniture.
-export function walkingPath(start,end,obstacles,bounds={x:6,z:4},step=.4){
+// Walking uses a half-metre navigation grid with clearance around furniture (wider with real_sitting, see world.js).
+export function walkingPath(start,end,obstacles,bounds={x:6,z:4},step=.4,clear=.08){
  const cols=Math.floor(bounds.x*2/step)+1,rows=Math.floor(bounds.z*2/step)+1;
  const point=(x,z)=>({x:-bounds.x+x*step,z:-bounds.z+z*step});
- const blocked=(x,z)=>obstacles.some(o=>Math.abs(x-o.x)<o.w/2+.08&&Math.abs(z-o.z)<o.d/2+.08);
+ const blocked=(x,z)=>obstacles.some(o=>Math.abs(x-o.x)<o.w/2+clear&&Math.abs(z-o.z)<o.d/2+clear);
  const nearest=p=>{let best,score=Infinity;for(let z=0;z<rows;z++)for(let x=0;x<cols;x++){const q=point(x,z),d=(q.x-p.x)**2+(q.z-p.z)**2;if(d<score&&!blocked(q.x,q.z)){best={x,z};score=d}}return best};
  const a=nearest(start),b=nearest(end);if(!a||!b)return [];const key=p=>p.z*cols+p.x,queue=[a],prev=new Map([[key(a),null]]);let found=false;
  for(let i=0;i<queue.length;i++){const p=queue[i];if(key(p)===key(b)){found=true;break}for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){const q={x:p.x+dx,z:p.z+dz};if(q.x<0||q.z<0||q.x>=cols||q.z>=rows||prev.has(key(q)))continue;const v=point(q.x,q.z);if(blocked(v.x,v.z))continue;prev.set(key(q),p);queue.push(q)}}
