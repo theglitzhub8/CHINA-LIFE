@@ -39,6 +39,12 @@ as before). Code: public/hospital.js, game.js `faint`/`blackout`; tests: tests/h
 **Phase 1 · Check-ups and hospital Chinese.** A free weekly check-up: the doctor asks questions in simple Chinese
 (发烧 fever, 头疼 headache, 肚子疼 stomach ache, 过敏 allergy…) and you answer from choices; doing well gives XP and
 Chinese progress, like University's words. Useful for real life in China.
+✅ Done 29 Oct 2026 (switch `hospital_checkup`, off; it needs `hospital_care` on too): "👩‍⚕️ Free weekly check-up" in
+Your health at the City Hospital. 5 of 18 questions (chinalife-api/hospital-lib.php): what the doctor says (你哪儿不舒服？,
+你发烧吗？, 张开嘴…, 一天吃三次，饭后吃, 挂号, 急诊…) and how you'd say it (我发烧了, 我对青霉素过敏, 药房在哪儿？…).
+economy.php action `checkup` hands out the questions without answers and marks them; once per Beijing week (Monday);
++8 XP per right answer and +20 for 5/5 on the server ledger, +5 Chinese per right answer; the result screen shows
+every right answer with pinyin and meaning. No sign-in, no check-up.
 
 **Phase 2 · Pharmacy.** Buy medicine to keep: painkillers (energy), oral rehydration salts (after drinking), vitamins
 (slower needs drop for a day), stomach medicine (cures food sickness anywhere). Used from the phone; priced so that

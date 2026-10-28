@@ -4,10 +4,11 @@ import test from 'node:test';import assert from 'node:assert/strict';import fs f
 import {harness,fixture} from './game-harness.mjs';
 const r=f=>fs.readFileSync(f,'utf8');const tick=()=>new Promise(res=>setImmediate(res));
 
+const PAPER=['fever','head','stomach','cough','register'].map(id=>({id,prompt:'问 '+id,pinyin:'wèn',options:['right '+id,'wrong a','wrong b','wrong c']}));
 function hospital(on,state={}){
  const t=harness({...fixture(),place:'football',...state}),c=t.context,calls=[],trips=[];
- c.ChinaLifeFlags={cast:k=>k==='hospital_care'&&on,appOff:()=>false};c.ChinaLifeCloud={signedIn:true};
- c.ChinaLifeAuth={request:async(path,method,body)=>{if(/economy\.php/.test(path))calls.push([path,body]);return {data:{charged:200,bill:200,first:false,recovering:false,money:3000,xp:0}}}};
+ const keys=on===true?['hospital_care']:on||[];c.ChinaLifeFlags={cast:k=>keys.includes(k),appOff:()=>false};c.ChinaLifeCloud={signedIn:true};
+ c.ChinaLifeAuth={request:async(path,method,body)=>{if(/economy\.php/.test(path))calls.push([path,body]);if(body?.action==='checkup')return {data:body.step==='start'?{questions:PAPER}:{money:3000,xp:500,checkup:{right:4,total:5,xp:32,marked:PAPER.map((q,i)=>({id:q.id,prompt:q.prompt,pinyin:q.pinyin,answer:q.options[0],right:i>0}))}}};return {data:{charged:200,bill:200,first:false,recovering:false,money:3000,xp:0}}}};
  c.ChinaLifeWorld={journey:(o,done)=>{trips.push(o);done()}};
  vm.runInContext(r('public/hospital.js'),c);return {t,c,calls,trips};
 }
@@ -39,4 +40,18 @@ test('Your health lists what is low, food sickness and being drunk, with a fix f
  s.needs={hunger:80,energy:80,hygiene:80,bladder:80,fun:80,social:80};s.food={};s.drunk=0;c.ChinaLifeHospital.health();
  assert.match(t.document.getElementById('activityContent').textContent,/You’re in good shape/);
  assert.match(r('public/world.js'),/if\(p\[0\]==='cityhospital'&&window\.ChinaLifeHospital\?\.on\?\.\(\)\)items\.unshift\(\['🩺 Your health'/);
+});
+
+// Hospital Phase 1 (switch hospital_checkup): the free weekly check-up, 5 questions from the doctor, marked on the server.
+test('check-up: offered in Your health at the hospital only with both switches, 5 questions, XP from the server, Chinese progress',async()=>{
+ const off=hospital(true,{place:'cityhospital'});off.c.ChinaLifeHospital.health();assert.equal(off.t.document.getElementById('hpCheck'),null,'hospital_checkup off');
+ const away=hospital(['hospital_care','hospital_checkup']);away.c.ChinaLifeHospital.health();assert.equal(away.t.document.getElementById('hpCheck'),null,'only at the hospital');
+ const {t,c,calls}=hospital(['hospital_care','hospital_checkup'],{place:'cityhospital'}),d=t.document,chinese=()=>t.game.state.skillXP.Chinese+t.game.state.skills.Chinese*100,before=chinese();
+ c.ChinaLifeHospital.health();d.getElementById('hpCheck').onclick();await tick();await tick();
+ assert.deepEqual(JSON.parse(JSON.stringify(calls[0][1])),{action:'checkup',step:'start'});
+ for(let i=0;i<5;i++){assert.match(d.querySelector('#activityContent h2').textContent,/Check-up/);assert.match(d.getElementById('activityContent').textContent,new RegExp('Question '+(i+1)+' of 5'));d.querySelector('[data-hp-a="0"]').onclick()}
+ await tick();await tick();
+ assert.deepEqual(JSON.parse(JSON.stringify(calls[1][1])),{action:'checkup',answers:{fever:'right fever',head:'right head',stomach:'right stomach',cough:'right cough',register:'right register'}});
+ const text=d.getElementById('activityContent').textContent;assert.match(text,/4\/5 right · \+32 XP · Chinese \+20/);assert.match(text,/next free check-up is on Monday/);
+ assert.equal(t.game.state.money,3000);assert.equal(chinese()-before,20,'+5 Chinese per right answer');
 });

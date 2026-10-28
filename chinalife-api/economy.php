@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/common.php';
+require_once __DIR__.'/hospital-lib.php';
 const CL_HOSPITAL_BILL=200; // Hospital Phase 0: waking up at the hospital (owner, 29 Oct 2026); first visit free
 cl_methods(['GET','POST']);
 
@@ -38,7 +39,7 @@ if ($method==='GET') {
 cl_rate('economy',30,60);
 $input=cl_body();
 $action=(string)($input['action']??'');
-if (!in_array($action,['job','mission','purchase','accident','hospital','club-drink','club-spray','school','jet'],true)) cl_fail('Choose a job, mission or purchase');
+if (!in_array($action,['job','mission','purchase','accident','hospital','checkup','club-drink','club-spray','school','jet'],true)) cl_fail('Choose a job, mission or purchase');
 // v9: ChampagnePappi's bar in 007 Club. Price and XP live here only; one drink per 90 s, XP for the first 8 a day.
 $clubDrinks=['pappi-fizz'=>[120,10],'gold-rush'=>[300,25],'zero-proof'=>[40,5],'water'=>[0,0]];
 
@@ -71,6 +72,21 @@ try {
     // Hospital Phase 0 (docs/HOSPITAL-PLAN.md, appadmin switch hospital_care): fainting, a blackout or bad food sickness
     // take you to the City Hospital. The bill (CL_HOSPITAL_BILL, owner: ¥200) comes off the server ledger, never below
     // ¥0; your first visit ever is free, and a second one inside 10 minutes is free too (you are still recovering).
+    // Hospital Phase 1 (switch hospital_checkup): the free weekly check-up in hospital Chinese (hospital-lib.php).
+    // step 'start' hands out the questions; 'submit' marks them, once per Beijing week, XP on the server ledger.
+    if ($action==='checkup') {
+        if (!(cl_hafrik_features()['hospital_checkup']??false)) cl_fail('Check-ups are switched off',403);
+        $ref='checkup:'.cl_checkup_week();
+        if (economy_seen('checkup',$ref)) cl_fail('You had your free check-up this week. Come back on Monday.',409);
+        if (($input['step']??'')==='start') {$db->commit();json_response('success',['questions'=>cl_checkup_paper()],'The doctor will see you now.');}
+        $r=is_array($input['answers']??null)?cl_checkup_mark($input['answers']):null;
+        if (!$r) cl_fail('Answer all the doctor’s questions');
+        $moved=cl_move_totals($uid,$game,0,$r['xp']);
+        economy_note('checkup',$ref,0,$r['xp']);
+        cl_store_totals($uid,$game);
+        $db->commit();
+        json_response('success',$moved+['checkup'=>$r,'duplicate'=>false,'bonus'=>false],'Check-up done.');
+    }
     if ($action==='hospital') {
         if (!(cl_hafrik_features()['hospital_care']??false)) cl_fail('The hospital service is switched off',403);
         $cause=(string)($input['cause']??'');if (!in_array($cause,['faint','blackout','sick'],true)) cl_fail('Choose why you are at the hospital');

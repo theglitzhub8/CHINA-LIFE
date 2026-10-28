@@ -1446,3 +1446,27 @@ test('hospital bill: off by default, first visit free, recovering free, then ¥2
   const broke=await visit('faint');assert.equal(broke.data.charged,50,'never below ¥0');assert.equal(coins(),0);
  }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{hospital_care:false}})}
 });
+
+// Hospital Phase 1 (switch hospital_checkup): the free weekly check-up. Questions without answers, marked here, XP on
+// the ledger, once per Beijing week; a paper with the wrong number of answers or an unknown question is refused.
+test('hospital check-up: off by default, 5 questions without answers, marked on the server, once a week',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(54,'user54')");
+ assert.equal((await call(54,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China'}}})).httpStatus,200);
+ const xp=()=>Number(sql('USE chinalife_test; SELECT xp FROM chinalife_balances WHERE user_id=54').trim());
+ const visit=body=>call(54,'economy.php','POST',{action:'checkup',...body});
+ assert.equal((await visit({step:'start'})).httpStatus,403,'switched off by default');
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{hospital_checkup:true}});
+  const paper=await visit({step:'start'});assert.equal(paper.httpStatus,200,paper.message);const q=paper.data.questions;
+  assert.equal(q.length,5);assert.equal(new Set(q.map(x=>x.id)).size,5);for(const x of q){assert.equal(x.options.length,4);assert.equal(x.answer,undefined,'no answers sent')}
+  assert.equal((await visit({answers:{[q[0].id]:'x'}})).httpStatus,400,'all five answers');
+  assert.equal((await visit({answers:{nope:'a',b:'b',c:'c',d:'d',e:'e'}})).httpStatus,400,'known questions only');
+  const start=xp(),answers=Object.fromEntries(q.map(x=>[x.id,x.options[0]]));
+  const done=await visit({answers});assert.equal(done.httpStatus,200,done.message);const c=done.data.checkup;
+  assert.equal(c.total,5);assert.equal(c.marked.length,5);assert.equal(c.right,c.marked.filter(m=>m.right).length);
+  assert.equal(c.right,q.filter(x=>c.marked.find(m=>m.id===x.id).answer===x.options[0]).length,'marked against the real answers');
+  assert.equal(c.xp,c.right*8+(c.right===5?20:0));assert.equal(xp(),start+c.xp);
+  const again=await visit({step:'start'});assert.equal(again.httpStatus,409);assert.match(again.message,/Monday/);
+  assert.equal((await visit({answers})).httpStatus,409,'no second reward this week');assert.equal(xp(),start+c.xp);
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{hospital_checkup:false}})}
+});

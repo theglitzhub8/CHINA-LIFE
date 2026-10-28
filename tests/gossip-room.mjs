@@ -14,7 +14,7 @@ function room(on,{place='gist',live=null}={}){
 }
 
 test('the switch starts off on the server and in the game',()=>{
- assert.match(r('chinalife-api/hafrik-features.php'),/'real_sitting','gossip_room','gossip_show','gossip_wall','gossip_city','gossip_rep','hospital_care'\];\}/);
+ assert.match(r('chinalife-api/hafrik-features.php'),/'real_sitting','gossip_room','gossip_show','gossip_wall','gossip_city','gossip_rep','hospital_care','hospital_checkup'\];\}/);
  assert.match(r('public/flags.js'),/gossip_room:false,gossip_show:false,gossip_wall:false,gossip_city:false,gossip_rep:false/);
 });
 
