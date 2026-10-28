@@ -76,6 +76,12 @@ if ($stored) {
 }
 // Wardrobe locks (switch wardrobe_locks): no locked item before its milestone (wardrobe-locks.php).
 $features=cl_hafrik_features();if(!empty($features['wardrobe_locks'])){require_once __DIR__.'/wardrobe-locks.php';$game=cl_wardrobe_enforce($game,$storedGame,$features);}
+// Micro-customization details (micro-style.php): cleaned on every save; rare options need their milestone while
+// micro_style is on, unless the item already had that option.
+if(is_array($game['wardrobe']??null)){require_once __DIR__.'/micro-style.php';$allowed=null;
+ if(!empty($features['micro_style'])){require_once __DIR__.'/wardrobe-locks.php';[$met,$student]=cl_wardrobe_met($game,$storedGame,$features);$rare=cl_micro_lists()['rare'];$prev=$storedGame['wardrobe']['details']??[];
+  $allowed=fn($k,$v,$id)=>!isset($rare[$k.':'.$v])||(($prev[$id][$k]??null)===$v)||$met($rare[$k.':'.$v][$student?0:1]);}
+ $game['wardrobe']['details']=cl_micro_clean($game['wardrobe']['details']??[],is_array($game['wardrobe']['owned']??null)?$game['wardrobe']['owned']:[],$allowed);}
 $gameJson=json_encode($game,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);$characterJson=json_encode($character,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);
 if ($revision===0) $changed=cl_run('INSERT IGNORE INTO chinalife_saves(user_id,character_data,game_state,revision,created_at,updated_at) VALUES(?,?,?,1,NOW(),NOW())','iss',[$uid,$characterJson,$gameJson]);
 else $changed=cl_run('UPDATE chinalife_saves SET character_data=?,game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=? AND revision=?','ssii',[$characterJson,$gameJson,$uid,$revision]);

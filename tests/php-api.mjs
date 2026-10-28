@@ -1230,3 +1230,27 @@ test('wardrobe locks: a save cannot add a locked item before its milestone; owne
   w=(await call(29,'save.php')).data.save.game.wardrobe;assert.ok(w.owned.includes('leather-white'));
  }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{wardrobe_locks:false}})}
 });
+
+// University Years Phase 10: micro-customization details are cleaned on save, rare options need milestones, and other
+// players receive the details of what you wear.
+test('micro-customization: saves keep only valid details, rare options need their milestone, and presence shares them',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(30,'user30'),(31,'user31')");
+ const save=async(id,g)=>{const cur=await call(id,'save.php');return call(id,'save.php','POST',{revision:cur.data?.revision??0,save:{character:{},game:g}})};
+ const wardrobe=details=>({owned:['tee-basic','jeans','canvas','shirt-oxford','backpack'],wearing:{top:'shirt-oxford',bottom:'jeans',shoes:'canvas',acc:['backpack']},colors:{},details});
+ const base={...game(),background:'Worker',city:'China',place:'campus'};
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{micro_style:true}});
+  assert.equal((await save(30,{...base,wardrobe:wardrobe({'shirt-oxford':{btn:'#3fae8a',collar:'v',glitter:'yes'},jeans:{len:'crop',fit:'huge'},backpack:{col:'#c9a24a',graphic:'star'},handbag:{col:'#7a1f2b'}})})).httpStatus,200);
+  // Jade buttons (Regular rank) and the gold bag (Shenyang Star) are refused at 0 XP; unknown fields and values go.
+  let d=(await call(30,'save.php')).data.save.game.wardrobe.details;
+  assert.deepEqual(d,{'shirt-oxford':{collar:'v'},jeans:{len:'crop'},backpack:{graphic:'star'}});
+  // At Regular rank the jade buttons are allowed.
+  sql("USE chinalife_test; UPDATE chinalife_balances SET xp=1600 WHERE user_id=30");
+  await save(30,{...base,xp:1600,wardrobe:wardrobe({'shirt-oxford':{btn:'#3fae8a',collar:'v'},jeans:{len:'crop'},backpack:{graphic:'star'}})});
+  d=(await call(30,'save.php')).data.save.game.wardrobe.details;assert.equal(d['shirt-oxford'].btn,'#3fae8a');
+  // Another player in the same place sees the details of what user 30 wears.
+  assert.equal((await save(31,{...base})).httpStatus,200);
+  await call(30,'presence.php','POST',{...presence('China','campus')});const p=(await call(31,'presence.php','POST',{...presence('China','campus')})).data.players.find(x=>String(x.id)==='30');
+  assert.deepEqual(p.details,{'shirt-oxford':{btn:'#3fae8a',collar:'v'},jeans:{len:'crop'},backpack:{graphic:'star'}});
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{micro_style:false}})}
+});

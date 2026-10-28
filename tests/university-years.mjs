@@ -156,3 +156,40 @@ test('wardrobe locks in the store: a lock and the milestone instead of a price; 
  // Owned items are never locked.
  t.game.state.wardrobe.owned.push('luxwatch');assert.doesNotMatch(card('accessories','luxwatch'),/🔒/);
 });
+
+test('micro-customization: the game and server lists match, and the server item list matches the store styles',()=>{
+ const c={window:{},document:{createElement:()=>({}),head:{append(){}}}};vm.createContext(c);vm.runInContext(r('public/shop-catalog.js'),c);vm.runInContext(r('public/micro-style.js'),c);const S=c.window.ChinaLifeStyle;
+ const php=r('chinalife-api/micro-style.php'),arr=x=>JSON.stringify(x);
+ const pal=Object.fromEntries([...php.match(/'pal'=>\[(.*?\])\],/s)[1].matchAll(/'(\w+)'=>\[([^\]]*)\]/g)].map(m=>[m[1],m[2].split(',').map(v=>v.trim().slice(1,-1))]));assert.equal(arr(pal),arr(S.PAL));
+ const en=Object.fromEntries([...php.match(/'enum'=>\[(.*?\])\],/s)[1].matchAll(/'(\w+)'=>\[([^\]]*)\]/g)].map(m=>[m[1],m[2].split(',').map(v=>v.trim().slice(1,-1))]));assert.equal(arr(en),arr(S.ENUM));
+ const fields=Object.fromEntries([...php.match(/'fields'=>\[(.*?\])\],/s)[1].matchAll(/'(\w+)'=>\[([^\]]*)\]/g)].map(m=>[m[1],m[2].split(',').map(v=>v.trim().slice(1,-1))]));assert.equal(arr(fields),arr(S.FIELDS));
+ const rare=Object.fromEntries([...php.match(/'rare'=>\[(.*?\])\]\];/s)[1].matchAll(/'([\w:#]+)'=>\['([\w:]+)','([\w:]+)'\]/g)].map(m=>[m[1],[m[2],m[3]]]));assert.equal(arr(rare),arr(S.RARE));
+ const items=Object.fromEntries([...php.match(/function cl_micro_items\(\): array \{return \[(.*?)\];\}/s)[1].matchAll(/'([\w-]+)'=>'(\w+)'/g)].map(m=>[m[1],m[2]]));
+ const store=c.window.ChinaLifeStore.items.filter(i=>S.FIELDS[i.style]);assert.equal(arr(Object.fromEntries(store.map(i=>[i.id,i.style]).sort())),arr(Object.fromEntries(Object.entries(items).sort())));
+});
+
+test('micro-customization in the store: customise an owned item, rare options locked, details drawn only while the switch is on',async()=>{
+ const {harness,fixture}=await import('./game-harness.mjs');const t=harness({...fixture(),place:'mall'}),c=t.context,d=t.document,s=t.game.state;
+ s.wardrobe.owned.push('shirt-oxford','backpack');s.wardrobe.wearing.top='shirt-oxford';s.wardrobe.wearing.acc=['backpack'];
+ c.ChinaLifeFlags={cast:()=>false};t.game.store('mine','shirt-oxford');assert.equal(d.querySelector('.ms-panel'),null,'switch off: no panel');
+ c.ChinaLifeFlags={cast:k=>k==='micro_style'};t.game.store('mine','shirt-oxford');assert.match(d.querySelector('.ms-panel').textContent,/Buttons.*Collar.*Stitching/);
+ const pick=(k,v)=>d.querySelector('[data-ms="'+k+'"][data-v="'+v+'"]');pick('btn','#1f1f1f').onclick();pick('collar','mandarin').onclick();
+ assert.equal(JSON.stringify(s.wardrobe.details['shirt-oxford']),'{"btn":"#1f1f1f","collar":"mandarin"}');
+ // Jade buttons are rare (Regular rank for non-students here): locked, and a click does nothing.
+ assert.equal(pick('btn','#3fae8a').disabled,true);assert.match(pick('btn','#3fae8a').title,/Regular rank/);pick('btn','#3fae8a').onclick();assert.equal(s.wardrobe.details['shirt-oxford'].btn,'#1f1f1f');
+ s.xp=1600;t.game.store('mine','shirt-oxford');assert.equal(pick('btn','#3fae8a').disabled,false);
+ // Choosing the same option again clears it.
+ pick('collar','mandarin').onclick();assert.equal(s.wardrobe.details['shirt-oxford'].collar,undefined);
+ t.game.store('mine','backpack');pick('col','#7a1f2b').onclick();pick('graphic','star').onclick();
+ // The look carries the details while the switch is on; the classic body draws them.
+ let look=t.game.playerLook();assert.equal(look.top.d.btn,'#1f1f1f');assert.equal(JSON.stringify(look.accD.backpack),'{"col":"#7a1f2b","graphic":"star"}');
+ const {characterModel}=await import('../public/characters.js');const plain=characterModel({...look,top:{s:look.top.s,c:look.top.c},accD:{}}).children.length;assert.ok(characterModel(look).children.length>plain);
+ c.ChinaLifeFlags={cast:()=>false};look=t.game.playerLook();assert.equal(look.top.d,undefined);assert.equal(JSON.stringify(look.accD),'{}');
+});
+
+test('micro-customization saves are cleaned: unowned items, unknown fields and values are dropped; details survive a reload',async()=>{
+ const {harness,fixture}=await import('./game-harness.mjs');
+ const t=harness({...fixture(),wardrobe:{owned:['tee-basic','jeans','canvas','shirt-oxford'],wearing:{top:'shirt-oxford',bottom:'jeans',shoes:'canvas',acc:[]},colors:{},
+  details:{'shirt-oxford':{btn:'#1f1f1f',collar:'hood',glitter:true},jeans:{len:'crop',fit:'wide',btn:'#1f1f1f'},handbag:{col:'#7a1f2b'},canvas:{stitch:'#c0392b'}}}});
+ assert.equal(JSON.stringify(t.game.state.wardrobe.details),'{"shirt-oxford":{"btn":"#1f1f1f"},"jeans":{"len":"crop","fit":"wide"}}');
+});

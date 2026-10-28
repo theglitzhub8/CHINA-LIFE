@@ -14,5 +14,5 @@ function met(s,r){if(r==='graduated')return !!s?.student?.graduated;if(r==='home
  if(r.startsWith('year:'))return (window.ChinaLifeUniversity?.status?.year||1)>=Number(r.slice(5));return (s?.xp||0)>=Number(r.slice(3))}
 // '' when the item can be bought, otherwise what unlocks it.
 function reason(s,id){if(!on('wardrobe_locks'))return '';const r=rule(s,id);return r&&!met(s,r)?label(r):''}
-window.ChinaLifeWardrobeLocks={RULES,reason,label};
+window.ChinaLifeWardrobeLocks={RULES,reason,label,meets:met};
 })();

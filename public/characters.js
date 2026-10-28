@@ -13,7 +13,7 @@ const boxG=(w,h,d)=>geo('b'+w+h+d,()=>new THREE.BoxGeometry(w,h,d));
 const sph=r=>geo('s'+r,()=>new THREE.SphereGeometry(r,12,10));
 
 // Older saves pass shirt/trousers/outfit; newer ones pass a full outfit {top,bottom,shoes,acc} from the store.
-function normalise(o){const top=o.top||{s:o.outfit==='dress'?'dress':o.outfit==='tank'?'tank':'tee',c:o.shirt},bottom=o.bottom||{s:o.outfit==='dress'?'none':'jeans',c:o.trousers},shoes=o.shoes&&typeof o.shoes==='object'?o.shoes:{s:'sneakers',c:o.shoes};return {top:{s:top.s||'tee',c:hex(top.c??0x23799a)},bottom:{s:bottom.s||'jeans',c:hex(bottom.c??0x28394b)},shoes:{s:shoes.s||'sneakers',c:hex(shoes.c??0xf2efe8)},acc:Array.isArray(o.acc)?o.acc:[]}}
+function normalise(o){const top=o.top||{s:o.outfit==='dress'?'dress':o.outfit==='tank'?'tank':'tee',c:o.shirt},bottom=o.bottom||{s:o.outfit==='dress'?'none':'jeans',c:o.trousers},shoes=o.shoes&&typeof o.shoes==='object'?o.shoes:{s:'sneakers',c:o.shoes};return {top:{s:top.s||'tee',c:hex(top.c??0x23799a),d:top.d||{}},bottom:{s:bottom.s||'jeans',c:hex(bottom.c??0x28394b),d:bottom.d||{}},shoes:{s:shoes.s||'sneakers',c:hex(shoes.c??0xf2efe8)},acc:Array.isArray(o.acc)?o.acc:[],accD:o.accD&&typeof o.accD==='object'?o.accD:{}}}
 
 export function characterModel(options={}){
  const {skin:s0=0xa06d4d,hair='cropped',hairColor:h0=0x1f2628}=options,skin=hex(s0),hairColor=hex(h0),fit=normalise(options);
@@ -21,8 +21,13 @@ export function characterModel(options={}){
  const longSleeve=['shirt','hoodie','jacket','suit','sweater','qipao','gown'].includes(top.s),shortLegs=bottom.s==='shorts',skirt=bottom.s==='skirt'||dress;
  // Legs: thigh and shin hang from the hips; shorts and skirts show skin below.
  for(const side of [-1,1]){const hip=new THREE.Group();hip.position.set(side*.1,.9,0);g.add(hip);
-  part(hip,cap(.085,.34),dress||skirt?skin:bottom.c,0,-.22,0);
-  part(hip,cap(.07,.36),shortLegs||skirt?skin:bottom.c,0,-.62,0);
+  // Micro-customization (micro-style.js): trouser fit scales the legs, cropped trousers show skin above the shoe,
+  // and a seam stitch runs down the outside of each leg.
+  const bd=bottom.d,cloth=!dress&&!skirt,crop=cloth&&!shortLegs&&bd.len==='crop',fw=cloth?({slim:.86,wide:1.2}[bd.fit]||1):1;
+  part(hip,cap(.085,.34),dress||skirt?skin:bottom.c,0,-.22,0).scale.set(fw,1,fw);
+  if(crop){part(hip,cap(.07,.18),bottom.c,0,-.53,0).scale.set(fw,1,fw);part(hip,cap(.066,.16),skin,0,-.74,0)}
+  else part(hip,cap(.07,.36),shortLegs||skirt?skin:bottom.c,0,-.62,0).scale.set(shortLegs?1:fw,1,shortLegs?1:fw);
+  if(cloth&&bd.stitch)part(hip,boxG(.012,shortLegs?.3:crop?.42:.66,.012),hex(bd.stitch),side*.085*fw,shortLegs?-.24:crop?-.33:-.45,0);
   // Shoes by style.
   const sh=fit.shoes,sc=sh.c;if(options.lite){part(hip,boxG(.16,.11,.3),sc,0,-.87,.05);limbs.push(hip);continue}if(sh.s==='boots'){part(hip,boxG(.17,.24,.26),sc,0,-.82,.03)}else if(sh.s==='heels'){part(hip,boxG(.13,.08,.26),sc,0,-.87,.05);part(hip,boxG(.04,.12,.04),sc,0,-.92,-.07)}else if(sh.s==='slides'){part(hip,boxG(.15,.04,.28),sc,0,-.9,.04);part(hip,boxG(.15,.05,.1),skin,0,-.86,.06)}else if(sh.s==='loafers'){part(hip,boxG(.15,.08,.29),sc,0,-.88,.05)}else{part(hip,boxG(.16,.11,.3),sc,0,-.87,.05);part(hip,boxG(.162,.03,.31),0xffffff,0,-.92,.05)}
   limbs.push(hip)}
@@ -32,9 +37,17 @@ export function characterModel(options={}){
  // Torso: chest wider than waist; jackets and suits add an open front over an inner layer.
  const torso=part(g,geo('torso2',()=>new THREE.CylinderGeometry(.24,.19,.5,14)),top.c,0,1.22,0);torso.scale.set(1,1,.72);
  if(top.s==='jacket'||top.s==='suit'){part(g,boxG(.12,.46,.02),top.s==='suit'?0xf4f4f2:shade(top.c,1.35),0,1.22,.17);if(top.s==='suit')part(g,boxG(.05,.32,.02),0x8c1c2b,0,1.2,.185)}
- if(top.s==='shirt'||top.s==='suit'||top.s==='qipao'){part(g,boxG(.2,.06,.14),top.s==='qipao'?top.c:0xf4f4f2,0,1.48,.03)}
+ // Collar: the chosen shape for shirts, suits and jackets (micro-style.js), else the classic band.
+ const td=top.d,collar=['shirt','suit','jacket'].includes(top.s)?td.collar:null,cc=top.s==='jacket'?shade(top.c,1.2):0xf4f4f2;
+ if(collar==='mandarin')part(g,geo('mandarin',()=>new THREE.CylinderGeometry(.1,.11,.07,14,1,true)),top.s==='shirt'?top.c:cc,0,1.5,.01);
+ else if(collar==='spread')for(const x of [-1,1])part(g,boxG(.13,.04,.12),cc,x*.07,1.47,.06).rotation.z=-x*.35;
+ else if(collar==='v')for(const x of [-1,1])part(g,boxG(.025,.16,.02),cc,x*.04,1.42,.17).rotation.z=x*.35;
+ else if(top.s==='shirt'||top.s==='suit'||top.s==='qipao'||collar==='classic'){part(g,boxG(.2,.06,.14),top.s==='qipao'?top.c:cc,0,1.48,.03)}
  if(top.s==='hoodie')part(g,geo('hood',()=>new THREE.TorusGeometry(.16,.06,6,14)),top.c,0,1.48,-.04).rotation.x=Math.PI/2.4;
  if(top.s==='qipao')for(let i=0;i<3;i++)part(g,boxG(.03,.03,.02),0xc9a24a,.07,1.4-i*.09,.175);
+ // Buttons down the front (centre on shirts, on the open edge of suits and jackets) and a stitched hem line.
+ if(td.btn&&['shirt','suit','jacket'].includes(top.s))for(let i=0;i<3;i++)part(g,boxG(.03,.03,.02),hex(td.btn),top.s==='shirt'?0:.075,1.38-i*.1,top.s==='shirt'?.172:.185);
+ if(td.stitch&&!dress)part(g,boxG(.3,.014,.02),hex(td.stitch),0,1.0,.145);
  part(g,geo('neck',()=>new THREE.CylinderGeometry(.065,.075,.12,10)),skin,0,1.52,0);
  // Arms: sleeve, forearm (skin or sleeve) and hand.
  for(const side of [-1,1]){const shoulder=new THREE.Group();shoulder.position.set(side*.29,1.42,0);g.add(shoulder);
@@ -64,8 +77,15 @@ export function characterModel(options={}){
  if(acc.has('headphones')){const band=part(g,geo('band',()=>new THREE.TorusGeometry(.2,.025,6,16,Math.PI)),0x1d1d1d,0,1.78,0);band.rotation.z=0;for(const x of [-.2,.2])part(g,sph(.06),0x1d1d1d,x,1.74,0)}
  if(acc.has('chain'))part(g,geo('chain',()=>new THREE.TorusGeometry(.13,.015,6,18)),0xd9b24a,0,1.42,.08).rotation.x=Math.PI/2.3;
  if(acc.has('watch')||acc.has('luxwatch'))part(limbs[2],boxG(.08,.05,.09),acc.has('luxwatch')?0xd9b24a:0x1d1d1d,0,-.5,.02);
- if(acc.has('backpack'))part(g,boxG(.32,.4,.16),0x2f4a6b,0,1.2,-.22);
- if(acc.has('handbag')){part(g,boxG(.22,.16,.08),0x7a1f2b,.38,.95,.04);part(g,geo('strap',()=>new THREE.TorusGeometry(.09,.012,4,10,Math.PI)),0xd9b24a,.38,1.03,.04)}
+ // Bags take a colourway and a small graphic (micro-style.js).
+ const badge=(kind,x,y,z,flip)=>{if(!kind||kind==='none')return;const k=flip?-1:1;
+  if(kind==='star')for(const r of [0,Math.PI/4])part(g,boxG(.07,.07,.008),0xffd34d,x,y,z).rotation.z=r;
+  else if(kind==='stripe')part(g,boxG(.26,.035,.008),0xf4f4f2,x,y,z);
+  else if(kind==='heart')for(const sd of [-1,1])part(g,boxG(.05,.07,.008),0xd9304a,x+sd*.018,y,z).rotation.z=-sd*.6;
+  else if(kind==='panda'){part(g,boxG(.09,.08,.008),0xf4f4f2,x,y,z);for(const sd of [-1,1])part(g,boxG(.02,.02,.008),0x111111,x+sd*.02,y+.008,z+k*.004)}};
+ const bp=fit.accD.backpack||{},hb=fit.accD.handbag||{};
+ if(acc.has('backpack')){part(g,boxG(.32,.4,.16),bp.col?hex(bp.col):0x2f4a6b,0,1.2,-.22);badge(bp.graphic,0,1.22,-.305,true)}
+ if(acc.has('handbag')){part(g,boxG(.22,.16,.08),hb.col?hex(hb.col):0x7a1f2b,.38,.95,.04);part(g,geo('strap',()=>new THREE.TorusGeometry(.09,.012,4,10,Math.PI)),0xd9b24a,.38,1.03,.04);badge(hb.graphic,.38,.95,.085,false)}
  g.userData.limbs=limbs;return g;
 }
 
