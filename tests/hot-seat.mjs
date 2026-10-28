@@ -72,7 +72,7 @@ test('client wiring: loaded in the game, entry points in the Gossip Room, Gossip
  const dev=fs.readFileSync('public/index.dev.html','utf8'),rooms=fs.readFileSync('public/rooms.js','utf8'),world=fs.readFileSync('public/world.js','utf8'),js=fs.readFileSync('public/hot-seat.js','utf8');
  assert.ok(dev.includes('<script src="hot-seat.js"></script>')&&dev.includes('href="hot-seat.css"'));
  assert.ok(rooms.includes("ChinaLifeHotSeat.paintTV(")&&rooms.includes("'chinalife:hotseat'")&&rooms.includes("removeEventListener('chinalife:hotseat'"));
- assert.ok(rooms.includes("label('🔥 Hot seat · True or Cap?'"));assert.ok(world.includes("['🔥 Hot seat',"));
+ assert.ok(rooms.includes("label('🔥 Hot Seat · True or Cap?'"));assert.ok(world.includes("['🔥 Hot Seat',"));
  assert.ok(fs.readFileSync('public/admin.js','utf8').includes("ChinaLifeHotSeat?.mountAdmin($('hsCard')")&&fs.readFileSync('public/game.js','utf8').includes("ChinaLifeHotSeat?.mountAdmin($('adminHotSeat')"));
  // Offline never calls the API; online only talks to hot-seat.php.
  assert.ok(/const online=\(\)=>!sandbox\(\)\?\.localOnly&&!!root\.ChinaLifeCloud\?\.joined/.test(js));

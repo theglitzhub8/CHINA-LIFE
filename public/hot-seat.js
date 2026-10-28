@@ -98,7 +98,7 @@ function paintTV(x,w,h,g,text){
 function sheet(){
   let d=$('hotSeatDialog');if(d)return d;
   d=document.createElement('dialog');d.id='hotSeatDialog';d.className='hs-sheet';d.setAttribute('aria-label','Gossip hot seat');
-  d.innerHTML='<div class="hs-head"><b>🔥 Hot seat</b><span class="hs-anon">Anonymous · Gossip Room</span><button class="hs-x" aria-label="Close">✕</button></div><div class="hs-body"></div>';
+  d.innerHTML='<div class="hs-head"><b>🔥 Hot Seat</b><span class="hs-anon">Anonymous · Gossip Room</span><button class="hs-x" aria-label="Close">✕</button></div><div class="hs-body"></div>';
   d.querySelector('.hs-x').onclick=()=>d.close();
   d.addEventListener('close',()=>{clearInterval(poll);poll=null});
   document.body.appendChild(d);return d;

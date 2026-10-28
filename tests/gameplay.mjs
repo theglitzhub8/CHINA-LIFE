@@ -256,6 +256,6 @@ test('approved partners: restaurants are in food delivery, shops and services in
 
 test('Gist opens the one anonymous Gossip room with approved posts merged in',async()=>{
  const t=harness();let asked;t.context.ChinaLifeAuth={request:async path=>{asked=path;return {data:{posts:[{id:'1',body:'Welcome students',at:t.context.Date.now(),reactions:{like:0,fire:0,laugh:0},legacy:true}]}}}};
- await t.game.gist();assert.match(asked,/gist-night\.php/);assert.equal(t.document.querySelector('#activityContent h2').textContent,'Shenyang Gossip Center');
+ await t.game.gist();assert.match(asked,/gist-night\.php/);assert.equal(t.document.querySelector('#activityContent h2').textContent,'🤫 Gossip wall');
  const feed=t.document.getElementById('gistNightFeed');await new Promise(r=>setImmediate(r));assert.match(feed.textContent,/Anonymous tip/);assert.match(feed.textContent,/Welcome students/);assert.equal(feed.querySelector('[data-react]'),null,'old board posts have no reactions');
 });

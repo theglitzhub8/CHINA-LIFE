@@ -19,7 +19,7 @@ export function dressRoom(c,id){
   box(2.2,.45,.8,0x7a3b62,-3.8,.25,-3.4);box(2.2,.5,.15,0x7a3b62,-3.8,.6,-3.75);cylinder(.45,.42,0xd9b24a,-3.8,.22,-2.4);
   cylinder(.03,1.5,0x222222,4.6,.75,-2.6);mesh(new THREE.SphereGeometry(.09,10,8),0x333333,4.6,1.55,-2.6);
   label('🫖 Tea table · spill it',-3.8,1.2,-2.4,'interactive',()=>game.gist?.());
-  if(window.ChinaLifeHotSeat?.enabled?.()){cylinder(.34,.5,0xe0263b,3.7,.25,-2.6);box(.7,.7,.1,0xe0263b,3.7,.85,-2.95);cylinder(.36,.04,0xffcf5a,3.7,.52,-2.6);label('🔥 Hot seat · True or Cap?',3.9,1.9,-2.6,'interactive',()=>window.ChinaLifeHotSeat.open())}}
+  if(window.ChinaLifeHotSeat?.enabled?.()){cylinder(.34,.5,0xe0263b,3.7,.25,-2.6);box(.7,.7,.1,0xe0263b,3.7,.85,-2.95);cylinder(.36,.04,0xffcf5a,3.7,.52,-2.6);label('🔥 Hot Seat · True or Cap?',3.9,1.9,-2.6,'interactive',()=>window.ChinaLifeHotSeat.open())}}
  if(kind==='hospital'){
   // Ward: reception with a red cross, two curtained beds, a heart monitor and waiting chairs.
   box(3,1.05,.7,0xf4f7f8,-3.6,.53,BACK+1.1);box(3.1,.06,.8,0x5fb5b8,-3.6,1.08,BACK+1.1);
