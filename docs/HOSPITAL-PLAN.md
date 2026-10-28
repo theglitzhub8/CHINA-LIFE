@@ -30,6 +30,11 @@ it, and street accidents can't happen in one-city mode); nothing to learn or do 
 take you to the City Hospital by ambulance: you wake up on the ward, a nurse explains what happened, and the bill is
 charged on the server (it can be waived the first time). A "🩺 Your health" screen in the hospital shows what is wrong
 right now (low needs, sickness, drunk) and the treatments that fix it.
+✅ Done 29 Oct 2026: fainting (hunger or energy) and a drinking blackout take you to the hospital by ambulance;
+economy.php action `hospital` charges ¥200 (`CL_HOSPITAL_BILL`), the first visit free, no second bill within 10
+minutes, never more than you have. "🩺 Your health" is on the hospital's place bar (one line in world.js) and on the
+wake-up screen. Not built: an automatic ambulance for food sickness (it is listed in Your health and cured on arrival,
+as before). Code: public/hospital.js, game.js `faint`/`blackout`; tests: tests/hospital.mjs, tests/php-api.mjs.
 
 **Phase 1 · Check-ups and hospital Chinese.** A free weekly check-up: the doctor asks questions in simple Chinese
 (发烧 fever, 头疼 headache, 肚子疼 stomach ache, 过敏 allergy…) and you answer from choices; doing well gives XP and

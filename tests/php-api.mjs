@@ -1425,3 +1425,24 @@ test('Gossip admin: settings checked and applied, extra blocked words, wall repo
   assert.equal((await call(1,'admin.php','POST',{action:'gossip_moderate',id,op:'hide'})).httpStatus,404);
  }finally{await set(d.defaults);await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{gossip_show:false,gossip_wall:false}});sql('USE chinalife_test; DELETE FROM chinalife_gist_night WHERE user_id=49')}
 });
+
+// Hospital Phase 0 (switch hospital_care): waking up at the hospital. ¥200 from the ledger, first visit free, a
+// repeat inside 10 minutes free, never below ¥0.
+test('hospital bill: off by default, first visit free, recovering free, then ¥200, never more than you have',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(53,'user53')");
+ assert.equal((await call(53,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China'}}})).httpStatus,200);
+ const coins=()=>Number(sql('USE chinalife_test; SELECT coins FROM chinalife_balances WHERE user_id=53').trim());
+ const visit=cause=>call(53,'economy.php','POST',{action:'hospital',cause});
+ assert.equal((await visit('faint')).httpStatus,403,'switched off by default');
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{hospital_care:true}});
+  const start=coins();
+  const first=await visit('faint');assert.equal(first.httpStatus,200,first.message);assert.equal(first.data.charged,0);assert.equal(first.data.first,true);assert.equal(coins(),start);
+  const again=await visit('blackout');assert.equal(again.data.charged,0);assert.equal(again.data.recovering,true);
+  assert.equal((await visit('nonsense')).httpStatus,400);
+  sql("USE chinalife_test; UPDATE chinalife_economy_actions SET created_at=DATE_SUB(NOW(),INTERVAL 1 HOUR) WHERE user_id=53 AND action='hospital'");
+  const paid=await visit('faint');assert.equal(paid.data.charged,200);assert.equal(paid.data.first,false);assert.equal(coins(),start-200);
+  sql("USE chinalife_test; UPDATE chinalife_economy_actions SET created_at=DATE_SUB(NOW(),INTERVAL 1 HOUR) WHERE user_id=53 AND action='hospital'; UPDATE chinalife_balances SET coins=50 WHERE user_id=53");
+  const broke=await visit('faint');assert.equal(broke.data.charged,50,'never below ¥0');assert.equal(coins(),0);
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{hospital_care:false}})}
+});

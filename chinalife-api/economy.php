@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/common.php';
+const CL_HOSPITAL_BILL=200; // Hospital Phase 0: waking up at the hospital (owner, 29 Oct 2026); first visit free
 cl_methods(['GET','POST']);
 
 $jobs=[
@@ -37,7 +38,7 @@ if ($method==='GET') {
 cl_rate('economy',30,60);
 $input=cl_body();
 $action=(string)($input['action']??'');
-if (!in_array($action,['job','mission','purchase','accident','club-drink','club-spray','school','jet'],true)) cl_fail('Choose a job, mission or purchase');
+if (!in_array($action,['job','mission','purchase','accident','hospital','club-drink','club-spray','school','jet'],true)) cl_fail('Choose a job, mission or purchase');
 // v9: ChampagnePappi's bar in 007 Club. Price and XP live here only; one drink per 90 s, XP for the first 8 a day.
 $clubDrinks=['pappi-fizz'=>[120,10],'gold-rush'=>[300,25],'zero-proof'=>[40,5],'water'=>[0,0]];
 
@@ -67,6 +68,20 @@ try {
     $game=cl_lock_character($uid);
     // Street accident: ambulance ¥300 + treatment ¥500 = ¥800, taken from the server ledger and never below ¥0.
     // One accident per 10 minutes; a repeat inside the cooldown is free (the player is still recovering).
+    // Hospital Phase 0 (docs/HOSPITAL-PLAN.md, appadmin switch hospital_care): fainting, a blackout or bad food sickness
+    // take you to the City Hospital. The bill (CL_HOSPITAL_BILL, owner: ¥200) comes off the server ledger, never below
+    // ¥0; your first visit ever is free, and a second one inside 10 minutes is free too (you are still recovering).
+    if ($action==='hospital') {
+        if (!(cl_hafrik_features()['hospital_care']??false)) cl_fail('The hospital service is switched off',403);
+        $cause=(string)($input['cause']??'');if (!in_array($cause,['faint','blackout','sick'],true)) cl_fail('Choose why you are at the hospital');
+        $visits=(int)cl_one('SELECT COUNT(*) n FROM chinalife_economy_actions WHERE user_id=? AND action="hospital"','i',[$uid])['n'];
+        $recent=(bool)cl_one('SELECT id FROM chinalife_economy_actions WHERE user_id=? AND action="hospital" AND created_at>=DATE_SUB(NOW(),INTERVAL 10 MINUTE)','i',[$uid]);
+        $held=cl_balances_lock($uid);$fee=$visits===0||$recent?0:max(0,min(CL_HOSPITAL_BILL,$held['coins']));
+        $moved=$fee?cl_move_totals($uid,$game,-$fee,0):economy_totals($game);
+        economy_note('hospital',$cause.':'.time().':'.bin2hex(random_bytes(3)),-$fee,0);if ($fee) cl_store_totals($uid,$game);
+        $db->commit();
+        json_response('success',$moved+['charged'=>$fee,'first'=>$visits===0,'recovering'=>$recent,'bill'=>CL_HOSPITAL_BILL,'duplicate'=>false,'bonus'=>false],$fee?'Treated at the hospital.':'Treated free of charge.');
+    }
     if ($action==='accident') {
         $walk=cl_optional_rows('SELECT city FROM chinalife_presence WHERE user_id=? AND street_at>=DATE_SUB(NOW(),INTERVAL 30 SECOND)','i',[$uid]);
         if (!$walk) cl_fail('Accidents only happen on the street',403);
