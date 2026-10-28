@@ -191,7 +191,10 @@ async function syncTransfers(){if(!account||!auto||busy||loading||!game.state.cr
 // R5: class attendance (Student). GET reads the status (and applies a missed-days hold server-side); POST marks today present.
 async function attendance(mark=false){if(!account)throw Error('Sign in to mark attendance.');const generation=authEpoch;if(mark){if(!await upload())throw Error('Save your character first.');await window.ChinaLifeCloud.presenceNow?.()}
  const result=await api('/chinalife/attendance.php',mark?'POST':'GET',mark?{}:undefined),d=result.data||result;
- if(d.event){const saved=await loadRemote();if(generation!==authEpoch)throw Error('Your account changed.');game.state.attendance=saved.state.attendance;reconcileTransfers(saved);remote=saved;game.save();game.refresh?.()}return d}
+ if(d.event){const saved=await loadRemote();if(generation!==authEpoch)throw Error('Your account changed.');game.state.attendance=saved.state.attendance;reconcileTransfers(saved);remote=saved;
+  // attendance.php moved coins/XP on the ledger (reward, hold or release). Without this the next save reads the old
+  // device total as spending and takes the reward back.
+  game.state.money+=d.coins||0;game.state.xp+=d.xp||0;game.save();game.refresh?.()}return d}
 async function claimDaily(){
  const generation=authEpoch;if(!await upload())throw Error('Save your character before claiming your reward.');
  const result=await api('/chinalife/daily.php','POST',{});

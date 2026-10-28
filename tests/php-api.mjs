@@ -1019,3 +1019,17 @@ test('Party Night runs a timed dance, takes one vote each and names the winner',
  const done=await call(6,'party.php?city=Shenyang&place=night');
  assert.equal(done.data.round.phase,'closed');assert.equal(done.data.round.winner,'6');assert.match(done.data.round.title,/user6 · Dance Champion/);
 });
+
+test('attendance: the reward paid by the server stays paid and the attendance record survives device saves',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(22,'user22')");
+ assert.equal((await call(22,'save.php','POST',{revision:0,save:{character:{},game:{...game(),place:'campus'}}})).httpStatus,200);
+ const t=harness(null),c=t.context;c.HafrikSession={token:'test-22',user:{id:22}};c.URLSearchParams=URLSearchParams;c.fetch=(url,opts)=>fetch(base+new URL(url).pathname+new URL(url).search,opts);
+ await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);await c.ChinaLifeCloud.ready;
+ const money=t.game.state.money,xp=t.game.state.xp;
+ await call(22,'presence.php','POST',{...presence('Shenyang','campus')});const a=await c.ChinaLifeCloud.attendance(true);assert.equal(a.event,'present');assert.equal(a.today,true);
+ assert.equal(t.game.state.money,money+30);assert.equal(t.game.state.xp,xp+15);
+ // The next device save must not read the old totals as spending, nor drop the attendance record.
+ t.game.state.needs.fun=Math.max(0,t.game.state.needs.fun-1);await c.ChinaLifeCloud.upload();
+ const s=(await call(22,'save.php')).data.save.game;assert.equal(s.money,money+30);assert.equal(s.xp,xp+15);assert.equal(s.attendance.days.length,1);
+ assert.equal((await call(22,'attendance.php')).data.today,true);
+});
