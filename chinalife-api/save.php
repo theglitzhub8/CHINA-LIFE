@@ -74,6 +74,8 @@ if ($stored) {
     if ($xp!==0) $xp=0;
     $game['money']=$money;$game['xp']=$xp;$game['rankClaimed']=0;
 }
+// Wardrobe locks (switch wardrobe_locks): no locked item before its milestone (wardrobe-locks.php).
+$features=cl_hafrik_features();if(!empty($features['wardrobe_locks'])){require_once __DIR__.'/wardrobe-locks.php';$game=cl_wardrobe_enforce($game,$storedGame,$features);}
 $gameJson=json_encode($game,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);$characterJson=json_encode($character,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);
 if ($revision===0) $changed=cl_run('INSERT IGNORE INTO chinalife_saves(user_id,character_data,game_state,revision,created_at,updated_at) VALUES(?,?,?,1,NOW(),NOW())','iss',[$uid,$characterJson,$gameJson]);
 else $changed=cl_run('UPDATE chinalife_saves SET character_data=?,game_state=?,revision=revision+1,updated_at=NOW() WHERE user_id=? AND revision=?','ssii',[$characterJson,$gameJson,$uid,$revision]);

@@ -1211,3 +1211,22 @@ test('university graduation: needs four passed years and a major, opens in Year 
   assert.match((await uni('2026-11-24 10:00',{action:'graduate',text:good})).message,/already graduated/);
  }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:false}})}
 });
+
+// University Years Phase 9: the server refuses new locked clothes in a save; items owned before stay.
+test('wardrobe locks: a save cannot add a locked item before its milestone; owned items stay; first home unlocks',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(29,'user29')");
+ const wardrobe=(owned,acc=[])=>({owned:['tee-basic','jeans','canvas',...owned],wearing:{top:'tee-basic',bottom:'jeans',shoes:'canvas',acc},colors:{}});
+ const save=async g=>{const cur=await call(29,'save.php');return call(29,'save.php','POST',{revision:cur.data?.revision??0,save:{character:{},game:g}})};
+ const base={...game(),background:'Worker'};
+ // Before the switch: a gold chain is bought.
+ assert.equal((await save({...base,wardrobe:wardrobe(['chain'])})).httpStatus,200);
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{wardrobe_locks:true}});
+  assert.equal((await save({...base,wardrobe:wardrobe(['chain','luxwatch','leather-white'],['chain','luxwatch'])})).httpStatus,200);
+  let w=(await call(29,'save.php')).data.save.game.wardrobe;
+  assert.deepEqual(w.owned,['tee-basic','jeans','canvas','chain'],'the watch (Legend) and leather sneakers (first home) are refused; the chain stays');assert.deepEqual(w.wearing.acc,['chain']);
+  // A first home unlocks the leather sneakers.
+  assert.equal((await save({...base,properties:{Shenyang:'apartment'},wardrobe:wardrobe(['chain','leather-white'])})).httpStatus,200);
+  w=(await call(29,'save.php')).data.save.game.wardrobe;assert.ok(w.owned.includes('leather-white'));
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{wardrobe_locks:false}})}
+});

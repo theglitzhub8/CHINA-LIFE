@@ -130,9 +130,15 @@ Every phase sits behind an admin switch (default OFF) so the live game is unchan
 - [ ] Later: a graduation hall room with an audience, and switching to a working background after graduating.
 
 ### Phase 9. Progression-locked wardrobe, switch `wardrobe_locks`
-- [ ] `requires` on store items: year, graduation, first apartment, rank. Locked items visible with a lock and
-      the reason; the server refuses buying or wearing locked items.
-- [ ] Starter set reviewed so it looks neat, not humiliating.
+- [x] 12 locked items (`public/wardrobe-locks.js`, same list in `chinalife-api/wardrobe-locks.php`, kept equal by a
+      test). Students with university years: Varsity jacket at Year 2, Tailored suit and Suit trousers at graduation.
+      Everyone else by rank (Explorer 200 XP ... Legend 12,000 XP). Leather jacket and White leather sneakers: your
+      first apartment. Gown, designer sneakers, gold chain, handbag, luxury watch: higher ranks.
+- [x] The store shows a lock and the milestone instead of the price, and no Buy button; the item can still be
+      previewed. Items already owned are never locked.
+- [x] `save.php` refuses a new locked item before its milestone and wearing one that is not owned; items in the stored
+      wardrobe stay (bought before the locks or unlocked earlier).
+- [x] Starter set reviewed: Everyday tee, Slim jeans and Canvas sneakers stay neat and are never locked.
 
 ### Phase 10. Micro-customization, switch `micro_style`
 - [ ] Per-item details: button colour, stitching colour, collar type, bag colourway and graphic, trouser length

@@ -133,3 +133,26 @@ test('the graduation blazer is never sold, but shows under My stuff once it is y
  assert.equal(cat('clothes'),false);assert.equal(cat('mine'),false);
  t.game.state.wardrobe.owned.push('grad-blazer');assert.equal(cat('clothes'),false);assert.equal(cat('mine'),true);
 });
+
+test('wardrobe locks: the game and the server use the same list',()=>{
+ const c={window:{}};vm.createContext(c);vm.runInContext(r('public/wardrobe-locks.js'),c);const js=c.window.ChinaLifeWardrobeLocks.RULES;
+ const php=Object.fromEntries([...r('chinalife-api/wardrobe-locks.php').matchAll(/'([a-z-]+)'=>\['([a-z0-9:]+)','([a-z0-9:]+)'\]/g)].map(m=>[m[1],[m[2],m[3]]]));
+ assert.equal(JSON.stringify(php),JSON.stringify(js));assert.equal(Object.keys(js).length,12);
+ for(const id of ['tee-basic','jeans','canvas'])assert.ok(!js[id],id+' (starter) is never locked');
+});
+
+test('wardrobe locks in the store: a lock and the milestone instead of a price; students unlock by year and graduation',async()=>{
+ const {harness,fixture}=await import('./game-harness.mjs');const t=harness({...fixture(),place:'mall'}),c=t.context,d=t.document;vm.runInContext(r('public/wardrobe-locks.js'),c);
+ const card=(cat,id)=>{t.game.store(cat,id);return d.querySelector('[data-item="'+id+'"] small').textContent},detail=()=>d.querySelector('.store-detail').textContent;
+ c.ChinaLifeFlags={cast:()=>false};assert.equal(card('clothes','suit-tailored'),'¥6,800','switch off: on sale as before');
+ // Everyone else (and students while university years are off) unlocks by rank.
+ c.ChinaLifeFlags={cast:k=>k==='wardrobe_locks'};assert.equal(card('clothes','suit-tailored'),'🔒 Regular rank');assert.match(detail(),/Unlocks with: Regular rank/);assert.equal(d.getElementById('storeBuy'),null);
+ assert.equal(card('clothes','jacket-leather'),'🔒 Your first apartment');assert.equal(card('clothes','hoodie'),'¥320','not locked');
+ // Students with university years: Year 2 and graduation.
+ c.ChinaLifeFlags={cast:k=>k==='wardrobe_locks'||k==='uni_years'};c.ChinaLifeUniversity={status:{year:1}};
+ assert.equal(card('clothes','jacket-varsity'),'🔒 University Year 2');assert.equal(card('clothes','suit-tailored'),'🔒 Graduation');
+ c.ChinaLifeUniversity.status.year=2;assert.equal(card('clothes','jacket-varsity'),'¥680');assert.ok(d.getElementById('storeBuy'));
+ t.game.state.student={university:'campus',graduated:'2026-11-23'};assert.equal(card('clothes','suit-tailored'),'¥6,800');
+ // Owned items are never locked.
+ t.game.state.wardrobe.owned.push('luxwatch');assert.doesNotMatch(card('accessories','luxwatch'),/🔒/);
+});
