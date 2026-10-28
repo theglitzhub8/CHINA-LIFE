@@ -90,3 +90,6 @@ html.fb-open body{overflow:hidden}
 .fb-m span+span{border-top:1px solid #1f5236}.fb-m span.w{font-weight:800;color:#ffe14d}
 .fb-admin-list{padding-left:18px}.fb-admin-list button{margin-left:6px}
 .fb-stage:has(.fb-full) .fb-controls,.fb-stage:has(.fb-full) .fb-count,.fb-stage:has(.fb-full) .fb-banner{display:none}
+/* Voice at the Football Field: the header mic (football.js micTap / micLabel). */
+.fb-mic{min-height:44px;padding:0 12px;border:0;border-radius:22px;background:#1d4a31;color:#fff;font-weight:700;font-size:14px;margin-left:auto;margin-right:8px}
+.fb-mic.on{background:#e0263b}

@@ -79,6 +79,9 @@ local tournaments) even though the server was live. It now uses the signed-in re
 same function), so lobbies, quick match, tournaments and results go through football.php, and the server switch
 `football_matches` decides whether matches are open (switch it off and the Football screen closes for players).
 Checked on the local stack: a second player joined a lobby and showed up on the host's screen.
+Same day: a hotfix keeps Football available while the server's answer is unknown (the startup check ran before the
+player joined, which hid Football for live players for about 15 minutes), and the Football screen got a header mic
+("🎙 Talk / 🔴 Live / 🔇 Muted") for the Football Field's voice room, shared by everyone at the field (both teams).
 
 Went live 27 Oct 2026 18:19–18:20 CST (commit 8b52400): migration run on hafr_hafrikcom2, football.php / football-lib.php / football-admin.php + admin.php hook uploaded, front end deployed, switch `football_matches` = on. Tournament prize coins left at 0. Backup and RESTORE.txt: `/root/backups/chinalife-football-golive-20261027-101914/` (UTC stamp). Off switch without a restore: Admin > Football matches > Turn off. Still pending: a two-account online test (lobby, match, result confirm, tournament) with seed logins.
 

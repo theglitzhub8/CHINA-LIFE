@@ -230,3 +230,15 @@ test('online but not asked yet: Football stays available, asks the server once, 
  c.ChinaLifeCloud.joined=true;assert.equal(c.ChinaLifeFootball.enabled(),true,'unknown: stays available');c.ChinaLifeFootball.enabled();
  assert.equal(calls.length,1,'asks once');await new Promise(r=>setTimeout(r,0));assert.equal(c.ChinaLifeFootball.enabled(),false,'the server said off');
 });
+
+// Voice at the Football Field: the match screen's header mic joins / mutes the venue's voice (the same as the
+// on-screen mic, which the full-screen match covers) and shows Talk / Live / Muted.
+test('the Football screen has a mic: it uses the room voice and shows Talk, Live or Muted',async()=>{
+ const {harness,fixture}=await import('./game-harness.mjs');const vm=await import('node:vm');
+ const t=harness({...fixture(),place:'football'}),c=t.context,v={active:false,listening:false,muted:true};let taps=0;
+ c.requestAnimationFrame=()=>0;c.cancelAnimationFrame=()=>{};c.ChinaLifeVoice=v;const q=t.document.getElementById('quickVoice');q.onclick=async()=>{taps++;Object.assign(v,{active:true,listening:false,muted:false})};
+ vm.runInContext(readFileSync('public/football-engine.js','utf8'),c);vm.runInContext(readFileSync('public/football.js','utf8'),c);
+ await c.ChinaLifeFootball.open();const mic=t.document.querySelector('#fbScreen .fb-mic');assert.ok(mic,'the header has a mic');assert.equal(mic.textContent,'🎙 Talk');
+ mic.dispatchEvent(new c.Event('click',{bubbles:true}));await new Promise(r=>setTimeout(r,0));assert.equal(taps,1,'it uses the room voice');assert.equal(mic.textContent,'🔴 Live');
+ v.muted=true;mic.dispatchEvent(new c.Event('click',{bubbles:true}));await new Promise(r=>setTimeout(r,0));assert.equal(taps,2);
+});

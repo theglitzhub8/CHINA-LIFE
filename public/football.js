@@ -35,9 +35,10 @@
   function screen() {
     if (el) return el;
     el = document.createElement('div'); el.id = 'fbScreen'; el.className = 'fb-screen'; el.hidden = true;
-    el.innerHTML = '<header class="fb-top"><button class="fb-back" data-fb="back" aria-label="Back">‹</button><b class="fb-title">⚽ Football Field</b><button class="fb-x" data-fb="close" aria-label="Close">✕</button></header><main class="fb-body"></main><div class="fb-msg" hidden></div>';
+    el.innerHTML = '<header class="fb-top"><button class="fb-back" data-fb="back" aria-label="Back">‹</button><b class="fb-title">⚽ Football Field</b><button class="fb-mic" data-fb="mic" aria-label="Join voice">🎙 Talk</button><button class="fb-x" data-fb="close" aria-label="Close">✕</button></header><main class="fb-body"></main><div class="fb-msg" hidden></div>';
     document.body.appendChild(el);
     el.addEventListener('click', onClick);
+    setInterval(micLabel, 1500);
     return el;
   }
   const body = () => $('.fb-body', screen());
@@ -433,9 +434,15 @@
     enterLobby(localLobby(tCur.team_size, String(bm.a) === String(mine) ? 0 : 1, { tournament: tCur.id, bracketMatch: bm.id, knockout: true }));
   }
   // ---------- clicks ----------
+  // Voice at the Football Field: everyone at the field (both teams, the lobby and the stands) shares the venue's voice
+  // room (voice.js). The match screen covers the on-screen mic, so its header has one: the same join / mute / unmute.
+  async function micTap() { const q = document.getElementById('quickVoice'); if (q?.onclick) { try { await q.onclick(); } catch {} } else root.ChinaLifeVoice?.open?.(); }
+  function micLabel() { const b = el?.querySelector('.fb-mic'), v = root.ChinaLifeVoice; if (!b || el.hidden) return; const live = v?.active && !v.listening && !v.muted, muted = v?.active && !v.listening && v.muted;
+    b.textContent = live ? '🔴 Live' : muted ? '🔇 Muted' : '🎙 Talk'; b.classList.toggle('on', !!live); b.setAttribute('aria-label', live ? 'Mute microphone' : muted ? 'Unmute microphone' : 'Join voice'); }
   async function onClick(e) {
     const b = e.target.closest('[data-fb]'); if (!b) return; const a = b.dataset.fb;
     if (a === 'close') return close();
+    if (a === 'mic') { await micTap(); return micLabel(); }
     if (a === 'back' || a === 'home') { if (match && !match.local && match.status === 'lobby') { try { await call('POST', { action: 'leave', id: match.id }); } catch {} } finished = false; return view === 'home' ? close() : home(); }
     if (a === 'size') { pickSize = +b.dataset.n; return home(); }
     if (a === 'diff') { difficulty = b.dataset.d; try { localStorage.setItem(DIFF_KEY(), difficulty); } catch {} return paintLobby(); }
