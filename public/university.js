@@ -23,13 +23,17 @@ const place=()=>{if(chip)chip.style.top=document.querySelector('.r5-attend:not(.
 function render(){const show=on()&&st&&campus(G()?.state?.place)&&!document.querySelector('dialog[open]');if(!show){chip?.remove();chip=null;return}
  if(!chip){chip=document.createElement('div');chip.className='r5-attend uni-chip';chip.setAttribute('role','status');($('worldUI')||document.body).appendChild(chip)}
  place();
- const cls=today().find(c=>c.status==='now'),exam=st.exams.length>0,k=headline(st)+exam+(cls?.id||'')+busy+st.attendance;if(chip.dataset.k===k)return;chip.dataset.k=k;
+ const cls=today().find(c=>c.status==='now'),exam=st.exams.length>0,k=headline(st)+exam+(cls?.id||'')+busy+st.attendance;
+ // "uni-now": a class check-in is open, so this card goes ahead of the others in the one-card spot (r3.js lane()).
+ chip.classList.toggle('uni-now',!!cls);if(chip.dataset.k===k)return;chip.dataset.k=k;
  const [icon,title,small,button]=cls?['📳','Class now: '+cls.time+' '+cls.subject,'Check in from the classroom · +'+st.classReward.xp+' XP · ¥'+st.classReward.coins,busy?'…':'Check in']:
   exam?['📝','Exam day: '+st.exams.map(y=>'Year '+y).join(', ')+' open','Pass mark '+(st.passMarks[String(st.exams[0])]??st.passMark)+'/'+st.questions+' · +'+st.reward.xp+' XP · ¥'+st.reward.coins,'Take exam']:
   ['🎓','Year '+st.year+' · '+st.dayName,headline(st)+' · attendance '+st.attendance,'Open'];
  chip.innerHTML='<span class="r5-ic">'+icon+'</span><p><b>'+esc(title)+'</b><small>'+esc(small)+'</small></p><button type="button"'+(busy?' disabled':'')+'>'+button+'</button>';
  chip.querySelector('button').onclick=()=>cls?attend():open()}
-async function attend(){const g=G();if(busy)return;busy=true;render();try{await C().presenceNow?.();const d=await C().university({action:'attend'});st=d;at=Date.now();g.toast?.('✓ Checked in to '+d.attended.subject+' · +'+d.attended.xp+' XP · ¥'+d.attended.coins)}
+async function attend(){const g=G();if(busy)return;busy=true;render();try{await C().presenceNow?.();const d=await C().university({action:'attend'});st=d;at=Date.now();g.toast?.('✓ Checked in to '+d.attended.subject+' · +'+d.attended.xp+' XP · ¥'+d.attended.coins);
+  // Being in class also marks today's campus attendance (school.js), so its "Class today" card doesn't ask again.
+  const school=window.ChinaLifeSchool;if(school?.status&&!school.status.today)school.mark()}
  catch(e){g.toast?.(e.message||'Check-in failed.');await load(true)}busy=false;render()}
 async function open(){const g=G();if(!g)return;if(!st)await load(true);if(!st)return g.toast?.('University status is not available right now.');const s=st;
  const results=[1,2,3,4].map(y=>{const r=s.results[String(y)];return '<li>'+(r?.passed?'✅':r?'❌':y<=s.year?'⏳':'🔒')+' Year '+y+(r?' · '+r.score+'/'+r.total+(r.passed?' passed':' · resit on Sunday'):y<s.year?' · exam missed · resit on Sunday':y===s.year?' · exam on Sunday':'')+'</li>'}).join('');

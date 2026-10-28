@@ -20,3 +20,22 @@ test('one-city tour: no "Tap Map" step, "Pick a place" completes on arrival anyw
  c.ChinaLifeOnboarding.advance('order');c.ChinaLifeOnboarding.advance('hi');c.ChinaLifeOnboarding.advance('phone');assert.equal(c.ChinaLifeTour.active(),false);
  assert.match(game,/dailyReady\(\)&&reminded!==today\(\)&&!window\.ChinaLifeTour\?\.active\?\.\(\)/,'reward banner waits for the tour');
 });
+
+// UI review task 3: one card under the HUD at a time, and banners take that spot (newest wins) instead of covering the HUD.
+test('one card spot: the most important card shows, banners take the spot, the newest banner wins',()=>{
+ const t=harness({...fixture(),day:9,xp:5000,visited:['a','b','c']}),c=t.context,d=t.document;let now=0;
+ const mem=new Map();Object.assign(c,{matchMedia:()=>({matches:true}),requestAnimationFrame:f=>f(),MutationObserver:class{observe(){}},addEventListener(){},performance:{now:()=>++now},
+  localStorage:{getItem:k=>mem.get(k)??null,setItem:(k,v)=>mem.set(k,String(v)),removeItem:k=>mem.delete(k)}});
+ vm.runInContext(r('public/r3.js'),c);const ui=d.getElementById('worldUI'),add=cls=>{const e=d.createElement('div');e.className=cls;ui.appendChild(e);return e};
+ const uni=add('r5-attend uni-chip'),kitchen=add('r5-attend kitchen-chip'),school=add('r5-attend'),tip=add('r4-tip');c.ChinaLifeLane.update();
+ const shown=()=>[...d.querySelectorAll('.r5-attend,.r4-tip,.message-notification,#toast')].filter(e=>!e.classList.contains('lane-wait'));
+ assert.deepEqual(shown().filter(e=>e!==d.getElementById('toast')),[school],'daily attendance before kitchen, university info and tips');
+ uni.classList.add('uni-now');c.ChinaLifeLane.update();assert.ok(uni.classList.contains('lane-first'),'an open class check-in goes first');
+ school.remove();uni.classList.remove('uni-now');c.ChinaLifeLane.update();assert.ok(kitchen.classList.contains('lane-first'),'the next card comes back when one goes');
+ // A banner takes the spot: every card waits. Two banners: the newest shows.
+ const toast=d.getElementById('toast');toast.classList.add('show');c.ChinaLifeLane.update();assert.ok([uni,kitchen,tip].every(e=>e.classList.contains('lane-wait')));
+ const note=d.createElement('button');note.className='message-notification';note.hidden=false;d.body.append(note);c.ChinaLifeLane.update();
+ assert.ok(toast.classList.contains('lane-wait'));assert.ok(!note.classList.contains('lane-wait'));
+ note.hidden=true;toast.classList.remove('show');c.ChinaLifeLane.update();assert.ok(kitchen.classList.contains('lane-first'),'cards return when banners go');
+ const css=r('public/r4.css');assert.match(css,/#toast\{top:calc\(max\(8px,env\(safe-area-inset-top\)\) \+ 56px\)!important;opacity:0/);assert.match(css,/\.lane-wait\{display:none!important\}/);
+});

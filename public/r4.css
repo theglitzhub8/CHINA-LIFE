@@ -227,3 +227,11 @@ html:root body .fd-tx{flex:1;min-width:0}html:root body .fd-tx b{display:block;f
 html:root body .fd-ck{flex:none;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;color:#a0b2b4;font:600 18px/1 var(--io-font)}
 html:root body .fd-row.on .fd-ck{background:#34C759;color:#fff;font-size:13px}html:root body .fd-row.on .fd-tx b{color:#6b8588}
 html:root body #worldUI.tp-walking:not(.dock-open) .tp-enter{translate:0 -170px}
+/* One card spot and one banner lane (docs/UI-UX-REVIEW.md task 3, r3.js lane()): the top card and every banner sit just
+   under the HUD, never over the clock and money; whatever waits is hidden until its turn. */
+html:root body .lane-wait{display:none!important}
+html:root body #worldUI:not(.map-view) .lane-first{top:calc(max(8px,env(safe-area-inset-top)) + 56px)!important}
+html:root body #toast{top:calc(max(8px,env(safe-area-inset-top)) + 56px)!important;opacity:0;transform:translateY(-12px)!important;pointer-events:none}
+html:root body #toast.show{opacity:1;transform:none!important;pointer-events:auto}
+html:root body .message-notification{top:calc(max(8px,env(safe-area-inset-top)) + 56px)!important}
+@media (max-width:760px){html:root body #toast,html:root body .message-notification{left:16px!important;right:72px!important;width:auto!important;max-width:none!important}html:root body .message-notification{transform:none!important}}

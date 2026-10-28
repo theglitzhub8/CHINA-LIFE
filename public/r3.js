@@ -74,6 +74,25 @@ function drag(){const ui=$('worldUI'),c=$('infoPanel');if(!ui||!c||c.dataset.r3)
 function freeze(){const ui=$('worldUI');if(ui.classList.contains('sheet-dragging'))return;ui.style.setProperty('--r4-tpb',getComputedStyle(ui).getPropertyValue('--tp-bottom').trim()||'164px')}
 function haptic(){if(!reduce.matches&&navigator.vibrate)try{navigator.vibrate(8)}catch{}}
 
+/* ---------- One card spot and one banner lane (docs/UI-UX-REVIEW.md task 3) ---------- */
+// Cards on the map (tour, class check-in, daily attendance, kitchen, university, tips, street chip) share the spot under
+// the HUD: only the most important one shows, the others wait (class lane-wait) and come back when it goes. Banners
+// (toast, game and message notifications) use the same spot; while one shows the cards wait, and the newest banner wins.
+const CARD_SEL='#coachCard,.r5-attend,.r4-tip:not(.inline),.street-chip',BANNER_SEL='#toast,.message-notification';
+const rank=el=>el.id==='coachCard'?100:el.classList.contains('uni-now')?90:el.classList.contains('kitchen-chip')?60:el.classList.contains('uni-chip')?50:el.classList.contains('r5-attend')?80:el.classList.contains('r4-tip')?40:30;
+const bannerUp=el=>el.id==='toast'?el.classList.contains('show'):!el.hidden;const since=new Map();let laneRaf=0;
+function lane(){laneRaf=0;const banners=[...document.querySelectorAll(BANNER_SEL)];
+ for(const b of banners){if(bannerUp(b)){if(!since.has(b))since.set(b,performance.now())}else since.delete(b)}
+ const newest=banners.filter(b=>since.has(b)).sort((a,b)=>since.get(b)-since.get(a))[0]||null;
+ for(const b of banners)set(b,'lane-wait',!!newest&&b!==newest);
+ const cards=[...document.querySelectorAll(CARD_SEL)].sort((a,b)=>rank(b)-rank(a)),first=newest?null:cards[0]||null;
+ for(const c of cards){set(c,'lane-wait',c!==first);set(c,'lane-first',c===first)}}
+function set(el,k,on){if(el.classList.contains(k)!==on)el.classList.toggle(k,on)}
+const laneSoon=()=>{if(!laneRaf)laneRaf=requestAnimationFrame(lane)};
+const laneMine=n=>n?.nodeType===1&&(n.matches?.(CARD_SEL+','+BANNER_SEL));
+new MutationObserver(ms=>{if(ms.some(m=>laneMine(m.target)||[...m.addedNodes,...m.removedNodes].some(laneMine)))laneSoon()}).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','hidden']});
+window.ChinaLifeLane={update:lane};
+
 /* ---------- Wiring: react to DOM changes the game already makes ---------- */
 function tick(){pill();coach();placeWatch();drag()}
 function boot(){if(!G()?.state){setTimeout(boot,300);return}tick();

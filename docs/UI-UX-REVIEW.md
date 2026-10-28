@@ -98,6 +98,10 @@ Each task is small, keeps the approved map look, and can ship behind no switch (
    there, and points a new student to campus.
 3. **One card at a time (B1–B3, E1).** A tiny queue for chips, cards and banners: tour > class now > reward >
    everything else; one notification lane that never covers the HUD.
+   ✅ Done 29 Oct (r3.js `lane()`): one card under the HUD (tour > class check-in > daily attendance > kitchen >
+   University > tips > street chip), the rest wait their turn; toasts and notification banners use the same spot
+   (never over the clock and money), cards wait while one shows, and the newest banner wins. A University class
+   check-in also marks the day's attendance, so "Class today" doesn't ask twice.
 4. **Calm place bar and controls (B4, mic/jump).** Collapsed by default; mic only after joining voice; jump on streets.
    (These live partly in world.js/world.css: the edits stay minimal and the owner sees before/after.)
 5. **Plain words pass (A3, B5–B7, D2, F).** ¥ only, no "NPC"/"admin", readable dates, needs with words, first-time
