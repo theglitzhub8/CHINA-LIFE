@@ -110,9 +110,12 @@ Every phase sits behind an admin switch (default OFF) so the live game is unchan
 - [ ] Later: a library room of its own on the campus map, whisper-only chat, and sitting on a real chair (Phase 1).
 
 ### Phase 7. Year 3 laboratory and major
-- [ ] Choose Computer Science or Physics (sets `student.major`).
-- [ ] Lab sessions: Chinese mini-games per major (match terms to meanings, order the steps of an experiment,
-      read a Chinese instruction and pick the right action). New HSK 2 word sets for each major.
+- [x] Choose Computer Science or Physics once, from Year 3 (saved in `university.major` and `student.major`).
+- [x] One lab session a day on campus (`university-lab.php` holds the content: 15 terms, 2 experiments and 4
+      instructions per major): 2 terms to match, an experiment's steps to tap in order (Chinese, optional English
+      hint, undo), and a Chinese instruction to act on. Marked by `university.php`; 3 of 4 earns a lab credit and
+      20 XP, and every point is 5 knowledge. Lab credits and knowledge are kept for graduation.
+- [ ] Later: more experiments and instructions per major.
 
 ### Phase 8. Year 4 graduation
 - [ ] Final task: write a self-introduction in Chinese characters (typed with the phone's Chinese keyboard),

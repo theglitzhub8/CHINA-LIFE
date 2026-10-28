@@ -8,6 +8,7 @@ declare(strict_types=1);
 // Everything is kept in game_state.university, written only by this endpoint (save.php keeps the stored copy).
 require_once __DIR__.'/common.php';
 require_once __DIR__.'/university-words.php';
+require_once __DIR__.'/university-lab.php';
 cl_methods(['GET','POST']);cl_rate('university',30,60);
 if(!(cl_hafrik_features()['uni_years']??false)){http_response_code(403);json_response('error',['enabled'=>false],'University years are switched off');exit;}
 const CL_UNI_YEARS=4, CL_UNI_QUESTIONS=10, CL_UNI_PASS=6, CL_UNI_XP=60, CL_UNI_COINS=120;
@@ -17,6 +18,9 @@ const CL_UNI_YEARS=4, CL_UNI_QUESTIONS=10, CL_UNI_PASS=6, CL_UNI_XP=60, CL_UNI_C
 const CL_UNI_CLASSES=[['am',540,'Chinese class'],['pm',840,'Lecture']], CL_UNI_CLASS_LEN=45, CL_UNI_EARLY=2, CL_UNI_MISS=10, CL_UNI_GAIN=5, CL_UNI_CLASS_XP=10, CL_UNI_CLASS_COINS=10, CL_UNI_TRUANCY=60;
 // Library (opens in Year 2): up to 2 reading sessions a day. Read 3 words of the year's units, then answer 3 questions;
 // 2 right wins back 5 attendance points for the current year (10 on Saturday, library day) and 5 knowledge per right answer.
+// Laboratory (opens in Year 3): choose a major once, then one lab session a day: 2 terms, an experiment to put in order
+// and a Chinese instruction to act on (4 points). 3 points pass: a lab credit and 20 XP; 5 knowledge per point.
+const CL_UNI_LAB_DAY=1, CL_UNI_LAB_PASS=3, CL_UNI_LAB_XP=20;
 const CL_UNI_LIB_DAY=2, CL_UNI_LIB_POINTS=5, CL_UNI_LIB_SAT=10, CL_UNI_LIB_WORDS=3, CL_UNI_LIB_PASS=2;
 // Course units per year: Years 1-2 are HSK 1 (units 1-15), Years 3-4 HSK 2 (units 16-30), each year a little wider.
 const CL_UNI_UNITS=[1=>[0,9],2=>[5,14],3=>[15,22],4=>[18,29]];
@@ -62,6 +66,7 @@ function cl_uni_view(array $u, string $today, int $minute): array {
   'minute'=>$minute,'classDay'=>$classDay,'timetable'=>$timetable,'classTimes'=>array_map(fn($c)=>['id'=>$c[0],'time'=>cl_uni_hm($c[1]),'subject'=>$c[2]],CL_UNI_CLASSES),
   'attendance'=>$score,'truancy'=>$score<CL_UNI_TRUANCY,'classReward'=>['xp'=>CL_UNI_CLASS_XP,'coins'=>CL_UNI_CLASS_COINS],
   'library'=>['open'=>$year>=2&&!$orientation,'today'=>(int)($u['library'][$today]??0),'perDay'=>CL_UNI_LIB_DAY,'points'=>$weekday===6?CL_UNI_LIB_SAT:CL_UNI_LIB_POINTS],'knowledge'=>(int)($u['knowledge']??0),
+  'lab'=>['open'=>$year>=3&&!$orientation,'major'=>$u['major']??null,'majorName'=>isset($u['major'])?cl_uni_lab()[$u['major']]['name']:null,'today'=>(int)($u['labDays'][$today]??0),'perDay'=>CL_UNI_LAB_DAY,'credits'=>(int)($u['labCredits']??0),'majors'=>array_map(fn($k,$m)=>['id'=>$k,'name'=>$m['name'],'icon'=>$m['icon']],array_keys(cl_uni_lab()),cl_uni_lab())],
   'passMark'=>cl_uni_pass($score),'passMarks'=>(object)array_combine(array_map('strval',$open),array_map(fn($y)=>cl_uni_pass(cl_uni_score($u,$y,$today,$minute)),$open)),'questions'=>CL_UNI_QUESTIONS,'reward'=>['xp'=>CL_UNI_XP,'coins'=>CL_UNI_COINS]];
 }
 // Ten questions from the year's units: meaning, writing or pinyin, four choices each. Answers stay on the server.
@@ -121,6 +126,28 @@ try {
    if($points){$u['libBonus']=is_array($u['libBonus']??null)?$u['libBonus']:[];$u['libBonus'][$y]=(int)($u['libBonus'][$y]??0)+$points;}
    $u['knowledge']=(int)($u['knowledge']??0)+$right*5;$u['lib']=null;$changed=true;
    $out=['libraryResult'=>['right'=>$right,'total'=>count($l['answers']),'passed'=>$passed,'points'=>$points,'knowledge'=>$right*5,'answers'=>$l['answers']]];
+  } elseif($action==='choose_major'){
+   $major=(string)($input['major']??'');if(!$v['lab']['open']){$db->rollback();cl_fail('You choose your major in Year 3',409);}
+   if(isset($u['major'])){$db->rollback();cl_fail('You already chose your major',409);}if(!isset(cl_uni_lab()[$major])){$db->rollback();cl_fail('Choose Computer Science or Physics');}
+   $u['major']=$major;$changed=true;$out=['major'=>['id'=>$major,'name'=>cl_uni_lab()[$major]['name']]];
+  } elseif($action==='start_lab'){
+   if(!$v['lab']['open']){$db->rollback();cl_fail('The laboratory opens in Year 3',409);}if(!isset($u['major'])){$db->rollback();cl_fail('Choose your major first',409);}
+   if($v['lab']['today']>=CL_UNI_LAB_DAY){$db->rollback();cl_fail('One lab session a day. Come back tomorrow.',409);}
+   $p=cl_one('SELECT place FROM chinalife_presence WHERE user_id=? AND seen_at>=DATE_SUB(NOW(),INTERVAL 90 SECOND)','i',[$uid]);$place=(string)($p['place']??'');
+   if(!$p||!(in_array($place,['campus','ef','university','liaoning','dongbei','academy'],true)||str_contains($place,'univ')||str_contains($place,'campus'))){$db->rollback();cl_fail('The laboratory is on your campus',409);}
+   $m=cl_uni_lab()[$u['major']];$terms=$m['terms'];shuffle($terms);$qs=[];$termAnswers=[];
+   foreach(array_slice($terms,0,2) as $t){$others=array_values(array_filter(array_column($m['terms'],2),fn($x)=>$x!==$t[2]));shuffle($others);$o=array_merge([$t[2]],array_slice($others,0,3));shuffle($o);$qs[]=['prompt'=>'What does '.$t[0].' ('.$t[1].') mean?','options'=>$o];$termAnswers[]=$t[2];}
+   $e=$m['experiments'][random_int(0,count($m['experiments'])-1)];$steps=[];foreach($e[1] as $i=>$st)$steps[]=['id'=>'s'.$i,'han'=>$st[0],'en'=>$st[1]];$order=array_column($steps,'id');shuffle($steps);
+   $in=$m['instructions'][random_int(0,count($m['instructions'])-1)];$io=array_merge([$in[2]],$in[3]);shuffle($io);
+   $u['labDays']=is_array($u['labDays']??null)?array_slice($u['labDays'],-14,null,true):[];$u['labDays'][$today]=(int)($u['labDays'][$today]??0)+1;
+   $u['labRun']=['day'=>$today,'terms'=>$termAnswers,'order'=>$order,'instruction'=>$in[2]];$changed=true;
+   $out=['labSession'=>['major'=>$m['name'],'terms'=>$qs,'experiment'=>['title'=>$e[0],'steps'=>$steps],'instruction'=>['han'=>$in[0],'pinyin'=>$in[1],'options'=>$io]]];
+  } elseif($action==='submit_lab'){
+   $l=$u['labRun']??null;if(!is_array($l)||($l['day']??'')!==$today){$db->rollback();cl_fail('Start a lab session first',409);}
+   $terms=is_array($input['terms']??null)?array_values($input['terms']):[];$right=0;foreach($l['terms'] as $i=>$a)if(($terms[$i]??null)===$a)$right++;
+   $orderOk=is_array($input['order']??null)&&array_values($input['order'])===$l['order'];$instrOk=($input['instruction']??null)===$l['instruction'];$right+=($orderOk?1:0)+($instrOk?1:0);
+   $passed=$right>=CL_UNI_LAB_PASS;$u['knowledge']=(int)($u['knowledge']??0)+$right*5;if($passed){$u['labCredits']=(int)($u['labCredits']??0)+1;$xp=CL_UNI_LAB_XP;}
+   $u['labRun']=null;$changed=true;$out=['labResult'=>['right'=>$right,'total'=>4,'passed'=>$passed,'xp'=>$xp,'coins'=>0,'knowledge'=>$right*5,'order'=>$orderOk,'instruction'=>$instrOk,'answers'=>['terms'=>$l['terms'],'order'=>$l['order'],'instruction'=>$l['instruction']]]];
   } else {$db->rollback();cl_fail('Unknown action');}
   $v=cl_uni_view($u,$today,$minute);
  }

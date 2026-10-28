@@ -1156,3 +1156,32 @@ test('university library: opens in Year 2, on campus, 2 sessions a day, wins bac
   await call(26,'presence.php','POST',{...presence('China','home')});assert.match((await uni('2026-11-15 10:00',{action:'start_library'})).message,/on your campus/);
  }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:false}})}
 });
+
+// University Years Phase 7: choose a major in Year 3, then daily lab sessions marked on the server.
+test('university lab: major chosen once in Year 3, one session a day on campus, terms, experiment order and instruction',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(27,'user27')");
+ const uni=(now,data)=>fetch(base+'/api/v4/chinalife/university.php',{method:data?'POST':'GET',headers:{Authorization:'Bearer test-27','X-Test-Today':now,...(data?{'content-type':'application/json'}:{})},body:data?JSON.stringify(data):undefined}).then(async r=>{const j=await r.json();return {...j,...(j.data||{}),httpStatus:r.status}});
+ const php=fs.readFileSync('chinalife-api/university-lab.php','utf8');const terms=new Map([...php.matchAll(/\['([^']+)','([^']+)','([^']+)'\]/g)].map(m=>[m[1],m[3]]));
+ const instr=new Map([...php.matchAll(/\['(请[^']+)','[^']+','([^']+)',\[/g)].map(m=>[m[1],m[2]]));
+ const solve=l=>({action:'submit_lab',terms:l.terms.map(q=>terms.get(q.prompt.match(/^What does (.+) \(/)[1])),order:l.experiment.steps.map(s=>s.id).sort(),instruction:instr.get(l.instruction.han)});
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:true}});
+  assert.equal((await call(27,'save.php','POST',{revision:0,save:{character:{},game:{...game(),place:'campus'}}})).httpStatus,200);
+  await call(27,'presence.php','POST',{...presence('China','campus')});
+  await uni('2026-11-02 08:00');assert.match((await uni('2026-11-09 10:00',{action:'choose_major',major:'cs'})).message,/in Year 3/);
+  let s=await uni('2026-11-16 10:00');assert.equal(s.year,3);assert.equal(s.lab.open,true);assert.equal(s.lab.major,null);assert.deepEqual(s.lab.majors.map(m=>m.id),['cs','physics']);
+  assert.match((await uni('2026-11-16 10:00',{action:'start_lab'})).message,/Choose your major first/);
+  assert.equal((await uni('2026-11-16 10:00',{action:'choose_major',major:'chemistry'})).httpStatus,400);
+  s=await uni('2026-11-16 10:00',{action:'choose_major',major:'cs'});assert.equal(s.major.name,'Computer Science');assert.equal(s.lab.majorName,'Computer Science');
+  assert.match((await uni('2026-11-16 10:00',{action:'choose_major',major:'physics'})).message,/already chose/);
+  // A session: 2 terms, 4 shuffled steps, 1 instruction; answers never sent. All right: pass, a credit, 20 XP, 20 knowledge.
+  let l=(await uni('2026-11-16 10:00',{action:'start_lab'})).labSession;assert.equal(l.major,'Computer Science');assert.equal(l.terms.length,2);assert.equal(l.experiment.steps.length,4);assert.equal(l.instruction.options.length,4);
+  assert.ok(!JSON.stringify(l).includes('answer'));
+  let r=await uni('2026-11-16 10:00',solve(l));assert.equal(r.labResult.right,4,JSON.stringify(r.labResult));assert.equal(r.labResult.passed,true);assert.equal(r.labResult.xp,20);assert.equal(r.lab.credits,1);assert.equal(r.knowledge,20);
+  assert.match((await uni('2026-11-16 15:00',{action:'start_lab'})).message,/One lab session a day/);
+  // Next day: terms right but the experiment in the wrong order and the wrong action: 2 of 4, no credit.
+  l=(await uni('2026-11-17 10:00',{action:'start_lab'})).labSession;const bad={...solve(l),order:solve(l).order.reverse(),instruction:'nope'};
+  r=await uni('2026-11-17 10:00',bad);assert.equal(r.labResult.right,2);assert.equal(r.labResult.passed,false);assert.equal(r.labResult.order,false);assert.equal(r.lab.credits,1);
+  await call(27,'presence.php','POST',{...presence('China','home')});assert.match((await uni('2026-11-18 10:00',{action:'start_lab'})).message,/on your campus/);
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:false}})}
+});

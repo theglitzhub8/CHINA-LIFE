@@ -84,3 +84,25 @@ test('university client: a quiet library session (radio paused), reading, three 
  for(const a of ['hello','I, me','thank you'])[...d.querySelectorAll('[data-lib-a]')].find(b=>b.textContent===a).onclick();await new Promise(r=>setTimeout(r,0));
  assert.equal(JSON.stringify(calls.at(-1)),JSON.stringify({action:'submit_library',answers:['hello','I, me','thank you']}));assert.match(screen(),/\+5 attendance · \+15 knowledge/);assert.match(screen(),/Attendance this year: 85\/100/);
 });
+
+test('university client: choose a major in Year 3, then a lab session (terms, steps in order with undo, instruction)',async()=>{
+ const {harness,fixture}=await import('./game-harness.mjs');const t=harness({...fixture(),place:'campus'});const c=t.context,d=t.document;t.game.state.student={university:'campus',major:''};
+ const majors=[{id:'cs',name:'Computer Science',icon:'💻'},{id:'physics',name:'Physics',icon:'⚛️'}];
+ const view=(lab={})=>({student:true,start:'2026-11-02',today:'2026-11-16',orientation:false,year:3,week:3,weekday:1,dayName:'Class day',hsk:'HSK 2',examDay:false,resits:[],exams:[],results:{},passedYears:2,rooms:[],passMark:6,passMarks:{},questions:10,reward:{xp:60,coins:120},minute:600,classDay:false,timetable:[],classTimes:[],attendance:100,truancy:false,classReward:{xp:10,coins:10},library:{open:true,today:0,perDay:2,points:5},knowledge:0,lab:{open:true,major:null,majorName:null,today:0,perDay:1,credits:0,majors,...lab}});
+ const session={major:'Computer Science',terms:[{prompt:'What does 电脑 (diànnǎo) mean?',options:['mouse','computer','file','data']},{prompt:'What does 代码 (dàimǎ) mean?',options:['code','screen','network','program']}],
+  experiment:{title:'写一个程序 · Write a program',steps:[{id:'s2',han:'保存文件',en:'Save the file'},{id:'s0',han:'打开电脑',en:'Turn on the computer'},{id:'s3',han:'运行程序',en:'Run the program'},{id:'s1',han:'写代码',en:'Write the code'}]},
+  instruction:{han:'请保存文件。',pinyin:'qǐng bǎocún wénjiàn',options:['Open the file','Save the file','Run the program','Turn off the screen']}};
+ const calls=[];c.ChinaLifeCloud={university:async data=>{calls.push(data);if(!data)return view();
+  if(data.action==='choose_major')return {...view({major:'cs',majorName:'Computer Science'}),major:{id:'cs',name:'Computer Science'}};
+  if(data.action==='start_lab')return {...view({major:'cs',majorName:'Computer Science',today:1}),labSession:session};
+  return {...view({major:'cs',majorName:'Computer Science',today:1,credits:1}),knowledge:20,labResult:{right:4,total:4,passed:true,xp:20,coins:0,knowledge:20,order:true,instruction:true,answers:{terms:['computer','code'],order:['s0','s1','s2','s3'],instruction:'Save the file'}}}}};
+ c.MutationObserver??=class{observe(){}};c.ChinaLifeFlags={cast:k=>k==='uni_years'};vm.runInContext(r('public/university.js'),c);const U=c.ChinaLifeUniversity;
+ const screen=()=>d.getElementById('activityContent').textContent,tap=(sel,text)=>[...d.querySelectorAll(sel)].find(b=>b.textContent.includes(text)).onclick(),tick=()=>new Promise(r=>setTimeout(r,0));
+ await U.load(true);await U.open();assert.match(screen(),/choose your major/);d.querySelector('[data-uni-major="cs"]').onclick();await tick();await tick();
+ assert.equal(t.game.state.student.major,'Computer Science','the major is on the character');assert.match(screen(),/Laboratory · Computer Science/);
+ d.querySelector('[data-uni-lab]').onclick();await tick();await tick();tap('[data-lab-t]','computer');tap('[data-lab-t]','code');assert.match(screen(),/tap the steps in the right order/);
+ tap('[data-lab-s]','打开电脑');tap('[data-lab-s]','运行程序');d.querySelector('[data-lab-undo]').onclick();d.querySelector('[data-lab-hint]').onclick();assert.match(screen(),/写代码 · Write the code/);
+ tap('[data-lab-s]','写代码');tap('[data-lab-s]','保存文件');tap('[data-lab-s]','运行程序');assert.match(screen(),/请保存文件/);tap('[data-lab-i]','Save the file');await tick();
+ assert.equal(JSON.stringify(calls.at(-1)),JSON.stringify({action:'submit_lab',terms:['computer','code'],order:['s0','s1','s2','s3'],instruction:'Save the file'}));
+ assert.match(screen(),/Lab credit earned/);assert.match(screen(),/打开电脑 → 写代码 → 保存文件 → 运行程序/);assert.match(screen(),/Lab credits: 1/);
+});

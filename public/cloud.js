@@ -294,8 +294,8 @@ window.ChinaLifeAuth = {base:HAFRIK_API,get token(){return liveToken},request:ap
 async function university(data){if(!account)throw Error('Sign in to use the university.');const generation=authEpoch;if(data&&!await upload())throw Error('Save your character first.');
  const result=await api('/chinalife/university.php',data?'POST':'GET',data),d=result.data||result;
  if(data){const saved=await loadRemote();if(generation!==authEpoch)throw Error('Your account changed.');reconcileTransfers(saved);remote=saved;
-  // An exam pass or a class check-in pays coins and XP on the server ledger; show them now (the next upload confirms).
-  const paid=d.result||d.attended;if(paid){game.state.money+=paid.coins||0;game.state.xp+=paid.xp||0}game.save();game.refresh?.()}return d}
+  // An exam pass, a class check-in or a passed lab session pays coins and/or XP on the server ledger; show them now (the next upload confirms).
+  const paid=d.result||d.attended||d.labResult;if(paid){game.state.money+=paid.coins||0;game.state.xp+=paid.xp||0}game.save();game.refresh?.()}return d}
 // Student allowance (switch uni_food): POST collects today's ¥100 from allowance.php. A payment moves the save revision,
 // so the save is reloaded and the money is added on the device at once (the next upload confirms it).
 async function allowance(){if(!account)throw Error('Sign in to collect your allowance.');const generation=authEpoch;

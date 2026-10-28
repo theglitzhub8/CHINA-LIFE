@@ -139,6 +139,8 @@ test('the city sky runs a fast shared day and night cycle, each city has daily w
  const dayOf=want=>{for(let d=1;d<400;d++)if(W.weatherFor('Shenyang',d)===want)return d};t.game.state.day=dayOf('clear');
  // The sky runs a 2-hour day: move real time until the sky reaches the wanted hour (5 real minutes per sky hour).
  const sky=h=>t.passMinutes(Math.round(((h-W.skyHour())%24+24)%24*5));
+ // The live sky takes the weather of the real (Beijing) day, so move the test clock to a clear real day first.
+ for(let i=0;i<60&&W.weatherFor('Shenyang')!=='clear';i++)t.passDays(1);
  const clear=dayOf('clear');sky(13);t.game.state.day=clear;t.world.map();const noon=W.lighting().sun;sky(23);t.game.state.day=clear;t.world.map();const night=W.lighting().sun;assert.ok(noon>2.5&&night<1,'noon '+noon+' night '+night);assert.ok(Math.abs(W.skyHour()-23)<.2);
  assert.equal(W.weatherFor('Shenyang',5),W.weatherFor('Shenyang',5),'weather is stable for the day');assert.ok(['clear','cloudy','rain','snow'].includes(W.weatherFor('Guangzhou',3)));
  for(let d=1;d<200;d++)assert.notEqual(W.weatherFor('Guangzhou',d),'snow','no snow in Guangzhou');
