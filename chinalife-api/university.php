@@ -15,6 +15,9 @@ const CL_UNI_YEARS=4, CL_UNI_QUESTIONS=10, CL_UNI_PASS=6, CL_UNI_XP=60, CL_UNI_C
 // opens 2 minutes early (when the phone buzzes). Attendance starts each year at 100: a missed class costs 10, an attended
 // one gives 5 back (up to 100). The year's score sets its exam pass mark: 90+ is 5/10, 60+ is 6/10, below is 7/10.
 const CL_UNI_CLASSES=[['am',540,'Chinese class'],['pm',840,'Lecture']], CL_UNI_CLASS_LEN=45, CL_UNI_EARLY=2, CL_UNI_MISS=10, CL_UNI_GAIN=5, CL_UNI_CLASS_XP=10, CL_UNI_CLASS_COINS=10, CL_UNI_TRUANCY=60;
+// Library (opens in Year 2): up to 2 reading sessions a day. Read 3 words of the year's units, then answer 3 questions;
+// 2 right wins back 5 attendance points for the current year (10 on Saturday, library day) and 5 knowledge per right answer.
+const CL_UNI_LIB_DAY=2, CL_UNI_LIB_POINTS=5, CL_UNI_LIB_SAT=10, CL_UNI_LIB_WORDS=3, CL_UNI_LIB_PASS=2;
 // Course units per year: Years 1-2 are HSK 1 (units 1-15), Years 3-4 HSK 2 (units 16-30), each year a little wider.
 const CL_UNI_UNITS=[1=>[0,9],2=>[5,14],3=>[15,22],4=>[18,29]];
 // Campus rooms and the year they open in. Rooms of later phases show as locked until then.
@@ -35,7 +38,7 @@ function cl_uni_score(array $u, int $year, string $today, int $minute): int {
  $s=100;$monday=cl_uni_date($u['start'])->modify('+'.(($year-1)*7).' days');
  for($i=0;$i<5;$i++){$d=$monday->modify("+$i days")->format('Y-m-d');if($d>$today)break;if($d<$u['enrolled'])continue;
   foreach(CL_UNI_CLASSES as $c){$st=cl_uni_slot($u,$d,$today,$minute,$c);if($st==='attended')$s=min(100,$s+CL_UNI_GAIN);elseif($st==='missed')$s=max(0,$s-CL_UNI_MISS);}}
- return $s;
+ return min(100,$s+(int)($u['libBonus'][(string)$year]??0));
 }
 function cl_uni_pass(int $score): int {return $score>=90?5:($score>=CL_UNI_TRUANCY?6:7);}
 function cl_uni_date(string $d): DateTimeImmutable {return new DateTimeImmutable($d,new DateTimeZone('Asia/Shanghai'));}
@@ -58,6 +61,7 @@ function cl_uni_view(array $u, string $today, int $minute): array {
   'rooms'=>array_map(fn($r)=>['id'=>$r[0],'name'=>$r[1],'year'=>$r[2],'open'=>$r[2]===1||($year>=$r[2]&&!$orientation)],CL_UNI_ROOMS),
   'minute'=>$minute,'classDay'=>$classDay,'timetable'=>$timetable,'classTimes'=>array_map(fn($c)=>['id'=>$c[0],'time'=>cl_uni_hm($c[1]),'subject'=>$c[2]],CL_UNI_CLASSES),
   'attendance'=>$score,'truancy'=>$score<CL_UNI_TRUANCY,'classReward'=>['xp'=>CL_UNI_CLASS_XP,'coins'=>CL_UNI_CLASS_COINS],
+  'library'=>['open'=>$year>=2&&!$orientation,'today'=>(int)($u['library'][$today]??0),'perDay'=>CL_UNI_LIB_DAY,'points'=>$weekday===6?CL_UNI_LIB_SAT:CL_UNI_LIB_POINTS],'knowledge'=>(int)($u['knowledge']??0),
   'passMark'=>cl_uni_pass($score),'passMarks'=>(object)array_combine(array_map('strval',$open),array_map(fn($y)=>cl_uni_pass(cl_uni_score($u,$y,$today,$minute)),$open)),'questions'=>CL_UNI_QUESTIONS,'reward'=>['xp'=>CL_UNI_XP,'coins'=>CL_UNI_COINS]];
 }
 // Ten questions from the year's units: meaning, writing or pinyin, four choices each. Answers stay on the server.
@@ -98,6 +102,25 @@ try {
    if(!$p||!(in_array($place,['campus','ef','university','liaoning','dongbei','academy'],true)||str_contains($place,'univ')||str_contains($place,'campus'))){$db->rollback();cl_fail('Go to your campus classroom to check in',409);}
    $u['classes']=is_array($u['classes']??null)?$u['classes']:[];$u['classes'][$today.'|'.$slot['id']]=true;$u['classes']=array_slice($u['classes'],-60,null,true);
    $coins=CL_UNI_CLASS_COINS;$xp=CL_UNI_CLASS_XP;$changed=true;$out=['attended'=>['id'=>$slot['id'],'subject'=>$slot['subject'],'xp'=>$xp,'coins'=>$coins]];
+  } elseif($action==='start_library'){
+   // A quiet reading session in the campus library: 3 words to read, then 3 questions on them (answers stay here).
+   if(!$v['library']['open']){$db->rollback();cl_fail('The library opens in Year 2',409);}
+   if($v['library']['today']>=CL_UNI_LIB_DAY){$db->rollback();cl_fail('You have read enough today. The library opens again tomorrow.',409);}
+   $p=cl_one('SELECT place FROM chinalife_presence WHERE user_id=? AND seen_at>=DATE_SUB(NOW(),INTERVAL 90 SECOND)','i',[$uid]);$place=(string)($p['place']??'');
+   if(!$p||!(in_array($place,['campus','ef','university','liaoning','dongbei','academy'],true)||str_contains($place,'univ')||str_contains($place,'campus'))){$db->rollback();cl_fail('The library is on your campus',409);}
+   [$from,$to]=CL_UNI_UNITS[$year=$v['year']];$pool=array_values(array_filter(cl_uni_words(),fn($w)=>$w[3]>=$from&&$w[3]<=$to));shuffle($pool);$read=array_slice($pool,0,CL_UNI_LIB_WORDS);
+   $qs=[];$answers=[];foreach($read as $w){$others=array_values(array_unique(array_filter(array_column($pool,2),fn($x)=>$x!==$w[2])));shuffle($others);$o=array_merge([$w[2]],array_slice($others,0,3));shuffle($o);
+    $qs[]=['prompt'=>'What does '.$w[0].' ('.$w[1].') mean?','options'=>$o];$answers[]=$w[2];}
+   $u['library']=is_array($u['library']??null)?array_slice($u['library'],-14,null,true):[];$u['library'][$today]=(int)($u['library'][$today]??0)+1;
+   $u['lib']=['day'=>$today,'year'=>$year,'answers'=>$answers,'points'=>$v['library']['points']];$changed=true;
+   $out=['session'=>['words'=>array_map(fn($w)=>['han'=>$w[0],'pinyin'=>$w[1],'en'=>$w[2]],$read),'questions'=>$qs,'points'=>$v['library']['points']]];
+  } elseif($action==='submit_library'){
+   $l=$u['lib']??null;if(!is_array($l)||($l['day']??'')!==$today){$db->rollback();cl_fail('Start a library session first',409);}
+   $given=is_array($input['answers']??null)?array_values($input['answers']):[];$right=0;foreach($l['answers'] as $i=>$a)if(isset($given[$i])&&$given[$i]===$a)$right++;
+   $passed=$right>=CL_UNI_LIB_PASS;$y=(string)$l['year'];$points=$passed?(int)$l['points']:0;
+   if($points){$u['libBonus']=is_array($u['libBonus']??null)?$u['libBonus']:[];$u['libBonus'][$y]=(int)($u['libBonus'][$y]??0)+$points;}
+   $u['knowledge']=(int)($u['knowledge']??0)+$right*5;$u['lib']=null;$changed=true;
+   $out=['libraryResult'=>['right'=>$right,'total'=>count($l['answers']),'passed'=>$passed,'points'=>$points,'knowledge'=>$right*5,'answers'=>$l['answers']]];
   } else {$db->rollback();cl_fail('Unknown action');}
   $v=cl_uni_view($u,$today,$minute);
  }

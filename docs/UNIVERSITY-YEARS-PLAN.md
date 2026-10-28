@@ -103,8 +103,11 @@ Every phase sits behind an admin switch (default OFF) so the live game is unchan
 - [x] Fixed on the way: the sleeping roommate lay inside the mattress (the world's idle bob reset his height).
 
 ### Phase 6. Year 2 library
-- [ ] Library room: sit at a desk (uses real sit), read major books: knowledge points, restores exam buff,
-      quiet-room rules (no music, whisper chat).
+- [x] Library (opens in Year 2, on campus): up to 2 reading sessions a day from the University screen. The radio
+      pauses ("quiet please"), the character studies at a desk, reads 3 words of the year's units, then answers 3
+      questions marked by `university.php`. 2 right wins back 5 attendance points for the current year (10 on Saturday,
+      library day) and 5 knowledge per right answer (saved for the lab and graduation).
+- [ ] Later: a library room of its own on the campus map, whisper-only chat, and sitting on a real chair (Phase 1).
 
 ### Phase 7. Year 3 laboratory and major
 - [ ] Choose Computer Science or Physics (sets `student.major`).

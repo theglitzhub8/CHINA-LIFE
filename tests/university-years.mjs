@@ -69,3 +69,18 @@ test('university client: class chip and check-in, a buzz 2 minutes before class 
  d.getElementById('activityDialog').close();now=view({minute:900,attendance:40,truancy:true,passMark:7,timetable:tt('missed','missed')});await U.load(true);await U.open();
  assert.match(screen(),/14:00–14:45 Lecture · ❌ missed/);assert.match(screen(),/Truancy risk: your exam pass mark is 7\/10/);
 });
+
+test('university client: a quiet library session (radio paused), reading, three questions and the attendance won back',async()=>{
+ const {harness,fixture}=await import('./game-harness.mjs');const t=harness({...fixture(),place:'campus'});const c=t.context,d=t.document;
+ const view=(over={})=>({student:true,start:'2026-11-02',today:'2026-11-09',orientation:false,year:2,week:2,weekday:1,dayName:'Class day',hsk:'HSK 1',examDay:false,resits:[],exams:[],results:{},passedYears:0,rooms:[],passMark:6,passMarks:{},questions:10,reward:{xp:60,coins:120},minute:900,classDay:false,timetable:[],classTimes:[{id:'am',time:'09:00',subject:'Chinese class'}],attendance:80,truancy:false,classReward:{xp:10,coins:10},library:{open:true,today:0,perDay:2,points:5},knowledge:0,...over});
+ const calls=[];c.ChinaLifeCloud={university:async data=>{calls.push(data);if(!data)return view();
+  if(data.action==='start_library')return {...view({library:{open:true,today:1,perDay:2,points:5}}),session:{points:5,words:[{han:'你好',pinyin:'nǐ hǎo',en:'hello'},{han:'我',pinyin:'wǒ',en:'I, me'},{han:'谢谢',pinyin:'xièxie',en:'thank you'}],
+   questions:['hello','I, me','thank you'].map(a=>({prompt:'What does it mean?',options:['sorry',a,'bye','name']}))}};
+  return {...view({attendance:85,knowledge:15,library:{open:true,today:1,perDay:2,points:5}}),libraryResult:{right:3,total:3,passed:true,points:5,knowledge:15}}}};
+ let paused=0;c.ChinaLifeRadio={playing:true,pause:()=>paused++};c.MutationObserver??=class{observe(){}};c.ChinaLifeFlags={cast:k=>k==='uni_years'};
+ vm.runInContext(r('public/university.js'),c);const U=c.ChinaLifeUniversity;await U.load(true);await U.open();const screen=()=>d.getElementById('activityContent').textContent;
+ assert.match(screen(),/Sessions today: 0\/2/);d.querySelector('[data-uni-library]').onclick();await new Promise(r=>setTimeout(r,0));await new Promise(r=>setTimeout(r,0));
+ assert.equal(paused,1,'the radio pauses');assert.match(screen(),/你好 nǐ hǎo · hello/);d.querySelector('[data-lib-ready]').onclick();
+ for(const a of ['hello','I, me','thank you'])[...d.querySelectorAll('[data-lib-a]')].find(b=>b.textContent===a).onclick();await new Promise(r=>setTimeout(r,0));
+ assert.equal(JSON.stringify(calls.at(-1)),JSON.stringify({action:'submit_library',answers:['hello','I, me','thank you']}));assert.match(screen(),/\+5 attendance · \+15 knowledge/);assert.match(screen(),/Attendance this year: 85\/100/);
+});

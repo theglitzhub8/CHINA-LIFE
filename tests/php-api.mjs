@@ -1131,3 +1131,28 @@ test('student allowance: switch, once per Beijing day, students only, and the mo
   const next=await pay(24,'2026-11-03');assert.equal(next.paid,100);assert.equal(next.total,200);
  }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_food:false}})}
 });
+
+// University Years Phase 6: library reading sessions win back attendance points from Year 2.
+test('university library: opens in Year 2, on campus, 2 sessions a day, wins back attendance (double on Saturday)',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(26,'user26')");
+ const uni=(now,data)=>fetch(base+'/api/v4/chinalife/university.php',{method:data?'POST':'GET',headers:{Authorization:'Bearer test-26','X-Test-Today':now,...(data?{'content-type':'application/json'}:{})},body:data?JSON.stringify(data):undefined}).then(async r=>{const j=await r.json();return {...j,...(j.data||{}),httpStatus:r.status}});
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:true}});
+  assert.equal((await call(26,'save.php','POST',{revision:0,save:{character:{},game:{...game(),place:'campus'}}})).httpStatus,200);
+  await call(26,'presence.php','POST',{...presence('China','campus')});
+  let s=await uni('2026-11-02 08:00');assert.equal(s.library.open,false);assert.match((await uni('2026-11-02 08:00',{action:'start_library'})).message,/opens in Year 2/);
+  // Monday of Year 2, 15:00: both classes missed (80). A good session: 3 words read, 3 right, +5 attendance, +15 knowledge.
+  s=await uni('2026-11-09 15:00');assert.equal(s.year,2);assert.equal(s.attendance,80);assert.deepEqual(s.library,{open:true,today:0,perDay:2,points:5});
+  let l=await uni('2026-11-09 15:00',{action:'start_library'});assert.equal(l.session.words.length,3);assert.ok(!JSON.stringify(l.session.questions).includes('answer'));
+  let r=await uni('2026-11-09 15:00',{action:'submit_library',answers:l.session.words.map(w=>w.en)});
+  assert.deepEqual({...r.libraryResult,answers:undefined},{right:3,total:3,passed:true,points:5,knowledge:15,answers:undefined});assert.equal(r.attendance,85);assert.equal(r.knowledge,15);
+  // A poor session wins nothing; a third one that day is refused.
+  l=await uni('2026-11-09 16:00',{action:'start_library'});r=await uni('2026-11-09 16:00',{action:'submit_library',answers:[]});assert.equal(r.libraryResult.passed,false);assert.equal(r.attendance,85);
+  assert.match((await uni('2026-11-09 17:00',{action:'start_library'})).message,/read enough today/);
+  // Saturday is library day: a good session is worth 10.
+  s=await uni('2026-11-14 10:00');assert.equal(s.library.points,10);const before=s.attendance;
+  l=await uni('2026-11-14 10:00',{action:'start_library'});r=await uni('2026-11-14 10:00',{action:'submit_library',answers:l.session.words.map(w=>w.en)});assert.equal(r.attendance,before+10);
+  // Only from the campus.
+  await call(26,'presence.php','POST',{...presence('China','home')});assert.match((await uni('2026-11-15 10:00',{action:'start_library'})).message,/on your campus/);
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:false}})}
+});
