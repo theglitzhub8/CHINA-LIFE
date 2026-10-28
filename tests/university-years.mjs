@@ -106,3 +106,30 @@ test('university client: choose a major in Year 3, then a lab session (terms, st
  assert.equal(JSON.stringify(calls.at(-1)),JSON.stringify({action:'submit_lab',terms:['computer','code'],order:['s0','s1','s2','s3'],instruction:'Save the file'}));
  assert.match(screen(),/Lab credit earned/);assert.match(screen(),/打开电脑 → 写代码 → 保存文件 → 运行程序/);assert.match(screen(),/Lab credits: 1/);
 });
+
+test('university client: graduation writing, the checklist, the stage, the certificate, the blazer and moving out',async()=>{
+ const {harness,fixture}=await import('./game-harness.mjs');const t=harness({...fixture(),place:'university'});const c=t.context,d=t.document;t.game.state.student={university:'campus',major:'Physics'};
+ t.game.state.wardrobe={owned:[],wearing:{acc:[]},colors:{}};
+ const grad=(over={})=>({open:true,ready:true,missing:[],graduated:null,intro:null,minHan:20,reward:{coins:500,xp:200},...over});
+ const view=g=>({student:true,start:'2026-11-02',today:'2026-11-23',orientation:false,year:4,week:4,weekday:1,dayName:'Class day',hsk:'HSK 2',examDay:false,resits:[],exams:[],results:{},passedYears:4,rooms:[],passMark:5,passMarks:{},questions:10,reward:{xp:60,coins:120},minute:600,classDay:false,timetable:[],classTimes:[],attendance:100,truancy:false,classReward:{xp:10,coins:10},library:{open:true,today:0,perDay:2,points:5},knowledge:40,lab:{open:true,major:'physics',majorName:'Physics',today:0,perDay:1,credits:2,majors:[]},graduation:g});
+ const good='我叫Ada。我是尼日利亚人。我在东北大学学习。我的专业是物理。毕业以后我想在中国工作。';
+ const calls=[];c.ChinaLifeCloud={university:async data=>{calls.push(data);if(!data)return view(grad());
+  if(data.text!==good)return {...view(grad()),introResult:{passed:false,han:8,parts:{name:true,country:false,university:false,major:false,plan:false},coins:0,xp:0}};
+  return {...view(grad({graduated:'2026-11-23',intro:good})),introResult:{passed:true,han:40,parts:{},date:'2026-11-23',coins:500,xp:200,major:'Physics'}}}};
+ const said=[];let performed=0;c.ChinaLifeWorld={say:(who,text)=>said.push(text),perform:(spec,done)=>{performed++;done();return true}};
+ c.MutationObserver??=class{observe(){}};c.ChinaLifeFlags={cast:k=>k==='uni_years'};vm.runInContext(r('public/university.js'),c);const U=c.ChinaLifeUniversity;
+ const screen=()=>d.getElementById('activityContent').textContent,tick=()=>new Promise(r=>setTimeout(r,0));
+ await U.load(true);await U.open();d.querySelector('[data-uni-grad]').onclick();assert.match(screen(),/At least 20 Chinese characters/);
+ d.getElementById('uniIntro').value='我叫Ada。我是学生。';d.querySelector('[data-uni-submit]').onclick();await tick();await tick();
+ assert.match(screen(),/❌ Where you are from/);assert.match(screen(),/8 Chinese characters · write at least 20/);assert.equal(d.getElementById('uniIntro').value,'我叫Ada。我是学生。','the draft is kept');
+ d.getElementById('uniIntro').value=good;d.querySelector('[data-uni-submit]').onclick();await tick();await tick();
+ assert.equal(performed,1);assert.equal(said[0],good,'read on stage');assert.match(screen(),/Degree certificate/);assert.match(screen(),/Bachelor · Physics/);assert.match(screen(),/moved out of the dorm/);
+ assert.equal(t.game.state.student.graduated,'2026-11-23');assert.ok(t.game.state.wardrobe.owned.includes('grad-blazer'));
+});
+
+test('the graduation blazer is never sold, but shows under My stuff once it is yours',async()=>{
+ const {harness,fixture}=await import('./game-harness.mjs');const t=harness({...fixture(),place:'mall'}),d=t.document;
+ const cat=c=>{t.game.store(c);return !!d.querySelector('[data-item="grad-blazer"]')};
+ assert.equal(cat('clothes'),false);assert.equal(cat('mine'),false);
+ t.game.state.wardrobe.owned.push('grad-blazer');assert.equal(cat('clothes'),false);assert.equal(cat('mine'),true);
+});

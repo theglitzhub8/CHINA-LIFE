@@ -20,6 +20,15 @@ const CL_UNI_CLASSES=[['am',540,'Chinese class'],['pm',840,'Lecture']], CL_UNI_C
 // 2 right wins back 5 attendance points for the current year (10 on Saturday, library day) and 5 knowledge per right answer.
 // Laboratory (opens in Year 3): choose a major once, then one lab session a day: 2 terms, an experiment to put in order
 // and a Chinese instruction to act on (4 points). 3 points pass: a lab credit and 20 XP; 5 knowledge per point.
+// Graduation (Year 4 hall): with all four years passed and a major, write a self-introduction in Chinese characters
+// (at least 20) with five parts: name, where you are from, university, major and a plan. Pays ¥500 and 200 XP once.
+const CL_UNI_GRAD_COINS=500, CL_UNI_GRAD_XP=200, CL_UNI_GRAD_HAN=20;
+function cl_uni_intro(string $text, ?string $major): array {
+ $t=trim($text);$han=preg_match_all('/\p{Han}/u',$t);$majorWords=['cs'=>'计算机|电脑|软件','physics'=>'物理'][$major??'']??'专业';
+ $parts=['name'=>(bool)preg_match('/我叫|名字/u',$t),'country'=>(bool)preg_match('/我是.{1,8}人|我来自|我从.{1,10}来/u',$t),'university'=>(bool)preg_match('/大学|学院/u',$t),
+  'major'=>(bool)preg_match('/'.$majorWords.'/u',$t),'plan'=>(bool)preg_match('/我想|我希望|我要|我打算|以后|将来/u',$t)];
+ return ['han'=>$han,'parts'=>$parts,'passed'=>$han>=CL_UNI_GRAD_HAN&&!in_array(false,$parts,true)];
+}
 const CL_UNI_LAB_DAY=1, CL_UNI_LAB_PASS=3, CL_UNI_LAB_XP=20;
 const CL_UNI_LIB_DAY=2, CL_UNI_LIB_POINTS=5, CL_UNI_LIB_SAT=10, CL_UNI_LIB_WORDS=3, CL_UNI_LIB_PASS=2;
 // Course units per year: Years 1-2 are HSK 1 (units 1-15), Years 3-4 HSK 2 (units 16-30), each year a little wider.
@@ -66,6 +75,8 @@ function cl_uni_view(array $u, string $today, int $minute): array {
   'minute'=>$minute,'classDay'=>$classDay,'timetable'=>$timetable,'classTimes'=>array_map(fn($c)=>['id'=>$c[0],'time'=>cl_uni_hm($c[1]),'subject'=>$c[2]],CL_UNI_CLASSES),
   'attendance'=>$score,'truancy'=>$score<CL_UNI_TRUANCY,'classReward'=>['xp'=>CL_UNI_CLASS_XP,'coins'=>CL_UNI_CLASS_COINS],
   'library'=>['open'=>$year>=2&&!$orientation,'today'=>(int)($u['library'][$today]??0),'perDay'=>CL_UNI_LIB_DAY,'points'=>$weekday===6?CL_UNI_LIB_SAT:CL_UNI_LIB_POINTS],'knowledge'=>(int)($u['knowledge']??0),
+  'graduation'=>['open'=>$year>=4&&!$orientation,'ready'=>$finished===CL_UNI_YEARS&&isset($u['major']),'missing'=>array_values(array_merge(array_map(fn($y)=>'Pass the Year '.$y.' exam',array_values(array_filter(range(1,CL_UNI_YEARS),fn($y)=>!$passed($y)))),isset($u['major'])?[]:['Choose your major in the laboratory'])),
+   'graduated'=>$u['graduated']??null,'intro'=>$u['intro']??null,'minHan'=>CL_UNI_GRAD_HAN,'reward'=>['coins'=>CL_UNI_GRAD_COINS,'xp'=>CL_UNI_GRAD_XP]],
   'lab'=>['open'=>$year>=3&&!$orientation,'major'=>$u['major']??null,'majorName'=>isset($u['major'])?cl_uni_lab()[$u['major']]['name']:null,'today'=>(int)($u['labDays'][$today]??0),'perDay'=>CL_UNI_LAB_DAY,'credits'=>(int)($u['labCredits']??0),'majors'=>array_map(fn($k,$m)=>['id'=>$k,'name'=>$m['name'],'icon'=>$m['icon']],array_keys(cl_uni_lab()),cl_uni_lab())],
   'passMark'=>cl_uni_pass($score),'passMarks'=>(object)array_combine(array_map('strval',$open),array_map(fn($y)=>cl_uni_pass(cl_uni_score($u,$y,$today,$minute)),$open)),'questions'=>CL_UNI_QUESTIONS,'reward'=>['xp'=>CL_UNI_XP,'coins'=>CL_UNI_COINS]];
 }
@@ -148,6 +159,12 @@ try {
    $orderOk=is_array($input['order']??null)&&array_values($input['order'])===$l['order'];$instrOk=($input['instruction']??null)===$l['instruction'];$right+=($orderOk?1:0)+($instrOk?1:0);
    $passed=$right>=CL_UNI_LAB_PASS;$u['knowledge']=(int)($u['knowledge']??0)+$right*5;if($passed){$u['labCredits']=(int)($u['labCredits']??0)+1;$xp=CL_UNI_LAB_XP;}
    $u['labRun']=null;$changed=true;$out=['labResult'=>['right'=>$right,'total'=>4,'passed'=>$passed,'xp'=>$xp,'coins'=>0,'knowledge'=>$right*5,'order'=>$orderOk,'instruction'=>$instrOk,'answers'=>['terms'=>$l['terms'],'order'=>$l['order'],'instruction'=>$l['instruction']]]];
+  } elseif($action==='graduate'){
+   $gv=$v['graduation'];if(!empty($u['graduated'])){$db->rollback();cl_fail('You have already graduated',409);}
+   if(!$gv['open']){$db->rollback();cl_fail('The graduation hall opens in Year 4',409);}if(!$gv['ready']){$db->rollback();cl_fail(implode(' · ',$gv['missing']),409);}
+   $text=mb_substr(trim((string)($input['text']??'')),0,300);$check=cl_uni_intro($text,$u['major']??null);
+   if($check['passed']){$u['graduated']=$today;$u['intro']=$text;$coins=CL_UNI_GRAD_COINS;$xp=CL_UNI_GRAD_XP;$changed=true;}
+   $out=['introResult'=>$check+['date'=>$check['passed']?$today:null,'coins'=>$coins,'xp'=>$xp,'major'=>isset($u['major'])?cl_uni_lab()[$u['major']]['name']:null]];
   } else {$db->rollback();cl_fail('Unknown action');}
   $v=cl_uni_view($u,$today,$minute);
  }

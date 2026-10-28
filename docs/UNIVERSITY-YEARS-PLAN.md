@@ -118,10 +118,13 @@ Every phase sits behind an admin switch (default OFF) so the live game is unchan
 - [ ] Later: more experiments and instructions per major.
 
 ### Phase 8. Year 4 graduation
-- [ ] Final task: write a self-introduction in Chinese characters (typed with the phone's Chinese keyboard),
-      checked for required parts (name, country, university, major, a plan), then read it on stage.
-- [ ] Graduation ceremony, certificate, formal blazer unlocked, the player moves on to the city life
-      (first apartment, jobs).
+- [x] Graduation hall (Year 4) once all four year exams are passed and a major is chosen (it lists what is missing).
+- [x] Self-introduction typed in Chinese characters, checked by `university.php`: at least 20 characters and five
+      parts (name 我叫, where from 我是…人/我来自, university 大学, the student's own major 物理 or 计算机, a plan
+      我想/以后). A miss comes back as a checklist and keeps the draft.
+- [x] A pass: read on stage (speech bubble), degree certificate, ¥500 and 200 XP, the award-only Graduation blazer
+      (`grad-blazer`, never sold, shown under My stuff), and moving out of the dorm (`student.graduated`).
+- [ ] Later: a graduation hall room with an audience, and switching to a working background after graduating.
 
 ### Phase 9. Progression-locked wardrobe, switch `wardrobe_locks`
 - [ ] `requires` on store items: year, graduation, first apartment, rank. Locked items visible with a lock and

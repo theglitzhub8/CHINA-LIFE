@@ -183,5 +183,6 @@ test('University Years: a student lives in the 2-person dorm with a roommate who
  t.game.state.hour=10*60;t.world.venue('home');assert.match(mate(),/is at class · back at 12:00/);
  t.game.state.hour=20*60;t.world.venue('home');let completed=0;t.world.perform({kind:'cook',label:'Cook'},()=>completed++);t.tick(20);assert.equal(completed,1,'kitchen reachable');
  t.game.state.properties={...(t.game.state.properties||{}),[t.game.state.city]:'apartment'};t.world.venue('home');assert.equal(t.world.homeStyle,'apartment','a bought home replaces the dorm');
- t.game.state.properties={};t.game.state.background='Worker';t.world.venue('home');assert.equal(t.world.homeStyle,'rental','only students live in the dorm');
+ t.game.state.properties={};t.game.state.student={...(t.game.state.student||{}),graduated:'2026-11-23'};t.world.venue('home');assert.equal(t.world.homeStyle,'rental','a graduate has moved out of the dorm');
+ t.game.state.student.graduated=null;t.game.state.properties={};t.game.state.background='Worker';t.world.venue('home');assert.equal(t.world.homeStyle,'rental','only students live in the dorm');
 });

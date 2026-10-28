@@ -1185,3 +1185,29 @@ test('university lab: major chosen once in Year 3, one session a day on campus, 
   await call(27,'presence.php','POST',{...presence('China','home')});assert.match((await uni('2026-11-18 10:00',{action:'start_lab'})).message,/on your campus/);
  }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:false}})}
 });
+
+// University Years Phase 8: graduation with a self-introduction in Chinese, checked on the server.
+test('university graduation: needs four passed years and a major, opens in Year 4, checks the Chinese self-introduction, pays once',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(28,'user28')");
+ const uni=(now,data)=>fetch(base+'/api/v4/chinalife/university.php',{method:data?'POST':'GET',headers:{Authorization:'Bearer test-28','X-Test-Today':now,...(data?{'content-type':'application/json'}:{})},body:data?JSON.stringify(data):undefined}).then(async r=>{const j=await r.json();return {...j,...(j.data||{}),httpStatus:r.status}});
+ const good='我叫Ada。我是尼日利亚人。我在东北大学学习。我的专业是物理。毕业以后我想在中国工作。';
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:true}});
+  assert.equal((await call(28,'save.php','POST',{revision:0,save:{character:{},game:game()}})).httpStatus,200);
+  let s=await uni('2026-11-02 08:00');assert.equal(s.graduation.open,false);
+  s=await uni('2026-11-23 10:00');assert.equal(s.year,4);assert.equal(s.graduation.open,true);assert.equal(s.graduation.ready,false);
+  assert.deepEqual(s.graduation.missing,['Pass the Year 1 exam','Pass the Year 2 exam','Pass the Year 3 exam','Pass the Year 4 exam','Choose your major in the laboratory']);
+  assert.match((await uni('2026-11-23 10:00',{action:'graduate',text:good})).message,/Pass the Year 1 exam/);
+  sql(`USE chinalife_test; UPDATE chinalife_saves SET game_state=JSON_SET(game_state,'$.university.results',JSON_OBJECT('1',JSON_OBJECT('passed',true),'2',JSON_OBJECT('passed',true),'3',JSON_OBJECT('passed',true),'4',JSON_OBJECT('passed',true)),'$.university.major','physics') WHERE user_id=28`);
+  assert.match((await uni('2026-11-16 10:00',{action:'graduate',text:good})).message,/opens in Year 4/);
+  s=await uni('2026-11-23 10:00');assert.equal(s.graduation.ready,true);
+  // Too short and missing parts: nothing paid, the checklist says what is missing.
+  let r=await uni('2026-11-23 10:00',{action:'graduate',text:'我叫Ada。我是学生。'});assert.equal(r.introResult.passed,false);assert.equal(r.introResult.han,8);
+  assert.deepEqual(r.introResult.parts,{name:true,country:false,university:false,major:false,plan:false});assert.equal(r.graduation.graduated,null);
+  // The major must be the student's own (Physics here, not computer science words).
+  r=await uni('2026-11-23 10:00',{action:'graduate',text:good.replace('物理','计算机')});assert.equal(r.introResult.parts.major,false);
+  r=await uni('2026-11-23 10:00',{action:'graduate',text:good});assert.equal(r.introResult.passed,true);assert.equal(r.introResult.coins,500);assert.equal(r.introResult.xp,200);
+  assert.equal(r.graduation.graduated,'2026-11-23');assert.equal(r.graduation.intro,good);
+  assert.match((await uni('2026-11-24 10:00',{action:'graduate',text:good})).message,/already graduated/);
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:false}})}
+});
