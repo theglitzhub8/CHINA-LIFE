@@ -9,28 +9,36 @@ declare(strict_types=1);
 require_once __DIR__.'/common.php';
 require_once __DIR__.'/university-words.php';
 require_once __DIR__.'/university-lab.php';
-cl_methods(['GET','POST']);cl_rate('university',30,60);
-if(!(cl_hafrik_features()['uni_years']??false)){http_response_code(403);json_response('error',['enabled'=>false],'University years are switched off');exit;}
-const CL_UNI_YEARS=4, CL_UNI_QUESTIONS=10, CL_UNI_PASS=6, CL_UNI_XP=60, CL_UNI_COINS=120;
-// Timetable on class days (Mon-Fri, Beijing time): [id, start minute, subject]. Each class lasts 45 minutes; check-in
+// admin.php loads only the functions below (CL_UNI_FUNCTIONS_ONLY) to show and edit a student's university record.
+if(!defined('CL_UNI_FUNCTIONS_ONLY')){cl_methods(['GET','POST']);cl_rate('university',30,60);
+ if(!(cl_hafrik_features()['uni_years']??false)){http_response_code(403);json_response('error',['enabled'=>false],'University years are switched off');exit;}}
+require_once __DIR__.'/university-settings.php';
+// Numbers below marked "(admin)" come from appadmin's University tab (university-settings.php); the comments give the defaults.
+$S=cl_uni_settings();
+const CL_UNI_YEARS=4;
+define('CL_UNI_QUESTIONS',$S['examQuestions']);define('CL_UNI_PASS',$S['passNormal']);define('CL_UNI_XP',$S['examXp']);define('CL_UNI_COINS',$S['examCoins']);
+// Timetable on class days (Mon-Fri, Beijing time, admin): [id, start minute, subject]. Each class lasts 45 minutes; check-in
 // opens 2 minutes early (when the phone buzzes). Attendance starts each year at 100: a missed class costs 10, an attended
 // one gives 5 back (up to 100). The year's score sets its exam pass mark: 90+ is 5/10, 60+ is 6/10, below is 7/10.
-const CL_UNI_CLASSES=[['am',540,'Chinese class'],['pm',840,'Lecture']], CL_UNI_CLASS_LEN=45, CL_UNI_EARLY=2, CL_UNI_MISS=10, CL_UNI_GAIN=5, CL_UNI_CLASS_XP=10, CL_UNI_CLASS_COINS=10, CL_UNI_TRUANCY=60;
+define('CL_UNI_CLASSES',array_map(fn($c)=>[$c['id'],(int)substr($c['time'],0,2)*60+(int)substr($c['time'],3),$c['subject']],$S['classes']));
+define('CL_UNI_CLASS_LEN',$S['classLength']);define('CL_UNI_EARLY',$S['checkInEarly']);define('CL_UNI_MISS',$S['missPenalty']);define('CL_UNI_GAIN',$S['attendGain']);
+define('CL_UNI_CLASS_XP',$S['classXp']);define('CL_UNI_CLASS_COINS',$S['classCoins']);define('CL_UNI_TRUANCY',$S['truancyLine']);define('CL_UNI_GOOD',$S['goodLine']);
+define('CL_UNI_PASS_GOOD',$S['passGood']);define('CL_UNI_PASS_TRUANT',$S['passTruant']);
 // Library (opens in Year 2): up to 2 reading sessions a day. Read 3 words of the year's units, then answer 3 questions;
 // 2 right wins back 5 attendance points for the current year (10 on Saturday, library day) and 5 knowledge per right answer.
 // Laboratory (opens in Year 3): choose a major once, then one lab session a day: 2 terms, an experiment to put in order
 // and a Chinese instruction to act on (4 points). 3 points pass: a lab credit and 20 XP; 5 knowledge per point.
 // Graduation (Year 4 hall): with all four years passed and a major, write a self-introduction in Chinese characters
 // (at least 20) with five parts: name, where you are from, university, major and a plan. Pays ¥500 and 200 XP once.
-const CL_UNI_GRAD_COINS=500, CL_UNI_GRAD_XP=200, CL_UNI_GRAD_HAN=20;
+define('CL_UNI_GRAD_COINS',$S['gradCoins']);define('CL_UNI_GRAD_XP',$S['gradXp']);define('CL_UNI_GRAD_HAN',$S['gradMinHan']);
 function cl_uni_intro(string $text, ?string $major): array {
  $t=trim($text);$han=preg_match_all('/\p{Han}/u',$t);$majorWords=['cs'=>'计算机|电脑|软件','physics'=>'物理'][$major??'']??'专业';
  $parts=['name'=>(bool)preg_match('/我叫|名字/u',$t),'country'=>(bool)preg_match('/我是.{1,8}人|我来自|我从.{1,10}来/u',$t),'university'=>(bool)preg_match('/大学|学院/u',$t),
   'major'=>(bool)preg_match('/'.$majorWords.'/u',$t),'plan'=>(bool)preg_match('/我想|我希望|我要|我打算|以后|将来/u',$t)];
  return ['han'=>$han,'parts'=>$parts,'passed'=>$han>=CL_UNI_GRAD_HAN&&!in_array(false,$parts,true)];
 }
-const CL_UNI_LAB_DAY=1, CL_UNI_LAB_PASS=3, CL_UNI_LAB_XP=20;
-const CL_UNI_LIB_DAY=2, CL_UNI_LIB_POINTS=5, CL_UNI_LIB_SAT=10, CL_UNI_LIB_WORDS=3, CL_UNI_LIB_PASS=2;
+define('CL_UNI_LAB_DAY',$S['labPerDay']);define('CL_UNI_LAB_PASS',$S['labPass']);define('CL_UNI_LAB_XP',$S['labXp']);
+define('CL_UNI_LIB_DAY',$S['libraryPerDay']);define('CL_UNI_LIB_POINTS',$S['libraryPoints']);define('CL_UNI_LIB_SAT',$S['librarySaturday']);const CL_UNI_LIB_WORDS=3, CL_UNI_LIB_PASS=2;
 // Course units per year: Years 1-2 are HSK 1 (units 1-15), Years 3-4 HSK 2 (units 16-30), each year a little wider.
 const CL_UNI_UNITS=[1=>[0,9],2=>[5,14],3=>[15,22],4=>[18,29]];
 // Campus rooms and the year they open in. Rooms of later phases show as locked until then.
@@ -51,9 +59,9 @@ function cl_uni_score(array $u, int $year, string $today, int $minute): int {
  $s=100;$monday=cl_uni_date($u['start'])->modify('+'.(($year-1)*7).' days');
  for($i=0;$i<5;$i++){$d=$monday->modify("+$i days")->format('Y-m-d');if($d>$today)break;if($d<$u['enrolled'])continue;
   foreach(CL_UNI_CLASSES as $c){$st=cl_uni_slot($u,$d,$today,$minute,$c);if($st==='attended')$s=min(100,$s+CL_UNI_GAIN);elseif($st==='missed')$s=max(0,$s-CL_UNI_MISS);}}
- return min(100,$s+(int)($u['libBonus'][(string)$year]??0));
+ return max(0,min(100,$s+(int)($u['libBonus'][(string)$year]??0)));
 }
-function cl_uni_pass(int $score): int {return $score>=90?5:($score>=CL_UNI_TRUANCY?6:7);}
+function cl_uni_pass(int $score): int {return $score>=CL_UNI_GOOD?CL_UNI_PASS_GOOD:($score>=CL_UNI_TRUANCY?CL_UNI_PASS:CL_UNI_PASS_TRUANT);}
 function cl_uni_date(string $d): DateTimeImmutable {return new DateTimeImmutable($d,new DateTimeZone('Asia/Shanghai'));}
 // Enrolling Monday to Wednesday starts Year 1 this week; Thursday to Sunday is orientation until next Monday.
 function cl_uni_enrol(string $today): array {$d=cl_uni_date($today);$n=(int)$d->format('N');$monday=$d->modify('-'.($n-1).' days');
@@ -89,6 +97,7 @@ function cl_uni_exam(int $year): array {
   $qs[]=['type'=>$type,'prompt'=>$prompt,'options'=>$options];$answers[]=$w[$f];}
  return [$qs,$answers];
 }
+if(defined('CL_UNI_FUNCTIONS_ONLY'))return;
 [$today,$minute]=cl_uni_now();$input=$method==='POST'?cl_body(4000):[];
 $db->begin_transaction();
 try {

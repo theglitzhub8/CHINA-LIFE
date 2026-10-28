@@ -23,7 +23,9 @@ const RECIPES=[['tomato-egg','Tomato and egg on rice','西红柿炒鸡蛋',['tom
  ['plantain-beans','Plantain and beans','大蕉炖豆子',['plantain','beans','onion'],55]];
 // Pairs that do not belong in one pan.
 const BAD=[['plantain','soy'],['beans','soy'],['tofu','beef'],['egg','beans'],['tomato','wrappers']];
-const ORDER=40,FRIDGE=30,SICK_MS=3*3600e3,CRAMP_MS=25*60e3;
+const FRIDGE=30,SICK_MS=3*3600e3,CRAMP_MS=25*60e3;let ORDER=40;
+// The admin sets the meal and ingredient prices in appadmin's University tab (wardrobe-locks.js loads them).
+window.addEventListener?.('chinalife:uni-settings',e=>{const d=e.detail||{};if(Number.isInteger(d.mealPrice))ORDER=d.mealPrice;for(const [k,v] of Object.entries(d.food||{}))if(ING[k]&&Number.isInteger(v))ING[k][3]=v});
 const same=(a,b)=>a.length===b.length&&a.every(x=>b.includes(x));
 // What a pan of ingredients turns into: a known recipe, your own dish, or something that will make you ill.
 function evaluate(list){const ids=[...new Set(list)].filter(id=>ING[id]);if(ids.length<2||ids.length>4)return {ok:false,why:'Choose 2 to 4 ingredients.'};

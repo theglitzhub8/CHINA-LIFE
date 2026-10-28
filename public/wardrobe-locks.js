@@ -14,5 +14,14 @@ function met(s,r){if(r==='graduated')return !!s?.student?.graduated;if(r==='home
  if(r.startsWith('year:'))return (window.ChinaLifeUniversity?.status?.year||1)>=Number(r.slice(5));return (s?.xp||0)>=Number(r.slice(3))}
 // '' when the item can be bought, otherwise what unlocks it.
 function reason(s,id){if(!on('wardrobe_locks'))return '';const r=rule(s,id);return r&&!met(s,r)?label(r):''}
-window.ChinaLifeWardrobeLocks={RULES,reason,label,meets:met};
+// The admin can change these rules, the allowance and the campus store prices (appadmin University tab). They are read
+// from uni-settings.php while wardrobe_locks or uni_food is on, at most once a minute, and passed on as 'chinalife:uni-settings'.
+const valid=r=>typeof r==='string'&&(/^(|graduated|home|year:[234])$/.test(r)||/^xp:\d{1,7}$/.test(r));let fetched=0;
+function apply(d){if(!d||typeof d!=='object')return;if(d.wardrobe&&typeof d.wardrobe==='object'){for(const k of Object.keys(RULES))delete RULES[k];
+  for(const [k,r] of Object.entries(d.wardrobe))if(Array.isArray(r)&&r.length===2&&valid(r[0])&&valid(r[1]))RULES[k]=[r[0],r[1]]}
+ window.dispatchEvent(new CustomEvent('chinalife:uni-settings',{detail:d}))}
+async function load(){if(!(on('wardrobe_locks')||on('uni_food'))||!window.ChinaLifeCloud?.signedIn||Date.now()-fetched<60e3)return;fetched=Date.now();
+ try{const r=await window.ChinaLifeAuth.request('/chinalife/uni-settings.php');apply(r?.data||r)}catch{fetched=0}}
+window.addEventListener?.('chinalife:cast',load);window.setInterval?.(load,5*60e3);window.setTimeout?.(load,8000);window.setTimeout?.(load,30000);
+window.ChinaLifeWardrobeLocks={RULES,reason,label,meets:met,apply,load};
 })();

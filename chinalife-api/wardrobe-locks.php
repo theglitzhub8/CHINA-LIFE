@@ -2,7 +2,9 @@
 declare(strict_types=1);
 // University Years wardrobe (appadmin switch wardrobe_locks): the same rules as public/wardrobe-locks.js.
 // [rule for students while university years are on, rule for everyone else]; 'year:N', 'graduated', 'home', 'xp:N'.
-function cl_wardrobe_rules(): array {return ['jacket-varsity'=>['year:2','xp:200'],'jacket-leather'=>['home','home'],'leather-white'=>['home','home'],
+// These are the defaults; the admin can change them in appadmin (University tab, university-settings.php).
+function cl_wardrobe_rules(): array {require_once __DIR__.'/university-settings.php';return cl_uni_settings()['wardrobe'];}
+function cl_wardrobe_default_rules(): array {return ['jacket-varsity'=>['year:2','xp:200'],'jacket-leather'=>['home','home'],'leather-white'=>['home','home'],
  'suit-tailored'=>['graduated','xp:1500'],'trousers-suit'=>['graduated','xp:1500'],'qipao-silk'=>['xp:600','xp:600'],'loafers'=>['xp:600','xp:600'],
  'chain'=>['xp:1500','xp:1500'],'gown-evening'=>['xp:3500','xp:3500'],'designer-sneakers'=>['xp:3500','xp:3500'],'handbag'=>['xp:7000','xp:7000'],'luxwatch'=>['xp:12000','xp:12000']];}
 // [milestone check for a rule, whether the student rules apply] for a save; also used by micro-style.php rare options.

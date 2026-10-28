@@ -130,6 +130,56 @@ if ($action==='set_cities') {
 if ($action==='reports') {
     json_response('success',['reports'=>cl_rows('SELECT r.reason,r.message_body body,r.created_at,a.user_name reporter,b.user_name sender FROM chinalife_reports r LEFT JOIN users a ON a.user_id=r.reporter_id LEFT JOIN users b ON b.user_id=r.sender_id ORDER BY r.created_at DESC LIMIT 50'),'playerReports'=>cl_rows('SELECT r.reason,r.note,r.city,r.place,r.created_at,a.user_name reporter,b.user_name player,(SELECT COUNT(*) FROM chinalife_player_reports x WHERE x.peer_id=r.peer_id) total FROM chinalife_player_reports r LEFT JOIN users a ON a.user_id=r.reporter_id LEFT JOIN users b ON b.user_id=r.peer_id ORDER BY r.created_at DESC LIMIT 50')]);
 }
+// University Years settings (University tab). Only changes from the defaults are stored, so untouched values follow the code.
+if (in_array($action,['university_settings','set_university_settings','student','student_update'],true)) {
+ require_once __DIR__.'/university-settings.php';define('CL_UNI_FUNCTIONS_ONLY',true);require_once __DIR__.'/university.php';
+}
+if ($action==='university_settings') {
+ json_response('success',['settings'=>cl_uni_settings(),'defaults'=>cl_uni_defaults(),'numbers'=>array_map(fn($n)=>['min'=>$n[1],'max'=>$n[2],'label'=>$n[3]],cl_uni_numbers()),
+  'switches'=>array_intersect_key(cl_hafrik_features(),array_flip(['uni_years','uni_food','wardrobe_locks','micro_style','real_sitting'])),
+  'log'=>cl_rows("SELECT l.action,l.note,l.created_at,u.user_name target,a.user_name admin FROM chinalife_admin_log l LEFT JOIN users u ON u.user_id=l.target_id LEFT JOIN users a ON a.user_id=l.admin_id WHERE l.action IN ('set_university_settings','student_update') ORDER BY l.id DESC LIMIT 30")]);
+}
+if ($action==='set_university_settings') {
+ $s=cl_uni_valid_settings(is_array($input['settings']??null)?$input['settings']:[],$error);if(!$s)cl_fail($error??'Check the settings');
+ $defaults=cl_uni_defaults();$changed=array_filter($s,fn($v,$k)=>$v!==$defaults[$k],ARRAY_FILTER_USE_BOTH);$before=cl_uni_settings();
+ cl_run("INSERT INTO chinalife_settings(name,value,updated_at) VALUES('university',?,NOW()) ON DUPLICATE KEY UPDATE value=VALUES(value),updated_at=NOW()",'s',[json_encode((object)$changed,JSON_UNESCAPED_UNICODE)]);
+ $labels=cl_uni_numbers();
+ admin_log('set_university_settings',null,null,implode(' · ',array_map(fn($k)=>($labels[$k][3]??$k).(is_int($s[$k])?': '.$before[$k].' → '.$s[$k]:' changed'),array_keys(array_filter($s,fn($v,$k)=>$v!==$before[$k],ARRAY_FILTER_USE_BOTH))))?:'No changes');
+ json_response('success',['settings'=>$s]);
+}
+// A student's university record: what the game shows them, and admin fixes. Admin changes pay no rewards.
+if ($action==='student'||$action==='student_update') {
+ $target=filter_var($input['user_id']??null,FILTER_VALIDATE_INT);if(!$target)cl_fail('Choose a player');
+ [$today,$minute]=cl_uni_now();$db->begin_transaction();$g=cl_lock_character((int)$target);
+ $u=is_array($g['university']??null)&&isset($g['university']['start'])?$g['university']:null;
+ if($action==='student_update'){
+  if(($g['background']??'')!=='Student'){$db->rollback();cl_fail('This player is not a student',409);}
+  $op=(string)($input['op']??'');$year=filter_var($input['year']??null,FILTER_VALIDATE_INT);$note='';
+  if($op==='restart'){unset($g['university']);if(isset($g['student']))unset($g['student']['graduated']);$u=null;$note='University restarted (enrols again on next visit)';}
+  else{
+   if(!$u)$u=cl_uni_enrol($today);
+   if($op==='year'){if(!$year||$year<1||$year>CL_UNI_YEARS){$db->rollback();cl_fail('Choose Year 1 to 4');}
+    $d=cl_uni_date($today);$monday=$d->modify('-'.((int)$d->format('N')-1).' days');$u['start']=$monday->modify('-'.(($year-1)*7).' days')->format('Y-m-d');if($u['enrolled']>$u['start'])$u['enrolled']=$u['start'];$note='Moved to Year '.$year;}
+   elseif($op==='pass'||$op==='unpass'){if(!$year||$year<1||$year>CL_UNI_YEARS){$db->rollback();cl_fail('Choose Year 1 to 4');}
+    $u['results']=is_array($u['results']??null)?$u['results']:[];if($op==='pass')$u['results'][(string)$year]=['passed'=>true,'score'=>CL_UNI_QUESTIONS,'total'=>CL_UNI_QUESTIONS,'on'=>$today,'admin'=>true];else unset($u['results'][(string)$year]);
+    $note=($op==='pass'?'Passed':'Cleared').' the Year '.$year.' exam';}
+   elseif($op==='resit'){$u['attempts']=array_filter(is_array($u['attempts']??null)?$u['attempts']:[],fn($d)=>$d!==$today);$u['exam']=null;$note='Can sit today’s exams again';}
+   elseif($op==='attendance'){$points=filter_var($input['points']??null,FILTER_VALIDATE_INT);if($points===false||$points===null||$points<-100||$points>100||!$points){$db->rollback();cl_fail('Enter -100 to 100 attendance points');}
+    $y=(string)cl_uni_view($u,$today,$minute)['year'];$u['libBonus']=is_array($u['libBonus']??null)?$u['libBonus']:[];$u['libBonus'][$y]=max(-200,min(200,(int)($u['libBonus'][$y]??0)+$points));$note=($points>0?'+':'').$points.' attendance (Year '.$y.')';}
+   elseif($op==='major'){$m=(string)($input['major']??'');if($m===''){unset($u['major']);$note='Major cleared';}elseif(isset(cl_uni_lab()[$m])){$u['major']=$m;$note='Major set to '.cl_uni_lab()[$m]['name'];}else{$db->rollback();cl_fail('Choose a major');}}
+   elseif($op==='graduate'){$u['graduated']=$today;$g['student']=is_array($g['student']??null)?$g['student']:[];$g['student']['graduated']=$today;
+    if(is_array($g['wardrobe']['owned']??null)&&!in_array('grad-blazer',$g['wardrobe']['owned'],true))$g['wardrobe']['owned'][]='grad-blazer';$note='Marked graduated';}
+   elseif($op==='ungraduate'){unset($u['graduated'],$u['intro']);if(isset($g['student']))unset($g['student']['graduated']);$note='Graduation undone';}
+   elseif($op==='allowance'){$g['allowance']=['day'=>'','total'=>(int)($g['allowance']['total']??0)];$note='Can collect today’s allowance again';}
+   else{$db->rollback();cl_fail('Unknown change');}
+   $g['university']=$u;
+  }
+  cl_store_character((int)$target,$g);admin_log('student_update',(int)$target,null,$note);
+ }
+ $db->commit();
+ json_response('success',['student'=>($g['background']??'')==='Student','graduatedFlag'=>$g['student']['graduated']??null,'allowance'=>$g['allowance']??null,
+  'university'=>$u?cl_uni_view($u,$today,$minute)+['labCreditsTotal'=>(int)($u['labCredits']??0)]:null,'majors'=>array_map(fn($k,$m)=>['id'=>$k,'name'=>$m['name']],array_keys(cl_uni_lab()),cl_uni_lab())]);
+}
 // Rank management. Ranks, badges and suspensions are game status only; admin access comes from admin-config.php alone.
 $rankActions="'set_ranks','set_rank','award_badge','revoke_badge','suspend_rank'";
 if ($action==='ranks') {

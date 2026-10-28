@@ -1132,6 +1132,46 @@ test('student allowance: switch, once per Beijing day, students only, and the mo
  }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_food:false}})}
 });
 
+// The admin edits University Years from appadmin: settings over the defaults, and fixes to one student's record.
+test('university admin: settings checked and applied (allowance, classes, pass marks, wardrobe), and student record fixes',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(34,'user34'),(35,'user35')");
+ const uni=(id,now,data)=>fetch(base+'/api/v4/chinalife/university.php',{method:data?'POST':'GET',headers:{Authorization:'Bearer test-'+id,'X-Test-Today':now,...(data?{'content-type':'application/json'}:{})},body:data?JSON.stringify(data):undefined}).then(async r=>{const j=await r.json();return {...j,...(j.data||{}),httpStatus:r.status}});
+ const set=settings=>call(1,'admin.php','POST',{action:'set_university_settings',settings});
+ assert.equal((await call(2,'admin.php','POST',{action:'university_settings'})).httpStatus,403,'admins only');
+ const d=(await call(1,'admin.php','POST',{action:'university_settings'})).data;assert.equal(d.settings.allowance,100);assert.equal(d.settings.classes.length,2);assert.equal(d.settings.wardrobe['jacket-varsity'][0],'year:2');
+ try{
+  for(const bad of [{allowance:-1},{passGood:8,passNormal:6},{classes:[{time:'09:00',subject:'A'},{time:'09:20',subject:'B'}]},{classes:[]},{food:{caviar:5}},{wardrobe:{'jacket-varsity':['year:9','']}},{examQuestions:5}])
+   assert.equal((await set(bad)).httpStatus,400,JSON.stringify(bad));
+  assert.equal((await set({allowance:150,mealPrice:30,passNormal:4,passGood:3,passTruant:5,examXp:99,classes:[{id:'am',time:'08:00',subject:'Morning Chinese'},{time:'16:30',subject:'Culture'}],food:{rice:5},wardrobe:{'chain':['','xp:10']}})).httpStatus,200);
+  const s=(await call(1,'admin.php','POST',{action:'university_settings'})).data;assert.equal(s.settings.allowance,150);assert.deepEqual(s.settings.wardrobe,{chain:['','xp:10']});assert.equal(s.settings.food.rice,5);assert.equal(s.settings.food.egg,2);
+  assert.match(s.log[0].note,/Daily allowance \(¥\): 100 → 150/);
+  const pub=await call(34,'uni-settings.php');assert.equal(pub.data.allowance,150);assert.equal(pub.data.mealPrice,30);assert.deepEqual(pub.data.wardrobe,{chain:['','xp:10']});
+  // The game reads them: the timetable, pass marks and the allowance amount.
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:true,uni_food:true}});
+  assert.equal((await call(34,'save.php','POST',{revision:0,save:{character:{},game:game()}})).httpStatus,200);
+  const v=await uni(34,'2026-11-02 08:01');assert.deepEqual(v.timetable.map(c=>[c.id,c.time,c.subject,c.status]),[['am','08:00','Morning Chinese','now'],[v.timetable[1].id,'16:30','Culture','later']]);assert.equal(v.passMark,3);
+  const pay=await fetch(base+'/api/v4/chinalife/allowance.php',{method:'POST',headers:{Authorization:'Bearer test-34','X-Test-Today':'2026-11-02','content-type':'application/json'},body:'{}'}).then(r=>r.json());assert.equal((pay.data||pay).paid,150);
+  // Student record fixes, in the audit log, with no reward paid.
+  const before=(await call(34,'save.php')).data.save.game.money;const fix=data=>call(1,'admin.php','POST',{action:'student_update',user_id:34,...data});
+  assert.equal((await fix({op:'year',year:3})).data.university.year,3);
+  const passed=await fix({op:'pass',year:1});assert.equal(passed.data.university.results['1'].passed,true);assert.equal(passed.data.university.passedYears,1);
+  assert.equal((await fix({op:'unpass',year:1})).data.university.passedYears,0);
+  const m=await fix({op:'major',major:'physics'});assert.equal(m.data.university.lab.major,'physics');
+  assert.equal((await fix({op:'attendance',points:30})).data.university.attendance,Math.min(100,m.data.university.attendance+30));
+  assert.ok((await fix({op:'graduate'})).data.university.graduation.graduated);
+  let g=(await call(34,'save.php')).data.save.game;assert.ok(g.student.graduated);assert.equal(g.money,before,'admin fixes pay nothing');
+  assert.equal((await fix({op:'ungraduate'})).data.university.graduation.graduated,null);
+  assert.equal((await fix({op:'allowance'})).data.allowance.day,'');
+  assert.equal((await fix({op:'restart'})).data.university,null);g=(await call(34,'save.php')).data.save.game;assert.equal(g.university,undefined);
+  assert.equal((await fix({op:'year',year:7})).httpStatus,400);
+  assert.equal((await call(35,'save.php','POST',{revision:0,save:{character:{},game:{...game(),background:'Worker'}}})).httpStatus,200);
+  assert.equal((await call(1,'admin.php','POST',{action:'student_update',user_id:35,op:'graduate'})).httpStatus,409,'students only');
+  assert.equal((await call(1,'admin.php','POST',{action:'student',user_id:35})).data.student,false);
+  // Reset to defaults stores nothing over them.
+  assert.equal((await set(d.defaults)).httpStatus,200);assert.equal((await call(34,'uni-settings.php')).data.allowance,100);
+ }finally{await set(d.defaults);await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{uni_years:false,uni_food:false}})}
+});
+
 // University Years Phase 6: library reading sessions win back attendance points from Year 2.
 test('university library: opens in Year 2, on campus, 2 sessions a day, wins back attendance (double on Saturday)',async()=>{
  sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(26,'user26')");

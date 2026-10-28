@@ -7,7 +7,8 @@ declare(strict_types=1);
 require_once __DIR__.'/common.php';
 cl_methods(['GET','POST']);cl_rate('allowance',20,60);
 if(!(cl_hafrik_features()['uni_food']??false)){http_response_code(403);json_response('error',['enabled'=>false],'The student allowance is switched off');exit;}
-const CL_ALLOWANCE=100;
+// The amount is set in appadmin's University tab (university-settings.php, default ¥100).
+require_once __DIR__.'/university-settings.php';define('CL_ALLOWANCE',cl_uni_settings()['allowance']);
 // Local test stacks (CHINALIFE_TEST_SOCKET) may pin the day, as in university.php.
 $t=$_SERVER['HTTP_X_TEST_TODAY']??'';$today=getenv('CHINALIFE_TEST_SOCKET')&&preg_match('/^(\d{4}-\d{2}-\d{2})/',$t,$m)?$m[1]:cl_beijing_day();
 $db->begin_transaction();
