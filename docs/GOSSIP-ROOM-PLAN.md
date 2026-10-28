@@ -26,6 +26,12 @@ makes the room feel alive when you walk in.
 the phone's Gossip tile and the tea table: tonight's Hot Seat (live round, or "take the seat"), the Gossip wall,
 Gossip TV's pick, and City news, in that order. The phone's Gossip folder becomes one app. Plain names everywhere:
 Gossip wall, Hot Seat, Gossip TV.
+✅ Done 29 Oct (`public/gossip-room.js`): the screen opens from the phone's Gossip tile (one app while on), the
+place bar's "🫖 Gossip Room" card (first in the room; the duplicate "🤫 Gossip" card is hidden while on) and the tea
+table. Hot Seat shows "Live now: N votes · Ns left" with Vote now, or Take the seat; away from the room it starts
+the Where to? trip, and when the room is closed it says when it opens. City news (the admin's posts, which had no
+player door) shows the latest three with "See all". Fixed on the way: the old Hot Seat and Gossip TV apps' "Go to"
+buttons did nothing in one-city mode; they now start the Where to? trip. Names: "Hot Seat" and "Gossip wall".
 
 **Phase 1 · Hot Seat Hour.** A nightly show at set Beijing times (default 20:00–22:00): the room's host runs it,
 players queue for the seat, the TV shows the live round and the audience count, and the phone buzzes players who
