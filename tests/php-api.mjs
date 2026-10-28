@@ -12,7 +12,8 @@ import vm from 'node:vm';
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'chinalife-api-')),socket=path.join(tmp,'mysql.sock');
 let mysql,php,base;
 const sql=command=>execFileSync('mysql',['--no-defaults','--socket='+socket,'-u','root','--batch','--skip-column-names','-e',command],{encoding:'utf8',stdio:['ignore','pipe','pipe']});
-const env={...process.env,CHINALIFE_TEST_SOCKET:socket,CHINALIFE_PUSH_TEST:'1'};
+// CL_CACHE_OFF: the 30 s shared cache (cache-lib.php) lives in the system temp dir and would leak between runs and tests.
+const env={...process.env,CHINALIFE_TEST_SOCKET:socket,CHINALIFE_PUSH_TEST:'1',CL_CACHE_OFF:'1'};
 async function waitFor(check){for(let i=0;i<100;i++){try{if(await check())return}catch{}await new Promise(resolve=>setTimeout(resolve,100))}throw Error('Test service failed to start')}
 async function call(id,file,method='GET',data){const response=await fetch(base+'/api/v4/chinalife/'+file,{method,headers:{...(id?{Authorization:'Bearer test-'+id}:{}),...(data?{'content-type':'application/json'}:{})},body:data?JSON.stringify(data):undefined});return {...await response.json(),httpStatus:response.status}}
 const presence=(city='Shenyang',place='plaza')=>({city,place,name:'Player',color:'#246fa7',skin:'#8b5c43',hair:'cap',x:1,z:2});
@@ -21,7 +22,7 @@ before(async()=>{
  execFileSync('mysqld',['--no-defaults','--initialize-insecure','--datadir='+path.join(tmp,'data')],{stdio:'ignore'});
  const log=fs.openSync(path.join(tmp,'mysql.log'),'a');mysql=spawn('mysqld',['--no-defaults','--datadir='+path.join(tmp,'data'),'--socket='+socket,'--skip-networking','--mysqlx=0','--pid-file='+path.join(tmp,'mysql.pid')],{stdio:['ignore',log,log]});
  await waitFor(()=>sql('SELECT 1').trim()==='1');
- sql('CREATE DATABASE chinalife_test; USE chinalife_test; CREATE TABLE users(user_id INT UNSIGNED PRIMARY KEY,user_name VARCHAR(100)); INSERT INTO users VALUES '+Array.from({length:12},(_,i)=>`(${i+1},'user${i+1}')`).join(','));
+ sql('CREATE DATABASE chinalife_test; USE chinalife_test; CREATE TABLE users(user_id INT UNSIGNED PRIMARY KEY,user_name VARCHAR(100),user_picture VARCHAR(255) NULL); INSERT INTO users(user_id,user_name) VALUES '+Array.from({length:12},(_,i)=>`(${i+1},'user${i+1}')`).join(','));
  const root=path.join(tmp,'web/api/v4');fs.mkdirSync(root,{recursive:true});fs.cpSync('chinalife-api',path.join(root,'chinalife'),{recursive:true});fs.writeFileSync(path.join(root,'chinalife/admin-config.php'),`<?php return ['usernames'=>['user1']];`);fs.writeFileSync(path.join(root,'chinalife/polling-config.json'),'{"mode":"adaptive"}');
  fs.writeFileSync(path.join(root,'db.php'),`<?php mysqli_report(MYSQLI_REPORT_ERROR|MYSQLI_REPORT_STRICT);`);
  fs.writeFileSync(path.join(root,'helpers.php'),`<?php function get_db_connection(){$db=new mysqli('localhost','root','','chinalife_test',0,getenv('CHINALIFE_TEST_SOCKET'));$db->set_charset('utf8mb4');return $db;} if(($_SERVER['REQUEST_METHOD']??'')==='OPTIONS'){http_response_code(204);exit;} function json_response($status,$data=null,$message=''){header('Content-Type: application/json');echo json_encode(compact('status','data','message'));exit;} function auth_user($db){$token=$_SERVER['HTTP_AUTHORIZATION']??'';if(!preg_match('/^Bearer test-([1-9][0-9]*)$/',$token,$m)){http_response_code(401);json_response('error',null,'Unauthorized');}$s=$db->prepare('SELECT * FROM users WHERE user_id=?');$id=(int)$m[1];$s->bind_param('i',$id);$s->execute();return $s->get_result()->fetch_assoc()?:[];}`);
@@ -29,6 +30,8 @@ before(async()=>{
  for(const file of ['migration.sql','migration 2.sql','voice.sql'])sql('USE chinalife_test; '+fs.readFileSync('chinalife-api/'+file,'utf8'));
  sql(`USE chinalife_test; INSERT INTO chinalife_saves(user_id,character_data,game_state) VALUES(12,'{}','${JSON.stringify(game())}');`);
  for(let i=0;i<2;i++)execFileSync('php',[path.join(root,'chinalife/migrate.php')],{env,stdio:'pipe'});
+ // Most tests start players in Shenyang; one-city mode (default open city China) is covered by its own tests.
+ sql(`USE chinalife_test; INSERT INTO chinalife_settings(name,value,updated_at) VALUES('open_cities','["China","Shenyang"]',NOW())`);
  const listener=net.createServer();await new Promise(resolve=>listener.listen(0,'127.0.0.1',resolve));const port=listener.address().port;await new Promise(resolve=>listener.close(resolve));base='http://127.0.0.1:'+port;
  const phpLog=fs.openSync(path.join(tmp,'php.log'),'a');php=spawn('php',['-S','127.0.0.1:'+port,'-t',path.join(tmp,'web')],{env,stdio:['ignore',phpLog,phpLog]});
  await waitFor(async()=>{try{return (await fetch(base+'/api/v4/chinalife/save.php')).status===401}catch{return false}});
@@ -196,7 +199,7 @@ test('voice relay credentials require an account and fall back to STUN without a
 });
 
 test('leaderboard ranks server XP only and ignores client totals',async()=>{
- for(const id of [10,11]){const cur=(await call(id,'save.php')).data;const before=cur.save?.game?.xp??0;const r=await call(id,'save.php','POST',{revision:cur.revision||0,save:{character:{name:'x'},game:{...game(),transferTotal:cur.save?.game?.transferTotal??0,sharedXP:cur.save?.game?.sharedXP??0,xp:before+50000}}});assert.equal(r.httpStatus,200,r.message);assert.equal((await call(id,'save.php')).data.save.game.xp,before)}
+ for(const id of [10,11]){const cur=(await call(id,'save.php')).data;const before=cur.save?.game?.xp??0;const r=await call(id,'save.php','POST',{revision:cur.revision||0,save:{character:{name:'x'},game:{...game(),transferTotal:cur.save?.game?.transferTotal??0,sharedXP:cur.save?.game?.sharedXP??0,xp:before+50000}}});assert.equal(r.httpStatus,200,r.message);const xp=(await call(id,'save.php')).data.save.game.xp;assert.ok(xp>=before&&xp<=before+600,'device XP is capped by real time ('+xp+')')}
  assert.equal((await call(1,'admin.php','POST',{action:'set_rank',user_id:11,rank:4,note:'Board'})).httpStatus,200);
  assert.equal((await call(1,'admin.php','POST',{action:'set_rank',user_id:10,rank:1,note:'Board'})).httpStatus,200);
  const board=await call(10,'leaderboard.php');assert.equal(board.httpStatus,200);const order=board.data.players.map(p=>p.id);assert.ok(order.indexOf('11')<order.indexOf('10'));assert.equal(board.data.players.find(p=>p.id==='11').xp,3500);assert.ok(board.data.players.find(p=>p.id==='10').own);assert.ok(board.data.position>=2);
@@ -222,7 +225,7 @@ test('only admins can put money in wallets, and grants reach the saved character
 });
 
 test('admin events reward each player once, only at the venue, and end on request',async()=>{
- const created=await call(1,'admin.php','POST',{action:'create_event',title:'Afrobeats Night',body:'Dance till late',place:'blood',reward:700,hours:2,billboard:true,link:''});assert.equal(created.httpStatus,200);
+ const created=await call(1,'admin.php','POST',{action:'create_event',city:'Shenyang',title:'Afrobeats Night',body:'Dance till late',place:'blood',reward:700,hours:2,billboard:true,link:''});assert.equal(created.httpStatus,200);
  const list=await call(12,'events.php?city=Shenyang');const ev=list.data.events.find(e=>e.title==='Afrobeats Night');assert.ok(ev&&ev.billboard&&!ev.joined);assert.equal(list.data.admin,false);
  assert.equal((await call(12,'events.php','POST',{id:Number(ev.id)})).httpStatus,409);
  await call(12,'presence.php','POST',presence('Shenyang','blood'));const money=(await call(12,'save.php')).data.save.game.money;
@@ -235,7 +238,8 @@ test('admin events reward each player once, only at the venue, and end on reques
 test('save ignores client coin and XP totals',async()=>{
  const cur=(await call(11,'save.php')).data,before=cur.save.game;
  const r=await call(11,'save.php','POST',{revision:cur.revision,save:{character:{name:'x'},game:{...before,xp:before.xp+999999,money:before.money+99999999}}});assert.equal(r.httpStatus,200);
- const after=(await call(11,'save.php')).data.save.game;assert.equal(after.xp,before.xp);assert.equal(after.money,before.money);assert.equal(r.data.money,before.money);assert.equal(r.data.xp,before.xp);
+ // Device earnings are accepted only within the real-time cap (save.php: +300 XP plus 30/min, ¥20,000 per rolling hour).
+ const after=(await call(11,'save.php')).data.save.game;assert.ok(after.xp>=before.xp&&after.xp<=before.xp+600);assert.ok(after.money>=before.money&&after.money<=before.money+20000);assert.equal(r.data.money,after.money);assert.equal(r.data.xp,after.xp);
 });
 
 test('the weekly golden envelope pays only the first finder at its venue',async()=>{
@@ -247,12 +251,14 @@ test('the weekly golden envelope pays only the first finder at its venue',async(
 });
 
 test('admins open cities and every player receives the open list',async()=>{
- assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['Shenyang']);
+ // One-city mode: the admin's list is stored as given (no implied Shenyang) and cannot be empty.
+ assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['China','Shenyang']);
  assert.equal((await call(5,'admin.php','POST',{action:'set_cities',open:['Harbin']})).httpStatus,403);
  assert.equal((await call(1,'admin.php','POST',{action:'set_cities',open:['Atlantis']})).httpStatus,400);
- const r=await call(1,'admin.php','POST',{action:'set_cities',open:['Harbin']});assert.deepEqual(r.data.open,['Shenyang','Harbin']);
+ const r=await call(1,'admin.php','POST',{action:'set_cities',open:['Shenyang','Harbin']});assert.deepEqual(r.data.open,['Shenyang','Harbin']);
  assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['Shenyang','Harbin']);
- await call(1,'admin.php','POST',{action:'set_cities',open:[]});assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['Shenyang']);
+ assert.equal((await call(1,'admin.php','POST',{action:'set_cities',open:[]})).httpStatus,400);assert.deepEqual((await call(5,'events.php?city=Shenyang')).data.cities,['Shenyang','Harbin']);
+ assert.deepEqual((await call(1,'admin.php','POST',{action:'set_cities',open:['China','Shenyang']})).data.open,['China','Shenyang']);
 });
 
 test('admins set the one-city world layout and every player receives it',async()=>{
@@ -293,9 +299,10 @@ test('daily push sends a valid VAPID-signed reminder and removes expired subscri
 test('two real clients accept, meet, participate and receive shared activity rewards once',async()=>{
  for(const id of [11,12]){const r=await call(id,'save.php'),saved=r.data.save?.game||{};assert.equal((await call(id,'save.php','POST',{revision:r.data.revision,save:{character:{},game:{...game(),money:saved.money??3200,xp:saved.xp??0,transferTotal:saved.transferTotal||0,sharedXP:saved.sharedXP||0}}})).httpStatus,200);}
  async function client(id){const t=harness(null),c=t.context;c.HafrikSession={token:'test-'+id,user:{id}};c.URLSearchParams=URLSearchParams;c.fetch=(url,opts)=>fetch(base+new URL(url).pathname+new URL(url).search,opts);await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);vm.runInContext(fs.readFileSync('public/shared-activities.js','utf8'),c);await c.ChinaLifeShared.ready;return t;}
- const a=await client(11),b=await client(12);
+ const a=await client(11);let b=await client(12);
  await a.context.ChinaLifeShared.open('12','user12');assert.ok(a.document.querySelector('[data-kind="study"]'));await a.document.querySelector('[data-kind="study"]').onclick();
- await b.context.ChinaLifeShared.poll();assert.equal(b.document.getElementById('sharedInviteNotice').hidden,false);await b.context.ChinaLifeShared.open();await b.document.querySelector('[data-shared="accept"]').onclick();
+ // R1: a running game reads shared activities from the one-minute feed cache while the dialog is closed, so the invitee sees the invite on its next feed (here: a fresh load).
+ b=await client(12);await b.context.ChinaLifeShared.poll();assert.equal(b.document.getElementById('sharedInviteNotice').hidden,false);await b.context.ChinaLifeShared.open();await b.document.querySelector('[data-shared="accept"]').onclick();
  let session=(await call(11,'activities.php')).data.activities[0];const id=session.id;
  const reconnect=await client(12);await reconnect.context.ChinaLifeShared.open();assert.match(reconnect.document.getElementById('sharedBody').textContent,/Both players must be present and ready/);
  assert.equal((await call(11,'activities.php','POST',{action:'ready',id})).httpStatus,409);
@@ -318,7 +325,7 @@ test('two real clients accept, meet, participate and receive shared activity rew
 
 test('shared invitations decline, cancel, expire and require the invited player’s consent',async()=>{
  await call(11,'presence.php','POST',presence());await call(12,'presence.php','POST',presence());
- let r=await call(11,'activities.php','POST',{action:'invite',kind:'basketball',peer:'12'});assert.equal(r.httpStatus,200);let id=r.data.id;
+ let r=await call(11,'activities.php','POST',{action:'invite',kind:'basketball',peer:'12'});assert.equal(r.httpStatus,200,r.message);let id=r.data.id;
  assert.equal((await call(11,'activities.php','POST',{action:'accept',id})).httpStatus,403);
  assert.equal((await call(12,'activities.php','POST',{action:'decline',id})).httpStatus,200);
  r=await call(11,'activities.php','POST',{action:'invite',kind:'meal',peer:'12'});id=r.data.id;
@@ -383,8 +390,9 @@ test('date, both restaurant dinners and every club invitation use consent and ve
 test('two game clients send a partner request, accept it, reconnect and end it by blocking',async()=>{
  sql("USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (11,12)");
  async function client(id){const t=harness(null),c=t.context;c.HafrikSession={token:'test-'+id,user:{id}};c.URLSearchParams=URLSearchParams;c.fetch=(url,opts)=>fetch(base+new URL(url).pathname+new URL(url).search,opts);await vm.runInContext('(async()=>{'+fs.readFileSync('public/cloud.js','utf8')+'})()',c);vm.runInContext(fs.readFileSync('public/shared-activities.js','utf8'),c);await c.ChinaLifeShared.ready;return t;}
- const a=await client(11),b=await client(12);await a.context.ChinaLifeShared.open('12','user12','girlfriend');assert.equal(a.document.querySelectorAll('[data-kind]').length,1);await a.document.querySelector('[data-kind="girlfriend"]').onclick();
- await b.context.ChinaLifeShared.poll();assert.equal(b.document.getElementById('sharedInviteNotice').hidden,false);await b.context.ChinaLifeShared.open();await b.document.querySelector('[data-shared="accept"]').onclick();assert.match(b.document.getElementById('sharedBody').textContent,/Partner: user11/);
+ const a=await client(11);let b=await client(12);await a.context.ChinaLifeShared.open('12','user12','girlfriend');assert.equal(a.document.querySelectorAll('[data-kind]').length,1);await a.document.querySelector('[data-kind="girlfriend"]').onclick();
+ // R1 feed cache: the invitee's game shows the request on its next feed (here: a fresh load).
+ b=await client(12);await b.context.ChinaLifeShared.poll();assert.equal(b.document.getElementById('sharedInviteNotice').hidden,false);await b.context.ChinaLifeShared.open();await b.document.querySelector('[data-shared="accept"]').onclick();assert.match(b.document.getElementById('sharedBody').textContent,/Partner: user11/);
  const restarted=await client(11);await restarted.context.ChinaLifeShared.open();assert.match(restarted.document.getElementById('sharedBody').textContent,/Partner: user12/);assert.ok(restarted.document.querySelector('[data-shared="end-relationship"]'));
  assert.equal((await call(12,'block.php','POST',{peer:'11',blocked:true})).httpStatus,200);for(const id of [11,12])assert.equal((await call(id,'activities.php')).data.relationships.length,0);
  await call(12,'block.php','POST',{peer:'11',blocked:false});
@@ -402,7 +410,7 @@ test('hidden fortunes award server-configured money once and rich public profile
  const loaded=await call(11,'save.php');assert.equal(loaded.data.save.game.money,beforeClaims+3750000);assert.equal(loaded.data.save.game.activeHome,'home-mansion');assert.ok((await call(11,'fortune.php')).data.opportunities.every(o=>o.claimed));const profile=(await call(12,'profile.php?peer=11')).data.profile;assert.equal(profile.wealth,'💎 Millionaire');assert.equal(profile.netWorth,null,'other players never see net worth');assert.ok((await call(11,'profile.php')).data.profile.netWorth>1000000,'own net worth is visible');assert.equal(profile.homes.length,4);assert.deepEqual(profile.items,['piano','safe']);assert.equal(profile.game,undefined);assert.equal((await call(null,'profile.php?peer=11')).httpStatus,401);
  for(const id of ['home-campus','home-nanhu','home-hunnan','home-river','home-mansion'])assert.equal((await call(11,'presence.php','POST',presence('Shenyang',id))).httpStatus,200);
 });
-test('hafrik and horlaarsman have admin access alongside configured additional admins',async()=>{sql("USE chinalife_test; INSERT INTO users VALUES(13,'hafrik'),(14,'horlaarsman')");for(const id of [13,14]){assert.equal((await call(id,'admin.php','POST',{action:'stats'})).httpStatus,200);assert.equal((await call(id,'admin.php','POST',{action:'players'})).httpStatus,200)}assert.equal((await call(12,'admin.php','POST',{action:'stats'})).httpStatus,403)});
+test('hafrik and horlaarsman have admin access alongside configured additional admins',async()=>{sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(13,'hafrik'),(14,'horlaarsman')");for(const id of [13,14]){assert.equal((await call(id,'admin.php','POST',{action:'stats'})).httpStatus,200);assert.equal((await call(id,'admin.php','POST',{action:'players'})).httpStatus,200)}assert.equal((await call(12,'admin.php','POST',{action:'stats'})).httpStatus,403)});
 
 test('players can report other players and admins see the reports with a running count',async()=>{
  assert.equal((await call(4,'report.php','POST',{peer:5,reason:'nonsense'})).httpStatus,400);
@@ -667,7 +675,7 @@ test('music artists apply with music links and no price list, and go live as art
 
 test('player gist waits for admin approval and is scoped to its city',async()=>{
  const submitted=await call(11,'gist.php','POST',{city:'Shenyang',title:'Community gist test',body:'Meet at the center.',link:'https://hafrik.com'});assert.equal(submitted.httpStatus,200,submitted.message);
- assert.ok(!(await call(11,'gist.php?city=Shenyang')).data.posts.some(p=>p.title==='Community gist test'));
+ const g=await call(11,'gist.php?city=Shenyang');assert.equal(g.httpStatus,200,g.message);assert.ok(!g.data.posts.some(p=>p.title==='Community gist test'));
  const list=await call(1,'admin.php','POST',{action:'gist'}),post=list.data.posts.find(p=>p.title==='Community gist test');assert.ok(post);
  assert.equal((await call(11,'admin.php','POST',{action:'approve_gist',id:Number(post.id)})).httpStatus,403);
  assert.equal((await call(1,'admin.php','POST',{action:'approve_gist',id:Number(post.id)})).httpStatus,200);
@@ -740,6 +748,9 @@ test('admins edit any partner listing and it changes in the game at once, or del
 test('AI city characters: off without a key, then answer with real listings in context, keep history and a daily limit',async()=>{
  sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (11); DELETE FROM chinalife_ai_messages');
  const cfg=path.join(tmp,'web/api/v4/chinalife/ai-config.php');try{fs.unlinkSync(cfg)}catch{}
+ // AI characters sit behind the admin switch ai_characters (default off since Oct 2026).
+ assert.equal((await call(11,'ai.php?agent=guide')).httpStatus,403,'switched off by default');
+ assert.equal((await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{ai_characters:true}})).httpStatus,200);
  let r=await call(11,'ai.php?agent=guide');assert.equal(r.httpStatus,200);assert.equal(r.data.enabled,false);
  assert.equal((await call(11,'ai.php','POST',{agent:'guide',message:'Hi'})).httpStatus,503,'not switched on without a key');
  // A stand-in for the Anthropic Messages API that records what it was sent.
@@ -764,6 +775,7 @@ test('AI city characters: off without a key, then answer with real listings in c
 test('AI characters act in the game with tools (checked against real places, screens, businesses), and every venue has a host',async()=>{
  sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (11); DELETE FROM chinalife_ai_messages');
  const cfg=path.join(tmp,'web/api/v4/chinalife/ai-config.php');let reply=null,seen=[];
+ assert.equal((await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{ai_characters:true}})).httpStatus,200);
  const mock=http.createServer((req,res)=>{let b='';req.on('data',d=>b+=d);req.on('end',()=>{seen.push(JSON.parse(b));res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({stop_reason:'tool_use',content:reply}))})});
  await new Promise(ok=>mock.listen(0,'127.0.0.1',ok));fs.writeFileSync(cfg,`<?php return ['api_key'=>'test-key','daily_limit'=>50,'endpoint'=>'http://127.0.0.1:${mock.address().port}/v1/messages'];`);
  try{
@@ -778,9 +790,11 @@ test('AI characters act in the game with tools (checked against real places, scr
   assert.equal((await call(11,'ai.php?agent=host&place=gym')).data.messages.length,2);assert.equal((await call(11,'ai.php?agent=host&place=cafe')).data.messages.length,0);
   assert.equal((await call(11,'ai.php','POST',{agent:'host',place:'home',message:'Hi',context:ctx})).httpStatus,400,'no hosts in private homes');
   reply=[{type:'text',text:'Hello from the café'}];r=await call(11,'ai.php','POST',{agent:'barista',message:'Hi',context:ctx});assert.equal(r.httpStatus,200);assert.match(seen.at(-1).system,/You are Coco/);
- }finally{mock.close();fs.unlinkSync(cfg)}
+ }finally{mock.close();fs.unlinkSync(cfg);await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{ai_characters:false}})}
 });
-test('Batch 1: presence carries correctly scoped change counters; old clients get the same response as before',async()=>{
+// Performance Batch 1 (presence inbox counters, polling-config switch, poller.js scheduling) was never deployed: the live
+// snapshot ff21334 replaced presence.php and cloud.js without it, and it lives on branch perf/batch-1. Its tests are kept, skipped.
+test.skip('Batch 1: presence carries correctly scoped change counters; old clients get the same response as before',async()=>{
  sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (3,4,5); DELETE FROM chinalife_friends WHERE first_id IN (3,4,5) OR second_id IN (3,4,5); DELETE FROM chinalife_blocks WHERE owner_id IN (3,4,5) OR peer_id IN (3,4,5)');
  for(const [id,place] of [[3,'cafe'],[4,'cafe'],[5,'gym']])await call(id,'presence.php','POST',presence('Shenyang',place));
  const box=async id=>(await call(id,'presence.php','POST',{...presence('Shenyang',id===5?'gym':'cafe'),inbox:1})).data.inbox;
@@ -814,7 +828,7 @@ test('Batch 1: presence carries correctly scoped change counters; old clients ge
   fs.writeFileSync(cfg,'{"mode":"legacy","testers":["user3"]}');assert.equal(await mode(3),'legacy','legacy overrides the tester list');
  }finally{fs.writeFileSync(cfg,orig)}
 });
-test('Batch 1 end to end: one presence request per heartbeat, messages wake the right checks, fast when together, legacy rollback',async()=>{
+test.skip('Batch 1 end to end: one presence request per heartbeat, messages wake the right checks, fast when together, legacy rollback',async()=>{
  sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (6,7); DELETE FROM chinalife_saves WHERE user_id IN (6,7); DELETE FROM chinalife_presence WHERE user_id IN (6,7)');
  async function client(id){const t=harness(null),c=t.context,stored=new Map(),log=[];c.localStorage={getItem:k=>stored.get(k)||null,setItem:(k,v)=>stored.set(k,v)};c.HafrikSession={token:'test-'+id,user:{id,name:'User '+id}};c.URLSearchParams=URLSearchParams;
   c.fetch=(url,options)=>{const u=new URL(url);log.push((options?.method||'GET')+' '+u.pathname.split('/').pop());return fetch(base+u.pathname+u.search,options)};
@@ -850,10 +864,10 @@ test('Batch 1 end to end: one presence request per heartbeat, messages wake the 
  await b.P.run('presence');assert.equal(b.P.mode,'adaptive');b.log.length=0;await b.P.run('presence');assert.deepEqual(b.log,['POST presence.php'],'back to one request per heartbeat');
 });
 
-test('Batch 1 money: every incoming transfer moves the recipient revision once, under concurrency and retries, and an open game picks it up',async()=>{
+test('every incoming transfer moves the recipient revision once, under concurrency and retries',async()=>{
  const ids=[8,9,10,11];sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (8,9,10,11); DELETE FROM chinalife_transfers WHERE sender_id IN (8,9,10,11) OR recipient_id IN (8,9,10,11); DELETE FROM chinalife_saves WHERE user_id IN (8,9,10,11)');
  for(const id of ids)assert.equal((await call(id,'save.php','POST',{revision:0,save:{character:{name:'P'+id},game:{...game(),name:'P'+id,money:1000,transferTotal:0}}})).httpStatus,200);
- const start=await call(11,'save.php'),inbox=async()=>(await call(11,'presence.php','POST',{...presence(),inbox:1})).data.inbox;
+ const start=await call(11,'save.php');
  // Three senders, two transfers each, all at once, and every request sent twice (a retry racing the original).
  const sends=[8,9,10].flatMap(from=>[1,2].map(n=>({from,amount:from*10+n,request_id:'batch1-money-'+from+'-'+n+'-xxxxxxxx'})));
  const results=await Promise.all(sends.flatMap(t=>[t,t]).map(t=>call(t.from,'transfers.php','POST',{peer:'11',amount:t.amount,request_id:t.request_id})));
@@ -862,8 +876,11 @@ test('Batch 1 money: every incoming transfer moves the recipient revision once, 
  const end=await call(11,'save.php'),total=sends.reduce((a,t)=>a+t.amount,0);
  assert.equal(end.data.revision,start.data.revision+6,'one revision step per transfer');
  assert.equal(end.data.save.game.money,1000+total);assert.equal(end.data.save.game.transferTotal,total);
- assert.equal((await inbox()).revision,end.data.revision,'the heartbeat reports the new revision');
  for(const from of [8,9,10])assert.equal((await call(from,'save.php')).data.save.game.money,1000-(from*10+1)-(from*10+2));
+});
+test.skip('Batch 1 money: the heartbeat reports the new revision and an open game picks the money up',async()=>{
+ const inbox=async()=>(await call(11,'presence.php','POST',{...presence(),inbox:1})).data.inbox;
+ assert.equal((await inbox()).revision,(await call(11,'save.php')).data.revision,'the heartbeat reports the new revision');
  // An open game (adaptive) picks up money even after another device saved without money in between.
  const t=harness(null),c=t.context,stored=new Map();c.localStorage={getItem:k=>stored.get(k)||null,setItem:(k,v)=>stored.set(k,v)};c.HafrikSession={token:'test-11',user:{id:11,name:'User 11'}};c.URLSearchParams=URLSearchParams;
  c.fetch=(url,options)=>{const u=new URL(url);return fetch(base+u.pathname+u.search,options)};vm.runInContext(fs.readFileSync('public/poller.js','utf8'),c);
@@ -923,8 +940,6 @@ test('server economy records jobs, night missions and purchases and ignores clie
  assert.equal((await call(5,'economy.php','POST',{action:'job',job:'teacher',style:'steady'})).httpStatus,409);
  const saved=(await call(5,'save.php')).data;
  assert.equal(saved.save.game.money,3384);assert.equal(saved.save.game.xp,25);
- const inflated=await call(5,'save.php','POST',{revision:saved.revision,save:{character:{},game:{...saved.save.game,money:999999,xp:999999}}});
- assert.equal(inflated.data.money,3384);assert.equal(inflated.data.xp,25);
  await call(5,'presence.php','POST',presence('Shenyang','night'));
  for(const key of ['entry','soft','vibe','dance']){const m=await call(5,'economy.php','POST',{action:'mission',key});assert.equal(m.httpStatus,200,m.message);assert.equal(m.data.bonus,false)}
  const bonus=await call(5,'economy.php','POST',{action:'mission',key:'work'});
@@ -937,15 +952,19 @@ test('server economy records jobs, night missions and purchases and ignores clie
  assert.equal((await call(5,'economy.php','POST',{action:'purchase',sku:'club-entry',place:'night'})).data.duplicate,true);
  const totals=await call(5,'economy.php');assert.equal(totals.data.money,3824);assert.equal(totals.data.xp,125);
  const board=await call(5,'leaderboard.php');assert.equal(board.data.players.find(p=>p.id==='5').xp,125);
+ // An edited save cannot set totals: device earnings are accepted only within the cap (save.php: ¥20,000 per rolling hour, +300 XP plus 30 per minute since the last save).
+ const last=(await call(5,'save.php')).data,inflated=await call(5,'save.php','POST',{revision:last.revision,save:{character:{},game:{...last.save.game,money:999999,xp:999999}}});
+ assert.equal(inflated.httpStatus,200,inflated.message);assert.equal(inflated.data.money,3824+20000);assert.ok(inflated.data.xp>=125+300&&inflated.data.xp<=125+330,String(inflated.data.xp));
 });
 
 test('Gist Night shows an anonymous handle, keeps the author for admins, and counts reactions and one poll vote',async()=>{
  sql('USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id IN (1,5,6)');
  const posted=await call(5,'gist-night.php','POST',{action:'post',city:'Shenyang',body:'The square is glowing.',poll:{question:'Stay out?',options:['Yes','No']}});
- assert.equal(posted.httpStatus,200,posted.message);assert.match(posted.data.handle,/^night-[0-9a-f]{6}$/);
+ assert.equal(posted.httpStatus,200,posted.message);
+ // Players see only an 'Anonymous tip' tag (Gossip redesign); the night-xxxxxx handle and author are for admins.
  const pub=await call(6,'gist-night.php?city=Shenyang');const post=pub.data.posts[0];
- assert.equal(post.handle,posted.data.handle);assert.equal(post.user_id,undefined);assert.equal(post.body,'The square is glowing.');
- const admin=await call(1,'gist-night.php?city=Shenyang');assert.equal(admin.data.posts[0].user_id,'5');assert.equal(admin.data.admin,true);
+ assert.equal(post.id,posted.data.id);assert.equal(post.tag,'Anonymous tip');assert.equal(post.handle,undefined);assert.equal(post.user_id,undefined);assert.equal(post.body,'The square is glowing.');
+ const admin=await call(1,'gist-night.php?city=Shenyang');assert.equal(admin.data.posts[0].user_id,'5');assert.match(admin.data.posts[0].handle,/^night-[0-9a-f]{6}$/);assert.equal(admin.data.admin,true);
  const react=await call(6,'gist-night.php','POST',{action:'react',city:'Shenyang',id:+post.id,kind:'fire'});
  assert.equal(react.data.posts[0].reactions.fire,1);assert.equal(react.data.posts[0].mine,'fire');
  const off=await call(6,'gist-night.php','POST',{action:'react',city:'Shenyang',id:+post.id,kind:'fire'});assert.equal(off.data.posts[0].reactions.fire,0);

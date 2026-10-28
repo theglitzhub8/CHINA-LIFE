@@ -119,7 +119,8 @@ test('two accounts recover from an initial presence outage on the regular heartb
  assert.equal(a.context.ChinaLifeCloud.joined,false);assert.equal(b.context.ChinaLifeCloud.joined,false);
  api.failPresence=false;
  const heartbeat=t=>t.intervals.find(fn=>fn.name==='presenceHeartbeat')();
- await heartbeat(a);await heartbeat(b);await heartbeat(a);
+ // A failed first join waits 15 s and a joined heartbeat 20 s before the same room is sent again.
+ a.passMinutes(1);b.passMinutes(1);await heartbeat(a);await heartbeat(b);a.passMinutes(1);await heartbeat(a);
  assert.equal(a.context.ChinaLifeCloud.players[0].id,'bob');assert.equal(b.context.ChinaLifeCloud.players[0].id,'alice');
  assert.equal(a.context.ChinaLifeCloud.joined,true);assert.equal(b.context.ChinaLifeCloud.joined,true);
  await a.context.ChinaLifeCloud.leave();await heartbeat(a);assert.equal(a.context.ChinaLifeCloud.joined,true);
