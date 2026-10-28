@@ -14,8 +14,8 @@ function room(on,{place='gist',live=null}={}){
 }
 
 test('the switch starts off on the server and in the game',()=>{
- assert.match(r('chinalife-api/hafrik-features.php'),/'real_sitting','gossip_room','gossip_show'\];\}/);
- assert.match(r('public/flags.js'),/gossip_room:false,gossip_show:false/);
+ assert.match(r('chinalife-api/hafrik-features.php'),/'real_sitting','gossip_room','gossip_show','gossip_wall'\];\}/);
+ assert.match(r('public/flags.js'),/gossip_room:false,gossip_show:false,gossip_wall:false/);
 });
 
 test('switch off: the tea table opens the Gossip wall as before, and the phone keeps Hot Seat and Gossip TV',async()=>{
@@ -121,4 +121,36 @@ test('Hot Seat stays offline (simulated voters) unless Hot Seat Hour is on, then
  let on=false;c.ChinaLifeFlags={cast:k=>k==='gossip_show'&&on,appOff:()=>false};vm.runInContext(r('public/hot-seat.js'),c);
  c.ChinaLifeHotSeat.peek();assert.equal(urls.length,0,'switch off: no server calls (as before)');
  on=true;c.ChinaLifeHotSeat.peek();assert.match(urls[0]||'',/\/chinalife\/hot-seat\.php/,'switch on: talks to the server');
+});
+
+// Phase 2 (switch gossip_wall): the wall gets the full reaction row, replies, its place tag, Gist of the day on top,
+// and place chips that filter it. Off: the wall is exactly as before.
+function wall(on,posts){
+ const t=harness({...fixture(),place:'gist'}),c=t.context,sent=[];
+ c.ChinaLifeFlags={cast:k=>k==='gossip_wall'&&on,appOff:()=>false};
+ c.ChinaLifeAuth={request:async(path,method,body)=>{if(method==='POST')sent.push(body);return {data:{admin:false,posts}}}};
+ vm.runInContext(r('public/gossip-wall.js'),c);return {t,c,sent};
+}
+const tips=[
+ {id:'1',official:true,tag:'Hafrik',own:false,body:'Welcome to the wall',at:Date.now(),reactions:{like:0,fire:0,laugh:0},mine:null},
+ {id:'2',official:false,own:false,body:'Big news from #campus today',at:Date.now(),reactions:{like:0,fire:1,laugh:0,shock:0,eyes:0,cap:0},mine:null,place:'campus',replies:[],reply_count:0},
+ {id:'3',official:false,own:false,body:'Who danced on the table at the #club?',at:Date.now(),reactions:{like:1,fire:2,laugh:3,shock:1,eyes:0,cap:2},mine:'cap',place:'club',top:true,reply_count:5,
+  replies:[{id:'9',body:'It was the DJ',op:false,own:true},{id:'10',body:'I was there',op:true,own:false},{id:'11',body:'No way',op:false,own:false}]}];
+
+test('Gossip wall with the switch on: six reactions, replies, place tags, Gist of the day first, and place chips',async()=>{
+ const {t,sent}=wall(true,tips);await t.game.gistNight();await tick();const d=t.document,cards=[...d.querySelectorAll('#gistNightFeed article.gossip-card')];
+ assert.match(cards[1].textContent,/🏆 Gist of the day/,'the top tip comes right after the pinned Hafrik post');assert.match(cards[1].textContent,/#club/);
+ const reacts=[...cards[1].querySelectorAll('[data-gw-react]')].map(b=>b.textContent.trim());assert.deepEqual(reacts,['😂 3','🔥 2','🫢 1','👀 0','🧢 2','❤️ 1']);
+ assert.ok(cards[1].querySelector('[data-kind="cap"]').className.includes('mine'));
+ assert.match(cards[1].querySelector('.gw-replies').textContent,/💬 5 replies.*2 earlier.*You It was the DJ.*Tipster I was there.*Anonymous No way/s);
+ cards[1].querySelector('[data-kind="shock"]').onclick();assert.deepEqual(JSON.parse(JSON.stringify(sent.at(-1))),{city:t.game.state.city,action:'react',id:3,kind:'shock'});
+ const f=cards[1].querySelector('[data-gw-form]');f.querySelector('input').value='Too funny';f.onsubmit({preventDefault(){}});assert.equal(sent.at(-1).action,'reply');assert.equal(sent.at(-1).body,'Too funny');
+ d.querySelector('[data-gw-chip="campus"]').onclick();
+ const shown=[...d.querySelectorAll('#gistNightFeed article.gossip-card')].filter(c=>!c.hidden).map(c=>c.dataset.place||'pinned');assert.deepEqual(shown,['pinned','campus'],'the campus chip keeps pinned posts and #campus tips');
+});
+
+test('Gossip wall with the switch off: no new reactions, replies or chips',async()=>{
+ const {t}=wall(false,tips);await t.game.gistNight();await tick();const d=t.document;
+ assert.equal(d.querySelector('[data-gw-react]'),null);assert.equal(d.querySelector('.gw-replies'),null);assert.equal(d.querySelector('.gw-chips'),null);
+ assert.equal(d.querySelectorAll('#gistNightFeed [data-react]').length,9,'the old three reactions on each of the three posts');
 });

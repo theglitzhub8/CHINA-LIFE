@@ -48,6 +48,12 @@ runs offline (not changed here). Before switching `gossip_show` on, the Hot Seat
 
 **Phase 2 · A better Gossip wall.** Reactions (😂 🔥 🫢 👀 🧢), short replies, and "Gist of the day" chosen by
 reactions. Tags for the other places (#club #campus #football #hq) so the wall reads like the city's feed.
+✅ Done 29 Oct (switch `gossip_wall`, off; `public/gossip-wall.js`, gist-night.php, `migration-gist-wall.sql`): six
+reactions (😂 🔥 🫢 👀 🧢 ❤️, one per player per tip as before); anonymous replies, 2–140 characters, checked with
+the Hot Seat word list and the no-names/links/numbers rule, 20 an hour, the latest three shown ("Tipster" marks the
+tip's author, admins can trace who replied); "🏆 Gist of the day" is today's most-reacted tip (3 or more), lifted
+under any pinned Hafrik post; a place tag written in a tip (#club #campus #football #hq #hospital #voting #gossip)
+shows on it, and place chips filter the wall. Needs the replies table: run `migrate.php` before switching it on.
 
 **Phase 3 · The city makes gossip.** Things that happen elsewhere post to the wall automatically, always as
 "someone", never a player's name: a club VIP night, a football result, a graduation, a new rank, a Hot Seat streak.

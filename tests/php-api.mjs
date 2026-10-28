@@ -1325,3 +1325,26 @@ test('Hot Seat Hour: queue during the show, next gist after the reveal, queue dr
   assert.equal(sql("USE chinalife_test; SELECT status FROM chinalife_hot_seat WHERE user_id=38").trim(),'dropped');
  }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{gossip_show:false}});sql("USE chinalife_test; DELETE FROM chinalife_hot_seat WHERE user_id IN (36,37,38)")}
 });
+
+// Gossip Room Phase 2 (switch gossip_wall): more reactions, anonymous replies, place tags and Gist of the day.
+test('Gossip wall: new reactions and replies only with the switch, clean replies, place tags, Gist of the day',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(40,'user40'),(41,'user41'),(42,'user42'),(43,'user43')");
+ const gn=(id,data)=>call(id,data?'gist-night.php':'gist-night.php?city=China',data?'POST':'GET',data?{city:'China',...data}:undefined);
+ const post=await gn(40,{action:'post',body:'Who danced on the table at the #club last night?'});assert.equal(post.httpStatus,200,post.message);const id=+post.data.id;
+ assert.equal((await gn(41,{action:'react',id,kind:'cap'})).httpStatus,400,'🧢 needs the switch');
+ assert.equal((await gn(41,{action:'reply',id,body:'It was the DJ'})).httpStatus,403,'replies need the switch');
+ assert.equal((await gn(41,'')).data?.posts?.[0]?.replies,undefined);
+ try{
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{gossip_wall:true}});
+  for(const [u,k] of [[41,'cap'],[42,'shock'],[43,'eyes']])assert.equal((await gn(u,{action:'react',id,kind:k})).httpStatus,200);
+  const r1=await gn(41,{action:'reply',id,body:'It was the DJ, everyone saw'});assert.equal(r1.httpStatus,200,r1.message);
+  assert.equal((await gn(40,{action:'reply',id,body:'I was there too'})).httpStatus,200);
+  assert.equal((await gn(42,{action:'reply',id,body:'see https://example.com'})).httpStatus,422,'no links');
+  assert.equal((await gn(42,{action:'reply',id,body:'x'})).httpStatus,422,'too short');
+  const feed=(await gn(41)).data.posts,p=feed.find(x=>+x.id===id);
+  assert.equal(p.place,'club');assert.equal(p.reply_count,2);assert.deepEqual(p.replies.map(r=>[r.body,r.op,r.own]),[['It was the DJ, everyone saw',false,true],['I was there too',true,false]]);
+  assert.equal(p.reactions.cap,1);assert.equal(p.reactions.shock,1);assert.equal(p.reactions.eyes,1);assert.equal(p.mine,'cap');
+  assert.equal(p.top,true,'3 reactions today: Gist of the day');assert.equal(p.replies[0].user_id,undefined,'players never see who replied');
+  assert.equal((await gn(1)).data.posts.find(x=>+x.id===id).replies[0].user_id,'41','admins can trace a reply');
+ }finally{await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{gossip_wall:false}});sql('USE chinalife_test; DELETE FROM chinalife_gist_night WHERE user_id=40')}
+});

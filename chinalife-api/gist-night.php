@@ -1,7 +1,14 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__.'/common.php';
+require_once __DIR__.'/hot-seat-lib.php';
 cl_methods(['GET','POST']);
+// Gossip wall Phase 2 (docs/GOSSIP-ROOM-PLAN.md, appadmin switch gossip_wall): more reactions, anonymous replies,
+// "Gist of the day" (today's most-reacted tip, at least 3 reactions) and place tags written in the post (#club …).
+function gist_wall_on(): bool {return (bool)(cl_hafrik_features()['gossip_wall']??false);}
+function gist_kinds(): array {return gist_wall_on()?['like','fire','laugh','shock','eyes','cap']:['like','fire','laugh'];}
+const GIST_PLACES=['club','campus','football','hq','hospital','voting','gossip'];
+function gist_place(string $body): ?string {return preg_match('/#('.implode('|',GIST_PLACES).')\b/i',$body,$m)?strtolower($m[1]):null;}
 
 function gist_handle(int $userId, string $city): string {
     return 'night-'.substr(hash('sha256', $userId.'|'.$city.'|gist-night'), 0, 6);
@@ -26,11 +33,24 @@ function gist_night_feed(string $city): array {
         foreach (cl_rows("SELECT poll_id,option_index,COUNT(*) n FROM chinalife_gist_night_votes WHERE poll_id IN ($pin) GROUP BY poll_id,option_index",$pt,$pollIds) as $row) $counts[$row['poll_id']][(int)$row['option_index']]=(int)$row['n'];
         foreach (cl_rows("SELECT poll_id,option_index FROM chinalife_gist_night_votes WHERE user_id=? AND poll_id IN ($pin)",'i'.$pt,array_merge([$uid],$pollIds)) as $row) $voted[$row['poll_id']]=(int)$row['option_index'];
     }
+    // Replies (switch gossip_wall): the count and the latest three per post, anonymous; "OP" marks the tip's author.
+    $replies=[];$replyCounts=[];
+    if (gist_wall_on()) {
+        $authors=array_column($posts,'user_id','id');
+        foreach (cl_optional_rows("SELECT post_id,COUNT(*) n FROM chinalife_gist_night_replies WHERE post_id IN ($in) GROUP BY post_id",$types,$ids) as $row) $replyCounts[$row['post_id']]=(int)$row['n'];
+        foreach (array_reverse(cl_optional_rows("SELECT id,post_id,user_id,body,UNIX_TIMESTAMP(created_at)*1000 at FROM chinalife_gist_night_replies WHERE post_id IN ($in) ORDER BY id DESC LIMIT 300",$types,$ids)) as $row) {
+            $r=['id'=>(string)$row['id'],'body'=>$row['body'],'at'=>(int)$row['at'],'op'=>(int)$row['user_id']===(int)($authors[$row['post_id']]??0),'own'=>(int)$row['user_id']===(int)$uid];
+            if ($admin) $r['user_id']=(string)$row['user_id'];
+            $replies[$row['post_id']][]=$r;
+        }
+        foreach ($replies as $k=>$list) $replies[$k]=array_slice($list,-3);
+    }
     $out=[];
     foreach ($posts as $post) {
         $official=(int)$post['official']===1;
         $item=['id'=>(string)$post['id'],'tag'=>$official?'Hafrik':'Anonymous tip','official'=>$official,'own'=>(int)$post['user_id']===(int)$uid,'body'=>$post['body'],'at'=>(int)$post['at'],'reactions'=>$reactions[$post['id']]??['like'=>0,'fire'=>0,'laugh'=>0],'mine'=>$mine[$post['id']]??null];
-        foreach (['like','fire','laugh'] as $kind) $item['reactions'][$kind]=(int)($item['reactions'][$kind]??0);
+        foreach (gist_kinds() as $kind) $item['reactions'][$kind]=(int)($item['reactions'][$kind]??0);
+        if (gist_wall_on()) {$item['place']=gist_place((string)$post['body']);$item['replies']=$replies[$post['id']]??[];$item['reply_count']=(int)($replyCounts[$post['id']]??0);}
         // Players only ever see 'Anonymous tip'. Admins can still trace the author.
         if ($admin) {$item['user_id']=(string)$post['user_id'];$item['handle']=gist_handle((int)$post['user_id'],$city);}
         if (isset($polls[$post['id']])) {
@@ -39,6 +59,12 @@ function gist_night_feed(string $city): array {
             foreach (array_values($options) as $i=>$text) $item['poll']['options'][]=['text'=>$text,'votes'=>(int)($counts[$poll['id']][$i]??0)];
         }
         $out[]=$item;
+    }
+    // Gist of the day: today's (Beijing) anonymous tip with the most reactions, at least 3.
+    if (gist_wall_on()) {
+        $start=(new DateTimeImmutable(cl_beijing_day().' 00:00',new DateTimeZone('Asia/Shanghai')))->getTimestamp()*1000;$best=null;$bestN=2;
+        foreach ($out as $k=>$item) {if ($item['official']||$item['at']<$start) continue;$n=array_sum($item['reactions']);if ($n>$bestN) {$best=$k;$bestN=$n;}}
+        if ($best!==null) $out[$best]['top']=true;
     }
     $out=array_merge($out,gist_legacy_posts($city,$admin));
     // Official Hafrik posts are pinned on top; everything else is newest first.
@@ -93,7 +119,7 @@ if ($action==='post') {
 if ($action==='react') {
     cl_rate('gist_night_tap',30,60);
     $id=(int)($input['id']??0);$kind=(string)($input['kind']??'');
-    if (!in_array($kind,['like','fire','laugh'],true) || !$id) cl_fail('Choose a reaction');
+    if (!in_array($kind,gist_kinds(),true) || !$id) cl_fail('Choose a reaction');
     $post=cl_one('SELECT id,city FROM chinalife_gist_night WHERE id=?','i',[$id]);
     if (!$post||$post['city']!==$city) cl_fail('That gossip is gone',404);
     $have=cl_one('SELECT kind FROM chinalife_gist_night_reactions WHERE post_id=? AND user_id=?','ii',[$id,$uid]);
@@ -101,6 +127,20 @@ if ($action==='react') {
     elseif ($have) cl_run('UPDATE chinalife_gist_night_reactions SET kind=?,created_at=NOW() WHERE post_id=? AND user_id=?','sii',[$kind,$id,$uid]);
     else cl_run('INSERT INTO chinalife_gist_night_reactions(post_id,user_id,kind,created_at) VALUES(?,?,?,NOW())','iis',[$id,$uid,$kind]);
     json_response('success',['posts'=>gist_night_feed($city)],'Reaction saved.');
+}
+if ($action==='reply') {
+    // A short anonymous answer (switch gossip_wall): 2-140 characters, no swearing, links, @handles or numbers.
+    if (!gist_wall_on()) cl_fail('Replies are switched off',403);
+    cl_rate('gist_night_reply',20,3600);
+    $id=(int)($input['id']??0);$text=trim(preg_replace('/\s+/u',' ',(string)($input['body']??'')));
+    if (!$id) cl_fail('Choose a tip to reply to');
+    if (mb_strlen($text)<2||mb_strlen($text)>140) cl_fail('Replies are 2 to 140 characters',422);
+    if (hs_profane($text)) cl_fail('Keep it friendly: no swearing or insults',422);
+    if (hs_personal($text)) cl_fail('No names, links, @handles or phone numbers',422);
+    $post=cl_one('SELECT id,city FROM chinalife_gist_night WHERE id=?','i',[$id]);
+    if (!$post||$post['city']!==$city) cl_fail('That gossip is gone',404);
+    cl_run('INSERT INTO chinalife_gist_night_replies(post_id,user_id,body,created_at) VALUES(?,?,?,NOW())','iis',[$id,$uid,$text]);
+    json_response('success',['posts'=>gist_night_feed($city)],'Reply posted anonymously.');
 }
 if ($action==='vote') {
     cl_rate('gist_night_tap',30,60);
