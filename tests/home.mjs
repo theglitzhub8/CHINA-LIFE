@@ -35,3 +35,12 @@ test('homeAct runs a home action without the At home sheet, and the sheet still 
  t.game.home();assert.match(d.querySelector('#activityContent h2').textContent,/At home/,'opening the sheet yourself still works');
  s.place='night';assert.equal(t.game.homeAct('homeNetflix'),undefined);assert.match(d.getElementById('toast').textContent,/Go home first/);
 });
+
+// Owner saw the club menu at home: after visiting the club, the hidden club dock still showed because the dock style set
+// display:flex over the hidden attribute. A hidden dock now always stays hidden.
+test('after the club, home shows the home dock only (a hidden dock never shows)',()=>{
+ const {t,c,d}=home();c.ChinaLifeFlags.cast=k=>k==='home_dock'||k==='club_dock';const ui=d.getElementById('worldUI'),hud=d.createElement('div');hud.className='club-hud';
+ t.game.state.place='night';ui.append(hud);c.ChinaLifeClubDock.sync();assert.equal(d.getElementById('clubDock').hidden,false);assert.equal(d.getElementById('homeDock').hidden,true);
+ hud.remove();t.game.state.place='home';c.ChinaLifeClubDock.sync();assert.equal(d.getElementById('clubDock').hidden,true);assert.equal(d.getElementById('homeDock').hidden,false);
+ assert.match(r('public/club-dock.js'),/html:root body #worldUI \.club-dock\[hidden\]\{display:none!important\}/);
+});
