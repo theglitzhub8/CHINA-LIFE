@@ -61,3 +61,21 @@ test('sleep at home: night falls over the room with a counter of the hours slept
  const nap=fire({state:'start',kind:'sleep',label:'Take a nap',place:'home',duration:3});assert.equal(nap.duration,5.5);
  const away=fire({state:'start',kind:'sleep',label:'Proper sleep',place:'night',duration:3});assert.equal(away.duration,3,'not at home: untouched');
 });
+
+// Phase 3: shower and toilet (the 'wash' activity at home). The body goes out of sight under a veil; world.js shows it again.
+test('shower and toilet at home: a frosted shower with humming, or the door and a flush, then fresh with the need filled',()=>{
+ const src=r('public/home-moments.js');assert.match(src,/d\.duration=loo\?5:7/);assert.match(r('public/game.js'),/kind:'wash',x:4,z:3,label:'Use the toilet'/);assert.match(r('public/game.js'),/kind:'wash',x:4,z:3,label:'Freshen up'/);
+ const t=harness({...fixture(),place:'home'}),c=t.context,d=t.document,said=[],body={visible:true};c.requestAnimationFrame=f=>f(0);
+ c.ChinaLifeWorld={say:(who,s)=>said.push(s),onFrame:()=>()=>{},body};c.ChinaLife.isResidence=p=>p==='home';c.ChinaLifeAudio={volume:0};
+ vm.runInContext(src,c);t.timers.splice(0);const vp=d.getElementById('worldViewport')||d.body,fire=detail=>{const e=new c.Event('chinalife:perform');e.detail=detail;c.dispatchEvent(e);return detail};
+ assert.equal(fire({state:'start',kind:'wash',label:'Freshen up',place:'home',duration:3}).duration,7);
+ let el=vp.querySelector('.hm-shower');assert.ok(el,'shower veil');assert.equal(body.visible,false,'never the body');assert.equal(el.querySelectorAll('.hm-drop').length,34);assert.ok(el.querySelector('.hm-steam'));
+ t.timers.shift()();assert.match(el.querySelector('.hm-hum').textContent,/La la la/);t.timers.splice(0);
+ fire({state:'end',kind:'wash',label:'Freshen up',place:'home'});assert.ok(el.classList.contains('done'));assert.match(el.querySelector('.hm-note').textContent,/Hygiene 100%/);
+ for(const f of t.timers.splice(0))f();assert.ok(said.includes('✨ So fresh!'));
+ body.visible=true;t.timers.splice(0);assert.equal(fire({state:'start',kind:'wash',label:'Use the toilet',place:'home',duration:3}).duration,5);
+ el=vp.querySelector('.hm-loo');assert.ok(el,'toilet veil');assert.match(el.textContent,/15 minutes later/);assert.equal(body.visible,false);
+ t.timers.shift()();assert.ok(el.classList.contains('flushed'),'flush');
+ fire({state:'end',kind:'wash',label:'Use the toilet',place:'home'});assert.match(el.querySelector('.hm-note').textContent,/Bladder 100%/);for(const f of t.timers.splice(0))f();assert.ok(said.includes('😮‍💨 Much better'));
+ assert.equal(fire({state:'start',kind:'wash',label:'Freshen up',place:'gym',duration:3}).duration,3,'not at home: untouched');
+});

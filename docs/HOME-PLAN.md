@@ -90,6 +90,14 @@ map does not change; home interiors can.
   - **Changes to the protected world.js** (no map change): a per-frame hook list (`ChinaLifeWorld.onFrame`) and
     `ChinaLifeWorld.body`, the player's body, so moments can pose the arms.
 - **Phase 3 · Shower and toilet** (steam / door and fade, never the body).
+  ✅ Done 30 Oct 2026 (no switch; public/home-moments.js, no world.js change). At home, from the dock:
+  - **Shower (7 s):** you go out of sight behind frosted glass with running water and rising steam, and the sound of the
+    shower. "🎶 La la la…" and "🎶 Hmm hmm hmmm~" float up from behind the glass. At the end: sparkles, "🧼 Hygiene 100%"
+    and "✨ So fresh!".
+  - **Toilet (5 s):** the screen goes dark with a closed door and "🚽 15 minutes later…", then "🌀 Flush!" with a flush
+    sound. Out with "🚽 Bladder 100%" and "😮‍💨 Much better".
+  - The body is never shown (world.js shows it again when the activity ends). Sounds follow the music volume and are
+    silent at 0. Times and needs are unchanged (game.js). Skipped when motion is reduced.
 - **Phase 4 · Eat:** cook from your fridge at the stove, or order with the rider at your door.
 - **Phase 5 · Chill and friends:** TV on the sofa with popcorn; the doorbell when a friend arrives.
 - **Phase 6 · Wardrobe, study at the desk, video call family.**
