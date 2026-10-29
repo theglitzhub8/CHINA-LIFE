@@ -219,6 +219,12 @@ function cl_valid_world_layout($v): ?array {
     if (array_key_exists('npc_density',$v)) {$n=$v['npc_density'];if (!is_int($n)&&!is_float($n)||$n<0||$n>1) return null;$out['npc_density']=round((float)$n,2);}
     // Optional one-city club name (venue 'night'); missing means the client default. Classic always shows 007 Club.
     if (array_key_exists('club_name',$v)) {$c=$v['club_name'];if (!is_string($c)) return null;$c=trim(preg_replace('/\s+/u',' ',$c));if ($c===''||mb_strlen($c)>24||preg_match('/[<>"\x00-\x1f]/',$c)) return null;$out['club_name']=$c;}
+    // Optional opening hours per venue (admin, 30 Oct 2026): {id:[opens,closes]} in game hours on the Beijing clock.
+    // opens 0–23, closes 1–24; closes before opens runs past midnight (18→4); [0,24] is open all day. Missing = default.
+    if (array_key_exists('hours',$v)) {$h=$v['hours'];if (!is_array($h)) return null;$hours=[];
+        foreach ($h as $id=>$pair) {if (!in_array($id,CL_ONE_CITY_PLACES,true)||!is_array($pair)||count($pair)!==2) return null;[$a,$b]=array_values($pair);
+            if (!is_int($a)||!is_int($b)||$a<0||$a>23||$b<1||$b>24||$a===$b) return null;$hours[$id]=[$a,$b];}
+        if ($hours) $out['hours']=$hours;}
     return $out;
 }
 // Null when the row is missing, so the client keeps its built-in default.

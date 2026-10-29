@@ -123,3 +123,24 @@ test('suggestions never claim a crowd, skip closed places and send new students 
  assert.ok(!o.suggest({minutes:H(13),needs:ok,student:true,day:1,here:'campus'}).some(s=>s.id==='university'),'never where you already are');
  assert.ok(o.suggest({minutes:H(3)+30,needs:ok,here:'night'}).length>0);
 });
+
+// Admin opening hours (world_layout.hours, 30 Oct 2026): the admin's hours replace the defaults; bad pairs are ignored;
+// classic mode keeps the built-in hours.
+test('admin opening hours: used by isOpenAt and hoursOf, past midnight too; invalid hours ignored',()=>{
+ const {ChinaLifeOneCity:o}=load();
+ assert.deepEqual([...o.hoursOf('night')],[18,4],'default');
+ o.set({mode:'one-city',hours:{night:[20,6],gist:[0,24],football:[9,9],casino:[1,2],hq:[25,3]}});
+ assert.deepEqual([...o.hoursOf('night')],[20,6]);assert.equal(o.isOpenAt('night',H(19)),false);assert.equal(o.isOpenAt('night',H(5)),true);assert.equal(o.isOpenAt('night',H(7)),false);
+ assert.equal(o.isOpenAt('gist',H(3)),true,'open all day');
+ assert.deepEqual([...o.hoursOf('football')],[6,23],'opens and closes at the same hour: ignored');assert.deepEqual([...o.hoursOf('hq')],[9,21],'out of range: ignored');
+ o.set({mode:'classic',hours:{night:[20,6]}});assert.deepEqual([...o.hoursOf('night')],[18,4],'classic ignores the one-city admin hours');
+});
+
+test('the World layout admin card shows and saves opening hours that differ from the default',async()=>{
+ const {ChinaLifeOneCity:o}=load({confirm:()=>true});const {parseHTML}=await import('linkedom');const {document}=parseHTML('<div id="el"></div>');const el=document.getElementById('el');
+ let saved=null;const call=async(a,b)=>{if(a==='world_layout')return {layout:{mode:'one-city',hours:{night:[20,6]}}};saved=b.layout;return {layout:b.layout}};
+ await o.mountAdmin(el,call,()=>{});
+ const row=id=>el.querySelector('[data-wl-hours="'+id+'"]');assert.equal(row('night').querySelector('[data-wl-open]').value,'20');assert.equal(row('night').querySelector('[data-wl-close]').value,'6');
+ for(const op of row('voting').querySelectorAll('[data-wl-close] option'))op.toggleAttribute('selected',op.value==='22');await el.querySelector('#wlSave').onclick();
+ assert.deepEqual(JSON.parse(JSON.stringify(saved.hours)),{night:[20,6],voting:[8,22]},'only hours that differ from the default are saved');
+});

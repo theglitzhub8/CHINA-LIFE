@@ -26,6 +26,8 @@
   const CLASSIC = Object.freeze({ mode: 'classic', city: null, places: null, whereTo: false, flights: true, npcDensity: 1, clubName: null });
   const density = (v, d) => (v === undefined || v === null || v === '' || !Number.isFinite(Number(v)) ? d : Math.max(0, Math.min(1, Number(v))));
 
+  // Admin opening hours ({id:[opens,closes]}, see cl_valid_world_layout): only valid pairs for known venues are kept.
+  const cleanHours = (h) => { const out = {}; if (h && typeof h === 'object') for (const [id, p] of Object.entries(h)) if (PLACES[id] && Array.isArray(p) && p.length === 2 && Number.isInteger(p[0]) && Number.isInteger(p[1]) && p[0] >= 0 && p[0] <= 23 && p[1] >= 1 && p[1] <= 24 && p[0] !== p[1]) out[id] = [p[0], p[1]]; return out; };
   // Accepts the server value (snake_case JSON from chinalife_settings.world_layout) or a partial object.
   function normalise(v) {
     if (!v || typeof v !== 'object') return { ...DEFAULT, places: [...ORDER] };
@@ -33,7 +35,7 @@
     const places = Array.isArray(v.places) ? v.places.filter((id) => PLACES[id]) : [...ORDER];
     const city = ALL_CITIES.includes(v.city) ? v.city : DEFAULT.city;
     const whereTo = v.where_to ?? v.whereTo;
-    return { mode: 'one-city', city, places: places.length ? places : [...ORDER], whereTo: whereTo !== false, flights: v.flights === true, npcDensity: density(v.npc_density ?? v.npcDensity, NPC_DENSITY), clubName: clubLabel(v.club_name ?? v.clubName) || CLUB.name };
+    return { mode: 'one-city', city, places: places.length ? places : [...ORDER], whereTo: whereTo !== false, flights: v.flights === true, npcDensity: density(v.npc_density ?? v.npcDensity, NPC_DENSITY), clubName: clubLabel(v.club_name ?? v.clubName) || CLUB.name , hours: cleanHours(v.hours) };
   }
   let layout = normalise(null);
   const listeners = new Set();
@@ -67,10 +69,12 @@
   };
 
   const hourOf = (minutes) => Math.floor((Number(minutes) || 0) / 60) % 24;
+  // A venue's opening hours: the admin's (world_layout.hours) or the built-in default above.
+  const hoursOf = (id) => (active() && layout.hours?.[id]) || PLACES[id]?.hours || [0, 24];
   function isOpenAt(id, minutes) {
     const p = PLACES[id];
     if (!p) return true;
-    const h = hourOf(minutes), [a, b] = p.hours;
+    const h = hourOf(minutes), [a, b] = hoursOf(id);
     if (a === 0 && b === 24) return true;
     return a < b ? h >= a && h < b : h >= a || h < b;
   }
@@ -135,6 +139,9 @@
       '<label class="admin-check"><input type="radio" name="wlMode" value="classic" ' + (classic ? 'checked' : '') + '> Classic (all cities, venues and map)</label>' +
       '<label>Active city<select id="wlCity">' + ALL_CITIES.map((c) => '<option ' + ((cur.city || 'China') === c ? 'selected' : '') + '>' + esc(c) + '</option>').join('') + '</select></label>' +
       ORDER.map((id) => '<label class="admin-check"><input type="checkbox" data-wl-place="' + id + '" ' + (classic || cur.places.includes(id) ? 'checked' : '') + '> ' + PLACES[id].icon + ' ' + esc(PLACES[id].label) + '</label>').join('') +
+      '<h3 style="margin-top:14px">Opening hours</h3><p class="fine-print">Game time on the Beijing clock. Closing before opening runs past midnight (18:00–04:00). 00:00–24:00 is open all day.</p>' +
+      ORDER.map((id) => { const [a, b] = (cur.hours && cur.hours[id]) || PLACES[id].hours, hr = (n) => String(n).padStart(2, '0') + ':00', opt = (from, to, sel) => Array.from({ length: to - from + 1 }, (_, i) => from + i).map((n) => '<option value="' + n + '" ' + (n === sel ? 'selected' : '') + '>' + hr(n) + '</option>').join('');
+        return '<label class="admin-hours" data-wl-hours="' + id + '" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:6px 0"><b style="min-width:9em">' + PLACES[id].icon + ' ' + esc(PLACES[id].label) + '</b> <span>Opens <select data-wl-open aria-label="' + esc(PLACES[id].label) + ' opens">' + opt(0, 23, a) + '</select> Closes <select data-wl-close aria-label="' + esc(PLACES[id].label) + ' closes">' + opt(1, 24, b) + '</select></span>' + (cur.hours && cur.hours[id] ? '' : ' <small>default</small>') + '</label>'; }).join('') +
       '<label class="admin-check"><input type="checkbox" id="wlFlights" ' + (cur.flights ? 'checked' : '') + '> Allow flights between cities</label>' +
       '<label>Club name (one city)<input id="wlClub" maxlength="24" value="' + esc(cur.clubName || CLUB.name) + '"></label>' +
       '<label>NPC crowd per venue (%)<input id="wlNpc" type="number" min="0" max="100" step="5" value="' + Math.round(cur.npcDensity * 100) + '"></label>' +
@@ -144,6 +151,12 @@
       const layoutOut = { mode, city: el.querySelector('#wlCity').value, places: [...el.querySelectorAll('[data-wl-place]:checked')].map((x) => x.dataset.wlPlace), where_to: mode === 'one-city', flights: mode === 'classic' || el.querySelector('#wlFlights').checked, npc_density: density(Number(el.querySelector('#wlNpc').value) / 100, cur.npcDensity) };
       const club = clubLabel(el.querySelector('#wlClub').value);
       if (club && club !== CLUB.name) layoutOut.club_name = club;
+      // Only hours that differ from the built-in default are saved, so later default changes still reach untouched venues.
+      const hours = {};
+      for (const row of el.querySelectorAll('[data-wl-hours]')) { const id = row.dataset.wlHours, a = Number(row.querySelector('[data-wl-open]').value), b = Number(row.querySelector('[data-wl-close]').value);
+        if (a === b) return toast(PLACES[id].label + ': opening and closing hours must differ (use 00:00–24:00 for all day).');
+        if (a !== PLACES[id].hours[0] || b !== PLACES[id].hours[1]) hours[id] = [a, b]; }
+      if (Object.keys(hours).length) layoutOut.hours = hours;
       if (!layoutOut.places.length) return toast('Keep at least one venue open.');
       if (!confirm(mode === 'classic' ? 'Switch back to the classic map and every venue?' : 'One city: ' + layoutOut.city + ' with ' + layoutOut.places.length + ' venues?')) return;
       try { const r = await adminCall('set_world_layout', { layout: layoutOut }); set(r.layout); toast('World layout saved.'); mountAdmin(el, adminCall, toast); } catch (e) { toast(e.message); }
@@ -162,7 +175,7 @@
       return layout.npcDensity ?? 1;
     },
     NPC_DENSITY, CLUB, clubName, brand, walkCity, QUEST_PLACES, questPlace,
-    isOpenAt, hourOf, suggest, relocate, mountAdmin,
+    isOpenAt, hoursOf, hourOf, suggest, relocate, mountAdmin,
     onChange: (f) => (listeners.add(f), () => listeners.delete(f)),
   };
 })(typeof window !== 'undefined' ? window : globalThis);

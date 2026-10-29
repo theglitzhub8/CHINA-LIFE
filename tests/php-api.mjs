@@ -1647,3 +1647,15 @@ test('club VIP drink: free once with a VIP pass, refused (never charged) after, 
  sql("USE chinalife_test; UPDATE chinalife_economy_actions SET created_at=DATE_SUB(NOW(),INTERVAL 2 MINUTE) WHERE user_id=65 AND action='club-drink'");
  const paid=await drink(65,{});assert.equal(paid.httpStatus,200,paid.message);assert.equal(paid.data.free,false);assert.equal(coins(65),start-120,'ordinary drinks are paid');
 });
+
+// Admin opening hours in the world layout (30 Oct 2026): {id:[opens,closes]}, checked, saved and sent to players.
+test('world layout hours: valid hours saved and served; bad hours refused',async()=>{
+ sql("USE chinalife_test; DELETE FROM chinalife_rate_limits WHERE user_id=1");
+ const set=layout=>call(1,'admin.php','POST',{action:'set_world_layout',layout});
+ try{
+  for(const bad of [{night:[18,18]},{night:[24,4]},{night:[0,25]},{casino:[1,2]},{night:[18]},{night:['18','4']}])assert.equal((await set({mode:'one-city',hours:bad})).httpStatus,400,JSON.stringify(bad));
+  const ok=await set({mode:'one-city',hours:{night:[20,6],gist:[0,24]}});assert.equal(ok.httpStatus,200,ok.message);assert.deepEqual(ok.data.layout.hours,{night:[20,6],gist:[0,24]});
+  assert.deepEqual((await call(5,'events.php?city=China')).data.world_layout.hours,{night:[20,6],gist:[0,24]},'players get the hours');
+  assert.equal((await set({mode:'one-city'})).data.layout.hours,undefined,'no hours: built-in defaults');
+ }finally{await set({mode:'classic'})}
+});

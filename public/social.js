@@ -98,7 +98,7 @@ window.addEventListener('chinalife:hafrik-features',e=>{const before=legacyNearb
 const luPlaces=()=>OC()?.layout?.places||[];
 const luName=id=>game.locations.find(l=>l[0]===id)?.[1]||OC()?.PLACES?.[id]?.label||id;
 const luOpen=id=>!OC()?.isOpenAt||OC().isOpenAt(id,game.state.hour);
-const luHours=id=>{const h=OC()?.PLACES?.[id]?.hours;if(!h)return '';const pad=n=>String(n%24).padStart(2,'0')+':00';return h[0]===0&&h[1]===24?'Open 24 hours':pad(h[0])+'–'+pad(h[1])};
+const luHours=id=>{const h=OC()?.hoursOf?.(id)||OC()?.PLACES?.[id]?.hours;if(!h)return '';const pad=n=>String(n%24).padStart(2,'0')+':00';return h[0]===0&&h[1]===24?'Open 24 hours':pad(h[0])+'–'+pad(h[1])};
 const luHere=()=>joined()?cityNearby().filter(p=>p.place&&p.place!=='private-home'):[];
 const luFriendsOnline=()=>friends.filter(f=>f.status==='accepted'&&f.online);
 // Happening now: football lobbies/tournaments that need players and the live hot seat, from the existing APIs.

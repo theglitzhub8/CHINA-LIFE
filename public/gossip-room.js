@@ -23,7 +23,7 @@ async function hot(mine){const h=H(),p=$('grHot'),go=$('grHotGo');if(!p)return;
  if(!h?.enabled?.()){p.textContent='The Hot Seat is closed right now.';return}
  // Closed (one-city opening hours, game time): say when it opens; the wall and the news work from anywhere.
  const OC=window.ChinaLifeOneCity,P=OC?.PLACES?.gist;
- if(!here()&&P&&OC.isOpenAt&&!OC.isOpenAt('gist',G().state.hour)){p.textContent='The Gossip Room is closed now. It opens at '+String(P.hours[0]).padStart(2,'0')+':00. The Gossip wall and City news work from anywhere.';go.innerHTML='';return}
+ if(!here()&&P&&OC.isOpenAt&&!OC.isOpenAt('gist',G().state.hour)){p.textContent='The Gossip Room is closed now. It opens at '+String((OC.hoursOf?.('gist')||P.hours)[0]).padStart(2,'0')+':00. The Gossip wall and City news work from anywhere.';go.innerHTML='';return}
  let live=null;try{live=await h.peek?.()}catch{}if(mine!==opened||!$('grHot'))return;
  p.textContent=live?'🔴 Live now: '+live.votes+' vote'+(live.votes===1?'':'s')+' · '+live.secondsLeft+'s left to say True or Cap.':'Nobody is on the seat. Drop an anonymous gist and the room votes True or Cap.';
  // Hot Seat Hour (switch gossip_show): when it is on, how busy it is; otherwise when it starts.

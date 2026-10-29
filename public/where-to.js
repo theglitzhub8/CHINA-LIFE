@@ -17,7 +17,7 @@ function counts() {
   return out;
 }
 function hoursText(id) {
-  const [a, b] = OC.PLACES[id].hours;
+  const [a, b] = OC.hoursOf ? OC.hoursOf(id) : OC.PLACES[id].hours;
   return a === 0 && b === 24 ? 'Open 24 hours' : pad(a) + ':00–' + pad(b % 24) + ':00';
 }
 function context() {
