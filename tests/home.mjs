@@ -110,3 +110,33 @@ test('eat at home: a pot on the stove, then sit at a little table; a delivery br
  rider.userData.path=[];rider.userData.onArrive();assert.equal(room.actors.length,0,'he leaves');
  c.dispatchEvent(new c.Event('chinalife:delivery'));for(const f of t.timers.splice(0))f();assert.equal(room.actors.length,0,'an old order never sends a rider');
 });
+
+// Phase 5: chill and friends. Netflix gets a scene (sofa and TV, or the laptop at the desk); the host hears the doorbell.
+test('chill at home: Netflix walks you to the sofa or desk, then laughs along; Netflix still works without a scene',()=>{
+ const g=r('public/game.js');assert.match(g,/const s=window\.ChinaLifeHomeMoments\?\.chillSpot\?\.\(\);if\(s&&sceneAction\(\{\.\.\.s,label:'Watch Netflix',duration:10\},\$\('homeNetflix'\)\.onclick\)!==false\)return/);
+ const t=harness({...fixture(),place:'home'}),s=t.game.state;s.needs.fun=30;s.needs.energy=80;const spots=[];t.context.ChinaLifeHomeMoments={chillSpot:()=>({kind:'type',x:-1.2,z:-3.6})};
+ t.context.ChinaLifeWorld={perform:(spec,done)=>{spots.push(spec);done();return true}};assert.equal(t.game.homeAct('homeNetflix'),true);
+ assert.equal(spots[0].label,'Watch Netflix');assert.equal(spots[0].kind,'type');assert.ok(s.needs.fun>30,'fun restored after the scene');
+ const u=harness({...fixture(),place:'home'});u.game.state.needs.fun=30;u.game.state.needs.energy=80;u.context.ChinaLifeHomeMoments={chillSpot:()=>null};u.context.ChinaLifeWorld={perform:()=>{throw Error('no scene')}};
+ u.game.homeAct('homeNetflix');assert.ok(u.game.state.needs.fun>30,'no spot: watched straight away');
+ // home-moments.js: the laptop version at the desk (no sofa and TV in this home).
+ const v=harness({...fixture(),place:'home'}),c=v.context,said=[],room=fakeRoom(),me=new room.root.constructor();c.requestAnimationFrame=f=>f(0);
+ c.ChinaLifeWorld={say:(w,x)=>said.push(x),onFrame:()=>()=>{},body:me,fx:()=>room.ctx,homeSpot:k=>k==='desk'?{x:-1.2,z:-3.6}:null};c.ChinaLife.isResidence=p=>p==='home';c.ChinaLifeAudio={volume:0};
+ vm.runInContext(r('public/home-moments.js'),c);v.timers.splice(0);assert.deepEqual(JSON.parse(JSON.stringify(c.ChinaLifeHomeMoments.chillSpot())),{kind:'type',x:-1.2,z:-3.6});
+ const e=new c.Event('chinalife:perform');e.detail={state:'start',kind:'type',label:'Watch Netflix',place:'home',duration:3};c.dispatchEvent(e);assert.equal(e.detail.duration,10);
+ assert.ok(room.root.children.some(o=>o.name==='home-moment'),'popcorn');for(const f of v.timers.splice(0))f();assert.ok(said.includes('😂😂😂'));assert.match(said[0],/Netflix time/);
+ const end=new c.Event('chinalife:perform');end.detail={state:'end',kind:'type',label:'Watch Netflix',place:'home'};c.dispatchEvent(end);assert.ok(!room.root.children.some(o=>o.name==='home-moment'));assert.ok(said.includes('😌 Needed that'));
+ const src=r('public/home-moments.js');assert.match(src,/findKind\(c,'sofa'\),tv=findKind\(c,'tv'\)/);assert.match(src,/me\.position\.y=ch\.h-\.42/);
+});
+
+test('friends: the host hears the doorbell when an invited friend accepts (once, and not for visits already on)',async()=>{
+ const src=r('public/home-visits.js');assert.match(src,/v\.status==='accepted'&&!rung\.has\(v\.id\)/);assert.match(src,/new CustomEvent\('chinalife:guest-arrived',\{detail:\{name:v\.guest_name,place:v\.place\}\}\)/);
+ const t=harness({...fixture(),place:'home'}),c=t.context,d=t.document,said=[];c.requestAnimationFrame=f=>f(0);
+ c.ChinaLifeWorld={say:(w,x)=>said.push(x),onFrame:()=>()=>{}};c.ChinaLife.isResidence=p=>p==='home';c.ChinaLifeAudio={volume:0};vm.runInContext(r('public/home-moments.js'),c);t.timers.splice(0);
+ const ring=[];c.addEventListener('chinalife:guest-arrived',e=>ring.push(e.detail.name));let visits=[{id:7,owner_id:1,guest_id:2,status:'accepted',guest_name:'Amaka',place:'home'}];
+ c.ChinaLifeCloud={signedIn:true,playerId:1};c.ChinaLifeAuth={request:async()=>({data:{visits}})};c.setInterval=f=>{c.__poll=f};vm.runInContext(src,c);
+ await c.__poll();assert.deepEqual(ring,[],'already on when the page loaded: quiet');
+ visits=[...visits,{id:8,owner_id:1,guest_id:3,status:'pending',guest_name:'Chen',place:'home'}];await c.__poll();assert.deepEqual(ring,[]);
+ visits[1]={...visits[1],status:'accepted'};await c.__poll();await c.__poll();assert.deepEqual(ring,['Chen'],'rings once');
+ assert.match(d.querySelector('.hm-bell .hm-note').textContent,/Ding-dong! Chen is here/);for(const f of t.timers.splice(0))f();assert.ok(said.includes('👋 Come in, Chen!'));
+});

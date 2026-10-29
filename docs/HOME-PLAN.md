@@ -114,4 +114,16 @@ map does not change; home interiors can.
   - **Change to the protected world.js** (no map change): `ChinaLifeWorld.fx()` (the room's props and people kit,
     inside a room only) and `ChinaLifeWorld.homeSpot(name)` (the home's door, stove, bed…).
 - **Phase 5 · Chill and friends:** TV on the sofa with popcorn; the doorbell when a friend arrives.
+  ✅ Done 30 Oct 2026 (no switch; home-moments.js, plus small changes in game.js and home-visits.js; no world.js change).
+  - **📺 Chill (10 s), homes with a sofa and TV** (apartment and up): you walk to the sofa and sit on the cushion facing
+    the TV. The screen lights up with a made-up show ("Campus Hearts", "The Last Dumpling"…) and cuts between scenes,
+    with a coloured glow. A bowl of popcorn sits beside you. "📺 <show> time!", "😂😂😂", "😮 No way!",
+    "🍿 *crunch crunch*", "🤣 I can't…", then "😌 Needed that".
+  - **Homes without a sofa and TV** (dorm, rental): the same at the desk with the laptop and popcorn.
+  - Before this, Netflix had no scene at all. Fun, energy and time are unchanged (game.js). If there's no free spot, it
+    runs straight away as before.
+  - The TV picture is placed with a ray, because the renderer draws the TV screen as a deeper black box than the model.
+  - **👋 Friends:** when a friend you invited accepts and comes over, the host hears a two-tone doorbell, sees
+    "🔔 Ding-dong! <name> is here" and says "👋 Come in, <name>!". It rings once per visit. Visits already on when the
+    page loads stay quiet. It's checked every 30 s, the same as invitations.
 - **Phase 6 · Wardrobe, study at the desk, video call family.**

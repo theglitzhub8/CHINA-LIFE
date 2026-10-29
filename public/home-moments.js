@@ -120,7 +120,53 @@ function riderArrives(item){if(rider&&!rider.parent)rider=null;const c=W()?.fx?.
 window.addEventListener('chinalife:delivery',()=>{const g=G(),fresh=(g?.state?.foodOrders||[]).find(o=>o.received&&waiting.has(o.id));note();if(fresh)waiting.delete(fresh.id);
  if(!fresh||reduced()||!g.isResidence?.(g.state.place))return;setTimeout(()=>riderArrives(String(fresh.item||'food').replace(/^\p{Extended_Pictographic}\s*/u,'')),400)});
 setInterval(note,3000);
-window.ChinaLifeHomeMoments={nightFall,wake,stretch,showerStart,toiletStart,cookStart,tableStart,riderArrives,eatNow};
+
+// Phase 5: chill and friends. Chill (game.js homeNetflix asks chillSpot() where to go): you walk to the sofa, sit down
+// facing the TV, the screen lights up and changes scenes, a bowl of popcorn sits beside you and you laugh along. Homes
+// without a sofa and TV watch on the laptop at the desk. Friends: home-visits.js rings the doorbell for the host when an
+// invited friend accepts ('chinalife:guest-arrived').
+let chillAt=null,chilling=null;
+const findKind=(c,k)=>{let f=null;c.root.traverse(o=>{if(!f&&o.userData?.kind===k)f=o});return f};
+function chillSpot(){const c=W()?.fx?.();if(!c||!G()?.isResidence?.(G().state.place))return null;const T=c.THREE,sofa=findKind(c,'sofa'),tv=findKind(c,'tv');chillAt=null;
+ if(sofa&&tv){const p=sofa.getWorldPosition(new T.Vector3()),yaw=new T.Euler().setFromQuaternion(sofa.getWorldQuaternion(new T.Quaternion()),'YXZ').y,fx=-Math.sin(yaw),fz=-Math.cos(yaw),sx=Math.cos(yaw),sz=-Math.sin(yaw);
+  // The seat: the middle of the sofa, a little forward. Walk to free floor in front of it (or beside it), then sit.
+  const seat={x:p.x+fx*.08,z:p.z+fz*.08},free=(x,z)=>!c.obstacles().some(o=>Math.abs(x-o.x)<o.w/2+.2&&Math.abs(z-o.z)<o.d/2+.2);
+  for(const [d,s] of [[1.05,0],[1.05,.9],[1.05,-.9],[.4,1.9],[.4,-1.9],[1.4,1.5],[1.4,-1.5]]){const x=p.x+fx*d+sx*s,z=p.z+fz*d+sz*s;if(free(x,z)){chillAt={seat,ry:Math.atan2(fx,fz),h:.55,tv,side:{x:sx,z:sz}};return {kind:'sit',x,z}}}}
+ const desk=W()?.homeSpot?.('desk');if(desk){chillAt={laptop:true};return {kind:'type',x:desk.x,z:desk.z}}return null}
+// The TV picture: a glowing panel over the screen that cuts between scenes of a made-up show.
+const SHOWS=['Campus Hearts','Shenyang Nights','The Last Dumpling','Laoban','Roommates'];
+// The TV group holds the screen (its stand is merged into the room), so its box is the screen. The batched renderer can
+// draw the screen deeper than the model, so the picture goes just in front of the first surface a ray meets.
+function screenOn(k,tv){const c=k.c,T=c.THREE,b=new T.Box3().setFromObject(tv),wv=b.max.clone().sub(b.min),w=Math.max(wv.x,wv.z),h=wv.y;if(!(w>.6&&h>.3))return null;
+ const cv=document.createElement('canvas');cv.width=320;cv.height=180;const x=cv.getContext('2d'),tex=new T.CanvasTexture(cv),show=SHOWS[Math.floor(Math.random()*SHOWS.length)];let n=0;
+ const paint=()=>{const h=(n*67)%360;const g=x.createLinearGradient(0,0,320,180);g.addColorStop(0,'hsl('+h+' 70% 45%)');g.addColorStop(1,'hsl('+(h+60)%360+' 70% 20%)');x.fillStyle=g;x.fillRect(0,0,320,180);
+  for(let i=0;i<3;i++){x.fillStyle='hsl('+(h+120*i)%360+' 80% 70% / .7)';x.beginPath();x.arc(60+((n*40+i*110)%260),70+i*30,18+i*6,0,7);x.fill()}
+  x.fillStyle='rgb(0 0 0 / .55)';x.fillRect(0,146,320,34);x.fillStyle='#fff';x.font='700 18px system-ui,sans-serif';x.fillText('▶ '+show+' · E'+(1+n%8),12,169);tex.needsUpdate=true;n++};paint();
+ const m=new T.Mesh(new T.PlaneGeometry(w*.96,h*.94),new T.MeshBasicMaterial({map:tex}));const yaw=new T.Euler().setFromQuaternion(tv.getWorldQuaternion(new T.Quaternion()),'YXZ').y,ctr=b.getCenter(new T.Vector3()),half=Math.min(wv.x,wv.z)/2+.015,fx=Math.sin(yaw),fz=Math.cos(yaw);
+ m.position.set(ctr.x+fx*half,ctr.y,ctr.z+fz*half);
+ {const from=ctr.clone().add(new T.Vector3(fx*3,0,fz*3)),hit=new T.Raycaster(from,new T.Vector3(-fx,0,-fz),0,3.2).intersectObjects(c.root.children.filter(o=>o!==k.g),true)[0];if(hit&&hit.distance<3-half+.01)m.position.copy(from).add(new T.Vector3(-fx,0,-fz).multiplyScalar(hit.distance-.02))}m.rotation.y=yaw;k.g.add(m);
+ const light=new T.PointLight(0x88aaff,1.2,5);light.position.set(ctr.x+fx*1.2,ctr.y,ctr.z+fz*1.2);k.g.add(light);
+ const iv=setInterval(()=>{if(!k.g.parent)return clearInterval(iv);paint();light.color.setHSL(((n*67)%360)/360,.6,.6)},1800);
+ return {show,stop(){clearInterval(iv);tex.dispose()}}}
+function popcorn(k,x,y,z){const c=k.c;c.cylinder(.13,.1,0xd8322f,x,y+.05,z,k.g,14);for(let i=0;i<9;i++){const a=i*2.4,r=.04+(i%3)*.03;c.ball?.(.035,0xfff2c4,x+Math.cos(a)*r,y+.12+(i%2)*.02,z+Math.sin(a)*r,k.g)||c.cylinder(.03,.03,0xfff2c4,x+Math.cos(a)*r,y+.12,z+Math.sin(a)*r,k.g,6)}}
+function chillStart(ms){const ch=chillAt;chillAt=null;const k=group(),me=W()?.body;if(!k||!me||!ch)return null;const c=k.c;let tvOn=null,off=null;
+ if(!ch.laptop){c.moveTo(ch.seat.x,ch.seat.z,ch.ry);
+  // Keep the body on the cushion, facing the TV, through the sitting pose (frame hooks run after the pose).
+  off=W().onFrame(()=>{if(!k.g.parent)return off?.();me.position.x=ch.seat.x;me.position.z=ch.seat.z;me.rotation.y=ch.ry;if(me.userData.real)me.position.y=ch.h-.42});
+  tvOn=screenOn(k,ch.tv);popcorn(k,ch.seat.x+ch.side.x*.55,ch.h,ch.seat.z+ch.side.z*.55)}
+ else popcorn(k,me.position.x+.45,.75,me.position.z);
+ const lines=['📺 '+(tvOn?tvOn.show+' time!':'Netflix time!'),'😂😂😂','😮 No way!','🍿 *crunch crunch*','🤣 I can\'t…'],ts=lines.map((l,i)=>setTimeout(()=>W()?.say?.('me',l),300+i*Math.max(1500,(ms-1500)/lines.length)));
+ return {stop(){ts.forEach(clearTimeout);off?.();tvOn?.stop();drop(k)}}}
+window.addEventListener('chinalife:perform',e=>{const d=e.detail||{},g=G();if(d.label!=='Watch Netflix'||!g?.isResidence?.(d.place))return;
+ if(d.state==='start'){if(reduced()){chillAt=null;return}d.duration=Math.max(d.duration||0,10);chilling=chillStart(d.duration*1000)}
+ else{const ch=chilling;chilling=null;if(ch){ch.stop();W()?.say?.('me','😌 Needed that')}}});
+// The doorbell: a two-tone chime, a card at the top and you greet your friend.
+function chime(){try{const vol=window.ChinaLifeAudio?.volume??1;if(!vol)return;ac=ac||new (window.AudioContext||window.webkitAudioContext)();const t=ac.currentTime;
+ for(const [f,at] of [[659,0],[523,.42]]){const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,t+at);g.gain.linearRampToValueAtTime(.18*vol,t+at+.02);g.gain.exponentialRampToValueAtTime(.001,t+at+1.1);o.connect(g).connect(ac.destination);o.start(t+at);o.stop(t+at+1.2)}}catch{}}
+function doorbell(name){const who=String(name||'Your friend');chime();const el=veil('hm-bell','<div class="hm-note">🔔 Ding-dong! '+who.replace(/[<>&"]/g,'')+' is here</div>');
+ setTimeout(()=>{el.classList.remove('on');setTimeout(()=>el.remove(),900)},3200);setTimeout(()=>W()?.say?.('me','👋 Come in, '+who+'!'),900);return el}
+window.addEventListener('chinalife:guest-arrived',e=>{const g=G();if(!g?.isResidence?.(g.state.place))return;doorbell(e.detail?.name)});
+window.ChinaLifeHomeMoments={nightFall,wake,stretch,showerStart,toiletStart,cookStart,tableStart,riderArrives,eatNow,chillSpot,chillStart,doorbell};
 const css=document.createElement('style');css.textContent=
  '.hm-night{position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;transition:opacity 1.2s ease}.hm-night.on{opacity:1}'+
  '.hm-sky{position:absolute;inset:0;background:radial-gradient(ellipse at 70% 15%,rgb(40 60 120 / .35),transparent 55%),linear-gradient(180deg,rgb(8 12 40 / .82),rgb(14 18 52 / .7));transition:background 1.2s ease}'+
@@ -130,6 +176,7 @@ const css=document.createElement('style');css.textContent=
  '.hm-clock{position:absolute;left:50%;top:13%;transform:translateX(-50%);display:grid;justify-items:center;color:#fff;text-shadow:0 2px 12px rgb(0 0 0 / .5)}.hm-clock b{font:800 46px/1 system-ui,sans-serif;letter-spacing:1px}.hm-clock small{font:700 14px system-ui,sans-serif;opacity:.85;margin-top:6px}'+
  '.hm-zzz{position:absolute;left:52%;top:46%;color:#cfe0ff;font:800 26px system-ui,sans-serif}.hm-zzz span{position:absolute;opacity:0;animation:hmZ 2.4s ease-out infinite}.hm-zzz span:nth-child(2){animation-delay:.8s;font-size:.8em}.hm-zzz span:nth-child(3){animation-delay:1.6s;font-size:.65em}'+
  '@keyframes hmZ{0%{opacity:0;transform:translate(0,0)}20%{opacity:1}100%{opacity:0;transform:translate(40px,-70px)}}'+
+ '.hm-bell{background:radial-gradient(ellipse at 50% 18%,rgb(255 214 102 / .35),transparent 60%)}.hm-bell .hm-note{top:26%;animation:hmRing .5s ease-in-out 3}@keyframes hmRing{25%{transform:translateX(-50%) rotate(-4deg)}75%{transform:translateX(-50%) rotate(4deg)}}'+
  '.hm-wash{position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;transition:opacity .9s ease;overflow:hidden}.hm-wash.on{opacity:1}'+
  '.hm-frost{position:absolute;inset:0;background:linear-gradient(180deg,rgb(200 230 255 / .55),rgb(225 242 255 / .7));backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}'+
  '.hm-drop{position:absolute;top:-12%;width:2px;height:46px;border-radius:2px;background:linear-gradient(rgb(255 255 255 / 0),rgb(120 180 230 / .85));animation:hmDrop .8s linear infinite}@keyframes hmDrop{to{transform:translateY(120vh)}}'+
