@@ -139,3 +139,11 @@ test('student insurance: offered to students only, join for ¥200, and the wake-
  bill={charged:40,bill:40,insured:true,saved:160,first:false,recovering:false,money:2760,xp:0};s.needs.energy=0;t.game.refresh();await tick();await tick();
  assert.match(d.getElementById('activityContent').textContent,/Bill: ¥40 · 🛡️ your insurance saved ¥160/);bill=null;
 });
+
+// Hospital Phase 6: the appadmin Hospital tab reads and saves hospital-settings.php through admin.php.
+test('appadmin has a Hospital tab that loads and saves the hospital settings',()=>{
+ const admin=r('public/admin.js'),api=r('chinalife-api/admin.php');
+ assert.match(admin,/\['hospital','🏥','Hospital',/);assert.match(admin,/admin\('hospital_settings'\)/);assert.match(admin,/admin\('set_hospital_settings',\{settings\}\)/);
+ assert.match(admin,/checkupOff=\[\.\.\.body\.querySelectorAll\('\[data-hq-on\]'\)\]\.filter\(c=>!c\.checked\)/);
+ assert.match(api,/\$action==='hospital_settings'/);assert.match(api,/\$action==='set_hospital_settings'/);assert.match(api,/admin_log\('set_hospital_settings'/);
+});

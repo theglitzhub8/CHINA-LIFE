@@ -182,6 +182,30 @@ if ($action==='set_university_settings') {
  admin_log('set_university_settings',null,null,implode(' · ',array_map(fn($k)=>($labels[$k][3]??$k).(is_int($s[$k])?': '.$before[$k].' → '.$s[$k]:' changed'),array_keys(array_filter($s,fn($v,$k)=>$v!==$before[$k],ARRAY_FILTER_USE_BOTH))))?:'No changes');
  json_response('success',['settings'=>$s]);
 }
+// Hospital Phase 6 (appadmin Hospital tab): prices, bills, the check-up questions, pharmacy, job pay and shifts, ward
+// visits and insurance (hospital-settings.php), with today's numbers. Saved values apply at once, even with switches off.
+if ($action==='hospital_settings') {
+ require_once __DIR__.'/hospital-lib.php';
+ json_response('success',['settings'=>cl_hospital_settings(),'defaults'=>cl_hospital_defaults(),'numbers'=>array_map(fn($n)=>['min'=>$n[1],'max'=>$n[2],'label'=>$n[3]],cl_hospital_numbers()),
+  'questions'=>array_map(fn($q)=>['id'=>$q[0],'prompt'=>$q[1],'pinyin'=>$q[2],'answer'=>$q[3]],cl_checkup_builtin()),
+  'switches'=>array_intersect_key(cl_hafrik_features(),array_flip(['hospital_care','hospital_checkup','hospital_pharmacy','hospital_staff','hospital_visits','hospital_insurance'])),
+  'today'=>['wakeUps'=>(int)cl_one("SELECT COUNT(*) n FROM chinalife_economy_actions WHERE action='hospital' AND created_at>=CURDATE()")['n'],
+   'checkups'=>(int)cl_one("SELECT COUNT(*) n FROM chinalife_economy_actions WHERE action='checkup' AND created_at>=CURDATE()")['n'],
+   'insured'=>(int)cl_one("SELECT COUNT(DISTINCT user_id) n FROM chinalife_economy_actions WHERE action='insurance' AND created_at>=DATE_SUB(NOW(),INTERVAL ".cl_hset('insDays')." DAY)")['n'],
+   'onShift'=>(int)(cl_optional_rows('SELECT COUNT(*) n FROM chinalife_hospital_staff WHERE shift_until>NOW()')[0]['n']??0),
+   'nurses'=>(int)(cl_optional_rows('SELECT COUNT(*) n FROM chinalife_hospital_staff WHERE certified_at IS NOT NULL')[0]['n']??0),
+   'treated'=>(int)(cl_optional_rows('SELECT COUNT(*) n FROM chinalife_hospital_patients WHERE treated_at>=CURDATE()')[0]['n']??0),
+   'visits'=>(int)(cl_optional_rows('SELECT COUNT(*) n FROM chinalife_hospital_visits WHERE created_at>=CURDATE()')[0]['n']??0)],
+  'log'=>cl_rows("SELECT l.note,l.created_at,a.user_name admin FROM chinalife_admin_log l LEFT JOIN users a ON a.user_id=l.admin_id WHERE l.action='set_hospital_settings' ORDER BY l.id DESC LIMIT 20")]);
+}
+if ($action==='set_hospital_settings') {
+ require_once __DIR__.'/hospital-lib.php';
+ $s=cl_hospital_valid(is_array($input['settings']??null)?$input['settings']:[],$error);if (!$s) cl_fail($error??'Check the settings');
+ $d=cl_hospital_defaults();$changed=array_filter($s,fn($v,$k)=>$v!==$d[$k],ARRAY_FILTER_USE_BOTH);$before=cl_hospital_settings();$labels=cl_hospital_numbers();
+ cl_run("INSERT INTO chinalife_settings(name,value,updated_at) VALUES('hospital',?,NOW()) ON DUPLICATE KEY UPDATE value=VALUES(value),updated_at=NOW()",'s',[json_encode((object)$changed,JSON_UNESCAPED_UNICODE)]);
+ admin_log('set_hospital_settings',null,null,implode(' · ',array_map(fn($k)=>($labels[$k][3]??($k==='checkupOff'?'Check-up questions turned off':'Extra check-up questions')).(is_int($s[$k])?': '.$before[$k].' → '.$s[$k]:' changed'),array_keys(array_filter($s,fn($v,$k)=>$v!==$before[$k],ARRAY_FILTER_USE_BOTH))))?:'No changes');
+ json_response('success',['settings'=>$s]);
+}
 // A student's university record: what the game shows them, and admin fixes. Admin changes pay no rewards.
 if ($action==='student'||$action==='student_update') {
  $target=filter_var($input['user_id']??null,FILTER_VALIDATE_INT);if(!$target)cl_fail('Choose a player');

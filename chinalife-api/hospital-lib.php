@@ -1,10 +1,10 @@
 <?php
+require_once __DIR__.'/hospital-settings.php';
 // Hospital Phase 1 (docs/HOSPITAL-PLAN.md, appadmin switch hospital_checkup): the free weekly check-up. The doctor asks
 // in simple Chinese and you answer from choices; the words are the ones you'd need at a real hospital in China.
 // [id, prompt, pinyin (or ''), right answer, three wrong answers]. Prompts in Chinese ask for the meaning; prompts in
 // English ask how you'd say it. Answers stay on the server; the player sees them after marking.
-const CL_CHECKUP_QUESTIONS=5, CL_CHECKUP_XP=8, CL_CHECKUP_PERFECT=20;
-function cl_checkup_bank(): array {return [
+function cl_checkup_builtin(): array {return [
  ['where','你哪儿不舒服？','nǐ nǎr bù shūfu?','Where do you feel unwell?',['Where do you live?','What would you like to eat?','When did you arrive?']],
  ['fever','你发烧吗？','nǐ fāshāo ma?','Do you have a fever?',['Are you hungry?','Are you tired?','Are you a student?']],
  ['head','你头疼吗？','nǐ tóu téng ma?','Do you have a headache?',['Is your phone broken?','Do you like tea?','Are you cold?']],
@@ -24,29 +24,33 @@ function cl_checkup_bank(): array {return [
  ['say-doctor','How do you say “I need to see a doctor”?','','我要看医生',['我是医生','我不要药','我想回家']],
  ['say-better','How do you say “I feel better now”?','','我现在好多了',['我现在很饿','我现在不舒服','我现在要走了']],
 ];}
+// The questions in use: built-in ones the admin didn't turn off, then the admin's own (hospital-settings.php).
+function cl_checkup_bank(): array {
+ $s=cl_hospital_settings();
+ return [...array_values(array_filter(cl_checkup_builtin(),fn($q)=>!in_array($q[0],$s['checkupOff'],true))),...array_map(fn($q)=>[$q['id'],$q['prompt'],$q['pinyin'],$q['answer'],$q['wrong']],$s['checkupExtra'])];
+}
 function cl_checkup_week(): string {return (new DateTime('now',new DateTimeZone('Asia/Shanghai')))->format('o-\WW');}
-// A fresh check-up: CL_CHECKUP_QUESTIONS questions with shuffled choices, no answers.
+// A fresh check-up: cl_hset('checkupQuestions') questions with shuffled choices, no answers.
 function cl_checkup_paper(): array {
  $bank=cl_checkup_bank();shuffle($bank);
- return array_map(function($q){$o=[$q[3],...$q[4]];shuffle($o);return ['id'=>$q[0],'prompt'=>$q[1],'pinyin'=>$q[2],'options'=>$o];},array_slice($bank,0,CL_CHECKUP_QUESTIONS));
+ return array_map(function($q){$o=[$q[3],...$q[4]];shuffle($o);return ['id'=>$q[0],'prompt'=>$q[1],'pinyin'=>$q[2],'options'=>$o];},array_slice($bank,0,cl_hset('checkupQuestions')));
 }
-// Marks {id: answer}. Exactly CL_CHECKUP_QUESTIONS distinct questions from the bank, or null.
+// Marks {id: answer}. Exactly cl_hset('checkupQuestions') distinct questions from the bank, or null.
 function cl_checkup_mark(array $answers): ?array {
  $bank=[];foreach (cl_checkup_bank() as $q) $bank[$q[0]]=$q;
- if (count($answers)!==CL_CHECKUP_QUESTIONS) return null;
+ if (count($answers)!==cl_hset('checkupQuestions')) return null;
  $right=0;$marked=[];
  foreach ($answers as $id=>$a) {$q=$bank[(string)$id]??null;if (!$q) return null;$ok=(string)$a===$q[3];$right+=$ok?1:0;$marked[]=['id'=>$q[0],'prompt'=>$q[1],'pinyin'=>$q[2],'answer'=>$q[3],'right'=>$ok];}
- return ['right'=>$right,'total'=>CL_CHECKUP_QUESTIONS,'marked'=>$marked,'xp'=>$right*CL_CHECKUP_XP+($right===CL_CHECKUP_QUESTIONS?CL_CHECKUP_PERFECT:0)];
+ return ['right'=>$right,'total'=>cl_hset('checkupQuestions'),'marked'=>$marked,'xp'=>$right*cl_hset('checkupXp')+($right===cl_hset('checkupQuestions')?cl_hset('checkupPerfect'):0)];
 }
 // Hospital Phase 2 (switch hospital_pharmacy): medicine you buy at the City Hospital and keep, used from the phone.
 // Stock = bought minus used, counted from chinalife_economy_actions (action 'pharmacy', refs 'buy:<id>:…' / 'use:<id>:…').
 // id => [price, name, Chinese, pinyin, what it does]. Priced so that a visit (rest free, doctor ¥150) is still worth it.
-const CL_PHARMACY_MAX=5, CL_VITAMIN_HOURS=24;
 function cl_pharmacy_items(): array {return [
- 'painkiller'=>[60,'Painkillers','止痛药','zhǐtòng yào','+20 energy'],
- 'ors'=>[40,'Rehydration salts','口服补液盐','kǒufú bǔyè yán','−40 drunk, +5 energy'],
- 'vitamins'=>[80,'Vitamins','维生素','wéishēngsù','Needs drop 30% slower for 24 hours'],
- 'stomach'=>[90,'Stomach medicine','肠胃药','chángwèi yào','Cures food sickness'],
+ 'painkiller'=>[cl_hset('painkiller'),'Painkillers','止痛药','zhǐtòng yào','+20 energy'],
+ 'ors'=>[cl_hset('ors'),'Rehydration salts','口服补液盐','kǒufú bǔyè yán','−40 drunk, +5 energy'],
+ 'vitamins'=>[cl_hset('vitamins'),'Vitamins','维生素','wéishēngsù','Needs drop 30% slower for '.cl_hset('vitaminHours').' hours'],
+ 'stomach'=>[cl_hset('stomach'),'Stomach medicine','肠胃药','chángwèi yào','Cures food sickness'],
 ];}
 // Stock per item and when today's vitamins wear off (0 = none).
 function cl_pharmacy_stock(int $uid): array {
@@ -55,14 +59,13 @@ function cl_pharmacy_stock(int $uid): array {
   [$op,$id]=array_pad(explode(':',(string)$r['ref']),2,'');if (isset($stock[$id])) $stock[$id]+=$op==='buy'?1:($op==='use'?-1:0);
  }
  $v=cl_one('SELECT UNIX_TIMESTAMP(MAX(created_at)) t FROM chinalife_economy_actions WHERE user_id=? AND action="pharmacy" AND ref LIKE "use:vitamins:%"','i',[$uid]);
- $until=(int)($v['t']??0);$until=$until?$until+CL_VITAMIN_HOURS*3600:0;
+ $until=(int)($v['t']??0);$until=$until?$until+cl_hset('vitaminHours')*3600:0;
  return ['stock'=>array_map(fn($n)=>max(0,$n),$stock),'vitaminsUntil'=>$until>time()?$until:0];
 }
 // Hospital Phase 3 (switch hospital_staff): what player doctors and nurses give for each problem on a patient's chart.
 // problem => [what the chart says, the right treatment]. The most urgent problem is food sickness, then drunk (60%+),
 // then the lowest need.
-const CL_HS_SHIFT_MIN=60, CL_HS_WAIT_MIN=10, CL_HS_PAY_DOCTOR=120, CL_HS_PAY_NURSE=80, CL_HS_XP=20, CL_HS_XP_WRONG=5,
- CL_HS_PATIENT_XP=10, CL_HS_PAID_DAY=20, CL_HS_TEST_Q=8, CL_HS_TEST_PASS=7, CL_HS_AGAIN_MIN=20;
+const CL_HS_TEST_Q=8;
 function cl_hs_treatments(): array {return [
  'sick'=>['Food sickness','Stomach medicine 肠胃药'],'drunk'=>['Drunk','Rehydration salts 口服补液盐'],
  'energy'=>['Exhausted','Rest on the ward'],'hunger'=>['Hungry','A bowl of congee 粥'],
@@ -95,23 +98,21 @@ function cl_hs_test(): array {
   $qs[]=['id'=>'treat-'.$k,'prompt'=>'A patient’s chart says: '.$t[$k][0].'. What do you give?','pinyin'=>'','options'=>$opts];$answers[]=$t[$k][1];}
  return [$qs,$answers];
 }
-// Hospital Phase 4 (switch hospital_visits): visiting friends on the ward. You are "on the ward" for CL_HV_HOURS after
+// Hospital Phase 4 (switch hospital_visits): visiting friends on the ward. You are "on the ward" for cl_hset('wardHours') after
 // waking up at the hospital (economy action 'hospital') or being treated by a player doctor or nurse.
 // gift => [price, name, what it does for the patient]; cards are set phrases (no free text to moderate).
-const CL_HV_HOURS=3, CL_HV_XP=10;
 function cl_hv_gifts(): array {return [
- 'card'=>[0,'Just a card','+10 social'],'flowers'=>[50,'Flowers 鲜花','+15 fun, +20 social'],'fruit'=>[30,'Fruit 水果','+15 hunger, +15 social'],
+ 'card'=>[0,'Just a card','+10 social'],'flowers'=>[cl_hset('flowers'),'Flowers 鲜花','+15 fun, +20 social'],'fruit'=>[cl_hset('fruit'),'Fruit 水果','+15 hunger, +15 social'],
 ];}
 function cl_hv_cards(): array {return [
  'getwell'=>'早日康复！ Get well soon!','rest'=>'多喝水，多休息！ Drink water and rest!','miss'=>'我们想你！ We miss you!','jiayou'=>'加油！ You’ve got this!',
 ];}
 // Hospital Phase 5 (switch hospital_insurance): campus health insurance for students (owner, 29 Oct 2026). Join for
-// CL_INS_FEE (paid from your money, never renewed by itself) for CL_INS_DAYS; while covered the wake-up hospital bill
-// is CL_INS_BILL_CUT% off and pharmacy prices CL_INS_PHARMACY_CUT% off. Cover is worked out from the economy log
-// (action 'insurance'): each payment adds CL_INS_DAYS from the later of now and the current end.
-const CL_INS_FEE=200, CL_INS_DAYS=30, CL_INS_BILL_CUT=80, CL_INS_PHARMACY_CUT=25, CL_INS_RENEW_DAYS=7;
+// cl_hset('insFee') (paid from your money, never renewed by itself) for cl_hset('insDays'); while covered the wake-up hospital bill
+// is cl_hset('insBillCut')% off and pharmacy prices cl_hset('insPharmacyCut')% off. Cover is worked out from the economy log
+// (action 'insurance'): each payment adds cl_hset('insDays') from the later of now and the current end.
 function cl_insurance_until(int $uid): int {
- $until=0;foreach (cl_rows("SELECT UNIX_TIMESTAMP(created_at) t FROM chinalife_economy_actions WHERE user_id=? AND action='insurance' ORDER BY id",'i',[$uid]) as $r) $until=max($until,(int)$r['t'])+CL_INS_DAYS*86400;
+ $until=0;foreach (cl_rows("SELECT UNIX_TIMESTAMP(created_at) t FROM chinalife_economy_actions WHERE user_id=? AND action='insurance' ORDER BY id",'i',[$uid]) as $r) $until=max($until,(int)$r['t'])+cl_hset('insDays')*86400;
  return $until>time()?$until:0;
 }
 function cl_insured(int $uid): bool {return (cl_hafrik_features()['hospital_insurance']??false)&&cl_insurance_until($uid)>0;}

@@ -1603,3 +1603,32 @@ test('student insurance: students only, ¥200 for 30 days, cheaper hospital bill
   assert.equal((await call(62,'economy.php','POST',{action:'pharmacy',op:'stock'})).data.items.painkiller[0],60);
  }finally{await flip(false)}
 });
+
+// Hospital Phase 6 (appadmin Hospital tab): every number and the check-up questions are the admin's, checked, logged,
+// and used at once by the game.
+test('hospital admin: settings with defaults, checked, saved as changes, used by the bill, pharmacy and check-up',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(64,'user64'); DELETE FROM chinalife_rate_limits WHERE user_id=1");
+ assert.equal((await call(64,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China'}}})).httpStatus,200);
+ assert.equal((await call(64,'admin.php','POST',{action:'hospital_settings'})).httpStatus,403,'admins only');
+ const get=await call(1,'admin.php','POST',{action:'hospital_settings'});assert.equal(get.httpStatus,200,get.message);
+ const d=get.data;assert.equal(d.settings.bill,200);assert.equal(d.numbers.bill.label,'Wake-up hospital bill (¥)');assert.equal(d.questions.length,18);assert.ok('hospital_care' in d.switches);assert.equal(typeof d.today.wakeUps,'number');
+ const set=settings=>call(1,'admin.php','POST',{action:'set_hospital_settings',settings});
+ assert.equal((await set({bill:-5})).httpStatus,400);assert.equal((await set({testPass:9})).httpStatus,400);
+ assert.equal((await set({checkupOff:d.questions.map(q=>q.id)})).httpStatus,400,'keep enough questions on');
+ assert.equal((await set({checkupExtra:[{prompt:'?',answer:'a',wrong:['a','b','c']}]})).httpStatus,400,'three different wrong answers');
+ try{
+  const own={prompt:'护士 means…',pinyin:'hùshi',answer:'nurse',wrong:['doctor','patient','medicine']};
+  const ok=await set({bill:300,painkiller:70,checkupQuestions:3,checkupOff:d.questions.slice(0,16).map(q=>q.id),checkupExtra:[own,{...own,prompt:'医生 means…',pinyin:'yīshēng',answer:'doctor',wrong:['nurse','patient','medicine']}]});
+  assert.equal(ok.httpStatus,200,ok.message);
+  assert.deepEqual(JSON.parse(sql("USE chinalife_test; SELECT value FROM chinalife_settings WHERE name='hospital'").trim().replace(/\\\\/g,'\\')).bill,300,'saved as changes');
+  assert.match((await call(1,'admin.php','POST',{action:'hospital_settings'})).data.log[0].note,/Wake-up hospital bill \(¥\): 200 → 300/);
+  await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{hospital_care:true,hospital_pharmacy:true,hospital_checkup:true}});
+  const visit=()=>call(64,'economy.php','POST',{action:'hospital',cause:'faint'});await visit();
+  sql("USE chinalife_test; UPDATE chinalife_economy_actions SET created_at=DATE_SUB(NOW(),INTERVAL 1 HOUR) WHERE user_id=64 AND action='hospital'");
+  assert.equal((await visit()).data.charged,300,'the new bill');
+  assert.equal((await call(64,'economy.php','POST',{action:'pharmacy',op:'stock'})).data.items.painkiller[0],70,'the new price');
+  const paper=(await call(64,'economy.php','POST',{action:'checkup',step:'start'})).data.questions;assert.equal(paper.length,3,'three questions');
+  assert.ok(paper.every(q=>!d.questions.slice(0,16).some(b=>b.id===q.id)),'turned-off questions are never asked');
+  const own2=paper.find(q=>q.id==='x-1');if(own2){const r=await call(64,'economy.php','POST',{action:'checkup',answers:Object.fromEntries(paper.map(q=>[q.id,q.id==='x-1'?'nurse':'x']))});assert.equal(r.data.checkup.marked.find(m=>m.id==='x-1').right,true,'your own questions are marked')}
+ }finally{await set(d.defaults);await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{hospital_care:false,hospital_pharmacy:false,hospital_checkup:false}})}
+});

@@ -91,6 +91,14 @@ from the player's money rather than taken out of the daily student allowance, so
 
 **Phase 6 · Admin.** A Hospital tab in appadmin: prices and bills, the check-up questions, pharmacy prices, job pay
 and shifts, insurance fee and cover.
+✅ Done 29 Oct 2026: appadmin **🏥 Hospital** tab (admin.php `hospital_settings` / `set_hospital_settings`,
+chinalife-api/hospital-settings.php, saved in chinalife_settings 'hospital' as changes over the defaults and logged).
+30 numbers in five groups: wake-up bill and "no second bill within" minutes; check-up length and XP; the four medicine
+prices, how many you keep and how long vitamins work; doctor/nurse pay, XP, paid patients a day, shift length, waiting
+time, minutes between visits and the test's pass mark; ward hours, flower/fruit prices and visitor XP; insurance fee,
+days, both discounts and the renewal window. Check-up questions: untick built-in ones, add up to 50 of your own (they
+are used by the check-up and the Health worker test). Today's numbers at the top (wake-ups, check-ups, treated by
+players, on shift, nurses, ward visits, students insured). Changes apply at once, even with switches off.
 
 ## Owner's decisions (29 Oct 2026)
 
