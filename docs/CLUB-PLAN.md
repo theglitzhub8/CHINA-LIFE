@@ -32,6 +32,24 @@ anything to use it.
 **Phase 0 · The body.** Stand straight (fix the posture correction so the spine is upright and the head level). Sit
 properly: club sofas, VIP sofa, bar stools and chairs become real seats; you walk to the seat, turn and sit at the
 right height facing the room; NPCs sit on seats too. Remove the see-through ghost.
+✅ Done 30 Oct 2026 (no switch; bug fixes):
+- **Straight stance.** The real cause was in realism.js. The R9d posture fix straightened the spine, but the Biped thighs
+  hang off Bip01_Spine, so the legs swung forward (feet ~20 cm in front of the hips) and the body leaned back. The
+  thighs now keep the clip's direction. Measured: hips 0–1 cm, head 6–9 cm in front of the feet when standing (it was
+  −20 / −15 cm); walking head 1–4 cm ahead of the hips.
+- **No see-through copy.** The ghost silhouette of the player is removed everywhere.
+- **Sitting.**
+  - Club sofas show at 0.7 scale with three seats each. The VIP sofa has three VIP seats.
+  - Real bodies sit at the seat's height (seat − 0.42). The follow camera no longer pulls a seated player down to the
+    floor.
+  - Sit walks you to the nearest seat. You never sit on thin air (a toast asks you to tap a sofa or chair).
+  - Tap a sofa to sit. Tapping the VIP sofa without a pass opens Entry & VIP.
+  - "Take your VIP seat" walks you to a VIP seat.
+  - Seated classroom crowds no longer sink into their chairs.
+- **Local testing fix.** A localhost-only debug hook crashed the scene unless `?cldebug=1` was in the URL; it is now
+  guarded. The live site was never affected.
+- **Changes to the protected world.js** (room code only): the club seats; `sitAt`, `sitSpot` and the tap-to-sit check;
+  the sit height; and one condition each in tpFrame and the debug hook. Nothing on the city map changes.
 
 **Phase 1 · The club dock.** One row of big round buttons, always visible inside a club, just above Home/Map/People/
 Phone: 🎟 Door & VIP · 🍸 Bar · 💃 Dance · 💸 Spray · 🎧 Music · 🎤 Mic · ••• More (jobs, missions, dice, play with

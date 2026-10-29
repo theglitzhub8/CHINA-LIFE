@@ -98,7 +98,8 @@ test('action menu plays looping emotes with props, smoking only where allowed, a
  t.world.emote('smoke');assert.equal(t.world.emoteNow,'dance','no smoking at home');assert.match(t.document.getElementById('toast').textContent,/only allowed/);
  t.world.emote('drink');assert.equal(t.world.emoteNow,'drink');t.world.emote('stop');assert.equal(t.world.emoteNow,null);
  t.game.state.place='night';t.internal.render();t.world.venue('night');t.world.emote('smoke');assert.equal(t.world.emoteNow,'smoke');
- t.world.emote('sit');assert.equal(t.world.emoteNow,'sit');
+ // In a club, Sit walks you to the nearest sofa seat first (docs/CLUB-PLAN.md Phase 0), then you sit on it.
+ t.world.emote('sit');for(let i=0;i<60&&t.world.emoteNow!=='sit';i++)t.tick(1);assert.equal(t.world.emoteNow,'sit');
 });
 
 test('buying a house from a public venue routes into the purchased private interior',()=>{
