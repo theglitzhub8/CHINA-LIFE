@@ -79,3 +79,17 @@ test('tap to use: bar, DJ booth and DJ, dance floor, bouncer and wall ads do the
  assert.match(w,/while\(o&&o!==root&&!o\.userData\.tap\)o=o\.parent;if\(o\?\.userData\.tap\)\{o\.userData\.tap\(\);return\}/);
  assert.match(w,/if\(solid&&clubTap\(solid\)\)return;/);
 });
+
+// Phase 4: VIP service. Sitting in VIP brings a waiter from the bar; the first drink is free (server-checked), then he takes
+// your order; the dock's Bar calls him while you are seated in VIP.
+test('VIP waiter: comes when you sit in VIP, first drink on the house, then takes your order',()=>{
+ const w=r('public/world.js'),h=r('public/club-host.js'),d=r('public/club-dock.js');
+ assert.match(w,/window\.dispatchEvent\(new CustomEvent\('chinalife:vip-seated',\{detail:\{x:c\.c\.x,z:c\.c\.z,place\}\}\)\)/);
+ assert.match(w,/if\(u\.mode==='serve'\)\{const w=u\.path\?\.\[0\];if\(!w\)\{u\.mode='wait';/,'the waiter walks a path, then waits');
+ assert.match(w,/removeActor:b=>\{const i=actors\.indexOf\(b\);if\(i>=0\)actors\.splice\(i,1\);b\.removeFromParent\(\)\}/);
+ assert.match(h,/window\.addEventListener\('chinalife:vip-seated',onVip\)/);assert.match(h,/window\.removeEventListener\('chinalife:vip-seated',onVip\)/);
+ assert.match(h,/\{action:'club-drink',sku:'pappi-fizz',vip:1\}/,'the welcome drink asks the server for the free VIP drink');
+ assert.match(h,/afterOrder=x=>\{putDown\(glass,x,false\);/,'after the free one he takes an order from the menu');
+ assert.match(h,/if\(!seatedVip\(\)\)c\.setEmote\('drink'\);/,'ordering from your VIP seat does not stand you up');
+ assert.match(h,/const api=\{waiter:\(\)=>callWaiter\(false\),/);assert.match(d,/bar:\(\)=>window\.ChinaLifeClubHost\?\.waiter\?\.\(\)\|\|press\(/);
+});

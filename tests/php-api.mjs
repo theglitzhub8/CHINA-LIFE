@@ -1632,3 +1632,18 @@ test('hospital admin: settings with defaults, checked, saved as changes, used by
   const own2=paper.find(q=>q.id==='x-1');if(own2){const r=await call(64,'economy.php','POST',{action:'checkup',answers:Object.fromEntries(paper.map(q=>[q.id,q.id==='x-1'?'nurse':'x']))});assert.equal(r.data.checkup.marked.find(m=>m.id==='x-1').right,true,'your own questions are marked')}
  }finally{await set(d.defaults);await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{hospital_care:false,hospital_pharmacy:false,hospital_checkup:false}})}
 });
+
+// Club Phase 4: the VIP waiter's first drink is on the house with a VIP pass (once per 14 hours); a second free ask is
+// refused without charging, and without a VIP pass there is no VIP service. Ordinary drinks stay paid.
+test('club VIP drink: free once with a VIP pass, refused (never charged) after, VIP only',async()=>{
+ sql("USE chinalife_test; INSERT INTO users(user_id,user_name) VALUES(65,'user65'),(66,'user66'); DELETE FROM chinalife_rate_limits WHERE user_id IN (65,66)");
+ for(const id of [65,66]){assert.equal((await call(id,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China'}}})).httpStatus,200);sql("USE chinalife_test; REPLACE INTO chinalife_presence(user_id,name,city,place,seen_at) VALUES("+id+",'p','China','night',NOW())")}
+ sql("USE chinalife_test; INSERT INTO chinalife_economy_actions(user_id,action,ref,coins,xp,created_at) VALUES(65,'purchase','vip-night:night:test',-500,0,NOW())");
+ const coins=id=>Number(sql('USE chinalife_test; SELECT coins FROM chinalife_balances WHERE user_id='+id).trim());
+ const drink=(id,body)=>call(id,'economy.php','POST',{action:'club-drink',sku:'pappi-fizz',...body});
+ assert.equal((await drink(66,{vip:1})).httpStatus,403,'no VIP pass, no VIP service');
+ const start=coins(65);const free=await drink(65,{vip:1});assert.equal(free.httpStatus,200,free.message);assert.equal(free.data.free,true);assert.equal(coins(65),start,'on the house');
+ const again=await drink(65,{vip:1});assert.equal(again.httpStatus,409);assert.match(again.message,/free VIP drink is done/);assert.equal(coins(65),start,'never charged');
+ sql("USE chinalife_test; UPDATE chinalife_economy_actions SET created_at=DATE_SUB(NOW(),INTERVAL 2 MINUTE) WHERE user_id=65 AND action='club-drink'");
+ const paid=await drink(65,{});assert.equal(paid.httpStatus,200,paid.message);assert.equal(paid.data.free,false);assert.equal(coins(65),start-120,'ordinary drinks are paid');
+});

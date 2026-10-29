@@ -208,17 +208,25 @@ try {
         if (!isset($clubDrinks[$sku])) cl_fail('That drink is not on the menu');
         [, $here]=economy_here();
         if ($here!=='night') cl_fail('Order at the club bar',403);
-        if (cl_one('SELECT id FROM chinalife_economy_actions WHERE user_id=? AND action="club-drink" AND created_at>=DATE_SUB(NOW(),INTERVAL 90 SECOND)','i',[$uid])) {$totals=economy_totals($game);$db->commit();json_response('success',$totals+['cooldown'=>true],'One drink every 90 seconds.');}
-        [$price,$xp]=$clubDrinks[$sku];
+        // Club Phase 4 (docs/CLUB-PLAN.md): the VIP waiter's first drink of the night is on the house with a VIP pass for this
+        // club tonight (vip-night, 14 hours) or a VIP membership (30 days); once per 14 hours (a second ask is refused, never charged: order from the menu instead).
+        $vipFree=false;
+        if (!empty($input['vip'])) {
+            if (!cl_one('SELECT id FROM chinalife_economy_actions WHERE user_id=? AND action="purchase" AND ((ref LIKE "vip-night:night:%" AND created_at>=DATE_SUB(NOW(),INTERVAL 14 HOUR)) OR (ref LIKE "vip-member:%" AND created_at>=DATE_SUB(NOW(),INTERVAL 30 DAY)))','i',[$uid])) cl_fail('A VIP pass is needed for VIP service',403);
+            $vipFree=!cl_one('SELECT id FROM chinalife_economy_actions WHERE user_id=? AND action="club-drink" AND ref LIKE "club-drink:vipfree:%" AND created_at>=DATE_SUB(NOW(),INTERVAL 14 HOUR)','i',[$uid]);
+            if (!$vipFree) cl_fail('Your free VIP drink is done for tonight',409);
+        }
+        if (!$vipFree && cl_one('SELECT id FROM chinalife_economy_actions WHERE user_id=? AND action="club-drink" AND created_at>=DATE_SUB(NOW(),INTERVAL 90 SECOND)','i',[$uid])) {$totals=economy_totals($game);$db->commit();json_response('success',$totals+['cooldown'=>true],'One drink every 90 seconds.');}
+        [$price,$xp]=$clubDrinks[$sku];if ($vipFree) $price=0;
         $held=cl_balances_lock($uid);
         if ($held['coins']<$price) cl_fail('Not enough money',409);
         $today=cl_one('SELECT COUNT(*) n FROM chinalife_economy_actions WHERE user_id=? AND action="club-drink" AND xp>0 AND ref LIKE ?','is',[$uid,'club-drink:%:'.$day]);
         if ((int)($today['n']??0)>=8) $xp=0;
         $moved=cl_move_totals($uid,$game,-$price,$xp);
-        economy_note('club-drink','club-drink:'.$sku.':'.bin2hex(random_bytes(4)).':'.$day,-$price,$xp);
+        economy_note('club-drink','club-drink:'.($vipFree?'vipfree:':'').$sku.':'.bin2hex(random_bytes(4)).':'.$day,-$price,$xp);
         cl_store_totals($uid,$game);
         $db->commit();
-        json_response('success',$moved+['cooldown'=>false,'duplicate'=>false,'bonus'=>false],'Served.');
+        json_response('success',$moved+['cooldown'=>false,'free'=>$vipFree,'duplicate'=>false,'bonus'=>false],$vipFree?'On the house.':'Served.');
     }
     if ($action==='job') {
         $job=(string)($input['job']??'');

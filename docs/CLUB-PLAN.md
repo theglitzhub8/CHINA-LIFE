@@ -89,6 +89,19 @@ There is no separate mic stand: the Mic is on the dock (owner's choice).
 
 **Phase 4 · VIP service.** Take your VIP seat and a waiter walks over with a tray, puts the drink down and you sip it
 (first one on the house with a VIP pass, then order from your seat). Bottle service with sparklers for the VIP table.
+✅ Done 30 Oct 2026 (no switch; 007 / one-city Club, the `night` venue):
+- **The waiter.** Taking a VIP seat (world.js signals `chinalife:vip-seated`) brings a waiter in a black suit from the
+  bar, carrying a silver tray and a glass. He walks round the stage into the lounge (a new crowd mode, `serve`, with
+  waypoints), stops beside you and faces you.
+- **First drink.** On his first visit, economy.php `club-drink` with `vip:1` gives a free Pappi Fizz. It is checked on the
+  server: a vip-night pass for the club in the last 14 hours, or a vip-member pass in the last 30 days; once per 14 hours.
+  A second free ask is refused with a 409 and is **never charged**.
+- **After that.** He opens the bar menu and you order at bar prices. Ordering from your seat doesn't stand you up. If you
+  don't order within 15 s he leaves.
+- **The drink.** It goes on a little side table by your seat and is cleared when you get up. He walks back to the bar and
+  leaves.
+- While you're seated in VIP, the dock's **Bar** button calls the waiter instead.
+- Not built: bottle service with sparklers. It stays a later idea; the VIP table perk is unchanged.
 
 **Phase 5 · The walls.** The big screen above the DJ shows only the song playing and who requested it. Paid ads get
 their own frames on the side walls and rotate. No "Advertise here" pop-up.

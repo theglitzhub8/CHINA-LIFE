@@ -12,7 +12,8 @@ const DOCK=[['door','🎟','Door'],['bar','🍸','Bar'],['dance','💃','Dance']
 const COVERED=/^(🎟\s*)?Entry & VIP$|^(🍸\s*)?Bar$|^(🎧\s*)?Change \/ request song$/,title=b=>(b.childNodes[0]?.textContent||'').trim();
 const ACT={
  door:()=>G()?.clubAccess?.(G().state.place),
- bar:()=>press('.club-emotes [data-ce="menu"]')||pressItem(/^(🍸\s*)?Bar$/),
+ // Seated in the VIP lounge, the bar comes to you (club-host.js waiter).
+ bar:()=>window.ChinaLifeClubHost?.waiter?.()||press('.club-emotes [data-ce="menu"]')||pressItem(/^(🍸\s*)?Bar$/),
  dance:()=>press('.club-emotes [data-ce="dance"]')||window.ChinaLifeWorld?.emote?.('dance'),
  spray:()=>press('.club-emotes [data-ce="spray"]')||window.ChinaLifeClub?.open?.(),
  music:()=>window.ChinaLifeAudio?.open?.(),
