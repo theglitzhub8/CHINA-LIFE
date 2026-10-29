@@ -79,3 +79,34 @@ test('shower and toilet at home: a frosted shower with humming, or the door and 
  fire({state:'end',kind:'wash',label:'Use the toilet',place:'home'});assert.match(el.querySelector('.hm-note').textContent,/Bladder 100%/);for(const f of t.timers.splice(0))f();assert.ok(said.includes('😮‍💨 Much better'));
  assert.equal(fire({state:'start',kind:'wash',label:'Freshen up',place:'gym',duration:3}).duration,3,'not at home: untouched');
 });
+
+// Phase 4: eat. A pot on the stove while cooking, then a little table to eat at; collecting a delivery brings the rider.
+function fakeRoom(){class O{constructor(){this.children=[];this.parent=null;this.position={x:0,y:0,z:0,set(x,y,z){Object.assign(this,{x,y,z})}};this.rotation={y:0};this.scale={x:1,setScalar(v){this.x=v}};this.userData={};this.visible=true;this.material={};this.geometry={dispose(){}}}
+ add(...k){for(const o of k){o.parent=this;this.children.push(o)}return this}removeFromParent(){if(this.parent){this.parent.children=this.parent.children.filter(o=>o!==this);this.parent=null}}traverse(f){f(this);for(const o of this.children)o.traverse(f)}}
+ const root=new O(),actors=[],obstacles=[{x:.6,z:-3.1,w:1.95,d:1}],mk=(x,y,z,p)=>{const m=new O();m.position.set(x,y,z);(p||root).add(m);return m};
+ const THREE={Group:O,Mesh:O,SphereGeometry:O,BoxGeometry:O,MeshBasicMaterial:O,MeshStandardMaterial:O};
+ return {root,actors,ctx:{THREE,root,obstacles:()=>obstacles,cylinder:(r,h,c,x,y,z,p)=>mk(x,y,z,p),box:(w,h,d,c,x,y,z,p)=>mk(x,y,z,p),moveTo(x,z,ry){me.position.x=x;me.position.z=z;me.rotation.y=ry},
+  person:(x,z,shirt,skin,name,id,look)=>{const b=mk(x,0,z);b.userData.name=name;b.userData.look=look;return b},addActor:b=>actors.push(b),removeActor:b=>{actors.splice(actors.indexOf(b),1);b.removeFromParent()},labelFor:()=>null},me:null}}
+test('eat at home: a pot on the stove, then sit at a little table; a delivery brings the rider in from the door',()=>{
+ const src=r('public/home-moments.js'),w=r('public/world.js');assert.match(w,/fx:\(\)=>view==='venue'\?fxCtx\(\):null,homeSpot:k=>view==='venue'\?homeSpots\[k\]\|\|null:null/);
+ const t=harness({...fixture(),place:'home'}),c=t.context,said=[],room=fakeRoom(),me=new room.root.constructor();room.me=me;me.position.set(.6,0,-2.3);
+ const ctx=room.ctx;ctx.moveTo=(x,z,ry)=>{me.position.x=x;me.position.z=z;me.rotation.y=ry};const performs=[],hooks=new Set();
+ c.ChinaLifeWorld={say:(who,s)=>said.push(s),onFrame:f=>(hooks.add(f),()=>hooks.delete(f)),body:me,fx:()=>ctx,homeSpot:k=>k==='door'?{x:3,z:2.8}:null,perform:(spec,done)=>{performs.push(spec);return true},busy:false};
+ c.ChinaLife.isResidence=p=>p==='home';c.ChinaLifeAudio={volume:0};c.requestAnimationFrame=f=>f(0);vm.runInContext(src,c);t.timers.splice(0);
+ const fire=detail=>{const e=new c.Event('chinalife:perform');e.detail=detail;c.dispatchEvent(e);return detail},moment=()=>room.root.children.find(o=>o.name==='home-moment');
+ assert.equal(fire({state:'start',kind:'cook',label:'🍜 Cook instant noodles',place:'home',duration:3}).duration,9);
+ assert.ok(moment()?.children.length>=4,'pot, lid and flame on the stove');assert.ok(Math.abs(me.rotation.y-Math.PI)<.01,'facing the stove');assert.match(said[0],/Cooking instant noodles/);
+ for(const f of hooks)f(1000,16);assert.ok(Math.abs(me.rotation.y-Math.PI)<.2,'stays facing the pot through the pose');
+ fire({state:'end',kind:'cook',label:'🍜 Cook instant noodles',place:'home'});assert.ok(!moment(),'pot cleared');assert.ok(said.includes('🍜 Ready!'));
+ for(const f of t.timers.splice(0))f();assert.equal(performs[0].kind,'eat');assert.match(performs[0].label,/Eating instant noodles/);assert.equal(performs[0].duration,6);
+ assert.equal(fire({state:'start',kind:'eat',label:performs[0].label,place:'home',duration:3}).duration,6);assert.ok(moment(),'table, stool and bowl');
+ fire({state:'end',kind:'eat',label:performs[0].label,place:'home'});assert.ok(!moment());assert.ok(said.includes('😌 That hit the spot'));
+ // Delivery: only an order seen on its way sends the rider.
+ c.ChinaLife.state.foodOrders=[{id:'old',item:'🍕 Pizza',received:true},{id:'o1',item:'🍛 Jollof rice',received:false}];for(const f of t.intervals)f();
+ c.ChinaLife.state.foodOrders[1].received=true;t.timers.splice(0);c.dispatchEvent(new c.Event('chinalife:delivery'));for(const f of t.timers.splice(0))f();
+ const rider=room.actors[0];assert.ok(rider,'the rider walks in');assert.equal(rider.userData.name,'🛵 Delivery!');assert.equal(rider.userData.look.top.c,0xffc400);assert.equal(rider.userData.mode,'serve');
+ assert.deepEqual([rider.position.x,rider.position.z],[3,2.8],'from the door');rider.userData.onArrive();performs.length=0;
+ for(const f of t.timers.splice(0))f();for(const f of t.timers.splice(0))f();assert.ok(said.includes('🙏 Thank you!'));assert.match(performs[0]?.label||'',/Eating Jollof rice/);
+ rider.userData.path=[];rider.userData.onArrive();assert.equal(room.actors.length,0,'he leaves');
+ c.dispatchEvent(new c.Event('chinalife:delivery'));for(const f of t.timers.splice(0))f();assert.equal(room.actors.length,0,'an old order never sends a rider');
+});

@@ -99,5 +99,19 @@ map does not change; home interiors can.
   - The body is never shown (world.js shows it again when the activity ends). Sounds follow the music volume and are
     silent at 0. Times and needs are unchanged (game.js). Skipped when motion is reduced.
 - **Phase 4 · Eat:** cook from your fridge at the stove, or order with the rider at your door.
+  ✅ Done 30 Oct 2026 (no switch; public/home-moments.js). At home:
+  - **Cooking** (instant noodles, or a dish from your fridge when University food is on): you step up to the stove and
+    face it. A pot with a lid sits on the hob over a flickering flame, steam rises and it sizzles. "🔥 Cooking…", then
+    "😋 Smells so good…", then "🍜 Ready!" (9 s).
+  - **Eating:** you then sit down a step back from the stove at a little round table with a stool and a steaming bowl
+    (6 s), "😋 Mmm…" and "😌 That hit the spot". The pantry meal sits at the table too.
+  - **Delivery:** collecting an order at home brings a rider in a yellow jacket in from the door with an orange bag,
+    tagged "🛵 Delivery!". He stops beside you ("🛵 Your <dish>! Enjoy 🙏"), hands it over ("🙏 Thank you!"), walks
+    back out, and you sit down to eat it. Only an order seen on its way in this session sends him, so an old order from
+    a save never does.
+  - Food, money and time are unchanged (game.js, kitchen.js). Props are temporary and never block walking. Sounds
+    follow the music volume. Skipped when motion is reduced.
+  - **Change to the protected world.js** (no map change): `ChinaLifeWorld.fx()` (the room's props and people kit,
+    inside a room only) and `ChinaLifeWorld.homeSpot(name)` (the home's door, stove, bed…).
 - **Phase 5 · Chill and friends:** TV on the sofa with popcorn; the doorbell when a friend arrives.
 - **Phase 6 · Wardrobe, study at the desk, video call family.**
