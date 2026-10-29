@@ -93,3 +93,15 @@ test('VIP waiter: comes when you sit in VIP, first drink on the house, then take
  assert.match(h,/if\(!seatedVip\(\)\)c\.setEmote\('drink'\);/,'ordering from your VIP seat does not stand you up');
  assert.match(h,/const api=\{waiter:\(\)=>callWaiter\(false\),/);assert.match(d,/bar:\(\)=>window\.ChinaLifeClubHost\?\.waiter\?\.\(\)\|\|press\(/);
 });
+
+// Phase 5: the walls. Ads on their own walls (never over the Now playing screen or the BAR sign), no "Advertise here" in
+// clubs, and the Now playing screen says who asked for the song.
+test('club walls: ads clear of the music screen and bar, no Advertise here, Now playing shows the requester',()=>{
+ const w=r('public/world.js'),a=r('public/audio.js');
+ assert.match(w,/const adSpots=id=>id==='night'\?\[\{x:-9\.3,y:2\.1,z:-2\.2,ry:Math\.PI\/2,w:4\.4,h:2\.5\},\{x:-9\.3,y:2\.1,z:2\.8,ry:Math\.PI\/2,w:4\.4,h:2\.5\},\{x:3\.2,y:2\.2,z:-6\.86,ry:0,w:3\.2,h:2\}\]/);
+ // The music screen is 4.6 wide at x −3.5 on the back wall; the bar shelf starts at x 5.8. The back-wall ad (3.2 wide at x 3.2) clears both.
+ assert.ok(3.2-3.2/2>-3.5+4.6/2&&3.2+3.2/2<5.8);
+ assert.match(w,/if\(ad\.venues\.includes\(id\)&&!game\.clubs\.includes\(id\)\)adPlacement\(/);
+ assert.match(w,/ctx\.fillText\(info\.by\?'🎤 Requested by '\+String\(info\.by\)\.slice\(0,30\):info\.source\|\|'Club DJ',250,242,366\);/);
+ assert.match(a,/const q=queue\[0\];requestedBy=q&&q\.track===data\.track\?q\.name:null;/);assert.match(a,/source:'Club DJ',by:requestedBy\}/);
+});

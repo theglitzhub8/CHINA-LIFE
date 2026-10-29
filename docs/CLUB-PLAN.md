@@ -105,6 +105,17 @@ There is no separate mic stand: the Mic is on the dock (owner's choice).
 
 **Phase 5 · The walls.** The big screen above the DJ shows only the song playing and who requested it. Paid ads get
 their own frames on the side walls and rotate. No "Advertise here" pop-up.
+✅ Done 30 Oct 2026 (no switch):
+- **Paid ads in 007 / the one-city Club** (world.js `adSpots('night')`): two frames on the left wall, by the VIP lounge
+  and by the entrance, and one on the back wall between the stage and the bar. The room has no right wall (it is cut
+  away for the camera), so nothing hangs there.
+  - The Now playing screen (x −3.5 on the back wall) and the BAR sign / bottle shelf are no longer covered.
+  - Tapping a frame opens the ad (Phase 3).
+  - With more than three ads they share the frames as before.
+- **No "📣 Advertise here" board** inside clubs. The street billboards on the city map keep it.
+- **Now playing screen:** "🎤 Requested by <name>" when the song came from a request. audio.js notes the requester as the
+  first song in the queue starts. The server doesn't store it, so after a reload, or for a song that started before you
+  arrived, it says "Club DJ".
 
 Each phase: tests, a local play-through on a phone-sized screen, its own commit; live when the owner says. The city
 map's look does not change (club interior and character code only; edits to protected files kept minimal and reported).
