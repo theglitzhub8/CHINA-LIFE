@@ -54,6 +54,8 @@ const css=document.createElement('style');css.textContent=
  'html:root body.club-docked #worldUI :is(.tp-stick,.tp-jump){bottom:calc(var(--cd-nav,84px) + 92px + env(safe-area-inset-bottom))!important}'+
  // Sheets opened in a club stop at about half height, with the club still showing behind them.
  'html:root body.club-docked dialog:is(#activityDialog,#audioDialog)[open]{max-height:62vh!important;top:auto!important}html:root body.club-docked dialog:is(#activityDialog,#audioDialog)::backdrop{background:rgb(0 0 0 / .18)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}'+
+ // The dance competition's move sheet stays small (club-host.js), moves in a 2 × 2 grid.
+ 'html:root body.club-docked dialog#activityDialog.cd-compact[open]{max-height:36vh!important;height:auto!important;min-height:0!important}html:root body.club-docked #activityDialog.cd-compact .dance-pad{display:grid;grid-template-columns:1fr 1fr;gap:8px}html:root body.club-docked #activityDialog.cd-compact .dance-pad button{min-height:52px;margin:0}'+
  '.cd-more{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}.cd-more button{display:grid;justify-items:center;gap:2px;padding:10px 4px;border-radius:16px;border:1px solid #e3d9f5;background:#faf7ff}.cd-more span{font-size:24px}.cd-more b{font-size:13px}.cd-more small{font-size:10px;color:#6b6280;text-align:center}'+
  '.cd-list{display:grid;gap:8px}.cd-list button{display:grid;gap:2px;text-align:left;padding:12px 14px;border-radius:16px;border:1px solid #e3e8ef;background:#fff}';
 document.head?.append(css);

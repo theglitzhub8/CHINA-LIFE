@@ -114,9 +114,21 @@ test('club moments: activities animate and announce start/end; toast, hype, open
  assert.match(w,/window\.dispatchEvent\(new CustomEvent\('chinalife:perform',\{detail:ev\}\)\);if\(ev\.duration>actionRun\.duration\)actionRun\.duration=ev\.duration;target\.copy\(player\.position\);/);
  assert.match(w,/if\(current\.phase==='pose'\)window\.dispatchEvent\(new CustomEvent\('chinalife:perform',\{detail:\{state:'end'/);
  assert.match(m,/night:\[\['perform',0,-1\.9\],\['talk',3,2\],\['dance',0,0\],\['dance',\.6,\.4\]\]/,'Join the main dance floor dances');
- assert.match(h,/const POSES=\{toast:\[\['Bip01_R_UpperArm','z',-1\.5\],\['Bip01_R_Forearm','z',-\.8\]\],mic:/);
+ assert.match(h,/toast:\[\['Bip01_R_UpperArm','z',-1\.5\],\['Bip01_R_Forearm','z',-\.8\]\],mic:/);
  assert.match(h,/if\(k==='toast'\)\{boost\+=5;say\(pick\(LINES\.toast\)\);toastMoment\(\)\}/);assert.match(h,/if\(k==='hype'\)\{boost\+=6;say\(pick\(LINES\.dj\)\);hypeMoment\(\)\}/);
- assert.match(h,/if\(d\.kind==='perform'\)micStart\(d\);else if\(d\.kind==='talk'&&\/drink\/i\.test\(d\.label\|\|''\)\)meetStart\(d\);else if\(d\.kind==='dance'\)danceStart\(d\)/);
+ assert.match(h,/if\(\/open mic\/i\.test\(lb\)\)micStart\(d\);else if\(\/DJ set\/i\.test\(lb\)\)gigStart\('dj',d\);else if\(\/Bartender\/i\.test\(lb\)\)gigStart\('bar',d\);else if\(\/Promoter\/i\.test\(lb\)\)gigStart\('door',d\);/,'open mic and each club job by label');
  assert.match(h,/const MIC=\{x:-2,z:-3\};/,'open mic on the stage, clear of the Hypeman');
  assert.match(h,/tick:\(t,d\)=>\{tick\(t,d\);vipTick\(\);momentsTick\(t,d\);/);assert.match(h,/momentsDispose\(\);/);
+});
+
+// The dance competition on the floor (game.js 'chinalife:dance-comp' → club-host.js): spotlight in the middle, the DJ calls,
+// your move plays on your character, the result celebrates once the results sheet is closed.
+test('dance competition on the floor: signals from game.js, moves on the body, a celebration with the rank',()=>{
+ const g=r('public/game.js'),h=r('public/club-host.js'),d=r('public/club-dock.js'),w=r('public/world.js');
+ assert.match(g,/danceSignal\(\{state:'start'\}\);danceBeat\(id,0,0\)/);assert.match(g,/danceSignal\(\{state:'beat',n,call:danceMoves\.indexOf\(call\)/);
+ assert.match(g,/danceSignal\(\{state:'move',n,move:i,hit:m===call\}\)/);assert.match(g,/danceSignal\(\{state:'end',rank:won\?won\[1\]:0,hits,prize:won\?won\[2\]:0\}\)/,'rank, not place: place is the venue');
+ assert.match(h,/window\.addEventListener\('chinalife:dance-comp',compEvent\)/);assert.match(h,/if\(window\.ChinaLifeWorld\?\.emoteNow!=='dance'\)c\.setEmote\('dance'\)/,'never toggles a dance off');
+ assert.match(h,/m\.position\.x=b\.x\+\(a\.type===0\?\.45\*s:a\.type===1\?-\.45\*s:0\);m\.position\.y=b\.y\+\(a\.type===2\?\.45\*s:0\);m\.rotation\.y=b\.ry\+\(a\.type===3\?Math\.PI\*2\*k:0\)/);
+ assert.match(h,/function celebrate\(d\)\{/);assert.match(d,/#activityDialog\.cd-compact\[open\]\{max-height:36vh!important/);
+ assert.match(w,/function fxCtx\(\)\{return \{moveTo:\(x,z,ry\)=>\{/);
 });

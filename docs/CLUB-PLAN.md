@@ -143,3 +143,21 @@ world.js. No switch.
 - **📣 Shout-out:** unchanged. It already shows on the booth screen and the DJ and Hypeman read it out.
 - **How the arms move:** arm poses turn the real body's bones after the animation each frame (measured: toast hand above
   head height and forward, mic at the mouth, hype both arms up).
+- **🏆 Dance competition, on the dance floor.** game.js sends `chinalife:dance-comp` signals: start, beat, move and end
+  (the end carries `rank`). club-host.js:
+  - **Start:** puts you in the middle of the floor under a gold spotlight, dancing. The DJ announces the dance-off and
+    the crowd turns to watch.
+  - **Each beat:** the DJ shouts the move, and the move you tap plays on your character (45 cm step left or right, a
+    45 cm jump, or a full spin, in 0.6 s). A hit flashes the floor and the crowd cheers; a miss shows "😅 Oops!".
+  - **Finish:** after you close the results: the DJ calls your rank, "🥇 Champion!", confetti, lights, arms up and
+    applause.
+  - The move sheet stays small (2 × 2) during the round so the floor stays in view. Fee, scoring and prizes are
+    unchanged.
+- **💼 Club jobs at their real spots.** The pay and time come from game.js, as before.
+  - **🎧 DJ set:** you go behind the decks with both hands on them; the DJ steps aside, the lights go wild and the crowd
+    cheers.
+  - **🍸 Bartender:** you go behind the bar, shaking a drink, and two customers come up to order.
+  - **📣 Promoter:** you're at the door by the bouncer, waving guests in.
+- The open mic now starts only for the open mic itself; the DJ gig is also a "perform" activity.
+- **Not changed:** Play with people (dance, dice and spray with other players already have their own scenes) and Night
+  missions (a checklist).

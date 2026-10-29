@@ -112,13 +112,13 @@ export function nightClub(c){
  // Club moments (docs/CLUB-PLAN.md, 30 Oct 2026): every club action shows what it means. Arm poses on the real bodies
  // (bones turned after the animation each frame), props in the hand, speech bubbles, a stage spotlight, lighting bursts,
  // sparkles and confetti, and the crowd turning to watch or answering. The game's own costs and rewards are unchanged.
- const POSES={toast:[['Bip01_R_UpperArm','z',-1.5],['Bip01_R_Forearm','z',-.8]],mic:[['Bip01_R_UpperArm','z',-1.1],['Bip01_R_Forearm','z',-2]],hold:[['Bip01_R_UpperArm','z',-.5],['Bip01_R_Forearm','z',-1.3]],hype:[['Bip01_R_UpperArm','y',2.3],['Bip01_L_UpperArm','y',-2.3]]};
+ const POSES={deck:[['Bip01_R_UpperArm','z',-.7],['Bip01_R_Forearm','z',-1.1],['Bip01_L_UpperArm','z',-.7],['Bip01_L_Forearm','z',-1.1]],shake:[['Bip01_R_UpperArm','z',-.9],['Bip01_R_Forearm','z',-1.4]],wave:[['Bip01_R_UpperArm','y',2.1]],toast:[['Bip01_R_UpperArm','z',-1.5],['Bip01_R_Forearm','z',-.8]],mic:[['Bip01_R_UpperArm','z',-1.1],['Bip01_R_Forearm','z',-2]],hold:[['Bip01_R_UpperArm','z',-.5],['Bip01_R_Forearm','z',-1.3]],hype:[['Bip01_R_UpperArm','y',2.3],['Bip01_L_UpperArm','y',-2.3]]};
  const AX={x:new THREE.Vector3(1,0,0),y:new THREE.Vector3(0,1,0),z:new THREE.Vector3(0,0,1)},qTmp=new THREE.Quaternion(),vTmp=new THREE.Vector3();
  const posed=new Map(),fx=[],props=new Set(),bubbles=new Map(),moved=[];let spot=null,flashUntil=0,micVol=null;
  const boneOf=(b,n)=>{const cache=b.userData.cdBones||(b.userData.cdBones={});if(!(n in cache)){let f=null;b.traverse(o=>{if(!f&&o.name===n)f=o});cache[n]=f}return cache[n]};
  function pose(body,name,ms){if(!body?.userData?.real||reduced())return;posed.set(body,{name,from:performance.now(),until:performance.now()+ms})}
  // Weight eases in and out over a quarter second; hype pumps the arms.
- function poseTick(now){for(const [body,p] of posed){if(now>p.until+250||!body.parent){posed.delete(body);continue}const w=Math.min(1,(now-p.from)/250,(p.until+250-now)/250),pump=p.name==='hype'?1+.18*Math.sin(now/120):1;
+ function poseTick(now){for(const [body,p] of posed){if(now>p.until+250||!body.parent){posed.delete(body);continue}const w=Math.min(1,(now-p.from)/250,(p.until+250-now)/250),pump=p.name==='hype'?1+.18*Math.sin(now/120):p.name==='shake'?1+.25*Math.sin(now/70):p.name==='wave'?1+.15*Math.sin(now/150):1;
   for(const [bn,ax,a] of POSES[p.name]){const b=boneOf(body,bn);if(b){qTmp.setFromAxisAngle(AX[ax],a*w*pump);b.quaternion.multiply(qTmp)}}}}
  // A prop in a body's right hand (glass, mic) for ms; scaled to world size whatever the bone's scale.
  function inHand(body,make,ms){const hand=boneOf(body,'Bip01_R_Hand');if(!hand)return null;const o=make();body.updateMatrixWorld(true);hand.getWorldScale(vTmp);o.scale.divide(vTmp);o.position.set(.08/vTmp.x,0,.04/vTmp.z);hand.add(o);props.add(o);setTimeout(()=>{o.removeFromParent();props.delete(o)},ms);return o}
@@ -141,10 +141,12 @@ export function nightClub(c){
   crowd(me.position.x,me.position.z,7).slice(0,4).forEach((b,i)=>setTimeout(()=>bubbleOn(b,['🔥','🙌','Ayyy!','Turn up! 🎉'][i],1800),300+i*250))}
  // 🎤 Open mic (place-bar "Go to open mic", kind 'perform'): up on the stage, a mic stand and a mic in your hand, a
  // spotlight, the music drops, the crowd turns to watch; applause and confetti at the end.
+ // A spotlight cone with a real light, on a spot (y = floor or stage height).
+ function spotlight(x,z,y=0,color=0xfff3c4){const cone=new THREE.Mesh(new THREE.ConeGeometry(1.1,4.2,20,1,true),basic(color,{transparent:true,opacity:.16,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending}));cone.position.set(x,y+2.1,z);const light=new THREE.SpotLight(color,40,9,.5,.4);light.position.set(x,y+4.1,z+.4);light.target.position.set(x,y,z);root.add(cone,light,light.target);return [cone,light,light.target]}
  const MIC={x:-2,z:-3};let audience=[];
  function micStart(ev){const me=c.getPlayer();if(!me)return;ev.duration=9;me.position.set(MIC.x,.52,MIC.z);me.rotation.y=.2;
   const stand=new THREE.Group(),pole=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,1.25,8),new THREE.MeshStandardMaterial({color:0x111111})),foot=new THREE.Mesh(new THREE.CylinderGeometry(.18,.2,.03,16),pole.material);pole.position.y=.62;stand.add(pole,foot);stand.position.set(MIC.x+.05,.52,MIC.z+.42);root.add(stand);
-  const cone=new THREE.Mesh(new THREE.ConeGeometry(1.1,4.2,20,1,true),basic(0xfff3c4,{transparent:true,opacity:.16,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending}));cone.position.set(MIC.x,2.6,MIC.z);const light=new THREE.SpotLight(0xfff3c4,40,9,.5,.4);light.position.set(MIC.x,4.6,MIC.z+.4);light.target.position.set(MIC.x,.5,MIC.z);root.add(cone,light,light.target);spot=[stand,cone,light,light.target];
+  spot=[stand,...spotlight(MIC.x,MIC.z,.5)];
   pose(me,'mic',8800);inHand(me,micMesh,8800);const a=window.ChinaLifeAudio;if(a?.setVolume&&micVol==null){micVol=a.volume;a.setVolume(micVol*.35)}
   audience=crowd(MIC.x,MIC.z,11);watch(audience,MIC.x,MIC.z,9200);bubbleOn(me,'🎤 Is this thing on? Hello '+clubName+'!',3000);setTimeout(()=>bubbleOn(me,'🎤 '+pick(['This one goes out to everybody far from home…','Lagos to China, we are here! 🇳🇬🇨🇳','Make some noise! 🙌','Thank you! You\'re beautiful!'])),3600)}
  function micEnd(){const me=c.getPlayer();if(spot){for(const o of spot)o.removeFromParent();spot=null}const a=window.ChinaLifeAudio;if(micVol!=null){a?.setVolume?.(micVol);micVol=null}if(me)burst(new THREE.Vector3(MIC.x,2.6,MIC.z),40,[0xff3fa4,0x35e6ff,0xffcf5a],2.2);
@@ -161,10 +163,47 @@ export function nightClub(c){
  // 💃 Dance with the crowd / the main floor (kind 'dance'): the floor flashes and the people around you dance with you.
  function danceStart(ev){const me=c.getPlayer();if(!me)return;ev.duration=Math.max(ev.duration||0,6);flashUntil=performance.now()+2200;bubbleOn(me,'💃 Let\'s dance!',2200);
   crowd(me.position.x,me.position.z,4).forEach((b,i)=>{if(b.userData.mode==='chat'){moved.push({b,mode:'chat',face:b.userData.face});b.userData.mode='dance'}if(i<2)setTimeout(()=>bubbleOn(b,['Ayy! 🔥','Go {n}! 💃'][i].replace('{n}',game.state.name),1800),600+i*400)});setTimeout(()=>{for(const m of moved.splice(0))if(m.b.userData.mode==='dance'&&m.mode==='chat')m.b.userData.mode='chat'},6500)}
- const onPerform=e=>{const d=e.detail||{};if(d.place!=='night')return;if(d.state==='start'){if(d.kind==='perform')micStart(d);else if(d.kind==='talk'&&/drink/i.test(d.label||''))meetStart(d);else if(d.kind==='dance')danceStart(d)}else{if(d.kind==='perform')micEnd();if(d.kind==='talk')meetEnd()}};
+
+ // 💼 Club jobs, each at its real spot: DJ set behind the decks (the DJ steps aside), bartender behind the bar with
+ // customers ordering, promoter at the door waving guests in. The gig's pay and time come from game.js as before.
+ let gig=null;
+ function gigStart(kind,ev){const me=c.getPlayer();if(!me)return;ev.duration=Math.max(ev.duration||0,kind==='dj'?10:9);const props0=[];
+  if(kind==='dj'){const dj=c.bodies().find(b=>b.userData?.npc==='dj');const at=dj?{x:dj.position.x,y:dj.position.y,z:dj.position.z}:{x:0,y:.3,z:-4};if(dj){gig={dj,from:dj.position.clone()};dj.position.x-=1.3}c.moveTo(at.x+.2,at.z,0);me.position.y=at.y;
+   props0.push(...spotlight(at.x+.2,at.z,at.y,0xb48cff));pose(me,'deck',9800);flashUntil=performance.now()+9500;bubbleOn(me,'🎧 '+game.state.name+' on the decks!',3000);
+   const fans=crowd(at.x,at.z,12);watch(fans.filter(b=>b.userData.mode==='chat'),at.x,at.z,9800);fans.slice(0,4).forEach((b,i)=>setTimeout(()=>bubbleOn(b,['🔥 Tune!','Run it back! 🔁','Selecta! 🎧','🙌🙌'][i],2200),1500+i*900))}
+  if(kind==='bar'){c.moveTo(7.2,-4.75,0);pose(me,'shake',8800);inHand(me,glassMesh,8800);bubbleOn(me,'🍸 What can I get you?',2600);
+   crowd(7,-3.5,14).slice(0,2).forEach((b,i)=>{moved.push({b,mode:b.userData.mode,face:b.userData.face});Object.assign(b.userData,{mode:'serve',path:[[6.6+i*1.2,-3.35]],onArrive:()=>{b.userData.face=Math.PI;setTimeout(()=>bubbleOn(b,['One Club Fizz please! 🥂','Something strong! 🔥'][i],2200),300+i*1400)}})});
+   setTimeout(()=>bubbleOn(me,'Coming right up! 🍸',2200),5200)}
+  if(kind==='door'){c.moveTo(-7.4,5.6,-Math.PI/2);pose(me,'wave',8800);bubbleOn(me,'📣 Best party in town tonight!',2800);
+   crowd(-6,4,14).slice(0,2).forEach((b,i)=>{moved.push({b,mode:b.userData.mode,face:b.userData.face});c.moveTo&&b.position.set(-8.6,0,5.2+i*.7);Object.assign(b.userData,{mode:'serve',path:[[-5.5+i*.6,3.4-i*.5]],onArrive:()=>{b.userData.mode=moved.find(m=>m.b===b)?.mode||'dance'}});setTimeout(()=>bubbleOn(b,['Ooh, let\'s go in! 🎉','Is it free entry? 😄'][i],2200),1200+i*1800)})}
+  gig={...(gig||{}),kind,props:props0}}
+ function gigEnd(){if(!gig)return;const g=gig;gig=null;for(const o of g.props||[])o.removeFromParent();if(g.dj)g.dj.position.copy(g.from);for(const m of moved.splice(0))if(['serve','wait'].includes(m.b.userData.mode)){m.b.userData.mode=m.mode;m.b.userData.face=m.face}const me=c.getPlayer();if(me)burst(me.position.clone().setY(2.2),24,[0xff3fa4,0x35e6ff,0xffcf5a],2)}
+ // 🏆 Dance competition on the floor (game.js 'chinalife:dance-comp'): you in the spotlight in the middle, the DJ calls
+ // each move, your character does the move you tap (step left/right, jump, spin), the floor and crowd react, then the
+ // result with confetti and applause.
+ let comp=null;const MOVES=['⬅️ LEFT STEP!','➡️ RIGHT STEP!','⬆️ JUMP!','🔄 SPIN!'];
+ const djBody=()=>c.bodies().find(b=>b.userData?.npc==='dj');
+ function compEvent(e){const d=e.detail||{};if(d.place!=='night')return;const me=c.getPlayer();if(!me)return;
+  if(d.state==='start'){compStop();c.moveTo(0,.3,0);if(window.ChinaLifeWorld?.emoteNow!=='dance')c.setEmote('dance');comp={props:spotlight(0,.3,0,0xffcf5a),fans:crowd(0,0,12)};watch(comp.fans.filter(b=>b.userData.mode==='chat'),0,.3,60000);
+   const dj=djBody();if(dj)bubbleOn(dj,'🎤 Dance-off! Make some noise for '+game.state.name+'!',3200);burst(new THREE.Vector3(0,2.6,.3),30,[0xffcf5a,0xff3fa4,0x35e6ff],2)}
+  if(!comp)return;
+  // Keep dancing, and keep the move sheet small so the floor stays in view (club-dock.js .cd-compact).
+  if(d.state==='beat'){if(window.ChinaLifeWorld?.emoteNow!=='dance')c.setEmote('dance');setTimeout(()=>document.getElementById('activityDialog')?.classList.add('cd-compact'),0);const dj=djBody();if(dj)bubbleOn(dj,MOVES[d.call]||d.label,2600);bubbleOn(me,'👀 '+(MOVES[d.call]||'').replace('!','?'),2200)}
+  if(d.state==='move'){comp.anim={type:d.move,t0:performance.now()};if(d.hit){flashUntil=performance.now()+700;bubbleOn(me,['✔️ Nice!','🔥 Clean!','✔️ Yes!','💯'][d.n%4],1200);comp.fans.slice(0,2).forEach((b,i)=>setTimeout(()=>bubbleOn(b,['🔥','Ayyy!'][i],1000),200+i*200));boost+=3}else bubbleOn(me,'😅 Oops!',1200)}
+  // The result celebrates once the results sheet is closed ("Back to the party"), so you see it on the floor.
+  if(d.state==='end'){const t0=performance.now(),go=()=>document.querySelector('dialog[open]')&&performance.now()-t0<30000?setTimeout(go,250):celebrate(d);setTimeout(go,300)}}
+ function celebrate(d){const me=c.getPlayer();if(!me||!comp)return compStop();{const won=d.rank>0,dj=djBody();if(dj)bubbleOn(dj,won?'🏆 '+['1st','2nd','3rd'][d.rank-1]+' place: '+game.state.name+'!':'Big up '+game.state.name+'! Next time! 🙌',3800);
+   bubbleOn(me,won?['🥇 Champion!','🥈 2nd place!','🥉 3rd place!'][d.rank-1]:'😅 Good try!',3200);if(won){burst(new THREE.Vector3(0,2.8,.3),60,[0xffcf5a,0xff3fa4,0x35e6ff,0x8b5cff],2.8);flashUntil=performance.now()+2500;pose(me,'hype',2800)}
+   comp.fans.slice(0,5).forEach((b,i)=>setTimeout(()=>bubbleOn(b,won?['👏👏','Champion! 🏆','🔥🔥','We love you!','👏'][i]:['👏','Next time! 💪','👏','🙌','👏'][i],2400),300+i*220));setTimeout(compStop,4500)}}
+ function compStop(){document.getElementById('activityDialog')?.classList.remove('cd-compact');if(!comp)return;for(const o of comp.props)o.removeFromParent();const m=c.getPlayer()?.userData.real?.m;if(m&&m.userData.cdBase){m.position.x=m.userData.cdBase.x;m.position.y=m.userData.cdBase.y;m.rotation.y=m.userData.cdBase.ry}for(const x of moved.splice(0))if(x.b.userData.mode==='wait'){x.b.userData.mode=x.mode;x.b.userData.face=x.face}comp=null}
+ // The move itself, on the body's model (so the game's walking does not undo it): side step, jump or a full spin in 0.6 s.
+ function compTick(now){const a=comp?.anim,m=c.getPlayer()?.userData.real?.m;if(!a||!m)return;const b=m.userData.cdBase||(m.userData.cdBase={x:m.position.x,y:m.position.y,ry:m.rotation.y}),k=Math.min(1,(now-a.t0)/600),s=Math.sin(Math.PI*k);
+  m.position.x=b.x+(a.type===0?.45*s:a.type===1?-.45*s:0);m.position.y=b.y+(a.type===2?.45*s:0);m.rotation.y=b.ry+(a.type===3?Math.PI*2*k:0);if(k>=1)comp.anim=null}
+ window.addEventListener('chinalife:dance-comp',compEvent);
+ const onPerform=e=>{const d=e.detail||{};if(d.place!=='night')return;const lb=d.label||'';if(d.state==='start'){if(/open mic/i.test(lb))micStart(d);else if(/DJ set/i.test(lb))gigStart('dj',d);else if(/Bartender/i.test(lb))gigStart('bar',d);else if(/Promoter/i.test(lb))gigStart('door',d);else if(d.kind==='talk'&&/drink/i.test(lb))meetStart(d);else if(d.kind==='dance')danceStart(d)}else{if(/open mic/i.test(lb))micEnd();else if(/DJ set|Bartender|Promoter/i.test(lb))gigEnd();else if(d.kind==='talk')meetEnd()}};
  window.addEventListener('chinalife:perform',onPerform);
- function momentsTick(t,dt){poseTick(performance.now());fxTick(dt);if(performance.now()<flashUntil&&!reduced()){const on=Math.floor(t/90)%2;for(const m of floorMats)m.opacity=on?.95:.25;beams[0].rotation.z=Math.sin(t*.02)*.9;beams[1].rotation.z=-Math.sin(t*.02)*.9}}
- function momentsDispose(){window.removeEventListener('chinalife:perform',onPerform);micEnd();meetEnd();for(const m of fx.splice(0))m.removeFromParent();for(const o of props)o.removeFromParent();props.clear();for(const b of bubbles.values())b.el.remove();bubbles.clear();posed.clear()}
+ function momentsTick(t,dt){poseTick(performance.now());compTick(performance.now());fxTick(dt);if(performance.now()<flashUntil&&!reduced()){const on=Math.floor(t/90)%2;for(const m of floorMats)m.opacity=on?.95:.25;beams[0].rotation.z=Math.sin(t*.02)*.9;beams[1].rotation.z=-Math.sin(t*.02)*.9}}
+ function momentsDispose(){window.removeEventListener('chinalife:perform',onPerform);window.removeEventListener('chinalife:dance-comp',compEvent);compStop();gigEnd();micEnd();meetEnd();for(const m of fx.splice(0))m.removeFromParent();for(const o of props)o.removeFromParent();props.clear();for(const b of bubbles.values())b.el.remove();bubbles.clear();posed.clear()}
  async function order(x){const status=document.getElementById('pappiStatus');if(busy||!x)return;if(!(window.ChinaLifeAuth?.request&&window.ChinaLifeCloud?.signedIn)){if(status)status.textContent='Sign in to order.';return}
   if(x.price>game.state.money){if(status)status.textContent='Not enough money.';return}
   busy=true;document.querySelectorAll('[data-drink]').forEach(b=>b.disabled=true);
