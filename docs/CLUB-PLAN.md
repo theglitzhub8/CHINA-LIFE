@@ -76,6 +76,16 @@ mic-stand feature).
 
 **Phase 3 · Tap anything.** Sofa or chair → sit. Bar counter → order. DJ booth → request a song. Dance floor → dance.
 Mic stand → take the mic. Door / guard → entry and VIP. Wall ad → the advertiser's card. People → as now.
+✅ Done 30 Oct 2026 (no switch; world.js room code). Taps walk you to the spot, then act (`goDo` / `tapFrame`; a new
+walk cancels it):
+- **Bar:** the bar counter or bottle shelf (007 Club) → walk up, face the bar, the drinks menu opens.
+- **DJ:** the DJ booth, the stage, the music screen or the DJ himself → walk to the booth, the DJ booth (song
+  requests) opens.
+- **Dance floor:** a tile → walk there and dance (the club's own Dance, so the party meter and the dance-off count).
+- **Bouncer** → Entry & VIP.
+- **Wall ad** → its card.
+- **Sofas** → sit (Phase 0). **People** → as before.
+There is no separate mic stand: the Mic is on the dock (owner's choice).
 
 **Phase 4 · VIP service.** Take your VIP seat and a waiter walks over with a tray, puts the drink down and you sip it
 (first one on the house with a VIP pass, then order from your seat). Bottle service with sparklers for the VIP table.

@@ -65,3 +65,17 @@ test('club dock: hidden outside clubs and when the switch is off; the old club b
  assert.match(r('public/flags.js'),/club_dock:true/);assert.match(r('chinalife-api/hafrik-features.php'),/'club_dock'=>'Club: one row of buttons/);
  assert.match(r('public/index.dev.html'),/<script src="club-dock\.js"><\/script>/);
 });
+
+// Phase 3: tap anything in a club to use it (walk there, then act).
+test('tap to use: bar, DJ booth and DJ, dance floor, bouncer and wall ads do their thing',()=>{
+ const w=r('public/world.js');
+ assert.match(w,/function goDo\(x,z,fn\)\{if\(!player\)return;if\(Math\.hypot\(player\.position\.x-x,player\.position\.z-z\)<\.8\)return fn\(\);clearEmote\(\);setWalk\(new THREE\.Vector3\(x,0,z\)\);tapRun=\{x,z,fn\}\}/,'walk there, then act');
+ assert.match(w,/function setWalk\(end\)\{sitRun=null;tapRun=null;/,'a new walk cancels it');assert.match(w,/if\(sitRun\)sitFrame\(dt\);if\(tapRun\)tapFrame\(\);/);
+ assert.match(w,/if\(place==='night'&&p\.y>\.3&&p\.x>5\.3&&p\.x<9\.2&&p\.z>-7&&p\.z<-3\.6\)\{goDo\(6\.9,-3\.1,\(\)=>\{turnTo\(player,Math\.PI,1\);clubPress\('menu'\)/,'the bar counter opens the bar');
+ assert.match(w,/goDo\(0,-2,\(\)=>\{turnTo\(player,Math\.PI,1\);window\.ChinaLifeAudio\?\.open\?\.\(\)\}\);return true\}/,'the DJ booth opens song requests');
+ assert.match(w,/if\(p\.y>\.08&&p\.y<\.3&&Math\.abs\(p\.x\)<2\.5&&Math\.abs\(p\.z\)<1\.5\)\{goDo\(p\.x,p\.z,\(\)=>\{clubPress\('dance'\)\|\|setEmote\('dance'\)\}\);return true\}/,'a dance-floor tile: walk there and dance');
+ assert.match(w,/if\(a\?\.userData\?\.npc==='security'&&game\.clubs\.includes\(place\)\)return game\.clubAccess\?\.\(place\);if\(a\?\.userData\?\.npc==='dj'&&game\.clubs\.includes\(place\)\)return goDo\(0,-2,/,'the bouncer opens Entry & VIP; the DJ opens song requests');
+ assert.match(w,/if\(!onMap\)holder\.userData\.tap=\(\)=>game\.ad\?\.\(ad\);/,'tap a wall ad to open it');
+ assert.match(w,/while\(o&&o!==root&&!o\.userData\.tap\)o=o\.parent;if\(o\?\.userData\.tap\)\{o\.userData\.tap\(\);return\}/);
+ assert.match(w,/if\(solid&&clubTap\(solid\)\)return;/);
+});
