@@ -119,3 +119,27 @@ their own frames on the side walls and rotate. No "Advertise here" pop-up.
 
 Each phase: tests, a local play-through on a phone-sized screen, its own commit; live when the owner says. The city
 map's look does not change (club interior and character code only; edits to protected files kept minimal and reported).
+
+## Club moments (30 Oct 2026, owner: "make my user feel every bit")
+
+Every club action now shows what it means. Costs and rewards are unchanged. club-host.js, `chinalife:perform` events from
+world.js. No switch.
+
+- **Activities animate.** While an activity runs, the real body keeps animating (talk, dance, sit) instead of freezing
+  mid-step. world.js announces when an activity starts and ends, and a listener can make the moment longer.
+- **🎤 Go to open mic (9 s):**
+  - You step up onto the left of the stage. A mic stand appears, the mic is in your hand at your mouth, and a spotlight
+    cone is on you.
+  - The music drops to 35%. The crowd turns to watch and your lines appear in bubbles.
+  - At the end: applause bubbles (👏, "Encore!"), confetti, the music comes back, and the party meter goes up.
+- **🍸 Meet people over a drink (8.5 s):** someone from the crowd walks over and faces you. You both hold a drink and
+  chat in alternating bubbles.
+- **💃 Dance with the crowd / the main dance floor:** you dance (the second one used to fall back to a "talk" spot), the
+  floor flashes, and the people next to you join in and cheer.
+- **🥂 Toast:** a glass in your raised hand, sparkles, "🥂 Cheers!". The two nearest people turn, raise their glasses and
+  answer.
+- **🙌 Hype:** both arms up and pumping, the lights strobe, the floor flashes, confetti, and the crowd answers (🔥,
+  "Ayyy!").
+- **📣 Shout-out:** unchanged. It already shows on the booth screen and the DJ and Hypeman read it out.
+- **How the arms move:** arm poses turn the real body's bones after the animation each frame (measured: toast hand above
+  head height and forward, mic at the mouth, hype both arms up).

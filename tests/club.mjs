@@ -105,3 +105,18 @@ test('club walls: ads clear of the music screen and bar, no Advertise here, Now 
  assert.match(w,/ctx\.fillText\(info\.by\?'🎤 Requested by '\+String\(info\.by\)\.slice\(0,30\):info\.source\|\|'Club DJ',250,242,366\);/);
  assert.match(a,/const q=queue\[0\];requestedBy=q&&q\.track===data\.track\?q\.name:null;/);assert.match(a,/source:'Club DJ',by:requestedBy\}/);
 });
+
+// Club moments: every club action shows what it means (toast, hype, open mic, meet people, dancing), and activities keep
+// the real body animated instead of freezing it.
+test('club moments: activities animate and announce start/end; toast, hype, open mic, meet people and dance have real effects',()=>{
+ const w=r('public/world.js'),h=r('public/club-host.js'),m=r('public/movement.js');
+ assert.match(w,/if\(player\.userData\.real&&R7\)R7\.frame\(player,false,dt,0,\{dance:'dance',talk:'talk',sit:'sit'\}\[actionRun\.kind\]\|\|null\);/,'no frozen body during an activity');
+ assert.match(w,/window\.dispatchEvent\(new CustomEvent\('chinalife:perform',\{detail:ev\}\)\);if\(ev\.duration>actionRun\.duration\)actionRun\.duration=ev\.duration;target\.copy\(player\.position\);/);
+ assert.match(w,/if\(current\.phase==='pose'\)window\.dispatchEvent\(new CustomEvent\('chinalife:perform',\{detail:\{state:'end'/);
+ assert.match(m,/night:\[\['perform',0,-1\.9\],\['talk',3,2\],\['dance',0,0\],\['dance',\.6,\.4\]\]/,'Join the main dance floor dances');
+ assert.match(h,/const POSES=\{toast:\[\['Bip01_R_UpperArm','z',-1\.5\],\['Bip01_R_Forearm','z',-\.8\]\],mic:/);
+ assert.match(h,/if\(k==='toast'\)\{boost\+=5;say\(pick\(LINES\.toast\)\);toastMoment\(\)\}/);assert.match(h,/if\(k==='hype'\)\{boost\+=6;say\(pick\(LINES\.dj\)\);hypeMoment\(\)\}/);
+ assert.match(h,/if\(d\.kind==='perform'\)micStart\(d\);else if\(d\.kind==='talk'&&\/drink\/i\.test\(d\.label\|\|''\)\)meetStart\(d\);else if\(d\.kind==='dance'\)danceStart\(d\)/);
+ assert.match(h,/const MIC=\{x:-2,z:-3\};/,'open mic on the stage, clear of the Hypeman');
+ assert.match(h,/tick:\(t,d\)=>\{tick\(t,d\);vipTick\(\);momentsTick\(t,d\);/);assert.match(h,/momentsDispose\(\);/);
+});
