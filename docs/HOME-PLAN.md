@@ -67,6 +67,19 @@ map does not change; home interiors can.
 
 - **Phase 1 · The home dock** with need bars. More holds nap, wardrobe, study, video call, furnish/arrange, the shop
   and the home routine.
+  ✅ Done 30 Oct 2026 (switch `home_dock`, default ON). The dock module is club-dock.js, which now serves the club and
+  the home.
+  - **Buttons:** 🛏 Sleep · 🚿 Shower · 🚽 Toilet · 🍜 Eat · 📺 Chill · 👋 Friends · ••• More.
+  - **Need bars:** each need button has a bar (energy, hygiene, bladder, hunger, fun, social). It is green, and red with
+    a gentle pulse under 30%.
+  - **How they run:** through game.js `homeAct(id)`, the home sheet's own actions without opening the sheet. Sleep,
+    shower, toilet, Netflix, study and the pantry no longer pop the sheet back up after they finish.
+  - **Eat:** Cook a meal (from your fridge when University food is on), Instant noodles, Order food, and the emergency
+    pantry when you can't afford food.
+  - **More:** nap, wardrobe (the store), study at the desk (or the shop if you don't have one), the furniture shop, the
+    full home routine, and My homes. The video call comes in Phase 6.
+  - **Where it shows:** only in your own home. Not when visiting someone (a guest has no dock), not on the map. The
+    place bar is hidden, the joystick sits above the dock, and sheets open at half height, as in the club.
 - **Phase 2 · Sleep and nap:** night falls.
 - **Phase 3 · Shower and toilet** (steam / door and fade, never the body).
 - **Phase 4 · Eat:** cook from your fridge at the stove, or order with the rider at your door.
