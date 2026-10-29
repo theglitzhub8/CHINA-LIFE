@@ -30,3 +30,38 @@ test('club and VIP sofas are real seats at the right height; tap one to sit; nev
  assert.match(w,/else if\(player\.position\.y>0&&!actionRun&&!player\.userData\.chairSeat\)player\.position\.y=0;/,'the follow camera keeps you on the seat');
  assert.match(w,/Math\.hypot\(player\.position\.x-r\.seat\.x,player\.position\.z-r\.seat\.z\)>1\.8\)\{sitRun=null;return\}/,'a walk that ends near the seat still sits');
 });
+
+// Phase 1 (switch club_dock, default ON): one row of club buttons, More lists the rest, the old buttons hide.
+import vm from 'node:vm';import {harness,fixture} from './game-harness.mjs';
+function docked(flag=true){const t=harness({...fixture(),place:'night'}),c=t.context,d=t.document,pressed=[];
+ c.ChinaLifeFlags={cast:k=>k==='club_dock'?flag:false,appOff:()=>false};
+ const ui=d.getElementById('worldUI'),hud=d.createElement('div');hud.className='club-hud';
+ hud.innerHTML='<div class="club-emotes">'+['dance','toast','hype','spray','menu'].map(k=>'<button data-ce="'+k+'"></button>').join('')+'</div>';ui.append(hud);
+ hud.querySelectorAll('[data-ce]').forEach(b=>b.onclick=()=>pressed.push(b.dataset.ce));
+ const acts=d.getElementById('worldActivities');acts.innerHTML=['🎟 Entry & VIP<small>x</small>','🍸 Bar<small>x</small>','Go to open mic<small>2h</small>','💼 Club jobs<small>x</small>','🎧 Change / request song<small>x</small>'].map(h=>'<button>'+h+'</button>').join('');
+ acts.querySelectorAll('button').forEach(b=>b.onclick=()=>pressed.push('item:'+b.childNodes[0].textContent.trim()));
+ c.ChinaLifeAudio={open:()=>pressed.push('music'),playing:true,nowPlaying:{title:'Hometown Lounge'}};
+ vm.runInContext(r('public/club-dock.js'),c);c.ChinaLifeClubDock.sync();return {t,c,d,pressed}}
+
+test('club dock: seven buttons in a club that press the club\'s own controls, More lists the rest',()=>{
+ const {t,c,d,pressed}=docked();const dock=d.getElementById('clubDock');
+ assert.ok(dock&&!dock.hidden);assert.ok(d.body.classList.contains('club-docked'));
+ assert.deepEqual([...dock.querySelectorAll('[data-cd]')].map(b=>b.dataset.cd),['door','bar','dance','spray','music','mic','more']);
+ for(const k of ['bar','dance','spray','music'])dock.querySelector('[data-cd="'+k+'"]').onclick({stopPropagation(){}});
+ assert.deepEqual(pressed,['menu','dance','spray','music']);assert.ok(dock.querySelector('[data-cd="music"]').classList.contains('on'),'Music lights up while a song plays');
+ let opened=null;t.game.clubAccess=id=>{opened=id};dock.querySelector('[data-cd="door"]').onclick({stopPropagation(){}});assert.equal(opened,'night');
+ c.ChinaLifeClubDock.more();const text=d.getElementById('activityContent').textContent;
+ assert.match(text,/Toast/);assert.match(text,/Hype/);assert.match(text,/Chat/);assert.match(text,/Go to open mic/);assert.match(text,/Club jobs/);
+ assert.doesNotMatch(text,/Entry & VIP|Change \/ request song/,'already on the dock');assert.equal(d.querySelectorAll('[data-cd-item]').length,2);
+ d.querySelector('[data-cd-item="0"]').onclick();assert.equal(pressed.at(-1),'item:Go to open mic');
+ d.querySelector('[data-cd-ce="toast"]').onclick();assert.equal(pressed.at(-1),'toast');
+});
+
+test('club dock: hidden outside clubs and when the switch is off; the old club buttons hide only while docked',()=>{
+ const off=docked(false);assert.ok(!off.d.getElementById('clubDock'));assert.ok(!off.d.body.classList.contains('club-docked'));
+ const {c,d}=docked();d.querySelector('.club-hud').remove();c.ChinaLifeClubDock.sync();assert.equal(d.getElementById('clubDock').hidden,true);assert.ok(!d.body.classList.contains('club-docked'));
+ const css=r('public/club-dock.js');assert.match(css,/body\.club-docked #worldUI :is\(\.club-emotes,#clubMusicToggle,\.club-music-fab,\.radio-fab,\.club-now,#quickVoice,\.quick-voice,#infoPanel\)\{display:none!important\}/);
+ assert.match(css,/dialog:is\(#activityDialog,#audioDialog\)\[open\]\{max-height:62vh!important/,'option sheets stop at about half height');
+ assert.match(r('public/flags.js'),/club_dock:true/);assert.match(r('chinalife-api/hafrik-features.php'),/'club_dock'=>'Club: one row of buttons/);
+ assert.match(r('public/index.dev.html'),/<script src="club-dock\.js"><\/script>/);
+});

@@ -55,6 +55,21 @@ right height facing the room; NPCs sit on seats too. Remove the see-through ghos
 Phone: 🎟 Door & VIP · 🍸 Bar · 💃 Dance · 💸 Spray · 🎧 Music · 🎤 Mic · ••• More (jobs, missions, dice, play with
 people). It replaces the Party fan, the ▶ button, the music chip and the place-bar strip in clubs. Options open as
 half-height cards so the club stays visible behind them. The joystick moves clear of the dock.
+✅ Done 30 Oct 2026 (switch `club_dock`, default **ON**; turn off in Hafrik integrations to get the old buttons back).
+public/club-dock.js:
+- **The buttons** press the club's own controls, so every club works as before:
+  - Door → Entry & VIP.
+  - Bar → the club bar (Pappi's menu), or the classic bar.
+  - Dance, Spray → the club HUD buttons.
+  - Music → the DJ booth; the button lights while a song plays.
+  - Mic → the voice button (join / mute / unmute; shows 🔇 when muted). This also covers Phase 2.
+- **More** shows Toast, Hype, Shout-out and Chat, then every other place-bar item (open mic, meet people, dance floor,
+  dance competition, club jobs, night missions, play with people). Items already on the dock are left out.
+- **Hidden in a club:** the Party fan, ▶, radio, "DJ is ready" chip, the old mic button and the place bar. They all come
+  back outside the club.
+- **Sheets:** Entry & VIP, the bar, More and the DJ booth open at about 62% height with no blur, so the club stays
+  visible behind them.
+- The joystick sits above the dock.
 
 **Phase 2 · The mic.** Bring the 🎙 voice button back: always visible inside a club again (owner's choice, not a new
 mic-stand feature).
