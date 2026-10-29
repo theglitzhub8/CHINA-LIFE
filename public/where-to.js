@@ -110,8 +110,10 @@ function init() {
   OC.onChange(applyButton);
   // Leaving a venue opens the street map in classic mode; in one-city mode the player lands on "Where to?" instead.
   const ui = $('worldUI');
+  // A journey also switches to the street map (world.js journey): keep the trip in view, never cover it with the list.
   if (ui) new MutationObserver(() => {
     if (!OC.whereTo()) return;
+    if (window.ChinaLifeWorld?.busy) { if (open) hide(); return; }
     if (ui.classList.contains('map-view') && game()?.state?.created) { if (!open) show(); else render(); }
   }).observe(ui, { attributes: true, attributeFilter: ['class'] });
   for (const e of ['chinalife:update', 'chinalife:players', 'chinalife:online']) window.addEventListener(e, () => open && render());
