@@ -81,6 +81,14 @@ map does not change; home interiors can.
   - **Where it shows:** only in your own home. Not when visiting someone (a guest has no dock), not on the map. The
     place bar is hidden, the joystick sits above the dock, and sheets open at half height, as in the club.
 - **Phase 2 · Sleep and nap:** night falls.
+  ✅ Done 30 Oct 2026 (no switch; public/home-moments.js). Sleep or a nap in your own home:
+  - You lie in bed and say "💤 Goodnight…". The room goes dark blue with a moon, twinkling stars and Zzz drifting up.
+  - A big counter runs through the hours slept (8h for sleep, 3h for a nap). The game clock stays on Beijing time.
+  - The moment lasts 8 s (nap 5.5 s). Then the light turns warm, "☀️ Good morning!" (nap: "😌 That nap hit
+    different") and you stretch with both arms up.
+  - Energy, time and rent are unchanged (game.js). Skipped when motion is reduced.
+  - **Changes to the protected world.js** (no map change): a per-frame hook list (`ChinaLifeWorld.onFrame`) and
+    `ChinaLifeWorld.body`, the player's body, so moments can pose the arms.
 - **Phase 3 · Shower and toilet** (steam / door and fade, never the body).
 - **Phase 4 · Eat:** cook from your fridge at the stove, or order with the rider at your door.
 - **Phase 5 · Chill and friends:** TV on the sofa with popcorn; the doorbell when a friend arrives.

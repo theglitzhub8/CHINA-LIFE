@@ -44,3 +44,20 @@ test('after the club, home shows the home dock only (a hidden dock never shows)'
  hud.remove();t.game.state.place='home';c.ChinaLifeClubDock.sync();assert.equal(d.getElementById('clubDock').hidden,true);assert.equal(d.getElementById('homeDock').hidden,false);
  assert.match(r('public/club-dock.js'),/html:root body #worldUI \.club-dock\[hidden\]\{display:none!important\}/);
 });
+
+// Phase 2: sleep where night falls (home-moments.js). Only what you see changes; game.js sleep keeps its time and energy.
+test('sleep at home: night falls over the room with a counter of the hours slept, then morning and a stretch',()=>{
+ const src=r('public/home-moments.js'),w=r('public/world.js');
+ assert.match(w,/onFrame:f=>\(frameHooks\.add\(f\),\(\)=>frameHooks\.delete\(f\)\)/);assert.match(w,/get body\(\)\{return player\}/);assert.match(w,/for\(const f of frameHooks\)try\{f\(time,dt\)\}/);
+ assert.match(r('public/index.dev.html'),/<script src="home-moments\.js"><\/script>/);
+ assert.match(src,/d\.duration=nap\?5\.5:8/);assert.match(src,/nightFall\(nap\?180:480/);
+ const t=harness({...fixture(),place:'home'}),c=t.context,d=t.document,said=[];c.performance=performance;c.requestAnimationFrame=f=>setTimeout(()=>f(performance.now()),5);
+ let vp=d.getElementById('worldViewport');if(!vp){vp=d.createElement('div');vp.id='worldViewport';d.body.append(vp)}c.ChinaLifeWorld={say:(who,s)=>said.push(s),onFrame:()=>()=>{}};c.ChinaLife.isResidence=p=>p==='home';
+ vm.runInContext(src,c);const fire=detail=>{const e=new c.Event('chinalife:perform');e.detail=detail;c.dispatchEvent(e);return detail};
+ const start=fire({state:'start',kind:'sleep',label:'Proper sleep',place:'home',duration:3});assert.equal(start.duration,8);
+ const el=vp.querySelector('.hm-night');assert.ok(el,'night veil');assert.equal(el.querySelectorAll('.hm-star').length,18);assert.match(el.textContent,/of sleep/);assert.deepEqual(said,['💤 Goodnight…']);
+ fire({state:'end',kind:'sleep',label:'Proper sleep',place:'home'});assert.ok(el.classList.contains('dawn'));
+ for(const f of t.timers.splice(0))f();assert.ok(said.includes('☀️ Good morning!'));
+ const nap=fire({state:'start',kind:'sleep',label:'Take a nap',place:'home',duration:3});assert.equal(nap.duration,5.5);
+ const away=fire({state:'start',kind:'sleep',label:'Proper sleep',place:'night',duration:3});assert.equal(away.duration,3,'not at home: untouched');
+});
