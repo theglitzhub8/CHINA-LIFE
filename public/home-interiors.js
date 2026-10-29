@@ -13,7 +13,9 @@ const hex=c=>typeof c==='string'?parseInt(c.replace('#',''),16):c;
 // ---- Furniture (built facing -z unless rotated; sizes in metres) ----
 function bed(p,x,z,size,fabric,frame=0x6b4a35,ry=0){const w={single:1.3,double:1.9,king:2.4}[size];return g3(p,x,z,ry,it=>{box(it,w+.2,.35,2.5,solid(frame),0,.25,0);box(it,w,.25,2.3,solid(0xf6f3ee),0,.55,0);box(it,w+.04,.12,1.6,solid(fabric),0,.7,.35);for(const s of w>1.5?[-.45,.45]:[0])box(it,w>1.5?.75:.8,.18,.45,solid(0xffffff),s*w*.9,.75,-.85);box(it,w+.3,1.1,.18,solid(frame),0,.75,-1.3)},'bed')}
 function nightstand(p,x,z){return g3(p,x,z,0,it=>{box(it,.55,.55,.45,solid(0x8a6646),0,.28,0);cyl(it,.12,.16,.3,solid(0xe9e1d4),0,.7,0,10);const s=new THREE.Mesh(new THREE.SphereGeometry(.14,10,8),glow(0xffe2a8));s.position.y=.95;it.add(s)})}
-function wardrobe(p,x,z,ry,w=1.6,color=0xb08a62){return g3(p,x,z,ry,it=>{box(it,w,2.2,.65,solid(color),0,1.1,0);box(it,.03,2,.02,solid(0x6b4a35),0,1.1,-.33);for(const s of [-.12,.12])box(it,.04,.3,.04,solid(0xd9c9a6,.3,.7),s,1.1,-.35)})}
+// homeWardrobe marks the built-in wardrobe for home-moments.js (the walk to change outfit); it is not registered as the
+// shop's 'wardrobe' item, so a bought wardrobe still gets its own copy.
+function wardrobe(p,x,z,ry,w=1.6,color=0xb08a62){const g=g3(p,x,z,ry,it=>{box(it,w,2.2,.65,solid(color),0,1.1,0);box(it,.03,2,.02,solid(0x6b4a35),0,1.1,-.33);for(const s of [-.12,.12])box(it,.04,.3,.04,solid(0xd9c9a6,.3,.7),s,1.1,-.35)});g.userData.homeWardrobe=1;return g}
 function sofa(p,x,z,ry,w=2.6,color=0x5f7c8a,lux=false){return g3(p,x,z,ry,it=>{box(it,w,.4,1,solid(color),0,.35,0);box(it,w,.75,.28,solid(color),0,.72,.38);for(const s of [-1,1])box(it,.26,.6,1,solid(color),s*(w/2-.13),.55,0);for(let i=0;i<Math.round(w/1.1);i++)box(it,.7,.32,.18,solid(lux?0xe8d9b5:0xe7e2d8),-w/2+.65+i*1.05,.78,.22);if(lux)box(it,w+.1,.08,1.05,solid(0xc9a24a,.3,.6),0,.12,0)},'sofa')}
 function sectional(p,x,z,ry,color){return g3(p,x,z,ry,it=>{sofa(it,0,0,0,3.4,color,true);sofa(it,-1.95,-1.15,-Math.PI/2,1.8,color,true)})}
 function armchair(p,x,z,ry,color=0x8d6e63){const a=armchairModel(p,x,z,ry,color);if(a)a.userData.seat={h:.55,flip:true};return a}

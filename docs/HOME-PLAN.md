@@ -127,3 +127,18 @@ map does not change; home interiors can.
     "🔔 Ding-dong! <name> is here" and says "👋 Come in, <name>!". It rings once per visit. Visits already on when the
     page loads stay quiet. It's checked every 30 s, the same as invitations.
 - **Phase 6 · Wardrobe, study at the desk, video call family.**
+  ✅ Done 30 Oct 2026 (no switch; home-moments.js, plus small changes in game.js, club-dock.js and home-interiors.js; no
+  world.js change).
+  - **📱 Video call family** (new, in More and the home sheet): you go to your bedside with your phone, and a phone
+    screen shows your family back home ("Family · Lagos", your departure city) with a running call timer. Their lines
+    ("🍲 Have you eaten?", "🙏 We are so proud of you"…) alternate with yours in blue on the call, then hearts and
+    "🥹 Home feels closer" (12 s). The game: 30 minutes, social +30 and fun +8 the first call of the day; calling again
+    the same day is a quick catch-up (+10 / +2). Saved as `familyCallDay`.
+  - **📚 Study at the desk:** now walks to the home's real desk (it used a fixed spot before). You face the desk, a warm
+    desk lamp comes on, books and a notebook lie beside the laptop, and "📚 Focus mode", "✍️ Taking notes…",
+    "🤔 Hmm…", "💡 Oh, I get it now!", then "🎓 Brain: upgraded" (8 s). Skills, energy and time are unchanged.
+  - **👔 Wardrobe:** you walk to the wardrobe and face it ("👔 What to wear…"), and the outfit screen opens. If your look
+    changes within 5 minutes while you're home, you turn around once in it with sparkles: "✨ New look!". Homes without
+    a wardrobe (the dorm) open the outfit screen straight away as before.
+  - home-interiors.js marks the built-in wardrobe (`userData.homeWardrobe`). It is not registered as the shop's
+    "Tall wardrobe", so a bought wardrobe still gets its own copy.

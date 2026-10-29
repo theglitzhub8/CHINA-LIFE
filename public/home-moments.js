@@ -166,7 +166,51 @@ function chime(){try{const vol=window.ChinaLifeAudio?.volume??1;if(!vol)return;a
 function doorbell(name){const who=String(name||'Your friend');chime();const el=veil('hm-bell','<div class="hm-note">🔔 Ding-dong! '+who.replace(/[<>&"]/g,'')+' is here</div>');
  setTimeout(()=>{el.classList.remove('on');setTimeout(()=>el.remove(),900)},3200);setTimeout(()=>W()?.say?.('me','👋 Come in, '+who+'!'),900);return el}
 window.addEventListener('chinalife:guest-arrived',e=>{const g=G();if(!g?.isResidence?.(g.state.place))return;doorbell(e.detail?.name)});
-window.ChinaLifeHomeMoments={nightFall,wake,stretch,showerStart,toiletStart,cookStart,tableStart,riderArrives,eatNow,chillSpot,chillStart,doorbell};
+
+// Phase 6: study at the desk, the video call home, and the wardrobe.
+// Study (game.js homeStudy, the 'type' activity at the home's desk): face the desk, a warm desk lamp comes on, a stack of
+// books and a notebook lie beside the laptop, and your thoughts float up until it clicks.
+let studying=null;
+function studyStart(){const k=group(),me=W()?.body;if(!k||!me)return null;const c=k.c,T=c.THREE,desk=findKind(c,'desk');let face=me.rotation.y,top={x:me.position.x,z:me.position.z-.6};
+ if(desk){const p=desk.getWorldPosition(new T.Vector3());top={x:p.x,z:p.z};face=Math.atan2(p.x-me.position.x,p.z-me.position.z)}
+ const sx=Math.cos(face),sz=-Math.sin(face);
+ [0x2f6db5,0xc0392b,0xe6b422].forEach((col,i)=>c.box(.32,.06,.22,col,top.x+sx*.5,.81+i*.06,top.z+sz*.5,k.g));c.box(.3,.015,.22,0xfafafa,top.x-sx*.45,.79,top.z-sz*.45,k.g);
+ const shade=c.cylinder(.09,.12,0xf2c14e,top.x-sx*.6,1.25,top.z-sz*.6,k.g,12);c.cylinder(.012,.45,0x333333,top.x-sx*.6,1,top.z-sz*.6,k.g,6);
+ const lamp=new T.PointLight(0xffd59a,1.4,3.2);lamp.position.set(top.x-sx*.6,1.15,top.z-sz*.6);k.g.add(lamp);
+ const off=W().onFrame(t=>{if(!k.g.parent)return off();me.rotation.y=face;shade.scale.setScalar(1)});
+ const lines=['📚 Focus mode','✍️ Taking notes…','🤔 Hmm…','💡 Oh, I get it now!'],ts=lines.map((l,i)=>setTimeout(()=>W()?.say?.('me',l),300+i*1800));
+ return {stop(){ts.forEach(clearTimeout);off();drop(k)}}}
+window.addEventListener('chinalife:perform',e=>{const d=e.detail||{},g=G();if(d.kind!=='type'||d.label==='Watch Netflix'||!g?.isResidence?.(d.place))return;
+ if(d.state==='start'){if(reduced())return;d.duration=Math.max(d.duration||0,8);studying=studyStart()}else{const s=studying;studying=null;if(s){s.stop();W()?.say?.('me','🎓 Brain: upgraded')}}});
+
+// The video call (game.js homeCall, the 'phone' activity by the bed): a phone screen with your family back home on it,
+// a call timer, their lines and yours, and hearts at the end.
+let calling=null;
+function callStart(ms){const g=G(),from=String(g?.state?.student?.departure||'home').replace(/[<>&"]/g,''),you=String(g?.state?.name||'').replace(/[<>&"]/g,'');
+ const el=veil('hm-call','<div class="hm-phone"><div class="hm-cam"><span class="hm-fam">👩🏾‍🦱👨🏾</span><small>Family · '+from+'</small></div><div class="hm-said"></div><div class="hm-self">🤳</div><div class="hm-timer">00:00</div><div class="hm-end">📞</div></div>');
+ const said=el.querySelector('.hm-said'),timer=el.querySelector('.hm-timer'),t0=performance.now();
+ const tick=()=>{if(!el.isConnected)return;const s=Math.floor((performance.now()-t0)/1000*200);timer.textContent=pad(Math.floor(s/60)%60)+':'+pad(s%60);requestAnimationFrame(tick)};requestAnimationFrame(tick);
+ const fam=['👋 '+(you?you+'! ':'')+'We can see you!','🍲 Have you eaten?','🙏 We are so proud of you','❤️ Come home soon!'],me=['👋 Hi Mum! Hi Dad!','😅 Yes, I\'m eating well, I promise','🥹 Thank you…','❤️ Miss you too'];
+ // Your replies show on the call too (your speech bubble would sit behind the phone).
+ const show=(l,mine)=>{said.textContent=l;said.classList.toggle('me',mine);said.classList.remove('pop');void said.offsetWidth;said.classList.add('pop')};
+ const step=Math.max(1000,(ms-1200)/fam.length),ts=[];fam.forEach((l,i)=>{ts.push(setTimeout(()=>show(l,false),200+i*step),setTimeout(()=>show(me[i],true),200+i*step+step*.5))});
+ return {stop(){ts.forEach(clearTimeout);el.classList.add('done');said.textContent='❤️ ❤️ ❤️';setTimeout(()=>{el.classList.remove('on');setTimeout(()=>el.remove(),800)},900);setTimeout(()=>W()?.say?.('me','🥹 Home feels closer'),500)}}}
+window.addEventListener('chinalife:perform',e=>{const d=e.detail||{},g=G();if(d.label!=='Video call family'||!g?.isResidence?.(d.place))return;
+ if(d.state==='start'){if(reduced())return;d.duration=Math.max(d.duration||0,12);calling=callStart(d.duration*1000)}else{const c=calling;calling=null;c?.stop()}});
+
+// The wardrobe (More → Wardrobe): walk to the wardrobe, face it ("👔 What to wear…") and the outfit screen opens. If the
+// look changes while you're home, you turn around once in it with sparkles: "✨ New look!".
+let look=null,lookUntil=0;
+function wardrobe(){const g=G(),c=W()?.fx?.();if(!c||!g?.isResidence?.(g.state.place)||!W()?.perform||W().busy)return false;const T=c.THREE;let wr=null;c.root.traverse(o=>{if(!wr&&o.userData?.homeWardrobe)wr=o});if(!wr)return false;
+ // Stand on the side that faces into the room (the wardrobes stand against a wall).
+ const p=wr.getWorldPosition(new T.Vector3()),yaw=new T.Euler().setFromQuaternion(wr.getWorldQuaternion(new T.Quaternion()),'YXZ').y,flip=(-Math.sin(yaw))*-p.x+(-Math.cos(yaw))*-p.z<0?-1:1,fx=-Math.sin(yaw)*flip,fz=-Math.cos(yaw)*flip;
+ const x=p.x+fx*1,z=p.z+fz*1,face=Math.atan2(-fx,-fz);if(c.obstacles().some(o=>Math.abs(x-o.x)<o.w/2+.15&&Math.abs(z-o.z)<o.d/2+.15))return false;
+ return W().perform({kind:'talk',x,z,label:'Wardrobe',duration:1.4},()=>{W()?.body&&(W().body.rotation.y=face);look=JSON.stringify(g.state.appearance||null);lookUntil=Date.now()+300000;g.store?.()})!==false}
+window.addEventListener('chinalife:perform',e=>{const d=e.detail||{};if(d.label==='Wardrobe'&&d.state==='start')W()?.say?.('me','👔 What to wear…')});
+function newLook(){const me=W()?.body;W()?.say?.('me','✨ New look!');const el=veil('hm-look','');setTimeout(()=>{el.classList.remove('on');setTimeout(()=>el.remove(),800)},1300);
+ if(!me||reduced()||!W()?.onFrame)return;const t0=performance.now(),from=me.rotation.y,off=W().onFrame(()=>{const k=Math.min(1,(performance.now()-t0)/1000);me.rotation.y=from+Math.PI*2*(1-Math.pow(1-k,3));if(k>=1)off()})}
+setInterval(()=>{if(look===null)return;const g=G();if(Date.now()>lookUntil||!g?.isResidence?.(g.state.place)){look=null;return}const now=JSON.stringify(g.state.appearance||null);if(now!==look){look=null;setTimeout(newLook,700)}},800);
+window.ChinaLifeHomeMoments={nightFall,wake,stretch,showerStart,toiletStart,cookStart,tableStart,riderArrives,eatNow,chillSpot,chillStart,doorbell,studyStart,callStart,wardrobe,newLook};
 const css=document.createElement('style');css.textContent=
  '.hm-night{position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;transition:opacity 1.2s ease}.hm-night.on{opacity:1}'+
  '.hm-sky{position:absolute;inset:0;background:radial-gradient(ellipse at 70% 15%,rgb(40 60 120 / .35),transparent 55%),linear-gradient(180deg,rgb(8 12 40 / .82),rgb(14 18 52 / .7));transition:background 1.2s ease}'+
@@ -176,6 +220,12 @@ const css=document.createElement('style');css.textContent=
  '.hm-clock{position:absolute;left:50%;top:13%;transform:translateX(-50%);display:grid;justify-items:center;color:#fff;text-shadow:0 2px 12px rgb(0 0 0 / .5)}.hm-clock b{font:800 46px/1 system-ui,sans-serif;letter-spacing:1px}.hm-clock small{font:700 14px system-ui,sans-serif;opacity:.85;margin-top:6px}'+
  '.hm-zzz{position:absolute;left:52%;top:46%;color:#cfe0ff;font:800 26px system-ui,sans-serif}.hm-zzz span{position:absolute;opacity:0;animation:hmZ 2.4s ease-out infinite}.hm-zzz span:nth-child(2){animation-delay:.8s;font-size:.8em}.hm-zzz span:nth-child(3){animation-delay:1.6s;font-size:.65em}'+
  '@keyframes hmZ{0%{opacity:0;transform:translate(0,0)}20%{opacity:1}100%{opacity:0;transform:translate(40px,-70px)}}'+
+ '.hm-call{background:rgb(10 14 24 / .35)}.hm-phone{position:absolute;left:50%;top:14%;transform:translateX(-50%);width:min(250px,64vw);height:min(420px,52vh);border-radius:30px;background:#0d1117;border:6px solid #1f2630;box-shadow:0 18px 50px rgb(0 0 0 / .45);overflow:hidden;transition:transform .5s}'+
+ '.hm-cam{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:6px;background:radial-gradient(circle at 50% 40%,#f6c58f,#c4733b 70%,#6d3a1c);color:#fff}.hm-fam{font-size:64px;animation:hmBob 2.2s ease-in-out infinite}.hm-cam small{font:700 13px system-ui,sans-serif;background:rgb(0 0 0 / .35);padding:3px 10px;border-radius:999px}@keyframes hmBob{50%{transform:translateY(-6px) rotate(-2deg)}}'+
+ '.hm-said{position:absolute;left:10px;right:10px;bottom:62px;text-align:center;padding:8px 10px;border-radius:14px;background:rgb(255 255 255 / .92);color:#1b2530;font:800 15px system-ui,sans-serif;opacity:0}.hm-said.pop{animation:hmPop 2.6s ease both}@keyframes hmPop{0%{opacity:0;transform:translateY(10px)}12%,85%{opacity:1;transform:none}100%{opacity:.0}}.hm-said.me{background:#2f80ed;color:#fff;margin-left:30px}.hm-call.done .hm-said{opacity:1;animation:none;background:#ffe3ea;color:#c2185b}'+
+ '.hm-self{position:absolute;right:10px;top:10px;width:56px;height:76px;border-radius:12px;background:#33414f;display:grid;place-items:center;font-size:30px;border:2px solid #fff}.hm-timer{position:absolute;left:12px;top:12px;color:#fff;font:700 13px system-ui,sans-serif;background:rgb(0 0 0 / .4);padding:3px 8px;border-radius:999px}'+
+ '.hm-end{position:absolute;left:50%;bottom:12px;transform:translateX(-50%) rotate(135deg);width:42px;height:42px;border-radius:50%;background:#e53935;display:grid;place-items:center;font-size:20px}'+
+ '.hm-look:after{content:"✨  ✨  ✨";position:absolute;left:50%;top:40%;transform:translateX(-50%);font-size:34px;letter-spacing:8px;animation:hmSpark 1.1s ease-out both}'+
  '.hm-bell{background:radial-gradient(ellipse at 50% 18%,rgb(255 214 102 / .35),transparent 60%)}.hm-bell .hm-note{top:26%;animation:hmRing .5s ease-in-out 3}@keyframes hmRing{25%{transform:translateX(-50%) rotate(-4deg)}75%{transform:translateX(-50%) rotate(4deg)}}'+
  '.hm-wash{position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;transition:opacity .9s ease;overflow:hidden}.hm-wash.on{opacity:1}'+
  '.hm-frost{position:absolute;inset:0;background:linear-gradient(180deg,rgb(200 230 255 / .55),rgb(225 242 255 / .7));backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}'+

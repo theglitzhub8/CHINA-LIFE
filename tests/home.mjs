@@ -140,3 +140,37 @@ test('friends: the host hears the doorbell when an invited friend accepts (once,
  visits[1]={...visits[1],status:'accepted'};await c.__poll();await c.__poll();assert.deepEqual(ring,['Chen'],'rings once');
  assert.match(d.querySelector('.hm-bell .hm-note').textContent,/Ding-dong! Chen is here/);for(const f of t.timers.splice(0))f();assert.ok(said.includes('👋 Come in, Chen!'));
 });
+
+// Phase 6: the video call home, study at the desk, the wardrobe.
+test('video call family: from the bed, social up (less on a second call the same day), the call on screen',()=>{
+ const t=harness({...fixture(),place:'home'}),s=t.game.state,specs=[];s.needs.social=20;s.student={...(s.student||{}),departure:'Lagos'};
+ t.context.ChinaLifeWorld={homeSpot:k=>k==='bedside'?{x:-3.6,z:-.6}:null,perform:(spec,done)=>{specs.push(spec);done();return true}};
+ assert.equal(t.game.homeAct('homeCall'),true);assert.deepEqual([specs[0].kind,specs[0].x,specs[0].z,specs[0].label,specs[0].duration],['phone',-3.6,-.6,'Video call family',12]);
+ assert.equal(s.needs.social,50);assert.match(t.document.getElementById('toast').textContent,/family in Lagos/);t.game.homeAct('homeCall');assert.equal(s.needs.social,60,'second call the same day');
+ assert.match(r('public/game.js'),/r\.familyCallDay=num\(v\.familyCallDay\?\?0,0,36500\)/);
+ const {c,d}=home();c.ChinaLifeClubDock.home('more');assert.match(d.getElementById('activityContent').textContent,/Video call family/);
+ // The call itself (home-moments.js).
+ const v=harness({...fixture(),place:'home'}),x=v.context;x.requestAnimationFrame=()=>0;x.performance=performance;x.ChinaLifeWorld={say(){},onFrame:()=>()=>{}};x.ChinaLife.isResidence=p=>p==='home';x.ChinaLife.state.student={departure:'Lagos'};x.ChinaLifeAudio={volume:0};
+ vm.runInContext(r('public/home-moments.js'),x);v.timers.splice(0);const e=new x.Event('chinalife:perform');e.detail={state:'start',kind:'phone',label:'Video call family',place:'home',duration:3};x.dispatchEvent(e);
+ assert.equal(e.detail.duration,12);const el=v.document.querySelector('.hm-call');assert.match(el.textContent,/Family · Lagos/);v.timers.shift()();assert.match(el.querySelector('.hm-said').textContent,/We can see you/);
+ v.timers.shift()();assert.ok(el.querySelector('.hm-said').classList.contains('me'),'your reply on the call');
+ const end=new x.Event('chinalife:perform');end.detail={state:'end',kind:'phone',label:'Video call family',place:'home'};x.dispatchEvent(end);assert.ok(el.classList.contains('done'));
+});
+
+test('study at the desk and the wardrobe: walk to the real desk / wardrobe; a new look shows with a spin',()=>{
+ assert.match(r('public/game.js'),/const d=window\.ChinaLifeWorld\.homeSpot\?\.\('desk'\);return sceneAction\(\{kind:'type',x:d\?\.x\?\?3,z:d\?\.z\?\?-0\.8/);
+ assert.match(r('public/home-interiors.js'),/g\.userData\.homeWardrobe=1;return g\}/);assert.match(r('public/club-dock.js'),/wardrobe:\(\)=>window\.ChinaLifeHomeMoments\?\.wardrobe\?\.\(\)\|\|g\.store\?\.\(\)/);
+ const t=harness({...fixture(),place:'home'}),c=t.context,said=[],room=fakeRoom(),me=new room.root.constructor(),hooks=new Set(),perf=[];me.position.set(0,0,0);
+ c.requestAnimationFrame=f=>f(0);c.performance=performance;c.ChinaLifeWorld={say:(w,x)=>said.push(x),onFrame:f=>(hooks.add(f),()=>hooks.delete(f)),body:me,fx:()=>room.ctx,perform:(spec,done)=>{perf.push([spec,done]);return true},busy:false};
+ c.ChinaLife.isResidence=p=>p==='home';c.ChinaLifeAudio={volume:0};const T=room.ctx.THREE;
+ Object.assign(T,{PointLight:room.root.constructor,Vector3:class{constructor(x=0,y=0,z=0){Object.assign(this,{x,y,z})}},Quaternion:class{},Euler:class{setFromQuaternion(){this.y=Math.PI/2;return this}}});
+ const wr=new room.root.constructor();wr.userData.homeWardrobe=1;wr.getWorldPosition=v=>Object.assign(v,{x:-6,y:0,z:.8});wr.getWorldQuaternion=q=>q;room.root.add(wr);
+ vm.runInContext(r('public/home-moments.js'),c);t.timers.splice(0);let opened=0;c.ChinaLife.store=()=>opened++;c.ChinaLife.state.appearance={top:{s:'tee',c:1}};
+ assert.equal(c.ChinaLifeHomeMoments.wardrobe(),true);assert.equal(perf[0][0].label,'Wardrobe');assert.equal(perf[0][0].x,-5,'room side of the wardrobe');
+ perf[0][1]();assert.equal(opened,1,'outfit screen');assert.ok(Math.abs(me.rotation.y+Math.PI/2)<1e-9,'facing the wardrobe');
+ c.ChinaLife.state.appearance={top:{s:'hoodie',c:2}};for(const f of t.intervals)f();for(const f of t.timers.splice(0))f();assert.ok(said.includes('✨ New look!'));assert.ok(hooks.size>0,'turns around');
+ // Study: books, a lamp and thoughts at the desk.
+ const e=new c.Event('chinalife:perform');e.detail={state:'start',kind:'type',label:'Study at your desk',place:'home',duration:3};c.dispatchEvent(e);assert.equal(e.detail.duration,8);
+ assert.ok(room.root.children.some(o=>o.name==='home-moment'),'books and lamp');for(const f of t.timers.splice(0))f();assert.ok(said.includes('💡 Oh, I get it now!'));
+ const end=new c.Event('chinalife:perform');end.detail={state:'end',kind:'type',label:'Study at your desk',place:'home'};c.dispatchEvent(end);assert.ok(said.includes('🎓 Brain: upgraded'));
+});
