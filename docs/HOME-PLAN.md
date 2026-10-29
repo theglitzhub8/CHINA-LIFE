@@ -119,7 +119,9 @@ map does not change; home interiors can.
     the TV. The screen lights up with a made-up show ("Campus Hearts", "The Last Dumpling"…) and cuts between scenes,
     with a coloured glow. A bowl of popcorn sits beside you. "📺 <show> time!", "😂😂😂", "😮 No way!",
     "🍿 *crunch crunch*", "🤣 I can't…", then "😌 Needed that".
-  - **Homes without a sofa and TV** (dorm, rental): the same at the desk with the laptop and popcorn.
+  - **A sofa but no TV** (the townhouse): you sit on the sofa watching the show on a glowing tablet, with the popcorn
+    and laughs (31 Oct 2026, the owner's own home).
+  - **No sofa** (dorm, rental): the same at the desk with the laptop and popcorn.
   - Before this, Netflix had no scene at all. Fun, energy and time are unchanged (game.js). If there's no free spot, it
     runs straight away as before.
   - The TV picture is placed with a ray, because the renderer draws the TV screen as a deeper black box than the model.

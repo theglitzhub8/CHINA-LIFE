@@ -174,3 +174,17 @@ test('study at the desk and the wardrobe: walk to the real desk / wardrobe; a ne
  assert.ok(room.root.children.some(o=>o.name==='home-moment'),'books and lamp');for(const f of t.timers.splice(0))f();assert.ok(said.includes('💡 Oh, I get it now!'));
  const end=new c.Event('chinalife:perform');end.detail={state:'end',kind:'type',label:'Study at your desk',place:'home'};c.dispatchEvent(end);assert.ok(said.includes('🎓 Brain: upgraded'));
 });
+
+// Owner's townhouse has a sofa but no TV: chill on the sofa with a tablet instead of going to the desk.
+test('chill in a home with a sofa but no TV: sit on the sofa watching a tablet',()=>{
+ const t=harness({...fixture(),place:'home'}),c=t.context,room=fakeRoom(),me=new room.root.constructor(),T=room.ctx.THREE;c.requestAnimationFrame=f=>f(0);c.performance=performance;
+ class Tex{dispose(){}}Object.assign(T,{PointLight:class extends room.root.constructor{constructor(){super();this.color={setHSL(){}}}},PlaneGeometry:class{},CanvasTexture:Tex,Vector3:class{constructor(x=0,y=0,z=0){Object.assign(this,{x,y,z})}},Quaternion:class{},Euler:class{setFromQuaternion(){this.y=0;return this}}});
+ const sofa=new room.root.constructor();sofa.userData.kind='sofa';sofa.getWorldPosition=v=>Object.assign(v,{x:-1.6,y:0,z:-1.9});sofa.getWorldQuaternion=q=>q;room.root.add(sofa);room.ctx.moveTo=(x,z,ry)=>{me.position.x=x;me.position.z=z;me.rotation.y=ry};
+ c.document.createElement=(o=>tag=>{const e=o(tag);if(tag==='canvas')e.getContext=()=>new Proxy({},{get:(_,k)=>k==='createLinearGradient'?()=>({addColorStop(){}}):()=>{},set:()=>true});return e})(c.document.createElement.bind(c.document));
+ c.ChinaLifeWorld={say(){},onFrame:()=>()=>{},body:me,fx:()=>room.ctx,homeSpot:k=>k==='desk'?{x:-1.6,z:-3}:null};c.ChinaLife.isResidence=p=>p==='home';c.ChinaLifeAudio={volume:0};
+ vm.runInContext(r('public/home-moments.js'),c);t.timers.splice(0);const spot=c.ChinaLifeHomeMoments.chillSpot();assert.equal(spot.kind,'sit','the sofa, not the desk');
+ const e=new c.Event('chinalife:perform');e.detail={state:'start',kind:'sit',label:'Watch Netflix',place:'home',duration:3};c.dispatchEvent(e);
+ const g=room.root.children.find(o=>o.name==='home-moment');assert.ok(g,'tablet and popcorn');assert.ok(g.children.some(o=>o instanceof T.PointLight),'the tablet glows');
+ assert.ok(Math.abs(me.position.x+1.6)<1e-9&&Math.abs(me.position.z+1.98)<1e-9,'on the cushion');
+ assert.match(r('public/home-moments.js'),/tvOn=ch\.tv\?screenOn\(k,ch\.tv\):tabletOn\(k,ch\)/);
+});

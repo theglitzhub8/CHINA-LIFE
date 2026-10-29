@@ -122,13 +122,13 @@ window.addEventListener('chinalife:delivery',()=>{const g=G(),fresh=(g?.state?.f
 setInterval(note,3000);
 
 // Phase 5: chill and friends. Chill (game.js homeNetflix asks chillSpot() where to go): you walk to the sofa, sit down
-// facing the TV, the screen lights up and changes scenes, a bowl of popcorn sits beside you and you laugh along. Homes
-// without a sofa and TV watch on the laptop at the desk. Friends: home-visits.js rings the doorbell for the host when an
+// facing the TV, the screen lights up and changes scenes, a bowl of popcorn sits beside you and you laugh along. A home
+// with a sofa but no TV (the townhouse) watches on a tablet on the sofa; a home with no sofa uses the laptop at the desk. Friends: home-visits.js rings the doorbell for the host when an
 // invited friend accepts ('chinalife:guest-arrived').
 let chillAt=null,chilling=null;
 const findKind=(c,k)=>{let f=null;c.root.traverse(o=>{if(!f&&o.userData?.kind===k)f=o});return f};
 function chillSpot(){const c=W()?.fx?.();if(!c||!G()?.isResidence?.(G().state.place))return null;const T=c.THREE,sofa=findKind(c,'sofa'),tv=findKind(c,'tv');chillAt=null;
- if(sofa&&tv){const p=sofa.getWorldPosition(new T.Vector3()),yaw=new T.Euler().setFromQuaternion(sofa.getWorldQuaternion(new T.Quaternion()),'YXZ').y,fx=-Math.sin(yaw),fz=-Math.cos(yaw),sx=Math.cos(yaw),sz=-Math.sin(yaw);
+ if(sofa){const p=sofa.getWorldPosition(new T.Vector3()),yaw=new T.Euler().setFromQuaternion(sofa.getWorldQuaternion(new T.Quaternion()),'YXZ').y,fx=-Math.sin(yaw),fz=-Math.cos(yaw),sx=Math.cos(yaw),sz=-Math.sin(yaw);
   // The seat: the middle of the sofa, a little forward. Walk to free floor in front of it (or beside it), then sit.
   const seat={x:p.x+fx*.08,z:p.z+fz*.08},free=(x,z)=>!c.obstacles().some(o=>Math.abs(x-o.x)<o.w/2+.2&&Math.abs(z-o.z)<o.d/2+.2);
   for(const [d,s] of [[1.05,0],[1.05,.9],[1.05,-.9],[.4,1.9],[.4,-1.9],[1.4,1.5],[1.4,-1.5]]){const x=p.x+fx*d+sx*s,z=p.z+fz*d+sz*s;if(free(x,z)){chillAt={seat,ry:Math.atan2(fx,fz),h:.55,tv,side:{x:sx,z:sz}};return {kind:'sit',x,z}}}}
@@ -137,23 +137,30 @@ function chillSpot(){const c=W()?.fx?.();if(!c||!G()?.isResidence?.(G().state.pl
 const SHOWS=['Campus Hearts','Shenyang Nights','The Last Dumpling','Laoban','Roommates'];
 // The TV group holds the screen (its stand is merged into the room), so its box is the screen. The batched renderer can
 // draw the screen deeper than the model, so the picture goes just in front of the first surface a ray meets.
-function screenOn(k,tv){const c=k.c,T=c.THREE,b=new T.Box3().setFromObject(tv),wv=b.max.clone().sub(b.min),w=Math.max(wv.x,wv.z),h=wv.y;if(!(w>.6&&h>.3))return null;
- const cv=document.createElement('canvas');cv.width=320;cv.height=180;const x=cv.getContext('2d'),tex=new T.CanvasTexture(cv),show=SHOWS[Math.floor(Math.random()*SHOWS.length)];let n=0;
+function picture(T){const cv=document.createElement('canvas');cv.width=320;cv.height=180;const x=cv.getContext('2d'),tex=new T.CanvasTexture(cv),show=SHOWS[Math.floor(Math.random()*SHOWS.length)];let n=0;
  const paint=()=>{const h=(n*67)%360;const g=x.createLinearGradient(0,0,320,180);g.addColorStop(0,'hsl('+h+' 70% 45%)');g.addColorStop(1,'hsl('+(h+60)%360+' 70% 20%)');x.fillStyle=g;x.fillRect(0,0,320,180);
   for(let i=0;i<3;i++){x.fillStyle='hsl('+(h+120*i)%360+' 80% 70% / .7)';x.beginPath();x.arc(60+((n*40+i*110)%260),70+i*30,18+i*6,0,7);x.fill()}
-  x.fillStyle='rgb(0 0 0 / .55)';x.fillRect(0,146,320,34);x.fillStyle='#fff';x.font='700 18px system-ui,sans-serif';x.fillText('▶ '+show+' · E'+(1+n%8),12,169);tex.needsUpdate=true;n++};paint();
+  x.fillStyle='rgb(0 0 0 / .55)';x.fillRect(0,146,320,34);x.fillStyle='#fff';x.font='700 18px system-ui,sans-serif';x.fillText('▶ '+show+' · E'+(1+n%8),12,169);tex.needsUpdate=true;n++};paint();return {tex,show,paint,hue:()=>((n*67)%360)/360}}
+function screenOn(k,tv){const c=k.c,T=c.THREE,b=new T.Box3().setFromObject(tv),wv=b.max.clone().sub(b.min),w=Math.max(wv.x,wv.z),h=wv.y;if(!(w>.6&&h>.3))return null;
+ const {tex,show,paint,hue}=picture(T);
  const m=new T.Mesh(new T.PlaneGeometry(w*.96,h*.94),new T.MeshBasicMaterial({map:tex}));const yaw=new T.Euler().setFromQuaternion(tv.getWorldQuaternion(new T.Quaternion()),'YXZ').y,ctr=b.getCenter(new T.Vector3()),half=Math.min(wv.x,wv.z)/2+.015,fx=Math.sin(yaw),fz=Math.cos(yaw);
  m.position.set(ctr.x+fx*half,ctr.y,ctr.z+fz*half);
  {const from=ctr.clone().add(new T.Vector3(fx*3,0,fz*3)),hit=new T.Raycaster(from,new T.Vector3(-fx,0,-fz),0,3.2).intersectObjects(c.root.children.filter(o=>o!==k.g),true)[0];if(hit&&hit.distance<3-half+.01)m.position.copy(from).add(new T.Vector3(-fx,0,-fz).multiplyScalar(hit.distance-.02))}m.rotation.y=yaw;k.g.add(m);
  const light=new T.PointLight(0x88aaff,1.2,5);light.position.set(ctr.x+fx*1.2,ctr.y,ctr.z+fz*1.2);k.g.add(light);
- const iv=setInterval(()=>{if(!k.g.parent)return clearInterval(iv);paint();light.color.setHSL(((n*67)%360)/360,.6,.6)},1800);
+ const iv=setInterval(()=>{if(!k.g.parent)return clearInterval(iv);paint();light.color.setHSL(hue(),.6,.6)},1800);
+ return {show,stop(){clearInterval(iv);tex.dispose()}}}
+// No TV: a tablet held up in front of you on the sofa, playing the same show, its glow on your face.
+function tabletOn(k,ch){const c=k.c,T=c.THREE,{tex,show,paint,hue}=picture(T),fx=Math.sin(ch.ry),fz=Math.cos(ch.ry),x=ch.seat.x+fx*.36,z=ch.seat.z+fz*.36,y=ch.h+.5;
+ const back=c.box(.34,.22,.02,0x1b1f24,x+fx*.012,y,z+fz*.012,k.g);back.rotation.y=ch.ry;const m=new T.Mesh(new T.PlaneGeometry(.31,.19),new T.MeshBasicMaterial({map:tex}));m.position.set(x,y,z);m.rotation.y=ch.ry+Math.PI;k.g.add(m);
+ const light=new T.PointLight(0x88aaff,.6,1.6);light.position.set(x-fx*.1,y,z-fz*.1);k.g.add(light);
+ const iv=setInterval(()=>{if(!k.g.parent)return clearInterval(iv);paint();light.color.setHSL(hue(),.6,.6)},1800);
  return {show,stop(){clearInterval(iv);tex.dispose()}}}
 function popcorn(k,x,y,z){const c=k.c;c.cylinder(.13,.1,0xd8322f,x,y+.05,z,k.g,14);for(let i=0;i<9;i++){const a=i*2.4,r=.04+(i%3)*.03;c.ball?.(.035,0xfff2c4,x+Math.cos(a)*r,y+.12+(i%2)*.02,z+Math.sin(a)*r,k.g)||c.cylinder(.03,.03,0xfff2c4,x+Math.cos(a)*r,y+.12,z+Math.sin(a)*r,k.g,6)}}
 function chillStart(ms){const ch=chillAt;chillAt=null;const k=group(),me=W()?.body;if(!k||!me||!ch)return null;const c=k.c;let tvOn=null,off=null;
  if(!ch.laptop){c.moveTo(ch.seat.x,ch.seat.z,ch.ry);
-  // Keep the body on the cushion, facing the TV, through the sitting pose (frame hooks run after the pose).
+  // Keep the body on the cushion, facing the TV (or the room), through the sitting pose (frame hooks run after the pose).
   off=W().onFrame(()=>{if(!k.g.parent)return off?.();me.position.x=ch.seat.x;me.position.z=ch.seat.z;me.rotation.y=ch.ry;if(me.userData.real)me.position.y=ch.h-.42});
-  tvOn=screenOn(k,ch.tv);popcorn(k,ch.seat.x+ch.side.x*.55,ch.h,ch.seat.z+ch.side.z*.55)}
+  tvOn=ch.tv?screenOn(k,ch.tv):tabletOn(k,ch);popcorn(k,ch.seat.x+ch.side.x*.55,ch.h,ch.seat.z+ch.side.z*.55)}
  else popcorn(k,me.position.x+.45,.75,me.position.z);
  const lines=['📺 '+(tvOn?tvOn.show+' time!':'Netflix time!'),'😂😂😂','😮 No way!','🍿 *crunch crunch*','🤣 I can\'t…'],ts=lines.map((l,i)=>setTimeout(()=>W()?.say?.('me',l),300+i*Math.max(1500,(ms-1500)/lines.length)));
  return {stop(){ts.forEach(clearTimeout);off?.();tvOn?.stop();drop(k)}}}
