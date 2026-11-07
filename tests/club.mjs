@@ -132,3 +132,22 @@ test('dance competition on the floor: signals from game.js, moves on the body, a
  assert.match(h,/function celebrate\(d\)\{/);assert.match(d,/#activityDialog\.cd-compact\[open\]\{max-height:36vh!important/);
  assert.match(w,/function fxCtx\(\)\{return \{moveTo:\(x,z,ry\)=>\{/);
 });
+
+// Gossip Centre dock (switch gossip_dock, default ON): the club's row of buttons in the Gossip Centre ('gist').
+test('gossip dock: seven buttons in the Gossip Centre, each opens its screen; hidden elsewhere or when switched off',async()=>{
+ const {harness,fixture}=await import('./game-harness.mjs');const vm=await import('node:vm');const fs=await import('node:fs');const r=f=>fs.readFileSync(f,'utf8');
+ const make=(flag=true)=>{const t=harness({...fixture(),place:'gist'}),c=t.context,d=t.document,calls=[];t.game.state.created=true;
+  c.ChinaLifeFlags={cast:k=>k==='gossip_dock'?flag:false,appOff:()=>false};
+  Object.assign(t.game,{gistNight:()=>calls.push('wall'),gossipTv:()=>calls.push('tv'),cityNews:()=>calls.push('news')});
+  c.ChinaLifeGossipRoom={on:()=>true,open:()=>calls.push('room')};c.ChinaLifeHotSeat={enabled:()=>true,open:()=>calls.push('hot'),round:{status:'voting'},show:()=>null};
+  vm.runInContext(r('public/club-dock.js'),c);c.ChinaLifeClubDock.sync();return {t,c,d,calls}};
+ const {t,c,d,calls}=make();const dock=d.getElementById('gossipDock');assert.ok(dock&&!dock.hidden);assert.ok(d.body.classList.contains('gossip-docked')&&d.body.classList.contains('place-docked'));
+ assert.deepEqual([...dock.querySelectorAll('[data-gd]')].map(b=>b.dataset.gd),['room','hot','spill','tv','news','mic','more']);
+ assert.ok(dock.querySelector('[data-gd="hot"]').classList.contains('on'),'lit while a Hot Seat round is on');
+ for(const k of ['room','hot','spill','tv','news'])dock.querySelector('[data-gd="'+k+'"]').onclick({stopPropagation(){}});assert.deepEqual(calls,['room','hot','wall','tv','news']);
+ c.ChinaLifeClubDock.gossip('more');assert.match(d.getElementById('activityContent').textContent,/More in the Gossip Centre/);assert.match(d.getElementById('activityContent').textContent,/Chat/);
+ t.game.state.place='home';c.ChinaLifeClubDock.sync();assert.equal(dock.hidden,true,'not outside the Gossip Centre');
+ const off=make(false);assert.ok(!off.d.getElementById('gossipDock'),'switched off');
+ assert.match(r('public/flags.js'),/gossip_dock:true/);assert.match(r('chinalife-api/hafrik-features.php'),/'gossip_dock'=>'Gossip Centre: one row of buttons/);
+ assert.match(r('public/game.js'),/cityNews:legacyGistScreen,gossipTv,/);assert.match(r('public/club-dock.js'),/body\.gossip-docked #worldUI :is\(#infoPanel,#quickVoice,\.quick-voice\)\{display:none!important\}/);
+});

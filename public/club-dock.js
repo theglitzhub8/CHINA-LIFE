@@ -5,6 +5,7 @@
 // .club-emotes, voice.js #quickVoice, audio.js, game.clubAccess), so every club behaves as before.
 // Home Phase 1 (docs/HOME-PLAN.md, switch home_dock, default ON): at home the same dock has one button per need (Sleep,
 // Shower, Toilet, Eat, Chill, Friends) with a bar showing that need, and More; they run game.js homeAct (no sheet).
+// Gossip Centre (switch gossip_dock, default ON): Room, Hot Seat, Spill, TV, News, Mic and More (see syncGossip).
 (()=>{const $=id=>document.getElementById(id),G=()=>window.ChinaLife;
 const on=()=>window.ChinaLifeFlags?.cast?.('club_dock')!==false,homeOn=()=>window.ChinaLifeFlags?.cast?.('home_dock')!==false;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -57,15 +58,38 @@ function syncHome(){const g=G(),ui=$('worldUI'),here=homeOn()&&!!g?.state?.creat
 function build(){dock=document.createElement('nav');dock.id='clubDock';dock.className='club-dock';dock.setAttribute('aria-label','Club');
  dock.innerHTML=DOCK.map(([k,i,l])=>'<button type="button" data-cd="'+k+'"><span class="cd-i">'+i+'</span><span class="cd-l">'+l+'</span></button>').join('');
  dock.querySelectorAll('[data-cd]').forEach(b=>b.onclick=e=>{e.stopPropagation();ACT[b.dataset.cd]?.()});($('worldUI')||document.body).append(dock)}
+// Gossip Centre (switch gossip_dock, default ON): the same dock in the Gossip Centre ('gist'): the Gossip Room screen, the
+// Hot Seat (lit while a round is on), Spill (the Gossip wall: read and post), Gossip TV, City news, the Mic and More.
+const gossipOn=()=>window.ChinaLifeFlags?.cast?.('gossip_dock')!==false;
+const GOSSIP=[['room','🫖','Room'],['hot','🔥','Hot Seat'],['spill','🤫','Spill'],['tv','📺','TV'],['news','📰','News'],['mic','🎤','Mic'],['more','•••','More']];
+const GOSSIP_COVERED=/^(🫖\s*)?Gossip Room$|^(🔥\s*)?Hot Seat$/;
+const GOSSIP_ACT={
+ room:()=>window.ChinaLifeGossipRoom?.on?.()?window.ChinaLifeGossipRoom.open():G()?.gistNight?.(),
+ hot:()=>window.ChinaLifeHotSeat?.enabled?.()?window.ChinaLifeHotSeat.open():G()?.toast?.('The hot seat is closed right now'),
+ spill:()=>G()?.gistNight?.(),tv:()=>G()?.gossipTv?.(),news:()=>G()?.cityNews?.(),mic:ACT.mic,more:gossipMore};
+// More: the room's own activities (read today's gossip, share a tip) and chat.
+function gossipMore(){const g=G(),list=[...document.querySelectorAll('#worldActivities button')].filter(b=>!GOSSIP_COVERED.test(title(b)));
+ g.showScreen('🫖 More in the Gossip Centre','Everything else you can do here',
+  '<div class="cd-list">'+list.map((b,n)=>'<button type="button" data-cd-item="'+n+'">'+b.innerHTML+'</button>').join('')+'<button type="button" data-cd-chat><b>💬 Chat</b><small>Talk to people in the room</small></button></div>');
+ const c=$('activityContent');c.querySelector('[data-cd-chat]').onclick=()=>{$('activityDialog')?.close();press('#venueChatButton')};
+ c.querySelectorAll('[data-cd-item]').forEach(b=>b.onclick=()=>{$('activityDialog')?.close();list[Number(b.dataset.cdItem)]?.click()})}
+let gossipDock=null;
+function buildGossip(){gossipDock=document.createElement('nav');gossipDock.id='gossipDock';gossipDock.className='club-dock gossip-dock';gossipDock.setAttribute('aria-label','Gossip Centre');
+ gossipDock.innerHTML=GOSSIP.map(([k,i,l])=>'<button type="button" data-gd="'+k+'"><span class="cd-i">'+i+'</span><span class="cd-l">'+l+'</span></button>').join('');
+ gossipDock.querySelectorAll('[data-gd]').forEach(b=>b.onclick=e=>{e.stopPropagation();GOSSIP_ACT[b.dataset.gd]?.()});($('worldUI')||document.body).append(gossipDock)}
+function syncGossip(){const g=G(),ui=$('worldUI'),here=gossipOn()&&!!g?.state?.created&&g.state.place==='gist'&&!ui?.classList.contains('map-view');
+ document.body.classList.toggle('gossip-docked',here);if(here&&!gossipDock)buildGossip();if(gossipDock)gossipDock.hidden=!here;if(!here||!gossipDock)return false;
+ const H=window.ChinaLifeHotSeat,live=H?.round?.status==='voting'||!!H?.show?.()?.live,hot=gossipDock.querySelector('[data-gd="hot"]');hot.classList.toggle('on',live);hot.title=live?'A Hot Seat round is on: vote True or Cap':'Take the hot seat';
+ const v=$('quickVoice'),mic=gossipDock.querySelector('[data-gd="mic"]');mic.classList.toggle('on',v?.getAttribute('aria-pressed')==='true');mic.querySelector('.cd-i').textContent=v?.textContent?.trim()==='🔇'?'🔇':'🎤';mic.title=v?.getAttribute('aria-label')||'Join voice';return true}
 // Show the dock while you are inside a club (the club HUD exists), keep Music and Mic lit to match what is playing / live.
-function sync(){const atHome=syncHome(),inClub=on()&&!!document.querySelector('#worldUI .club-hud');document.body.classList.toggle('club-docked',inClub);document.body.classList.toggle('place-docked',inClub||atHome);
+function sync(){const home=syncHome(),gossip=syncGossip(),atHome=home||gossip,inClub=on()&&!!document.querySelector('#worldUI .club-hud');document.body.classList.toggle('club-docked',inClub);document.body.classList.toggle('place-docked',inClub||atHome);
  const nav0=document.querySelector('.world-nav');if(nav0&&(inClub||atHome))document.body.style.setProperty('--cd-nav',nav0.getBoundingClientRect().height+'px');
  if(inClub&&!dock)build();if(dock)dock.hidden=!inClub;if(!inClub||!dock)return;
  const nav=document.querySelector('.world-nav');if(nav)document.body.style.setProperty('--cd-nav',nav.getBoundingClientRect().height+'px');
  const a=window.ChinaLifeAudio,m=dock.querySelector('[data-cd="music"]');m.classList.toggle('on',!!a?.playing);m.title=a?.playing&&a.nowPlaying?'Now playing: '+(a.nowPlaying.title||a.nowPlaying.name||''):'Request a song';
  const v=$('quickVoice'),mic=dock.querySelector('[data-cd="mic"]'),live=v?.getAttribute('aria-pressed')==='true';mic.classList.toggle('on',live);mic.querySelector('.cd-i').textContent=v?.textContent?.trim()==='🔇'?'🔇':'🎤';mic.title=v?.getAttribute('aria-label')||'Join voice'}
 setInterval(sync,1000);if(typeof MutationObserver!=='undefined')new MutationObserver(sync).observe(document.body,{childList:true,subtree:false});window.addEventListener('chinalife:update',sync);
-window.ChinaLifeClubDock={sync,act:k=>ACT[k]?.(),more,items,home:k=>HOME_ACT[k]?.()};
+window.ChinaLifeClubDock={sync,act:k=>ACT[k]?.(),more,items,home:k=>HOME_ACT[k]?.(),gossip:k=>GOSSIP_ACT[k]?.()};
 const css=document.createElement('style');css.textContent=
  'html:root body.place-docked #worldUI .club-dock{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--cd-nav,84px) + 18px + env(safe-area-inset-bottom));z-index:30;display:flex;gap:4px;padding:6px;border-radius:26px;background:rgb(14 8 30 / .78);border:1px solid rgb(255 255 255 / .14);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 10px 30px rgb(0 0 0 / .35);pointer-events:auto;max-width:calc(100vw - 24px)}'+
  'html:root body.place-docked #worldUI .club-dock button{display:grid;justify-items:center;gap:2px;width:46px;min-height:52px;padding:6px 0 4px;border:0;border-radius:18px;background:transparent;color:#fff;font:700 10px/1.1 system-ui,sans-serif}'+
@@ -79,7 +103,9 @@ const css=document.createElement('style');css.textContent=
  'html:root body.place-docked dialog:is(#activityDialog,#audioDialog)[open]{max-height:62vh!important;top:auto!important}html:root body.place-docked dialog:is(#activityDialog,#audioDialog)::backdrop{background:rgb(0 0 0 / .18)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}'+
  // The dance competition's move sheet stays small (club-host.js), moves in a 2 × 2 grid.
  'html:root body.club-docked dialog#activityDialog.cd-compact[open]{max-height:36vh!important;height:auto!important;min-height:0!important}html:root body.club-docked #activityDialog.cd-compact .dance-pad{display:grid;grid-template-columns:1fr 1fr;gap:8px}html:root body.club-docked #activityDialog.cd-compact .dance-pad button{min-height:52px;margin:0}'+
- // A hidden dock stays hidden (the club and home docks share one spot and one style).
+ // In the Gossip Centre the dock replaces the place bar and the mic button.
+ 'html:root body.gossip-docked #worldUI :is(#infoPanel,#quickVoice,.quick-voice){display:none!important}'+
+ // A hidden dock stays hidden (the club, home and gossip docks share one spot and one style).
  'html:root body #worldUI .club-dock[hidden]{display:none!important}'+
  // At home the dock replaces the place bar; each need button has a bar (red when low).
  'html:root body.home-docked #worldUI #infoPanel{display:none!important}html:root body.place-docked #worldUI .home-dock .cd-bar{display:block;width:28px;height:3px;border-radius:2px;background:rgb(255 255 255 / .22);overflow:hidden}html:root body.place-docked #worldUI .home-dock .cd-bar i{display:block;height:100%;background:#4ade80}html:root body.place-docked #worldUI .home-dock .low .cd-bar i{background:#f87171}html:root body.place-docked #worldUI .home-dock .low .cd-i{animation:cdPulse 1.4s ease-in-out infinite}@keyframes cdPulse{50%{transform:scale(1.12)}}'+

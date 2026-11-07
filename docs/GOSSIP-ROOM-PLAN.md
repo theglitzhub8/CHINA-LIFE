@@ -109,3 +109,16 @@ gossip_rep (Phase 6 has no switch; its admin tab is always there and its reports
 Phase 0 first (it fixes the "three names" problem from the UI review), then 1 and 4 together (the show), then 2,
 3, 5 and 6. Each phase: tests, local play-through, its own commit, pushed to the feature branch; shipping to live
 only when the owner says so, switches off.
+
+## Gossip dock (7 Nov 2026, owner: "the way we did the club option at the bottom, do for the gossip center too")
+
+✅ Done (switch `gossip_dock`, default **ON**; public/club-dock.js, the same dock as the club and the home). In the Gossip
+Centre one row of buttons sits above Home / Where to? / Link Up / Phone, replacing the collapsed place bar and the mic
+button:
+
+🫖 Room (the Gossip Room screen; the Gossip wall when `gossip_room` is off) · 🔥 Hot Seat (lit while a round is on) ·
+🤫 Spill (the Gossip wall: read and post) · 📺 TV (Gossip TV) · 📰 News (City news) · 🎤 Mic (voice) · ••• More (read
+today's gossip, share a useful tip, chat).
+
+Sheets open at half height so the room stays in view. It shows only inside the Gossip Centre (not on the map), and turning
+the switch off in Hafrik integrations brings the old place bar back. game.js now exports `gossipTv`.

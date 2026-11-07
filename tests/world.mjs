@@ -146,7 +146,9 @@ test('the city sky runs a fast shared day and night cycle, each city has daily w
  const clear=dayOf('clear');sky(13);t.game.state.day=clear;t.world.map();const noon=W.lighting().sun;sky(23);t.game.state.day=clear;t.world.map();const night=W.lighting().sun;assert.ok(noon>2.5&&night<1,'noon '+noon+' night '+night);assert.ok(Math.abs(W.skyHour()-23)<.2);
  assert.equal(W.weatherFor('Shenyang',5),W.weatherFor('Shenyang',5),'weather is stable for the day');assert.ok(['clear','cloudy','rain','snow'].includes(W.weatherFor('Guangzhou',3)));
  for(let d=1;d<200;d++)assert.notEqual(W.weatherFor('Guangzhou',d),'snow','no snow in Guangzhou');
- t.game.state.day=dayOf('snow');sky(13);t.game.state.day=dayOf('snow');t.world.map();assert.equal(W.lighting().weather,'snow');
+ // Same for snow: the live sky follows the real day, so after setting the sky hour move the test clock on by whole days
+ // (a day is twelve sky cycles, so the hour stays) to a snowy real day. It failed on rainy real days (7 Nov 2026).
+ t.game.state.day=dayOf('snow');sky(13);for(let i=0;i<400&&W.weatherFor('Shenyang')!=='snow';i++)t.passDays(1);t.game.state.day=dayOf('snow');t.world.map();assert.equal(W.lighting().weather,'snow');
  t.game.state.place='gym';t.world.venue('gym');assert.equal(W.lighting().outdoor,false);assert.equal(W.lighting().weather,'clear','no snow indoors');assert.equal(W.lighting().sun,3)});
 
 test('every neighbourhood is built in its map-data style, cached per city, and browsing shows the browsed city names',()=>{const t=setup(),W=t.context.ChinaLifeWorld;
