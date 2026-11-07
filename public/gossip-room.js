@@ -10,12 +10,13 @@ const show=(...a)=>{G().showScreen(...a);const c=$('activityContent');if(c){c.sc
 const here=()=>G()?.state?.place==='gist';
 let opened=0;
 async function open(){const g=G();if(!g)return;const mine=++opened;
- show('🫖 Gossip Room','Hot Seat, the Gossip wall, Gossip TV and City news. Posts are anonymous to players.',
+ // Kept short: a few small cards, one tap each. Posts are anonymous to players.
+ show('🫖 Gossip Room','Everything gossip in one place. Your name is never shown.',
   '<div class="gr"><section class="gr-card gr-hot"><h3>🔥 Hot Seat</h3><p id="grHot">Checking the seat…</p><div class="gr-actions" id="grHotGo"></div></section>'+
-  '<section class="gr-card"><h3>🤫 Gossip wall</h3><p>Anonymous posts and polls from around the city. Read them, react, or drop your own.</p><div class="gr-actions"><button type="button" id="grWall">Open the Gossip wall</button></div></section>'+
+  '<button type="button" id="grWall" class="gr-row"><b>🤫 Gossip wall</b><span>Read and post anonymous tips ›</span></button>'+
   '<section class="gr-card"><h3>📺 Gossip TV</h3><blockquote id="grTv" class="gr-tv"></blockquote></section>'+
   (repOn()?'<section class="gr-card"><h3>🏅 Your gist rep</h3><p id="grRep" class="gr-muted">Counting…</p></section>':'')+
-  '<section class="gr-card"><h3>📰 City news</h3><div id="grNews"><p class="gr-muted">Loading the news…</p></div><div class="gr-actions"><button type="button" id="grNewsAll" class="gr-soft">See all city news</button></div></section></div>');
+  '<section class="gr-card"><h3>📰 City news</h3><div id="grNews"><p class="gr-muted">Loading the news…</p></div><button type="button" id="grNewsAll" class="gr-link">See all city news ›</button></section></div>');
  $('grWall').onclick=()=>g.gistNight();$('grNewsAll').onclick=()=>g.cityNews?.();
  const f=H()?.featured?.(),body=f?.body||f?.text||'';$('grTv').textContent=body?'“'+body+'”':'No featured gist yet today. Win the room on the Hot Seat and it goes on the TV.';
  hot(mine);news(mine);rep(mine)}
@@ -35,7 +36,7 @@ async function hot(mine){const h=H(),p=$('grHot'),go=$('grHotGo');if(!p)return;
 async function news(mine){const box=$('grNews');if(!box)return;
  try{const r=await window.ChinaLifeAuth?.request?.('/chinalife/gist.php?city='+encodeURIComponent(G().state.city)),d=r?.data||r||{};if(mine!==opened||!$('grNews'))return;
   const posts=(d.posts||[]).slice(0,3);
-  box.innerHTML=posts.length?posts.map(n=>'<article class="gr-news"><b>'+esc(n.title)+'</b><p>'+esc(String(n.body||'').slice(0,140))+(String(n.body||'').length>140?'…':'')+'</p></article>').join(''):'<p class="gr-muted">No city news today.</p>'}
+  box.innerHTML=posts.length?posts.map(n=>'<article class="gr-news"><b>'+esc(n.title)+'</b></article>').join(''):'<p class="gr-muted">No city news today.</p>'}
  catch{if(mine===opened&&$('grNews'))box.innerHTML='<p class="gr-muted">City news is not available right now.</p>'}}
 // Phase 4 (switch gossip_show): the room reacts to a reveal. Everyone in the room (players and characters, by their
 // name labels) cheers a True and laughs at a Cap for a few seconds.
@@ -66,11 +67,11 @@ async function rep(mine){const box=$('grRep');if(!box)return;
  try{const r=await window.ChinaLifeAuth?.request?.('/chinalife/gossip-rep.php'),d=r?.data||r;if(mine!==opened||!$('grRep'))return;if(!d?.on){box.closest('section')?.remove();return}repData=d;
   const p=d.prizes||[1000,500,250],won=d.last_week;
   box.innerHTML=(won?'<b class="gr-won">'+['🥇','🥈','🥉'][won.place-1]+' You were Truth teller #'+won.place+' last week: +¥'+Number(won.prize).toLocaleString()+' and a badge!</b><br>':'')+
-   '<b>'+d.week+'</b> this week · <b>'+d.total+'</b> all time<br>Hot Seat gists the room believes: +10 · called Cap: −5 · every 5 reactions on your wall tips: +1. '+
-   'Each Monday the week\'s top three get a badge and ¥'+p.map(n=>Number(n).toLocaleString()).join(' / ¥')+'. Only you can see your rep.'}
+   '<b>'+d.week+'</b> this week · <b>'+d.total+'</b> all time<details class="gr-how"><summary>How it works</summary>Hot Seat gists the room believes: +10 · called Cap: −5 · every 5 reactions on your wall tips: +1. '+
+   'Each Monday the week\'s top three get a badge and ¥'+p.map(n=>Number(n).toLocaleString()).join(' / ¥')+'. Only you can see your rep.</details>'}
  catch{if(mine===opened&&$('grRep'))box.textContent='Your rep is not available right now.'}}
 window.ChinaLifeGossipRoom={on,open,react,remind,watchWall,get rep(){return repData}};
-const css=document.createElement('style');css.textContent='.gr{display:grid;gap:12px}.gr-card{padding:14px 16px;border-radius:18px;background:#f3fbf8;border:1px solid #d6ebe5}.gr-card h3{margin:0 0 6px;font-size:16px}.gr-card p{margin:0 0 10px}.gr-hot{background:#fff4f1;border-color:#ffd6cc}.gr-actions{display:flex;flex-wrap:wrap;gap:8px}.gr-actions button{min-height:44px;padding:0 16px;border:0;border-radius:22px;background:#1F8E93;color:#fff;font-weight:700}.gr-actions .gr-soft{background:#fff;color:#0C3F44;border:1px solid #cfe3dd}.gr-tv{margin:0;padding:12px 14px;border-radius:14px;background:#0C3F44;color:#F7FFF7;font-style:italic}.gr-news{padding:8px 0;border-top:1px solid #d6ebe5}.gr-news:first-child{border-top:0}.gr-news p{margin:2px 0 0;font-size:13px;color:#43666b}.gr-muted{color:#587675;font-size:13px}.gr-show{margin:0 0 8px;padding:6px 10px;border-radius:12px;background:#fff;font-size:13px;font-weight:700;color:#0C3F44}.gr-show.live{background:#e0263b;color:#fff}'+
+const css=document.createElement('style');css.textContent='.gr{display:grid;gap:12px;padding-bottom:16px}.gr-card{padding:14px 16px;border-radius:18px;background:#f3fbf8;border:1px solid #d6ebe5}.gr-card h3{margin:0 0 6px;font-size:16px}.gr-card p{margin:0 0 10px}.gr-hot{background:#fff4f1;border-color:#ffd6cc}.gr-actions{display:flex;flex-wrap:wrap;gap:8px}.gr-actions button{min-height:44px;padding:0 16px;border:0;border-radius:22px;background:#1F8E93;color:#fff;font-weight:700}.gr-actions .gr-soft{background:#fff;color:#0C3F44;border:1px solid #cfe3dd}.gr-tv{margin:0;padding:12px 14px;border-radius:14px;background:#0C3F44;color:#F7FFF7;font-style:italic}.gr-news{padding:8px 0;border-top:1px solid #d6ebe5}.gr-news:first-child{border-top:0}.gr-news p{margin:2px 0 0;font-size:13px;color:#43666b}.gr-muted{color:#587675;font-size:13px}.gr-show{margin:0 0 8px;padding:6px 10px;border-radius:12px;background:#fff;font-size:13px;font-weight:700;color:#0C3F44}.gr-show.live{background:#e0263b;color:#fff}.gr-row{display:grid;gap:2px;text-align:left;width:100%;padding:14px 16px;border-radius:18px;background:#f3fbf8;border:1px solid #d6ebe5;color:#0C3F44;font:inherit}.gr-row b{font-size:16px}.gr-row span{font-size:13px;color:#1F8E93;font-weight:700}.gr-link{margin-top:8px;padding:0;border:0;background:none;color:#1F8E93;font:inherit;font-weight:700;font-size:14px}.gr-how{margin-top:6px}.gr-how summary{cursor:pointer;color:#1F8E93;font-weight:700}'+
  '.gr-react{position:absolute;bottom:32%;z-index:35;font-size:28px;opacity:0;animation:grUp 2.6s ease-out forwards;pointer-events:none}@keyframes grUp{0%{opacity:0;transform:translateY(20px) scale(.6)}15%{opacity:1;transform:translateY(0) scale(1.2)}100%{opacity:0;transform:translateY(-180px) scale(1)}}'+
  '@media (prefers-reduced-motion:reduce){.gr-react{animation:none}}';document.head?.append(css);
 })();

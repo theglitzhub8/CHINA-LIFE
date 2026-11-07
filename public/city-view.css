@@ -518,6 +518,8 @@ dialog .activity-panel :is(.quest-card,.dream-card,.gist-card) { margin: 8px 0; 
 .gossip-venue #venueOnline,.gossip-venue #worldOnline,.gossip-venue #onlineCount,.gossip-venue .scene-label.player,.gossip-venue .world-people,.gossip-screen .online-list,.gossip-screen .player-row{display:none!important}
 /* Gossip Night room */
 #activityDialog.gossip-screen{background:#121212;color:#F7FFF7}
+/* Light title, close button and sticky title bar on the dark Gossip wall (a general theme rule made them dark teal). */
+html:root body #activityDialog.gossip-screen :is(h2,.r4-inline-title){color:#F7FFF7!important}html:root body #activityDialog.gossip-screen .r4-inline-title{background:#0C3F44f0!important}html:root body #activityDialog.gossip-screen .close-x{color:#F7FFF7!important;background:#F7FFF726!important}
 .gossip-screen .activity-panel{background:radial-gradient(120% 70% at 85% 0%,#7a3b1f55,transparent 60%),radial-gradient(90% 60% at 0% 30%,#1F8E9333,transparent 65%),linear-gradient(180deg,#0C3F44 0%,#121212 70%);color:#F7FFF7;min-height:100%;padding-bottom:28px}
 .gossip-screen .activity-panel h2{color:#F7FFF7}.gossip-screen .activity-panel .lead{color:#cfe9e4}.gossip-screen .eyebrow{color:#f2b36d}
 .gossip-room{position:relative;display:grid;gap:12px;margin-top:6px}
