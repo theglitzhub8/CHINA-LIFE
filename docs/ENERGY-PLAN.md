@@ -95,6 +95,13 @@ Opened 8 Nov 2026 at the owner's request: flags.js `off('politics')` now follows
 live head count, open or closed, and a 🔥 Hot now tag on the busiest one. Friends show where they are with
 a Join button.
 
+✅ Built 8 Nov 2026 (social.js luV2/luHot/luTabCount, link-up.css, switch `linkup_v2`, default on). As built: the
+tabs are one pill bar (the active tab a teal gradient) with live counts: Places = players at places plus you, Chats =
+unread (red), Friends = friends online (green dot). Place cards are tinted per kind (club purple, gossip orange, voting
+blue, pitch green, HQ teal, hospital red, university indigo) with a big icon tile, a 👥 head-count pill (filled when
+busy) and a pulsing 🔥 Hot now on the busiest open place (players there, plus a live Hot Seat or open matches). The
+words are unchanged; closed places are greyed. Counts need the shared city (joined); otherwise the Join card shows.
+
 **Phase 7: Energy and coming back.** Shared across every place: a daily streak with a reward, a first-visit-of-the-day
 bonus per place, "live now" pulses on the dock buttons, and a celebration effect for wins and rewards.
 

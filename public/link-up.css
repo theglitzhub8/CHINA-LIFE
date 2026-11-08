@@ -53,3 +53,29 @@
 #socialDialog .pv6-head .pv6-id h3,html body #socialDialog .pv6-head .pv6-id h3{color:#F7FFF7!important}
 #socialDialog .pv6-head .pv6-id p,#socialDialog .pv6-head .pv6-rank,#socialDialog .pv6-head .pv6-rank small{color:#F7FFF7!important}
 #socialDialog .pv6 .lu-record{margin:0}
+/* Energy Phase 6 (switch linkup_v2): bold pill tabs with live counts, colourful place cards, a head-count pill, Hot now. */
+html:root body #socialDialog.lu-v2 #socialTabs{display:flex;gap:6px;padding:5px;margin:4px 12px 8px;border-radius:999px;background:#e6f1f0;border:0;box-shadow:inset 0 1px 3px rgb(12 63 68 / .12)}
+html:root body #socialDialog.lu-v2 #socialTabs button{flex:1;position:relative;display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 8px;border:0;border-radius:999px;background:transparent;color:#33595c;font-weight:800;font-size:14px;box-shadow:none}
+html:root body #socialDialog.lu-v2 #socialTabs button span{font-size:17px;line-height:1}
+html:root body #socialDialog.lu-v2 #socialTabs button.active{background:linear-gradient(135deg,#1F8E93,#0C3F44);color:#fff;box-shadow:0 6px 14px rgb(12 63 68 / .28)}
+html:root body #socialDialog.lu-v2 #socialTabs .tab-badge,html:root body #socialDialog.lu-v2 #socialTabs .lu-tab-count{position:static;min-width:20px;height:20px;padding:0 6px;border-radius:999px;display:inline-grid;place-items:center;font:800 11px/1 system-ui,sans-serif;font-style:normal}
+html:root body #socialDialog.lu-v2 #socialTabs .tab-badge{background:#ff5a5f;color:#fff}
+html:root body #socialDialog.lu-v2 #socialTabs .lu-tab-count{background:rgb(31 142 147 / .16);color:inherit}html:root body #socialDialog.lu-v2 #socialTabs button.active .lu-tab-count{background:rgb(255 255 255 / .22)}
+html:root body #socialDialog.lu-v2 #socialTabs .lu-tab-count.online::before{content:"";width:7px;height:7px;margin-right:4px;border-radius:50%;background:#22c55e;display:inline-block}
+html:root body #socialDialog.lu-v2 #socialTabs .lu-tab-count.online{display:inline-flex;align-items:center}
+/* Place cards: a tint per kind, a big icon tile, the count pill. */
+#socialDialog.lu-v2 .lu-places{gap:10px}
+#socialDialog.lu-v2 .lu-place{--k1:#1F8E93;--k2:#e8f6f5;position:relative;padding:10px 12px 10px 10px;border:0;border-radius:20px;background:linear-gradient(120deg,var(--k2),#fff 70%);box-shadow:0 4px 14px rgb(12 63 68 / .08),inset 4px 0 0 var(--k1)}
+#socialDialog.lu-v2 .lu-place[data-kind="club"]{--k1:#8b3fe4;--k2:#f3ecff}#socialDialog.lu-v2 .lu-place[data-kind="gossip"]{--k1:#f08a24;--k2:#fff3e6}
+#socialDialog.lu-v2 .lu-place[data-kind="voting"]{--k1:#3b6fe0;--k2:#ebf1ff}#socialDialog.lu-v2 .lu-place[data-kind="pitch"]{--k1:#22a35a;--k2:#e9f8ef}
+#socialDialog.lu-v2 .lu-place[data-kind="hq"]{--k1:#1F8E93;--k2:#e6f6f5}#socialDialog.lu-v2 .lu-place[data-kind="hospital"]{--k1:#e0414f;--k2:#ffeef0}#socialDialog.lu-v2 .lu-place[data-kind="university"]{--k1:#4f46e5;--k2:#eeedff}
+#socialDialog.lu-v2 .lu-place-icon{width:50px;height:50px;font-size:26px;border-radius:15px;border:0;background:#fff;box-shadow:0 3px 10px rgb(0 0 0 / .08)}
+#socialDialog.lu-v2 .lu-place-copy b{font-size:16px}
+#socialDialog.lu-v2 .lu-place.here{box-shadow:0 0 0 2px var(--k1),0 6px 18px rgb(12 63 68 / .12)}
+#socialDialog.lu-v2 .lu-place.closed{opacity:.62;filter:grayscale(.4)}
+#socialDialog.lu-v2 .lu-count{flex:none;align-self:center;padding:5px 9px;border-radius:999px;background:#fff;color:#5d7379;font-size:12px;font-weight:800;box-shadow:0 1px 4px rgb(0 0 0 / .08)}
+#socialDialog.lu-v2 .lu-count.busy{background:var(--k1);color:#fff}
+#socialDialog.lu-v2 .lu-hot{justify-self:start;font-style:normal;font-size:11px;font-weight:900;letter-spacing:.3px;color:#fff;background:linear-gradient(90deg,#ff5a1f,#ff2d6f);border-radius:999px;padding:2px 8px;animation:luHot 1.6s ease-in-out infinite}
+@keyframes luHot{50%{box-shadow:0 0 0 4px rgb(255 61 90 / .18)}}
+#socialDialog.lu-v2 .lu-btn{min-height:40px;background:var(--k1,#1F8E93)}#socialDialog.lu-v2 .lu-btn:disabled{background:#e9ecec;color:#8a9799}#socialDialog.lu-v2 .lu-place .lu-btn.ghost{background:#fff;color:#0C3F44}
+@media (prefers-reduced-motion:reduce){#socialDialog.lu-v2 .lu-hot{animation:none}}

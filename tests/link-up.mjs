@@ -120,3 +120,21 @@ test('polished profile: record sits under the stats row inside the card, the nam
  const c=await client({card:true,oneCity:false,players:[P('ada','gist')],profile:pp});await c.S.player('ada');await c.settle();
  assert.equal(c.body().querySelectorAll('[data-social="wave"]').length,2,'Classic keeps its Wave in Do something together');
 });
+
+// Energy Phase 6 (switch linkup_v2, default ON): pill tabs with live counts, a head-count pill and 🔥 Hot now.
+test('Link Up v2: tabs show who is online and friends online; cards show a head count; the busiest open place is Hot now',async()=>{
+ const u=await client({players:[P('ada','gist'),P('bayo','football'),P('chen','football'),P('dami','football'),P('fang','private-home')],friends:[{...P('ada','gist'),status:'accepted',online:true}]});
+ await u.S.open('places');await u.settle();
+ assert.ok(u.doc.getElementById('socialDialog').classList.contains('lu-v2'));
+ const tab=v=>u.doc.querySelector('#socialTabs [data-view="'+v+'"]');
+ assert.equal(tab('places').querySelector('.lu-tab-count').textContent,'5','four players at places, plus you');assert.equal(tab('friends').querySelector('.lu-tab-count.online').textContent,'1');
+ const row=id=>u.body().querySelector('.lu-place-main[data-peer="'+id+'"]').closest('.lu-place');
+ assert.equal(row('football').querySelector('.lu-count').textContent,'👥 3');assert.ok(row('football').querySelector('.lu-count.busy'));
+ assert.equal(row('gist').querySelector('.lu-count').textContent,'👥 2','one other, plus you');assert.equal(row('cityhospital').querySelector('.lu-count').textContent,'👥 0');
+ assert.match(row('football').textContent,/🔥 Hot now/);assert.equal(u.body().querySelectorAll('.lu-hot').length,1,'only the busiest');
+ assert.match(row('football').textContent,/3 players here/,'the words stay the same');
+ const quiet=await client({players:[]});await quiet.S.open('places');await quiet.settle();assert.equal(quiet.body().querySelectorAll('.lu-hot').length,0,'nothing is hot in an empty city');
+ const off=await client({players:[P('bayo','football'),P('chen','football')]});off.c.ChinaLifeFlags={cast:k=>k==='linkup_v2'?false:undefined};await off.S.open('places');await off.settle();
+ assert.ok(!off.doc.getElementById('socialDialog').classList.contains('lu-v2'));assert.equal(off.body().querySelectorAll('.lu-hot,.lu-count').length,0,'switch off: the old look');
+ assert.match(fs.readFileSync('public/flags.js','utf8'),/linkup_v2:true/);
+});
