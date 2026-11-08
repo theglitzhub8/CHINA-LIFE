@@ -65,6 +65,15 @@ Confetti on a win was already there.
 - The old rows ("Read today's city gossip", "Share a useful tip") are folded into News and Spill.
 - One "Today here" strip with three small tasks and rewards (post a tip, vote a round, react to 5 tips).
 
+✅ Built 8 Nov 2026 (gossip-room.js `tonight()`, chinalife-api/gossip-today.php, switch `gossip_tonight`, default on;
+needs the existing `gossip_room` switch on, as live). In the room, Room opens "🫖 Tonight": 🔥 Hot Seat (live status and
+one button), ✅ Today here, 🤫 Fresh on the wall (the two newest tips, Open Spill ›), 📺 On Gossip TV, and your rep.
+Today here: Drop a tip (1), Vote on a Hot Seat round (1), React to 5 tips, each ¥100 + 10 XP once a Beijing day. The
+server counts them from the real tables (your own tips, not Hafrik's or the city's; your Hot Seat votes; your
+reactions), refuses an unfinished one and pays each once. Unfinished tasks have Go (to the wall or the Hot Seat).
+City news is not repeated in the room (the dock has News); opened from the phone, away from the room, it is one row.
+The dock's More no longer repeats "Read today's city gossip" and "Share a useful tip".
+
 **Phase 5: Voting, same family as the gossip screens.** Countdown top card stays; candidates become big cards
 with photo, slogan and a live vote bar; one tap to vote; an "I voted" sticker and a small reward; results reveal
 with a drumroll at close.

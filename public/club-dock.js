@@ -69,7 +69,9 @@ const GOSSIP_ACT={
  hot:()=>window.ChinaLifeHotSeat?.enabled?.()?window.ChinaLifeHotSeat.open():G()?.toast?.('The hot seat is closed right now'),
  spill:()=>G()?.gistNight?.(),tv:()=>G()?.gossipTv?.(),news:()=>G()?.cityNews?.(),mic:ACT.mic,more:gossipMore};
 // More: the room's own activities (read today's gossip, share a tip) and chat.
-function gossipMore(){const g=G(),list=[...document.querySelectorAll('#worldActivities button')].filter(b=>!GOSSIP_COVERED.test(title(b)));
+// With Tonight on (switch gossip_tonight), the old rows that repeat News and Spill are not offered again.
+const GOSSIP_TWICE=/Read today.s city gossip|Share a useful tip/;
+function gossipMore(){const g=G(),twice=window.ChinaLifeFlags?.cast?.('gossip_tonight')!==false,list=[...document.querySelectorAll('#worldActivities button')].filter(b=>!GOSSIP_COVERED.test(title(b))&&!(twice&&GOSSIP_TWICE.test(b.textContent||'')));
  g.showScreen('🫖 More in the Gossip Centre','Everything else you can do here',
   '<div class="cd-list">'+list.map((b,n)=>'<button type="button" data-cd-item="'+n+'">'+b.innerHTML+'</button>').join('')+'<button type="button" data-cd-chat><b>💬 Chat</b><small>Talk to people in the room</small></button></div>');
  const c=$('activityContent');c.querySelector('[data-cd-chat]').onclick=()=>{$('activityDialog')?.close();press('#venueChatButton')};

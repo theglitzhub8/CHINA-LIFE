@@ -185,3 +185,27 @@ test('wall tips have a Report button (not on your own or Hafrik posts) that conf
  await d.querySelector('[data-gw-report]').onclick();await tick();assert.equal(sent.at(-1).action,'report');assert.equal(sent.at(-1).id,2);
  const admin=r('public/admin.js');assert.match(admin,/\['gossip','🫖','Gossip Room',/);assert.match(admin,/admin\('gossip_queue'\)/);assert.match(admin,/admin\('gossip_moderate',\{id:Number\(id\),op:mod\}\)/);
 });
+
+// Energy Phase 4 (switch gossip_tonight, default ON): in the room, Room is "Tonight": live now and Today here.
+test('Tonight: the Hot Seat, fresh tips, the TV and three Today here tasks; collecting pays from the server; no repeats',async()=>{
+ const make=(place='gist')=>{const t=harness({...fixture(),place}),c=t.context,calls={open:0,posts:[]};
+  c.ChinaLifeFlags={cast:k=>k==='gossip_room'||k==='gossip_tonight'?true:false,appOff:()=>false};c.ChinaLifeCloud={signedIn:true};
+  c.ChinaLifeHotSeat={enabled:()=>true,peek:async()=>null,featured:()=>({body:'Tunde bought a car'}),open(){calls.open++}};
+  let claimed=false;
+  c.ChinaLifeAuth={request:async(url,method,body)=>{if(/gist-night/.test(url))return {data:{posts:[{body:'Two watches at the club'},{body:'Free jollof tomorrow'},{body:'Old tip'}]}};
+   if(/gossip-today/.test(url)){if(method==='POST'){calls.posts.push(body.key);claimed=true;return {data:{money:3300,xp:10,awarded:100}}}
+    return {data:{prize:100,xp:10,tasks:[{key:'tip',count:1,target:1,done:true,claimed},{key:'vote',count:0,target:1,done:false,claimed:false},{key:'react',count:2,target:5,done:false,claimed:false}]}}}
+   return {data:{posts:[]}}}};
+  vm.runInContext(r('public/gossip-room.js'),c);return {t,c,d:t.document,calls}};
+ const {t,d,calls}=make();await t.game.gist();for(let i=0;i<4;i++)await tick();const text=d.getElementById('activityContent').textContent;
+ assert.equal(d.querySelector('#activityContent h2').textContent,'🫖 Tonight');
+ assert.match(text,/Hot Seat/);assert.match(text,/Two watches at the club/);assert.match(text,/Free jollof tomorrow/);assert.doesNotMatch(text,/Old tip/,'the two newest');assert.match(d.getElementById('grTv').textContent,/Tunde/);
+ assert.equal(d.getElementById('grNewsAll'),null,'in the room, News is on the dock, not here again');
+ assert.equal(d.querySelectorAll('.gr-task').length,3);assert.match(text,/¥100 each · 3 left/);assert.ok(d.querySelector('[data-gr-go="vote"]'),'unfinished: Go');
+ d.querySelector('[data-gr-claim="tip"]').onclick();for(let i=0;i<4;i++)await tick();
+ assert.deepEqual(calls.posts,['tip']);assert.equal(t.game.state.money,3300,'the server total');assert.ok(d.querySelector('.gr-task.claimed'),'ticked off');assert.match(d.getElementById('activityContent').textContent,/2 left/);
+ const away=make('football');await away.t.game.gist();for(let i=0;i<3;i++)await tick();
+ assert.equal(away.d.querySelector('#activityContent h2').textContent,'🫖 Gossip Room');assert.ok(away.d.getElementById('grNewsAll'),'away, City news is one row');
+ assert.match(r('public/club-dock.js'),/GOSSIP_TWICE=\/Read today\.s city gossip\|Share a useful tip\//);assert.match(r('public/flags.js'),/gossip_tonight:true/);
+ assert.match(r('chinalife-api/hafrik-features.php'),/'gossip_tonight'=>'Gossip Centre: Room becomes Tonight/);
+});

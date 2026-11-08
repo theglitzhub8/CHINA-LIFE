@@ -1668,3 +1668,22 @@ test('football daily challenge: ¥300 and 30 XP once a day, a second claim is a 
  assert.equal(first.httpStatus,200,first.message);assert.equal(first.data.awarded,300);assert.equal(first.data.awardedXp,30);assert.equal(first.data.money,3500);assert.equal(first.data.duplicate,false);
  const again=await call(77,'economy.php','POST',{action:'football-daily'});assert.equal(again.data.duplicate,true);assert.equal(again.data.money,3500,'paid once');
 });
+
+// Energy Phase 4 (switch gossip_tonight): "Today here" in the Gossip Centre, three tasks checked from what you did today.
+test('gossip Today here: tasks counted from real tips and reactions, ¥100 each once, unfinished tasks refused',async()=>{
+ sql("USE chinalife_test; INSERT IGNORE INTO users(user_id,user_name) VALUES(78,'user78')");
+ assert.equal((await call(78,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China'}}})).httpStatus,200);
+ let s=(await call(78,'gossip-today.php')).data;assert.deepEqual(s.tasks.map(t=>[t.key,t.count,t.target,t.done]),[['tip',0,1,false],['vote',0,1,false],['react',0,5,false]]);assert.equal(s.prize,100);
+ assert.equal((await call(78,'gossip-today.php','POST',{key:'tip'})).httpStatus,409,'not before the tip');
+ const tip=await call(78,'gist-night.php','POST',{action:'post',city:'China',body:'Somebody at the pitch scored with their eyes closed'});assert.equal(tip.httpStatus,200,tip.message);
+ const ids=[];for(let i=0;i<5;i++){const p=await call(5,'gist-night.php','POST',{action:'post',city:'China',body:'Tip number '+i+' from the square'});ids.push(+p.data.id)}
+ for(const id of ids.slice(0,4))await call(78,'gist-night.php','POST',{action:'react',city:'China',id,kind:'laugh'});
+ s=(await call(78,'gossip-today.php')).data;assert.deepEqual(s.tasks.map(t=>[t.key,t.count,t.done]),[['tip',1,true],['vote',0,false],['react',4,false]]);
+ const paid=await call(78,'gossip-today.php','POST',{key:'tip'});assert.equal(paid.httpStatus,200,paid.message);assert.equal(paid.data.awarded,100);assert.equal(paid.data.awardedXp,10);assert.equal(paid.data.money,3300);
+ assert.equal((await call(78,'gossip-today.php','POST',{key:'tip'})).data.duplicate,true,'once a day');
+ assert.equal((await call(78,'gossip-today.php','POST',{key:'react'})).httpStatus,409,'4 of 5 reactions');
+ await call(78,'gist-night.php','POST',{action:'react',city:'China',id:ids[4],kind:'fire'});
+ assert.equal((await call(78,'gossip-today.php','POST',{key:'react'})).data.money,3400);
+ s=(await call(78,'gossip-today.php')).data;assert.deepEqual(s.tasks.map(t=>t.claimed),[true,false,true]);
+ assert.equal((await call(78,'gossip-today.php','POST',{key:'nope'})).httpStatus,400);
+});
