@@ -93,3 +93,4 @@ td audio{width:220px;height:32px}
 .pe-song{display:grid;gap:6px;margin-bottom:10px;padding:10px;border:1px solid var(--line);border-radius:12px}.pe-song audio{width:100%;height:34px}
 .busy{opacity:.5;pointer-events:none}
 @media(max-width:760px){.pe-item{grid-template-columns:56px 1fr 80px auto}.pe-item .i_desc{grid-column:2/4}}
+.en-table{overflow-x:auto}.en-table td:first-child b{white-space:nowrap}.en-bar{height:5px;border-radius:9px;background:var(--line);margin-top:5px;min-width:70px;overflow:hidden}.en-bar i{display:block;height:100%;background:linear-gradient(90deg,#ff7a45,#ff3d6e);border-radius:9px}

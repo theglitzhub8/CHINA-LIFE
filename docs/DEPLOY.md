@@ -110,6 +110,12 @@ every request, so a change applies within about 10 s, with no deploy:
 | `{"mode":"testers","testers":["hafrik"],"percent":10}` | listed usernames or ids, plus that share of players |
 | `{"mode":"adaptive"}` | new polling for everyone |
 
+## Cron jobs
+
+| When | Command | What |
+|---|---|---|
+| Every hour (sends only 19:00–23:00 Beijing, once per player a day) | `/usr/local/lsws/lsphp84/bin/php /home/hafrik.com/public_html/api/v4/chinalife/push-streak.php` | Evening streak reminder (switch `streak_reminder`). Add `--dry --now` to see who would get one without sending. |
+
 ## Monitoring (read-only)
 
 `scripts/perf-monitor.php` reports, once a minute:

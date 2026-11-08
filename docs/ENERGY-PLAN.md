@@ -117,3 +117,12 @@ streak, first visits, the football challenge and the gossip tasks. Trust note: f
 are not checked against a place, so the most a player can take is ¥240 a day.
 
 Map look is untouched in every phase: the docks and the music pill sit in the same layer as the club dock.
+
+## After the plan (9 Nov 2026)
+
+- **Admin → Energy** (admin.js, chinalife-api/energy-admin.php): per Beijing day for 14 days: daily streak claims, how many
+  of them claimed again the next day (the main sign players return), first visits, all-seven bonuses, gossip tasks,
+  football challenges, paid votes and streak reminders sent; today's streak lengths and the streaks ending tonight.
+- **Evening streak reminder** (chinalife-api/push-streak.php, switch `streak_reminder`, default on): a player who
+  claimed yesterday but not today gets one Hafrik notification (inbox and app push) between 19:00 and 23:00 Beijing:
+  "🔥 Your N-day ChinaLife streak ends at midnight. Come back and claim ¥X today!". Needs an hourly cron (docs/DEPLOY.md).

@@ -1724,3 +1724,18 @@ test('daily visits: ¥20 + 5 XP per place once a day, ¥100 + 20 XP for all seve
  const last=await call(82,'daily-visit.php','POST',{place:'university'});assert.equal(last.data.all,true);assert.equal(last.data.awarded,120,'¥20 and the ¥100 bonus');assert.equal(last.data.awardedXp,25);assert.equal(last.data.money,3220+20*6+100);
  const s=(await call(82,'daily-visit.php')).data;assert.equal(s.visited.length,7);assert.equal(s.bonus,true);
 });
+
+// Admin → Energy and the evening streak reminder (switch streak_reminder).
+test('energy admin counts the day, and the streak reminder finds streaks ending tonight',async()=>{
+ const bj=d=>new Date(Date.now()+8*3600e3-d*86400e3).toISOString().slice(0,10),today=bj(0),yesterday=bj(1);
+ sql(`USE chinalife_test; INSERT IGNORE INTO users(user_id,user_name) VALUES(83,'user83'); INSERT INTO chinalife_saves(user_id,character_data,game_state) VALUES(83,'{}','${JSON.stringify({...game(),lastVisit:yesterday,streak:4})}')`);
+ assert.equal((await call(2,'admin.php','POST',{action:'energy'})).httpStatus,403,'admins only');
+ const e=await call(1,'admin.php','POST',{action:'energy'});assert.equal(e.httpStatus,200,e.message);
+ assert.equal(e.data.days.length,14);assert.equal(e.data.days[0].day,today);assert.ok(e.data.days[0].visits>=7);assert.ok(e.data.days[0].allSeven>=1);
+ assert.equal(e.data.days[0].back,null,'today cannot know tomorrow');assert.ok(e.data.waiting>=1);
+ const dir=path.join(tmp,'web/api/v4/chinalife'),run=async(...a)=>(await promisify(execFile)('php',[path.join(dir,'push-streak.php'),...a],{env})).stdout;
+ const out=await run('--dry','--now');assert.match(out,/would remind 83: 🔥 Your 4-day ChinaLife streak ends at midnight\. Come back and claim ¥250 today!/);
+ assert.equal((await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{streak_reminder:false}})).httpStatus,200);
+ assert.match(await run('--dry','--now'),/switched off/);
+ assert.equal((await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{streak_reminder:true}})).httpStatus,200);
+});
