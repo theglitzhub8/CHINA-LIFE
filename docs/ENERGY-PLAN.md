@@ -39,6 +39,14 @@ example HQ Services when its switch is off) is hidden. The place bar and the rou
 song name, ▶ / ⏸ and ⏭. It remembers if you paused. Tapping it opens the full radio. When no artist songs are
 approved yet it plays the game's own beats, so it is never empty.
 
+✅ Built 8 Nov 2026 (public/music-pill.js, switch `music_everywhere`, default on). Found on the way: the old radio button
+was never visible, because a style rule (ios.css) hides it whenever the club ▶ button exists, and that button always
+exists. As built: a round coral button above the bottom bar on the left in every place and at home. Tap = play / pause;
+the song name slides out for 4.5 s with ⏭; tap the name for the full radio (or the list of beats). Artist songs play
+when approved; until then the five catalog beats play one after another (2½ minutes each). It steps aside in clubs (the
+club DJ plays there) and on the approved city map (the music keeps playing there), goes quiet for the mic, in the
+library and in the background, remembers a pause, and otherwise starts on the first tap.
+
 **Phase 3: Football first screen.** A stadium-style top (floodlights, scoreboard look): one huge ⚡ PLAY NOW
 button, your record (wins, goals, win streak), who is on the pitch right now, today's challenge with a cash reward
 ("Score 3 goals today: +¥300"), and cups as cards with a countdown. Goal and win moments get confetti and sound.

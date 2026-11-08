@@ -69,7 +69,7 @@ async function exam(year){const g=G();let paper;try{paper=(await C().university(
   document.querySelector('[data-uni-back]').onclick=()=>open();render()};ask()}
 // A library session: quiet (the radio pauses), a short study at a desk, read 3 words, then 3 questions marked by the server.
 async function library(){const g=G();let d;try{d=await C().university({action:'start_library'})}catch(e){return g.toast?.(e.message||'The library is closed right now.')}st=d;at=Date.now();const ss=d.session,answers=[];let i=0;
- if(window.ChinaLifeRadio?.playing){window.ChinaLifeRadio.pause();g.toast?.('🤫 Quiet please: the radio is paused in the library.')}
+ if(window.ChinaLifeRadio?.playing||window.ChinaLifeMusic?.playing){window.ChinaLifeRadio?.pause?.();window.ChinaLifeMusic?.pause?.(false);g.toast?.('🤫 Quiet please: the radio is paused in the library.')}
  const read=()=>{show('📚 Library','Read these quietly, then answer three questions','<div class="uni-card"><ul class="uni-list lib-words">'+ss.words.map(w=>'<li><b>'+esc(w.han)+'</b> '+esc(w.pinyin)+' · '+esc(w.en)+'</li>').join('')+'</ul><div class="uni-exams"><button data-lib-ready>I have read them</button></div></div>');document.querySelector('[data-lib-ready]').onclick=ask};
  const ask=()=>{const x=ss.questions[i];show('📚 Library','Question '+(i+1)+' of '+ss.questions.length,'<div class="uni-card"><p class="uni-q">'+esc(x.prompt)+'</p><div class="uni-exams">'+x.options.map((o,n)=>'<button data-lib-a="'+n+'">'+esc(o)+'</button>').join('')+'</div></div>');
   document.querySelectorAll('[data-lib-a]').forEach(b=>b.onclick=()=>{answers.push(x.options[Number(b.dataset.libA)]);i++;i<ss.questions.length?ask():submit()})};
