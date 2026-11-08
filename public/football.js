@@ -67,16 +67,68 @@
         const d = await call('GET', { action: 'lobby' });
         if (d.mine && ['lobby', 'live'].includes(d.mine.match?.status)) { return enterLobby(d.mine); }
         if (d.mine) setTimeout(() => say('Your last result is waiting for the other players to confirm'), 50);
+        lastLobbies = d.lobbies || [];
         lobbies = (d.lobbies || []).map((l) => `<li><span>${l.size}v${l.size} · ${l.humans} player${l.humans == 1 ? '' : 's'} · ${l.status === 'live' ? 'playing' : 'waiting'}</span>${l.status === 'lobby' ? `<button class="fb-mini" data-fb="join" data-id="${esc(l.id)}">Join</button>` : ''}</li>`).join('');
         tours = (d.tournaments || []).map(tourRow).join('');
       } catch (e) { say(e.message); }
     } else tours = localTours().map(tourRow).join('');
+    if (homeOn()) return show('home', stadium(sizes, lobbies, tours));
     show('home', `<section class="fb-hero"><h2>Play a match</h2><p>Real matches with other players on the Field. Empty spots are filled by bots, so you can always play.</p>
       <div class="fb-sizes">${sizes}</div>
       <div class="fb-row"><button class="fb-btn primary" data-fb="quick">⚡ Quick match</button><button class="fb-btn" data-fb="create">＋ New match</button></div></section>
       ${online() ? `<section><h3>Open matches</h3><ul class="fb-list">${lobbies || '<li class="fb-empty">No open matches. Start one and invite friends.</li>'}</ul></section>` : ''}
       <section><h3>🏆 Tournaments</h3><ul class="fb-list">${tours || '<li class="fb-empty">No tournaments yet.</li>'}</ul><button class="fb-btn" data-fb="t-new">＋ Create a tournament</button></section>
       <p class="fb-note">${online() ? 'One match at a time. Results are checked by the server.' : 'Preview: matches and tournaments are saved on this device.'}</p>`);
+  }
+  // Energy Phase 3 (docs/ENERGY-PLAN.md, appadmin switch football_home, default ON): the first screen is a stadium. One
+  // big PLAY NOW (quick match at the chosen size), your record kept in the save (state.football: wins, goals, win
+  // streak), who is on the pitch now, today's challenge (¥300 + 30 XP, economy.php 'football-daily', once a Beijing day,
+  // claimed at the pitch) and the cups. Off: the old Play a match screen.
+  const homeOn = () => root.ChinaLifeFlags?.cast?.('football_home') !== false;
+  const bjDay = () => new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+  // One challenge a day, the same for everyone: [count kept in myRecord().today, target, words].
+  const CHALLENGES = [['goals', 3, 'Score 3 goals'], ['won', 2, 'Win 2 matches'], ['played', 3, 'Play 3 matches']];
+  const challenge = () => CHALLENGES[Math.floor(Date.parse(bjDay() + 'T00:00:00Z') / 864e5) % CHALLENGES.length];
+  const PRIZE = 300;
+  function myRecord() {
+    const s = game()?.state; const r = (s && (s.football ||= {})) || {};
+    for (const k of ['played', 'won', 'drawn', 'lost', 'goals', 'streak', 'best']) r[k] = Math.max(0, Math.floor(+r[k] || 0));
+    if (r.date !== bjDay()) { r.date = bjDay(); r.today = { played: 0, won: 0, goals: 0 }; r.claimed = false; }
+    r.today ||= { played: 0, won: 0, goals: 0 }; return r;
+  }
+  // Every finished match (on this phone or online) counts: result, your own goals, the win streak, today's challenge.
+  function noteMatch(won, draw, goals) {
+    const r = myRecord(); r.played++; if (won) r.won++; else if (draw) r.drawn++; else r.lost++; r.goals += goals;
+    r.streak = won ? r.streak + 1 : 0; r.best = Math.max(r.best, r.streak);
+    r.today.played++; if (won) r.today.won++; r.today.goals += goals; try { game()?.save?.(); } catch {}
+  }
+  const challengeLine = () => { const r = myRecord(), [k, n, words] = challenge(), v = Math.min(n, r.today[k] || 0); return { k, n, words, v, done: v >= n, claimed: !!r.claimed }; };
+  function stadium(sizes, lobbies, tours) {
+    const r = myRecord(), c = challengeLine(), playing = (lastLobbies || []).reduce((a, l) => a + (+l.humans || 0), 0);
+    const live = online() ? (playing ? `🔴 ${playing} playing now` : '🟢 Pitch open · start a match') : '🤖 Bots are warmed up';
+    const pct = Math.round(c.v / c.n * 100);
+    return `<section class="fb-stadium"><div class="fb-lights" aria-hidden="true"><i></i><i></i></div>
+      <p class="fb-live">${live}</p><h2>Matchday</h2><p class="fb-tag">Real 5-a-side. Empty spots get bots, so the whistle blows right away.</p>
+      <button class="fb-play" data-fb="quick">⚡ PLAY NOW <small>${pickSize}v${pickSize} · 3 minutes</small></button>
+      <div class="fb-sizes">${sizes}</div><button class="fb-link" data-fb="create">＋ New match with friends</button></section>
+      <section class="fb-record"><div><b>${r.won}</b><small>Wins</small></div><div><b>${r.goals}</b><small>Goals</small></div><div class="${r.streak ? 'hot' : ''}"><b>${r.streak ? '🔥' + r.streak : '0'}</b><small>Win streak</small></div><div><b>${r.played}</b><small>Played</small></div></section>
+      <section class="fb-chal${c.done ? ' done' : ''}"><div class="fb-chal-top"><span>🎯 Today's challenge</span><em>+¥${PRIZE}</em></div><b>${c.words}</b>
+        <div class="fb-bar"><i style="width:${pct}%"></i></div><div class="fb-chal-foot"><small>${c.claimed ? '✅ Claimed. A new challenge tomorrow.' : c.done ? 'Done! Collect your prize.' : c.v + ' / ' + c.n + ' · resets at midnight'}</small>${c.done && !c.claimed ? '<button class="fb-mini" data-fb="claim">Collect ¥' + PRIZE + '</button>' : ''}</div></section>
+      ${online() ? `<section><h3>🟢 Open matches</h3><ul class="fb-list">${lobbies || '<li class="fb-empty">No open matches. Start one and friends can join.</li>'}</ul></section>` : ''}
+      <section><h3>🏆 Cups</h3><ul class="fb-list fb-cups">${tours || '<li class="fb-empty">No cup running. Start one: friends sign up their teams.</li>'}</ul><button class="fb-btn" data-fb="t-new">＋ Start a cup</button></section>
+      ${r.best ? `<p class="fb-note">Best win streak: ${r.best}. ${r.drawn} draw${r.drawn === 1 ? '' : 's'} · ${r.lost} loss${r.lost === 1 ? '' : 'es'}.</p>` : ''}`;
+  }
+  let lastLobbies = [];
+  const chalMini = () => { if (!homeOn()) return ''; const c = challengeLine(); return `<p class="fb-chal-mini${c.done ? ' done' : ''}">🎯 ${c.words}: ${c.v}/${c.n}${c.claimed ? ' · claimed' : c.done ? ' · collect ¥' + PRIZE + ' on the Football screen' : ''}</p>`; };
+  async function claim() {
+    const c = challengeLine(); if (!c.done || c.claimed) return;
+    const g = game(), cloud = root.ChinaLifeCloud?.signedIn && root.ChinaLifeAuth?.request;
+    try {
+      if (cloud) { const res = await root.ChinaLifeAuth.request('/chinalife/economy.php', 'POST', { action: 'football-daily' }); g?.applyServerTotals?.(res?.data || res); }
+      else if (g?.state) { g.state.money += PRIZE; g.state.xp = (g.state.xp || 0) + 30; }
+    } catch (err) { return say(err.message || 'Could not collect the prize right now'); }
+    myRecord().claimed = true; try { g?.save?.(); g?.refresh?.(); } catch {}
+    say('🎉 +¥' + PRIZE + ' · challenge complete!'); buzz([40, 30, 80]); home();
   }
   const tourRow = (t) => `<li><span><b>${esc(t.name)}</b><small>${t.team_size}v${t.team_size} · ${t.teams}/${t.max_teams} teams · ${statusLabel(t)}${+t.prize_coins ? ` · 🪙 ${(+t.prize_coins).toLocaleString()}` : ''}</small></span><button class="fb-mini" data-fb="t-open" data-id="${esc(t.id)}">View</button></li>`;
   const statusLabel = (t) => t.status === 'registering' ? 'starts ' + when(t.starts_at) : t.status === 'running' ? 'in play' : t.status === 'done' ? 'finished' : 'cancelled';
@@ -299,6 +351,7 @@
     if (finished || !match) return; finished = true; const m = match; clearInterval(netT); netT = null;
     const s = m.state, mine = m.myTeam, won = s.winner === mine, isDraw = s.winner === null; if (won) try { window.dispatchEvent(new CustomEvent('chinalife:winner', { detail: { kind: 'football' } })); } catch {} // Club Hypeman
     let note = '';
+    noteMatch(won, isDraw, s.goals.filter((g) => !g.own && String(g.by) === String(m.me)).length);
     if (!m.local) {
       try {
         if (m.isHost) { const r = await call('POST', { action: 'result', id: m.id, report: E.report(s) }); note = r.status === 'done' ? 'Result confirmed ✓' : r.status === 'disputed' ? 'Result disputed: the ChinaLife team will check it' : 'Waiting for the other players to confirm…'; }
@@ -318,7 +371,7 @@
     ov.innerHTML = `<div class="fb-card"><p class="fb-kicker">FULL TIME</p><h2>${isDraw ? 'Draw' : won ? 'You win! 🎉' : 'You lose'}</h2><p class="fb-final"><span class="t0">A</span> ${s.score[0]} – ${s.score[1]} <span class="t1">B</span></p>${s.pens ? `<p class="fb-sub">Penalties ${s.pens[0]}–${s.pens[1]}</p>` : ''}
       ${motm ? `<div class="fb-motm t${motm.team}"><span class="fb-star">★</span><div><small>MAN OF THE MATCH</small><b>${esc(youMotm ? 'You' : motm.name)} <em>#${motm.num} · ${motm.team ? 'B' : 'A'}</em></b><small>${esc(line)} · rating ${motm.rating}</small></div></div>` : ''}
       <div class="fb-stats"><div><b>${poss[0]}%</b><small>Possession</small><b>${poss[1]}%</b></div><div><b>${sh[0]}</b><small>Shots</small><b>${sh[1]}</b></div></div>
-      <ul class="fb-goals">${scorers || '<li>No goals</li>'}</ul><p class="fb-note">${esc(note)}</p>
+      <ul class="fb-goals">${scorers || '<li>No goals</li>'}</ul><p class="fb-note">${esc(note)}</p>${chalMini()}
       <div class="fb-row">${m.tournament ? `<button class="fb-btn primary" data-fb="t-open" data-id="${esc(m.tournament)}">🏆 Bracket</button>` : `<button class="fb-btn primary" data-fb="again">Play again</button>`}<button class="fb-btn" data-fb="home">Done</button></div></div>`;
     $('.fb-stage', el)?.appendChild(ov); buzz([60, 40, 60]);
     if (won) rend?.confetti(120, mine);
@@ -445,6 +498,7 @@
     if (a === 'mic') { await micTap(); return micLabel(); }
     if (a === 'back' || a === 'home') { if (match && !match.local && match.status === 'lobby') { try { await call('POST', { action: 'leave', id: match.id }); } catch {} } finished = false; return view === 'home' ? close() : home(); }
     if (a === 'size') { pickSize = +b.dataset.n; return home(); }
+    if (a === 'claim') return claim();
     if (a === 'diff') { difficulty = b.dataset.d; try { localStorage.setItem(DIFF_KEY(), difficulty); } catch {} return paintLobby(); }
     if (a === 'snd') { const on = SND.toggle(); b.textContent = on ? '🔊' : '🔇'; return; }
     if (a === 'quick' || a === 'create' || a === 'again') {

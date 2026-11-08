@@ -93,3 +93,24 @@ html.fb-open body{overflow:hidden}
 /* Voice at the Football Field: the header mic (football.js micTap / micLabel). */
 .fb-mic{min-height:44px;padding:0 12px;border:0;border-radius:22px;background:#1d4a31;color:#fff;font-weight:700;font-size:14px;margin-left:auto;margin-right:8px}
 .fb-mic.on{background:#e0263b}
+/* Energy Phase 3 (switch football_home): the stadium first screen. */
+.fb-stadium{position:relative;overflow:hidden;border-radius:22px;padding:18px 16px 14px;text-align:center;background:repeating-linear-gradient(90deg,#1c6b3c 0 34px,#1a6237 34px 68px);box-shadow:0 10px 30px #0008,inset 0 -60px 60px -30px #0b2a19}
+.fb-stadium::before{content:"";position:absolute;inset:0;background:radial-gradient(70% 55% at 50% -10%,#fffbe0aa,transparent 70%);pointer-events:none}
+.fb-lights{position:absolute;inset:0;pointer-events:none}.fb-lights i{position:absolute;top:-30px;width:120px;height:120px;border-radius:50%;background:radial-gradient(#fffde8,#fff6b500 65%);animation:fbFlicker 4s ease-in-out infinite}
+.fb-lights i:first-child{left:-30px}.fb-lights i:last-child{right:-30px;animation-delay:1.3s}@keyframes fbFlicker{50%{opacity:.75}}
+.fb-stadium>*{position:relative}.fb-live{display:inline-block;margin:0 0 6px;padding:4px 10px;border-radius:999px;background:#0b2a19cc;font-size:12px;font-weight:700;color:#d9ffe6}
+.fb-stadium h2{font-size:30px;letter-spacing:.5px;text-transform:uppercase;margin:0;text-shadow:0 2px 0 #0b2a19}.fb-tag{margin:2px 0 14px;color:#e3f7ea;font-size:13px}
+.fb-play{display:grid;place-items:center;width:100%;min-height:76px;border:0;border-radius:20px;background:linear-gradient(180deg,#fff06a,#ffc81e);color:#13311f;font:900 26px/1 system-ui,sans-serif;letter-spacing:1px;box-shadow:0 6px 0 #b8870a,0 14px 28px #0007;animation:fbPulse 2.2s ease-in-out infinite;margin-bottom:12px}
+.fb-play small{font:700 12px/1.4 system-ui,sans-serif;letter-spacing:0;opacity:.75}.fb-play:active{transform:translateY(4px);box-shadow:0 2px 0 #b8870a,0 8px 18px #0007}
+@keyframes fbPulse{50%{box-shadow:0 6px 0 #b8870a,0 14px 28px #0007,0 0 0 8px #ffe14d33}}
+.fb-stadium .fb-sizes{margin-bottom:6px}.fb-stadium .fb-chip{background:#0b2a19cc}.fb-stadium .fb-chip.on{background:#ffe14d}
+.fb-link{border:0;background:none;color:#fff;font-weight:700;font-size:14px;padding:8px;text-decoration:underline;text-underline-offset:3px}
+.fb-record{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:14px}.fb-record div{display:grid;place-items:center;padding:10px 4px;border-radius:14px;background:#123323;border:1px solid #1f5236}
+.fb-record b{font-size:22px}.fb-record small{color:#9fc9ae;font-size:11px}.fb-record .hot{border-color:#ff8a3d;background:linear-gradient(160deg,#4a2a12,#123323)}
+.fb-chal{padding:14px;border-radius:18px;background:linear-gradient(135deg,#21324a,#14261d);border:1px solid #33507a}.fb-chal.done{border-color:#ffe14d;box-shadow:0 0 0 2px #ffe14d44}
+.fb-chal-top{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;color:#bcd3f5;text-transform:uppercase;letter-spacing:.4px}.fb-chal-top em{font-style:normal;color:#13311f;background:#ffe14d;border-radius:999px;padding:3px 9px;text-transform:none}
+.fb-chal>b{display:block;font-size:19px;margin:6px 0 10px}.fb-bar{height:10px;border-radius:5px;background:#0b1a12;overflow:hidden}.fb-bar i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#4ade80,#ffe14d);transition:width .5s}
+.fb-chal-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;min-height:34px}.fb-chal-foot small{color:#c6d8ef}
+.fb-chal.done .fb-mini{animation:fbPulse 1.6s ease-in-out infinite}
+.fb-chal-mini{margin:6px 0 0;font-size:13px;font-weight:700;color:#cfe3ff}.fb-chal-mini.done{color:#ffe14d}
+@media (prefers-reduced-motion:reduce){.fb-play,.fb-lights i,.fb-chal.done .fb-mini{animation:none}}

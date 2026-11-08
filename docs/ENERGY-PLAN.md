@@ -51,6 +51,15 @@ library and in the background, remembers a pause, and otherwise starts on the fi
 button, your record (wins, goals, win streak), who is on the pitch right now, today's challenge with a cash reward
 ("Score 3 goals today: +¥300"), and cups as cards with a countdown. Goal and win moments get confetti and sound.
 
+✅ Built 8 Nov 2026 (football.js `stadium()`, switch `football_home`, default on). As built: a floodlit "Matchday" card
+with a pulsing ⚡ PLAY NOW (quick match at the chosen size), team sizes and "New match with friends"; your record (wins,
+goals, 🔥 win streak, played), kept in the save as `state.football` and counted for every match (on this phone or
+online); today's challenge, the same for everyone and rotating daily (score 3 goals / win 2 / play 3), with a progress
+bar and Collect ¥300 (+30 XP), also shown on the full-time card; open matches; cups. The prize is paid by economy.php
+`football-daily`, once a Beijing day per player. Trust note: the game counts the goals and wins, and the server only
+checks once a day (football results are not on the live server), so a cheater could collect ¥300 a day unplayed.
+Confetti on a win was already there.
+
 **Phase 4: Gossip Centre, one clear layout.** The dock is the menu, and nothing is offered twice:
 - Room becomes **Tonight**: what is live now (Hot Seat round, newest tips, TV pick) with one big action.
 - The old rows ("Read today's city gossip", "Share a useful tip") are folded into News and Spill.

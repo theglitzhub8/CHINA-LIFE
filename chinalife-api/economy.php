@@ -38,7 +38,7 @@ if ($method==='GET') {
 cl_rate('economy',30,60);
 $input=cl_body();
 $action=(string)($input['action']??'');
-if (!in_array($action,['job','mission','purchase','accident','hospital','checkup','pharmacy','insurance','club-drink','club-spray','school','jet'],true)) cl_fail('Choose a job, mission or purchase');
+if (!in_array($action,['job','mission','purchase','accident','hospital','checkup','pharmacy','insurance','club-drink','club-spray','school','jet','football-daily'],true)) cl_fail('Choose a job, mission or purchase');
 // v9: ChampagnePappi's bar in 007 Club. Price and XP live here only; one drink per 90 s, XP for the first 8 a day.
 $clubDrinks=['pappi-fizz'=>[120,10],'gold-rush'=>[300,25],'zero-proof'=>[40,5],'water'=>[0,0]];
 
@@ -251,6 +251,18 @@ try {
         cl_store_totals($uid,$game);
         $db->commit();
         json_response('success',$moved+['duplicate'=>false,'bonus'=>false],'Shift recorded.');
+    }
+    // Energy Phase 3 (docs/ENERGY-PLAN.md, switch football_home): today's football challenge (score 3 goals, win 2 or play
+    // 3 matches, counted by the game) pays ¥300 + 30 XP once a Beijing day. The game shows the Collect button at the
+    // pitch; the server does not ask for presence, so players who have not joined the shared city can collect too.
+    if ($action==='football-daily') {
+        $ref='football-daily:'.$day;
+        if (economy_seen('football-daily',$ref)) {$totals=economy_totals($game);$db->commit();json_response('success',$totals);}
+        $moved=cl_move_totals($uid,$game,300,30);
+        economy_note('football-daily',$ref,$moved['awarded'],30);
+        cl_store_totals($uid,$game);
+        $db->commit();
+        json_response('success',$moved+['duplicate'=>false],'Daily challenge complete.');
     }
     if ($action==='mission') {
         $key=(string)($input['key']??'');

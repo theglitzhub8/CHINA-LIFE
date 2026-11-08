@@ -1659,3 +1659,12 @@ test('world layout hours: valid hours saved and served; bad hours refused',async
   assert.equal((await set({mode:'one-city'})).data.layout.hours,undefined,'no hours: built-in defaults');
  }finally{await set({mode:'classic'})}
 });
+
+// Energy Phase 3 (switch football_home): today's football challenge pays ¥300 + 30 XP once a Beijing day, on the server ledger.
+test('football daily challenge: ¥300 and 30 XP once a day, a second claim is a duplicate',async()=>{
+ sql("USE chinalife_test; INSERT IGNORE INTO users(user_id,user_name) VALUES(77,'user77')");
+ assert.equal((await call(77,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China'}}})).httpStatus,200);
+ const first=await call(77,'economy.php','POST',{action:'football-daily'});
+ assert.equal(first.httpStatus,200,first.message);assert.equal(first.data.awarded,300);assert.equal(first.data.awardedXp,30);assert.equal(first.data.money,3500);assert.equal(first.data.duplicate,false);
+ const again=await call(77,'economy.php','POST',{action:'football-daily'});assert.equal(again.data.duplicate,true);assert.equal(again.data.money,3500,'paid once');
+});

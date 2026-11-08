@@ -242,3 +242,26 @@ test('the Football screen has a mic: it uses the room voice and shows Talk, Live
  mic.dispatchEvent(new c.Event('click',{bubbles:true}));await new Promise(r=>setTimeout(r,0));assert.equal(taps,1,'it uses the room voice');assert.equal(mic.textContent,'🔴 Live');
  v.muted=true;mic.dispatchEvent(new c.Event('click',{bubbles:true}));await new Promise(r=>setTimeout(r,0));assert.equal(taps,2);
 });
+
+// Energy Phase 3 (switch football_home, default ON): the stadium first screen, your record and today's challenge.
+test('stadium first screen: PLAY NOW, your record from the save, today\'s challenge and collecting ¥300 once',async()=>{
+ const {harness,fixture}=await import('./game-harness.mjs');const vm=await import('node:vm');
+ const t=harness({...fixture(),place:'football'}),c=t.context,calls=[];c.requestAnimationFrame=()=>0;c.cancelAnimationFrame=()=>{};
+ c.ChinaLifeSandbox={localOnly:true};c.ChinaLifeFlags={cast:k=>k==='football_home'?true:undefined,off:()=>false};
+ vm.runInContext(readFileSync('public/football-engine.js','utf8'),c);vm.runInContext(readFileSync('public/football.js','utf8'),c);
+ const day=new Date(Date.now()+8*3600e3).toISOString().slice(0,10);
+ t.game.state.football={played:4,won:2,drawn:1,lost:1,goals:5,streak:2,best:3,date:day,today:{played:3,won:2,goals:3},claimed:false};
+ await c.ChinaLifeFootball.open();const d=t.document,txt=()=>d.getElementById('fbScreen').textContent;
+ assert.ok(d.querySelector('.fb-stadium [data-fb="quick"]'),'one big PLAY NOW');assert.match(txt(),/PLAY NOW/);
+ assert.deepEqual([...d.querySelectorAll('.fb-record b')].map(b=>b.textContent),['2','5','🔥2','4'],'wins, goals, streak, played');
+ assert.match(txt(),/Today's challenge/);assert.match(txt(),/\+¥300/);
+ // Every challenge here is done (3 goals, 2 wins, 3 played), so Collect shows; offline it pays on this device.
+ const money=t.game.state.money;d.querySelector('[data-fb="claim"]').click();await new Promise(r=>setTimeout(r,0));await new Promise(r=>setTimeout(r,0));
+ assert.equal(t.game.state.money,money+300);assert.equal(t.game.state.football.claimed,true);assert.ok(!d.querySelector('[data-fb="claim"]'),'collected once');assert.match(txt(),/Claimed/);
+ // A new Beijing day starts a fresh challenge; the record stays.
+ t.game.state.football.date='2000-01-01';d.querySelector('[data-fb="size"][data-n="2"]').click();await new Promise(r=>setTimeout(r,0));
+ assert.equal(t.game.state.football.claimed,false);assert.equal(t.game.state.football.today.played,0);assert.equal(t.game.state.football.won,2);
+ // The save keeps it (forgiving: a broken number becomes 0, never a broken save).
+ assert.match(readFileSync('public/game.js','utf8'),/r\.football=f&&typeof f==='object'\?\{played:n\(f\.played\)/);
+ assert.match(readFileSync('chinalife-api/economy.php','utf8'),/\$action==='football-daily'/);assert.match(readFileSync('public/flags.js','utf8'),/football_home:true/);
+});
