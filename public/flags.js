@@ -25,7 +25,7 @@
  // Hospital plan (docs/HOSPITAL-PLAN.md): hospital_care, hospital_checkup, hospital_pharmacy, hospital_staff, hospital_visits, hospital_insurance, default OFF.
  const ONE_CITY_APPS=['whereto','people','football','gossiproom','hotseat','gossiptv','wallet','exchange','marketplace','hafrikEvents','services','hafrikBusiness','spaces','tasks','goals','rank','work','jobs','earn','studio','university','chinese','skills','academy','community','police','court','shop','settings','notifications','admin'];
  const APP_GROUPS={app_launches:['celebrate'],app_travel:['travel','guide','driving'],app_homes:['home','homes'],app_cantaball:['cantaball'],app_story:['story'],app_politics:['politics'],app_delivery:['delivery'],app_needs:['needs'],app_together:['together'],app_opportunities:['fortune'],app_journal:['journal','cloud'],app_meet:['meet'],app_firstday:['firstday'],app_events:['events']};
- const CAST={ai_characters:false,club_pappi:false,club_hypeman:true,club_dock:true,home_dock:true,gossip_dock:true,place_docks:true,music_everywhere:true,football_home:true,gossip_tonight:true,voting_v2:true,uni_years:false,uni_food:false,wardrobe_locks:false,micro_style:false,real_sitting:false,gossip_room:false,gossip_show:false,gossip_wall:false,gossip_city:false,gossip_rep:false,hospital_care:false,hospital_checkup:false,hospital_pharmacy:false,hospital_staff:false,hospital_visits:false,hospital_insurance:false,...Object.fromEntries(Object.keys(APP_GROUPS).map(k=>[k,false]))};
+ const CAST={ai_characters:false,club_pappi:false,club_hypeman:true,club_dock:true,home_dock:true,gossip_dock:true,place_docks:true,music_everywhere:true,football_home:true,gossip_tonight:true,voting_v2:true,voting_open:true,uni_years:false,uni_food:false,wardrobe_locks:false,micro_style:false,real_sitting:false,gossip_room:false,gossip_show:false,gossip_wall:false,gossip_city:false,gossip_rep:false,hospital_care:false,hospital_checkup:false,hospital_pharmacy:false,hospital_staff:false,hospital_visits:false,hospital_insurance:false,...Object.fromEntries(Object.keys(APP_GROUPS).map(k=>[k,false]))};
  const oneCityApp=id=>{if(ONE_CITY_APPS.includes(id))return true;const g=Object.keys(APP_GROUPS).find(k=>APP_GROUPS[k].includes(id));return g?cast(g):false};let served={};
  const offList=()=>{try{return new Set((localStorage.getItem('chinalife-flags-off')||'').split(',').map(s=>s.trim()).filter(Boolean))}catch{return new Set()}};
  const cast=key=>{if(!(key in CAST))return false;if(on().has(key))return true;if(offList().has(key))return false;return typeof served[key]==='boolean'?served[key]:CAST[key]};
@@ -35,7 +35,9 @@
   ONE_CITY_APPS,APP_GROUPS,
   appOff:id=>id==='ai'?!cast('ai_characters'):window.ChinaLifeOneCity?.active?.()?!oneCityApp(id)&&!on().has(id):OFF.apps.includes(id)&&!on().has(id),
   placeOff:id=>(OFF.places.includes(id)&&!on().has(id)||oneCityOff(id))&&!keepPlace(id),
-  off:name=>OFF.features.includes(name)&&!on().has(name)};
+  // Voting (Energy Phase 5, 8 Nov 2026): the owner opened voting for everyone. The appadmin switch voting_open (default
+  // ON) pauses it again; 'politics' stays in OFF.features for the record and for devices that set it off.
+  off:name=>name==='politics'?!cast('voting_open'):OFF.features.includes(name)&&!on().has(name)};
 })();
 // R1 lazy loader for rarely used scripts (admin weekly editor, flight cabin). Resolves once the script has run.
 (()=>{const done=new Map();window.ChinaLifeLazy=src=>{if(!done.has(src))done.set(src,new Promise((ok,fail)=>{const s=document.createElement('script');s.src=src+'?v=r1';s.onload=()=>ok();s.onerror=()=>{done.delete(src);fail(Error('Could not load '+src))};document.head.append(s)}));return done.get(src)}})();

@@ -28,3 +28,11 @@ test('ballot v2: an empty ballot is one Stand for election card; a new winner is
  assert.ok(!off.d.querySelector('.ballot-avatar.photo'));assert.ok(!off.d.querySelector('.ballot-empty'));
  const r=f=>fs.readFileSync(f,'utf8');assert.match(r('public/flags.js'),/voting_v2:true/);assert.match(r('chinalife-api/politics.php'),/cl_move_totals\(\$uid,\$game,50,10\)/);
 });
+test('voting is open for everyone by default; the voting_open switch pauses it in the game and on the server',async()=>{
+ const vm=await import('node:vm');const ctx={window:{},localStorage:{getItem:()=>null}};ctx.window.addEventListener=()=>{};ctx.window.dispatchEvent=()=>{};vm.createContext(ctx);
+ vm.runInContext('var window=this.window,localStorage=this.localStorage;'+fs.readFileSync('public/flags.js','utf8').split('// R1 lazy loader')[0],ctx);
+ const F=ctx.window.ChinaLifeFlags;assert.equal(F.off('politics'),false,'open by default');assert.equal(F.off('cantaball'),true,'other features unchanged');
+ assert.equal(F.appOff('politics'),true,'the old phone app stays hidden: the Voting Booth is the way in');
+ const r=f=>fs.readFileSync(f,'utf8');assert.match(r('chinalife-api/hafrik-features.php'),/'voting_open'=>'Voting is open/);assert.doesNotMatch(r('chinalife-api/hafrik-features.php').match(/function cl_hafrik_features_default_off[^\n]*/)[0],/voting_open/);
+ assert.match(r('chinalife-api/politics.php'),/cl_hafrik_features\(\)\['voting_open'\]\?\?true\)\)cl_fail\('Voting is paused for now',409\)/);
+});

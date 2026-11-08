@@ -5,6 +5,8 @@ $in=$method==='POST'?cl_body():$_GET;$city=$in['city']??'Shenyang';
 if(!is_string($city)||!in_array($city,cl_open_cities(),true))cl_fail('Choose an active city');
 if($method==='GET')json_response('success',cl_politics_snapshot($city));
 $office=$in['office']??'';if(!is_string($office)||!in_array($office,CL_OFFICES,true))cl_fail('Choose a valid office');
+// Voting can be paused from Hafrik integrations (switch voting_open, default ON): no new votes or nominations then.
+if(!(cl_hafrik_features()['voting_open']??true))cl_fail('Voting is paused for now',409);
 if(isset($_GET['vote'])){
  cl_politics_ensure_week($city);
  $candidate=filter_var($in['candidate_id']??null,FILTER_VALIDATE_INT);if(!$candidate||$candidate<1)cl_fail('Choose a candidate');

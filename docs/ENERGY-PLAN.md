@@ -88,6 +88,8 @@ a new winner is revealed once per election on each device: "🥁 China has decid
 name pops after a drumroll. The confirm step stays, because a vote cannot be changed.
 Found: voting itself is paused for every player. The whole `politics` feature is OFF in flags.js and can only be
 turned on per device (localStorage `chinalife-flags-on`), so live players see "Voting is paused" and no Vote buttons.
+Opened 8 Nov 2026 at the owner's request: flags.js `off('politics')` now follows the appadmin switch `voting_open`
+(default ON); with it off, the game says "Voting is paused" and politics.php refuses votes and nominations (409).
 
 **Phase 6: Link Up.** Bold pill tabs with live badges ("12 online", unread chats). Places become cards with the
 live head count, open or closed, and a 🔥 Hot now tag on the busiest one. Friends show where they are with

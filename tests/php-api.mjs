@@ -1699,4 +1699,10 @@ test('City Hall vote pays ¥50 + 10 XP once per office per election',async()=>{
  assert.equal(vote.httpStatus,200,vote.message);assert.equal(vote.data.reward.awarded,50);assert.equal(vote.data.reward.awardedXp,10);assert.equal(vote.data.reward.money,3250);
  assert.equal((await call(80,'politics.php?vote=1','POST',{city:'China',office:'governor',candidate_id:id})).httpStatus,409,'one vote per office');
  const noSave=await call(81,'politics.php?vote=1','POST',{city:'China',office:'governor',candidate_id:id});assert.equal(noSave.httpStatus,200,'the vote still counts');assert.equal(noSave.data.reward,null);
+ // The voting_open switch pauses voting and nominations on the server too.
+ assert.equal((await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{voting_open:false}})).httpStatus,200);
+ const paused=await call(79,'politics.php?vote=1','POST',{city:'China',office:'governor',candidate_id:id});assert.equal(paused.httpStatus,409);assert.match(paused.message,/paused/);
+ assert.equal((await call(80,'politics.php','POST',{city:'China',office:'deputy-governor',statement:'Later.'})).httpStatus,409,'no nominations either');
+ assert.equal((await call(80,'politics.php?city=China')).httpStatus,200,'the ballot still shows');
+ assert.equal((await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{voting_open:true}})).httpStatus,200);
 });
