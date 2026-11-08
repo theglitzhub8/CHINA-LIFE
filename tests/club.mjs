@@ -149,5 +149,32 @@ test('gossip dock: seven buttons in the Gossip Centre, each opens its screen; hi
  t.game.state.place='home';c.ChinaLifeClubDock.sync();assert.equal(dock.hidden,true,'not outside the Gossip Centre');
  const off=make(false);assert.ok(!off.d.getElementById('gossipDock'),'switched off');
  assert.match(r('public/flags.js'),/gossip_dock:true/);assert.match(r('chinalife-api/hafrik-features.php'),/'gossip_dock'=>'Gossip Centre: one row of buttons/);
- assert.match(r('public/game.js'),/cityNews:legacyGistScreen,gossipTv,/);assert.match(r('public/club-dock.js'),/body\.gossip-docked #worldUI :is\(#infoPanel,#quickVoice,\.quick-voice\)\{display:none!important\}/);
+ assert.match(r('public/game.js'),/cityNews:legacyGistScreen,gossipTv,/);assert.match(r('public/club-dock.js'),/body:is\(\.gossip-docked,\.spot-docked\) #worldUI :is\(#infoPanel,#quickVoice,\.quick-voice\)\{display:none!important\}/);
+});
+
+// Energy Phase 1 (switch place_docks, default ON): the same dock at the Football Pitch, Voting Booth, Hafrik HQ and Hospital.
+test('place docks: football, voting, HQ and hospital get a row of buttons that open their screens or press their place-bar items',async()=>{
+ const {harness,fixture}=await import('./game-harness.mjs');const vm=await import('node:vm');const fs=await import('node:fs');const r=f=>fs.readFileSync(f,'utf8');
+ const make=(place,flag=true)=>{const t=harness({...fixture(),place}),c=t.context,d=t.document,calls=[];t.game.state.created=true;
+  c.ChinaLifeFlags={cast:k=>k==='place_docks'?flag:false,appOff:()=>false};
+  // A fake place bar: one button per item title (the real one comes from the world's place panel).
+  const bar=d.getElementById('worldActivities')||Object.assign(d.createElement('div'),{id:'worldActivities'});if(!bar.isConnected)d.body.append(bar);bar.innerHTML='';
+  const item=text=>{const b=d.createElement('button');b.textContent=text;b.onclick=()=>calls.push(text);bar.append(b)};
+  ({football:['⚽ Play a match','⚽ Kick-about with locals','🎽 Watch from the stands','🥤 Buy a drink'],voting:['Open the ballot','Read election notices'],
+    hq:['📅 CEO appointment','💼 Work at Hafrik HQ','💼 Co-work at the Hafrik hub','Hafrik community meetup'],cityhospital:['See a doctor','Rest on the ward']})[place]?.forEach(item);
+  c.ChinaLifeFootball={open:()=>calls.push('football')};c.ChinaLifeHospital={health:()=>calls.push('health')};t.game.politics=()=>calls.push('ballot');
+  vm.runInContext(r('public/club-dock.js'),c);c.ChinaLifeClubDock.sync();return {t,c,d,calls}};
+ const keys=d=>[...d.getElementById('placeDock').querySelectorAll('[data-pd]')].filter(b=>!b.hidden).map(b=>b.dataset.pd);
+ const press=(x,k)=>x.d.querySelector('#placeDock [data-pd="'+k+'"]').onclick({stopPropagation(){}});
+ const fb=make('football');assert.ok(fb.d.body.classList.contains('spot-docked')&&fb.d.body.classList.contains('place-docked'));
+ assert.deepEqual(keys(fb.d),['play','cups','kick','watch','mic','more']);for(const k of ['play','kick','watch'])press(fb,k);
+ assert.deepEqual(fb.calls,['football','⚽ Kick-about with locals','🎽 Watch from the stands']);
+ fb.c.ChinaLifeClubDock.spot('more');const more=fb.d.getElementById('activityContent').textContent;assert.match(more,/More at the Football Pitch/);assert.match(more,/Buy a drink/);assert.doesNotMatch(more,/Kick-about/,'More lists only what the dock does not cover');
+ const vote=make('voting');assert.deepEqual(keys(vote.d),['vote','notices','chat','mic','more']);press(vote,'vote');press(vote,'notices');assert.deepEqual(vote.calls,['ballot','Read election notices']);
+ // HQ services come from a switch: no item, no button.
+ const hq=make('hq');assert.deepEqual(keys(hq.d),['work','ceo','cowork','meetup','mic','more']);press(hq,'meetup');assert.deepEqual(hq.calls,['Hafrik community meetup']);
+ const h=make('cityhospital');assert.deepEqual(keys(h.d),['doctor','rest','health','chat','mic','more']);for(const k of ['doctor','rest','health'])press(h,k);assert.deepEqual(h.calls,['See a doctor','Rest on the ward','health']);
+ h.t.game.state.place='home';h.c.ChinaLifeClubDock.sync();assert.equal(h.d.getElementById('placeDock').hidden,true,'not outside these places');
+ assert.ok(!make('football',false).d.getElementById('placeDock'),'switched off');
+ assert.match(r('public/flags.js'),/place_docks:true/);assert.match(r('chinalife-api/hafrik-features.php'),/'place_docks'=>'Football Pitch, Voting Booth, Hafrik HQ and Hospital/);
 });

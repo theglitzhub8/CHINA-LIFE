@@ -29,6 +29,12 @@ pause; a clearer Gossip Centre; nicer Link Up tabs; and more action and energy s
 - Hafrik HQ: 💼 Work · 🧾 Services · 📅 CEO · 💻 Co-work · 🤝 Meetup · 🎤 Mic · ••• More
 - Hospital: 🩺 Doctor · 🛏 Rest · ❤️ Health · 🎤 Mic · ••• More
 
+✅ Built 8 Nov 2026 (club-dock.js `SPOTS`, switch `place_docks`, default on). As built: Football ⚡ Play · 🏆 Cups ·
+⚽ Kick · 🎽 Watch · Mic · More; Voting 🗳 Vote · 📜 Notices · 💬 Chat · Mic · More (Candidates and Results wait for
+Phase 5, because today they are the same ballot screen); HQ 🧾 Services · 💼 Work · 📅 CEO · 💻 Co-work · 🤝 Meetup · Mic ·
+More; Hospital 🩺 Doctor · 🛏 Rest · ❤️ Health · 💬 Chat · Mic · More. A button whose place-bar item is missing (for
+example HQ Services when its switch is off) is hidden. The place bar and the round mic button are hidden there.
+
 **Phase 2: Music everywhere.** A small "now playing" pill that is always on screen (map, every place, home):
 song name, ▶ / ⏸ and ⏭. It remembers if you paused. Tapping it opens the full radio. When no artist songs are
 approved yet it plays the game's own beats, so it is never empty.
