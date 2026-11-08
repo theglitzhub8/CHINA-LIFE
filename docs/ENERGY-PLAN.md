@@ -78,6 +78,17 @@ The dock's More no longer repeats "Read today's city gossip" and "Share a useful
 with photo, slogan and a live vote bar; one tap to vote; an "I voted" sticker and a small reward; results reveal
 with a drumroll at close.
 
+✅ Built 8 Nov 2026 (game.js politicsScreen + votingV2 helpers, theme.css, politics.php, switch `voting_v2`, default
+on). As built: candidates show their Hafrik photo (initials when none) and the leader gets 👑 and a gold ring; a ballot
+with no candidates is one "Nobody is on the ballot yet · Stand for election" card plus "Who won last time" (not four
+empty offices, no tabs); search only shows with more than six candidates; each vote stamps a big "🗳️ I VOTED · +¥50 ·
++10 XP" and the hero keeps an I VOTED sticker once every open ballot is done; politics.php pays ¥50 + 10 XP per vote
+(server ledger, once per office per election, only for players with a saved character; the vote counts either way);
+a new winner is revealed once per election on each device: "🥁 China has decided · And the new Governor is…", the
+name pops after a drumroll. The confirm step stays, because a vote cannot be changed.
+Found: voting itself is paused for every player. The whole `politics` feature is OFF in flags.js and can only be
+turned on per device (localStorage `chinalife-flags-on`), so live players see "Voting is paused" and no Vote buttons.
+
 **Phase 6: Link Up.** Bold pill tabs with live badges ("12 online", unread chats). Places become cards with the
 live head count, open or closed, and a 🔥 Hot now tag on the busiest one. Friends show where they are with
 a Join button.

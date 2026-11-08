@@ -1687,3 +1687,16 @@ test('gossip Today here: tasks counted from real tips and reactions, ¥100 each 
  s=(await call(78,'gossip-today.php')).data;assert.deepEqual(s.tasks.map(t=>t.claimed),[true,false,true]);
  assert.equal((await call(78,'gossip-today.php','POST',{key:'nope'})).httpStatus,400);
 });
+
+// Energy Phase 5 (switch voting_v2): a ballot vote pays ¥50 + 10 XP once per office per election; no save, no pay.
+test('City Hall vote pays ¥50 + 10 XP once per office per election',async()=>{
+ sql("USE chinalife_test; INSERT IGNORE INTO users(user_id,user_name) VALUES(79,'user79'),(80,'user80'),(81,'user81')");
+ assert.equal((await call(80,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China'}}})).httpStatus,200);
+ assert.equal((await call(79,'politics.php','POST',{city:'China',office:'governor',statement:'Brighter streets.'})).httpStatus,200);
+ sql("USE chinalife_test; UPDATE chinalife_politics_candidates SET status='approved' WHERE candidate_id=79 AND city='China'");
+ const id=+(await call(80,'politics.php?city=China')).data.candidates.find(c=>c.office==='governor'&&c.name==='user79').id;
+ const vote=await call(80,'politics.php?vote=1','POST',{city:'China',office:'governor',candidate_id:id});
+ assert.equal(vote.httpStatus,200,vote.message);assert.equal(vote.data.reward.awarded,50);assert.equal(vote.data.reward.awardedXp,10);assert.equal(vote.data.reward.money,3250);
+ assert.equal((await call(80,'politics.php?vote=1','POST',{city:'China',office:'governor',candidate_id:id})).httpStatus,409,'one vote per office');
+ const noSave=await call(81,'politics.php?vote=1','POST',{city:'China',office:'governor',candidate_id:id});assert.equal(noSave.httpStatus,200,'the vote still counts');assert.equal(noSave.data.reward,null);
+});
