@@ -128,7 +128,7 @@
       else if (g?.state) { g.state.money += PRIZE; g.state.xp = (g.state.xp || 0) + 30; }
     } catch (err) { return say(err.message || 'Could not collect the prize right now'); }
     myRecord().claimed = true; try { g?.save?.(); g?.refresh?.(); } catch {}
-    say('🎉 +¥' + PRIZE + ' · challenge complete!'); buzz([40, 30, 80]); home();
+    say('🎉 +¥' + PRIZE + ' · challenge complete!'); buzz([40, 30, 80]); root.ChinaLifeCelebrate?.('🎯 Challenge complete!', '+¥' + PRIZE + ' · +30 XP'); home();
   }
   const tourRow = (t) => `<li><span><b>${esc(t.name)}</b><small>${t.team_size}v${t.team_size} · ${t.teams}/${t.max_teams} teams · ${statusLabel(t)}${+t.prize_coins ? ` · 🪙 ${(+t.prize_coins).toLocaleString()}` : ''}</small></span><button class="fb-mini" data-fb="t-open" data-id="${esc(t.id)}">View</button></li>`;
   const statusLabel = (t) => t.status === 'registering' ? 'starts ' + when(t.starts_at) : t.status === 'running' ? 'in play' : t.status === 'done' ? 'finished' : 'cancelled';

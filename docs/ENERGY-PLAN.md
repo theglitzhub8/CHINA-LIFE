@@ -105,4 +105,15 @@ words are unchanged; closed places are greyed. Counts need the shared city (join
 **Phase 7: Energy and coming back.** Shared across every place: a daily streak with a reward, a first-visit-of-the-day
 bonus per place, "live now" pulses on the dock buttons, and a celebration effect for wins and rewards.
 
+✅ Built 8 Nov 2026 (public/energy.js, chinalife-api/daily-visit.php, switch `energy_loop`, default on). The daily
+streak already existed (daily.php: ¥50 and 20 XP times the day, up to day 7), so it was not duplicated; it got a face:
+once a Beijing day, when the reward is ready, a "Welcome back! 🔥 Day N streak" card with the 7-day ladder (done days
+ticked, today glowing, ¥ per day, MAX on day 7) and one big Claim (Later closes it). First visit of the day: ¥20 + 5 XP
+per place (the seven), and ¥100 + 20 XP for all seven in a day, paid by daily-visit.php once each; in the shared city
+the visit must match your presence. Live pulses (a red dot and a pulsing icon): football Play with open matches or
+cups, Vote when an open office has candidates and no vote from you, hospital Health when a need is under 30%, gossip
+Room when a Today here task is ready to collect. ChinaLifeCelebrate (banner, confetti, a short chime) now fires for the
+streak, first visits, the football challenge and the gossip tasks. Trust note: first visits outside the shared city
+are not checked against a place, so the most a player can take is ¥240 a day.
+
 Map look is untouched in every phase: the docks and the music pill sit in the same layer as the club dock.

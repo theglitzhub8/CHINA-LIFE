@@ -1706,3 +1706,21 @@ test('City Hall vote pays ¥50 + 10 XP once per office per election',async()=>{
  assert.equal((await call(80,'politics.php?city=China')).httpStatus,200,'the ballot still shows');
  assert.equal((await call(1,'admin.php','POST',{action:'set_hafrik_features',features:{voting_open:true}})).httpStatus,200);
 });
+
+// Energy Phase 7 (switch energy_loop): the first visit of the day to each of the seven places, and all seven.
+test('daily visits: ¥20 + 5 XP per place once a day, ¥100 + 20 XP for all seven, presence must match',async()=>{
+ sql("USE chinalife_test; INSERT IGNORE INTO users(user_id,user_name) VALUES(82,'user82')");
+ assert.equal((await call(82,'daily-visit.php','POST',{place:'football'})).httpStatus,409,'no save yet');
+ assert.equal((await call(82,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China'}}})).httpStatus,200);
+ assert.equal((await call(82,'daily-visit.php','POST',{place:'cafe'})).httpStatus,400,'only the seven places');
+ const first=await call(82,'daily-visit.php','POST',{place:'football'});assert.equal(first.httpStatus,200,first.message);assert.equal(first.data.awarded,20);assert.equal(first.data.awardedXp,5);assert.equal(first.data.money,3220);
+ assert.equal((await call(82,'daily-visit.php','POST',{place:'football'})).data.duplicate,true,'once a day');
+ // In the shared city, the visit must be where you are.
+ await call(82,'presence.php','POST',presence('China','gist'));
+ assert.equal((await call(82,'daily-visit.php','POST',{place:'voting'})).httpStatus,409);
+ assert.equal((await call(82,'daily-visit.php','POST',{place:'gist'})).data.awarded,20);
+ await call(82,'presence.php','DELETE');
+ for(const p of ['night','voting','hq','cityhospital']){const r=await call(82,'daily-visit.php','POST',{place:p});assert.equal(r.data.all,false,p)}
+ const last=await call(82,'daily-visit.php','POST',{place:'university'});assert.equal(last.data.all,true);assert.equal(last.data.awarded,120,'¥20 and the ¥100 bonus');assert.equal(last.data.awardedXp,25);assert.equal(last.data.money,3220+20*6+100);
+ const s=(await call(82,'daily-visit.php')).data;assert.equal(s.visited.length,7);assert.equal(s.bonus,true);
+});
