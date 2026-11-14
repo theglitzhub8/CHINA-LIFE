@@ -44,6 +44,13 @@ Today's Three (0/3) · 🔥 Streak and rank · 🔔 Notifications · 💬 Messag
 **This touches the approved top bar (CLAUDE.md):** only the ⌄ is added, nothing is restyled or moved, and the owner
 sees it before it goes live.
 
+✅ Built 14 Nov 2026 (public/today-panel.js, switch `today_panel`, default on). As built: instead of a second ⌄ (the
+city line already has one), a small "🎯 1/3" pill sits in the empty space of the clock chip and turns gold with a pulse
+when something waits (the streak reward or the bonus); tapping it or the clock drops one card: the time and day,
+Today's Three, streak and rank, Notifications, Messages, Link Up (players and friends online), mood, wallet, and
+switches for Music and Clean screen. Map change, for the owner: only the pill is added to the top bar; on narrow phones
+it moves to the city line, and where there is no room at all it hides and the clock shows a small gold dot instead.
+
 **Phase 3: The next-step chip.** One chip under the top bar: "🎯 Drop a gossip tip · +¥100 · Go", always the next
 unfinished task of Today's Three; ✓ and the bonus when all three are done. It replaces the "Find your feet" goal chip
 when the switch is on, and hides with Clean screen. Also in the approved layout: owner sees it first.
