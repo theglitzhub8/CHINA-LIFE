@@ -31,6 +31,13 @@ everyone each day, seeded from the date, so the server knows them without storin
 "New tasks in 9h 12m" at the top. The streak (daily.php) sits at the top of the same screen as one row.
 Opens from the existing ⏱ Today chip and the phone's Tasks app, which today show a plain list.
 
+✅ Built 14 Nov 2026 (public/today.js, chinalife-api/today.php, switch `todays_three`, default on). As built: Hustle =
+work one shift or one night mission; Life = play a football match or visit 3 places; Link-up = drop a tip, vote a Hot
+Seat round or react to 5 tips (the hospital check-up is weekly, so it is not in the pool, and elections are not always
+open). The picks come from the date; the swap and the bonus are ledger rows (today-swap, today-bonus). Opens from the
+⏱ Today chip and the phone's Tasks app (game.js tasksScreen); signed-out players are asked to log in. Admin → Energy
+has a "Today's Three done" column.
+
 **Phase 2: The Today panel.** A small ⌄ on the clock chip in the top bar opens one sheet:
 Today's Three (0/3) · 🔥 Streak and rank · 🔔 Notifications · 💬 Messages · 😊 Mood and needs · ¥ Wallet ·
 🟢 Players online · 🎵 Music on/off · 🌙 Clean screen on/off. Each row opens the screen we already have.

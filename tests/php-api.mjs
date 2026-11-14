@@ -1745,6 +1745,34 @@ test('daily visits: ¥20 + 5 XP per place once a day, ¥100 + 20 XP for all seve
  const s=(await call(82,'daily-visit.php')).data;assert.equal(s.visited.length,7);assert.equal(s.bonus,true);
 });
 
+// Today's Three (docs/TODAY-PLAN.md Phase 1): three tasks a day counted on the server, one free swap, a ¥300 Daily Bonus.
+test('today: three tasks from the ledger and the wall, one swap, the bonus once and only when all three are done',async()=>{
+ const day=new Date(Date.now()+8*3600e3).toISOString().slice(0,10);
+ sql("USE chinalife_test; INSERT IGNORE INTO users(user_id,user_name) VALUES(85,'user85'),(86,'user86')");
+ assert.equal((await call(85,'today.php','POST',{op:'bonus'})).httpStatus,409,'no save yet');
+ assert.equal((await call(85,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China'}}})).httpStatus,200);
+ let s=(await call(85,'today.php')).data;assert.deepEqual(s.tasks.map(t=>t.group),['hustle','life','linkup']);assert.equal(s.day,day);assert.equal(s.swapped,false);
+ assert.ok(s.endsIn>0&&s.endsIn<=86400);assert.deepEqual(s.bonus,{coins:300,xp:50,claimed:false});assert.ok(s.tasks.every(t=>!t.done&&t.count===0));
+ assert.equal((await call(85,'today.php','POST',{op:'bonus'})).httpStatus,409,'not before all three');
+ assert.equal((await call(85,'today.php','POST',{op:'swap',group:'nope'})).httpStatus,400);
+ // Swap the Link-up task away from the Hot Seat (no round in the test), otherwise swap Hustle.
+ const link=s.tasks[2].key,group=link==='hotseat'?'linkup':'hustle',before=s.tasks.find(t=>t.group===group).key;
+ const sw=await call(85,'today.php','POST',{op:'swap',group});assert.equal(sw.httpStatus,200,sw.message);assert.equal(sw.data.swapped,true);assert.notEqual(sw.data.tasks.find(t=>t.group===group).key,before);
+ assert.equal((await call(85,'today.php','POST',{op:'swap',group:'life'})).httpStatus,409,'one swap a day');
+ // Hustle and Life: the rows the job, mission, football and first-visit endpoints write.
+ const rows=['job','job:cafe-job:'+day],more=[['mission','mission:entry:'+day],['fb-full','fb:'+day+':1:2:w'],['place-visit','visit:night:'+day],['place-visit','visit:gist:'+day],['place-visit','visit:hq:'+day]];
+ sql('USE chinalife_test; INSERT INTO chinalife_economy_actions(user_id,action,ref,coins,xp,created_at) VALUES '+[rows,...more].map(([a,r])=>`(85,'${a}','${r}',0,0,NOW())`).join(','));
+ s=(await call(85,'today.php')).data;assert.equal(s.tasks[0].done,true);assert.equal(s.tasks[1].done,true);assert.equal(s.tasks[2].done,false);
+ // Link-up: a real tip and five reactions on the wall.
+ assert.equal((await call(85,'gist-night.php','POST',{action:'post',city:'China',body:'The fountain lights went pink tonight'})).httpStatus,200);
+ const ids=[];for(let i=0;i<5;i++){const p=await call(86,'gist-night.php','POST',{action:'post',city:'China',body:'Square tip '+i+' for today'});assert.equal(p.httpStatus,200,p.message);ids.push(+p.data.id)}
+ for(const id of ids)await call(85,'gist-night.php','POST',{action:'react',city:'China',id,kind:'laugh'});
+ s=(await call(85,'today.php')).data;assert.ok(s.tasks.every(t=>t.done),JSON.stringify(s.tasks));
+ const paid=await call(85,'today.php','POST',{op:'bonus'});assert.equal(paid.httpStatus,200,paid.message);assert.equal(paid.data.awarded,300);assert.equal(paid.data.awardedXp,50);assert.equal(paid.data.bonus.claimed,true);
+ assert.equal((await call(85,'today.php','POST',{op:'bonus'})).data.duplicate,true,'once a day');
+ const e=await call(1,'admin.php','POST',{action:'energy'});assert.ok(e.data.days[0].three>=1);
+});
+
 // Admin → Energy and the evening streak reminder (switch streak_reminder).
 test('energy admin counts the day, and the streak reminder finds streaks ending tonight',async()=>{
  const bj=d=>new Date(Date.now()+8*3600e3-d*86400e3).toISOString().slice(0,10),today=bj(0),yesterday=bj(1);
