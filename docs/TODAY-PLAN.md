@@ -72,6 +72,14 @@ ready · +¥300", and once collected it goes back to its usual hints.
 countdown, **Top 3 in your city** (football goals today, votes, gossip rep), your own line ("Not on the board yet"),
 the reward, one big Go. Server data exists for all three.
 
+✅ Built 14 Nov 2026 (public/event-screens.js, chinalife-api/event-screens.php, switch `event_screens`, default on).
+Opens from a new 🏟 Events row in the Today panel (tap the clock), which names what is on ("Hot Seat Hour is live",
+"Match Day · Hot Seat at 20:00"). Three cards, live first: ⚽ Match Day (ends at Beijing midnight, today's challenge,
+goals today, the next cup and its prize, ¥300), 🗳 Election (the open race with the most votes, its candidates, races
+you voted in, ¥50 + 10 XP a race), 🔥 Hot Seat Hour (live, or when it starts, ¥20 a right call). Gossip rep stays
+private (it hints at who wrote which gist), so the Hot Seat board ranks **right calls**: votes that matched the room.
+"Your city" = players last seen in that city. Read only; the map screen gains nothing.
+
 **Phase 5: What's new and How it works.** A "What's new" sheet once after an update (dated cards, each with a grey
 "where to find it" box), and a one-time "How it works · Got it" card on Today's Three, Football, Voting and the
 Gossip Centre.

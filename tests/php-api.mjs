@@ -1796,6 +1796,28 @@ test('today gym: arrive first, a workout counts after 60 s at the gym or with pr
  if(day>='2026-11-15'){const s=(await call(88,'today.php')).data;const life=s.tasks.find(t=>t.group==='life');if(life.key==='gym')assert.equal(life.done,true)}
 });
 
+// Event screens (docs/TODAY-PLAN.md Phase 4): Match Day, the election and Hot Seat Hour with the Top 3 in your city.
+test('event screens: goals today, the open race and right calls tonight, each with a countdown, your line and the reward',async()=>{
+ const day=new Date(Date.now()+8*3600e3).toISOString().slice(0,10);
+ sql("USE chinalife_test; INSERT IGNORE INTO users(user_id,user_name) VALUES(89,'user89'),(90,'user90'),(91,'user91')");
+ for(const id of [89,90,91])await call(id,'presence.php','POST',presence('China','gist'));
+ sql(`USE chinalife_test; INSERT INTO chinalife_economy_actions(user_id,action,ref,coins,xp,created_at) VALUES(89,'fb-full','fb:${day}:1:2:w',0,0,NOW()),(89,'fb-full','fb:${day}:2:1:l',0,0,NOW()),(90,'fb-full','fb:${day}:1:1:d',0,0,NOW()),(91,'fb-full','fb:${day}:1:0:l',0,0,NOW())`);
+ sql(`USE chinalife_test; INSERT INTO chinalife_hot_seat(user_id,city,place,body,status,day,true_votes,cap_votes,result,created_at,closes_at) VALUES(5,'China','gist','Event screen test gist','revealed','${day}',2,1,'true',NOW(),NOW());
+  SET @g=LAST_INSERT_ID(); INSERT INTO chinalife_hot_seat_votes(gist_id,user_id,vote,day,created_at) VALUES(@g,89,'true','${day}',NOW()),(@g,90,'true','${day}',NOW()),(@g,91,'cap','${day}',NOW())`);
+ const get=(id,hour)=>fetch(base+'/api/v4/chinalife/event-screens.php?city=China',{headers:{Authorization:'Bearer test-'+id,'X-Test-Today':day+' '+hour}}).then(async r=>({...(await r.json()),httpStatus:r.status}));
+ let r=await get(90,'21:00');assert.equal(r.httpStatus,200,r.message);const ev=Object.fromEntries(r.data.events.map(e=>[e.kind,e]));
+ assert.deepEqual(Object.keys(ev).sort(),['election','hotseat','match']);
+ const m=ev.match;assert.equal(JSON.stringify(m.top.slice(0,2).map(x=>[x.name,x.n])),JSON.stringify([['user89',3],['user90',1]]));
+ assert.equal(m.top.some(x=>x.name==='user91'),false,'no goals, not on the board');assert.deepEqual(m.me,{n:1,rank:2});assert.equal(m.top[1].me,true);
+ assert.equal(m.reward.coins,300);assert.ok(m.endsAt>r.data.now&&m.endsAt-r.data.now<=86400);assert.ok(['goals','won','played'].includes(m.challenge.key));
+ const h=ev.hotseat;assert.equal(h.live,true);assert.equal(h.endsAt-h.startsAt,2*3600,'20:00 to 22:00 by default');assert.equal(h.startsAt%86400,12*3600,'20:00 Beijing');assert.deepEqual(h.me,{n:1,rank:2});
+ assert.equal(h.top.some(x=>x.name==='user91'),false,'a wrong call is not a right call');assert.equal(h.top.some(x=>x.name==='user5'),false,'the author is never shown');
+ assert.equal(h.reward.coins,20);
+ r=await get(91,'10:00');const h2=r.data.events.find(e=>e.kind==='hotseat');assert.equal(h2.live,false);assert.equal(h2.startsAt%86400,12*3600);assert.deepEqual(h2.me,{n:0,rank:null});
+ const el=r.data.events.find(e=>e.kind==='election');assert.deepEqual(el.reward,{coins:50,xp:10});assert.ok(Array.isArray(el.top));
+ assert.equal((await call(null,'event-screens.php')).httpStatus,401);
+});
+
 // Admin → Energy and the evening streak reminder (switch streak_reminder).
 test('energy admin counts the day, and the streak reminder finds streaks ending tonight',async()=>{
  const bj=d=>new Date(Date.now()+8*3600e3-d*86400e3).toISOString().slice(0,10),today=bj(0),yesterday=bj(1);

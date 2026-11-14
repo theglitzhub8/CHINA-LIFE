@@ -10,7 +10,7 @@ Size: S = an hour or two, M = half a day, L = a day or more. "Map" = touches the
 ## Next: finish the Today plan (docs/TODAY-PLAN.md)
 1. ✅ (14 Nov, live after the next ship) **Phase 3, the next-step chip** (S, Map). The "Next step" chip under the top bar shows the next unfinished task of
    Today's Three with Go ("🎯 Drop a tip · +¥100 · Go"), then the bonus, then the usual hints.
-2. **Phase 4, event screens** (M). One screen for Match Day / cups, elections and Hot Seat Hour: countdown, Top 3 in
+2. ✅ (14 Nov, live after the next ship) **Phase 4, event screens** (M). One screen for Match Day / cups, elections and Hot Seat Hour: countdown, Top 3 in
    your city (goals today, votes, gossip rep), your own line, the reward, one Go.
 3. **Phase 5, What's new and How it works** (S). A dated "What's new" sheet once after an update; a one-time
    "How it works · Got it" card on Today's Three, Football, Voting, the Gossip Centre and the Gym.

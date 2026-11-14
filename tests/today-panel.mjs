@@ -27,3 +27,11 @@ test('Today panel: one list of rows, each opening the screen it names; music swi
 test('Today panel: the switch off leaves the top bar exactly as it was',()=>{
  const {doc,P}=setup({flag:false});P.pill();P.open();assert.equal(doc.getElementById('todayPill'),null);assert.equal(doc.getElementById('tdpCard'),null);
 });
+test('Today panel: an 🏟 Events row names what is on and opens the event screen',async()=>{
+ const t=harness({...fixture(),place:'home',city:'China'}),c=t.context,calls=[];t.game.state.created=true;
+ c.ChinaLifeFlags={cast:()=>undefined,off:()=>false};c.ChinaLifeToday={on:()=>false};
+ c.ChinaLifeEventScreens={on:()=>true,load:async()=>calls.push('load'),summary:()=>({hot:true,text:'Hot Seat Hour is live'}),open:()=>calls.push('events')};
+ vm.runInContext(fs.readFileSync('public/today-panel.js','utf8'),c);const P=c.ChinaLifeTodayPanel;P.open();await flush();
+ const r=t.document.querySelector('[data-tdp="events"]');assert.ok(r);assert.match(r.textContent,/EventsHot Seat Hour is live/);assert.ok(r.classList.contains('hot'));
+ r.onclick();assert.deepEqual(calls,['load','events']);
+});
