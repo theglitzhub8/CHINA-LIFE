@@ -50,7 +50,7 @@ test('admin switch legacy_people_nearby brings the old Nearby screen back, and t
 test('Places lists the seven venues with live player counts, You are here, closed hours and Join/Go via Where to?',async()=>{
  const u=await client({players:[P('ada','gist'),P('bayo','gist'),P('chen','football'),P('dami','football'),P('efe','football'),P('fang','private-home')]});
  await u.S.open('places');
- const rows=[...u.body().querySelectorAll('.lu-place')];assert.equal(rows.length,7);
+ const rows=[...u.body().querySelectorAll('.lu-place')];assert.equal(rows.length,8,'the seven and the Gym');
  const row=id=>u.body().querySelector('.lu-place-main[data-peer="'+id+'"]').closest('.lu-place');
  assert.match(row('gist').textContent,/You’re here.*2 others here/);assert.ok(row('gist').querySelector('[data-social="venue-chat"]'),'venue chat sits on your own place');
  assert.match(row('football').textContent,/3 players here/);assert.match(row('football').querySelector('[data-social="lu-go"]').textContent,/Join/);
@@ -92,7 +92,7 @@ test('profiles show the football record and hot seat calls when the API sends th
 
 test('guests see the Places list with a Hafrik log in prompt',async()=>{
  const u=await client({signedIn:false,joined:false});await u.S.open('places');
- assert.equal(u.body().querySelectorAll('.lu-place').length,7);assert.ok(u.body().querySelector('[data-social="hafrik-login"]'));
+ assert.equal(u.body().querySelectorAll('.lu-place').length,8);assert.ok(u.body().querySelector('[data-social="hafrik-login"]'));
 });
 
 test('football and hot seat expose read-only summaries for Link Up; Where to? exposes go',()=>{

@@ -206,7 +206,8 @@ function cl_open_cities(): array {
 }
 // One-city world layout (docs/ONE-CITY.md). Admin switches which venues are open, the Where-to board and flights.
 // Mode 'classic' turns every city, venue, the map and flights back on. Nothing is deleted either way.
-const CL_ONE_CITY_PLACES=['night','gist','voting','football','hq','cityhospital','university'];
+// The Gym joined the shared city on 15 Nov 2026 (the China map already had the Community Gym building, hidden until now).
+const CL_ONE_CITY_PLACES=['night','gist','voting','football','hq','cityhospital','university','gym'];
 function cl_valid_world_layout($v): ?array {
     if (!is_array($v)) return null;$mode=$v['mode']??'one-city';
     if (!in_array($mode,['one-city','classic'],true)) return null;
@@ -225,12 +226,16 @@ function cl_valid_world_layout($v): ?array {
         foreach ($h as $id=>$pair) {if (!in_array($id,CL_ONE_CITY_PLACES,true)||!is_array($pair)||count($pair)!==2) return null;[$a,$b]=array_values($pair);
             if (!is_int($a)||!is_int($b)||$a<0||$a>23||$b<1||$b>24||$a===$b) return null;$hours[$id]=[$a,$b];}
         if ($hours) $out['hours']=$hours;}
+    if ($mode==='one-city') $out['places_v']=2;
     return $out;
 }
 // Null when the row is missing, so the client keeps its built-in default.
 function cl_world_layout(): ?array {
     $row=cl_one("SELECT value FROM chinalife_settings WHERE name='world_layout'");
-    return $row?cl_valid_world_layout(json_decode($row['value'],true)):null;
+    if (!$row) return null;$v=json_decode($row['value'],true);
+    // Layouts saved before the Gym existed get it once; an admin save after that (places_v 2) is kept as chosen.
+    if (is_array($v)&&($v['mode']??'one-city')==='one-city'&&is_array($v['places']??null)&&!isset($v['places_v'])&&!in_array('gym',$v['places'],true)) $v['places'][]='gym';
+    return cl_valid_world_layout($v);
 }
 // Player ranks (XP ladder) are configured by admins. They are game status only and never grant admin access.
 function cl_default_ranks(): array {

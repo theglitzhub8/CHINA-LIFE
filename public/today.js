@@ -14,6 +14,7 @@ const TASKS={
  mission:['🪩','Do a night mission at a club',5,'Club XP'],
  match:['⚽','Play a football match',4,'Counts for the ¥300 challenge'],
  places:['🗺','Visit 3 places',6,'+¥20 each'],
+ gym:['🏋️','Work out at the gym',3,'Trains Fitness'],
  tip:['🤫','Drop a tip on the Gossip wall',2,'+¥100 in the Gossip Centre'],
  hotseat:['🔥','Vote on a Hot Seat round',2,'+¥100 in the Gossip Centre'],
  react:['😂','React to 5 tips on the wall',2,'+¥100 in the Gossip Centre'],
@@ -25,6 +26,7 @@ const GO={
  shift:()=>{close();G()?.earn?.()},
  mission:()=>{if(travel('night'))G()?.toast?.('Night missions are on the club’s bottom bar.')},
  match:()=>{if(travel('football'))window.ChinaLifeFootball?.open?.();else G()?.toast?.('Off to the pitch. Tap ⚡ Play when you arrive.')},
+ gym:()=>{if(travel('gym'))G()?.toast?.('Pick a workout from the gym’s list.');else G()?.toast?.('Off to the gym. Do one workout there.')},
  places:()=>{close();if(window.ChinaLifeWhereTo?.show)window.ChinaLifeWhereTo.show();else G()?.toast?.('Open the map and pick a place.')},
  tip:()=>{close();G()?.gistNight?.()},
  react:()=>{close();G()?.gistNight?.()},
@@ -57,7 +59,17 @@ async function open(){const g=G();if(!g?.showScreen)return;const mine=++opened;
  if(!signed()){$('tdLogin')?.addEventListener('click',()=>{close();window.ChinaLifeCloud?.open?.()});return}
  try{const d=await api();if(mine===opened)paint(d)}catch(e){if(mine===opened&&$('tdBody'))$('tdBody').innerHTML='<p class="td-muted">'+esc(e.message||'Today’s tasks are not available right now.')+'</p>'}}
 async function peek(){if(!on()||!signed())return null;try{return last=await api()}catch{return null}}
-window.ChinaLifeToday={open,on,peek,get last(){return last},TASKS,GROUPS};
+// The gym: a workout happens on this phone, so it tells the server when you arrive and when a workout is done there;
+// today.php counts it after a minute at the gym (or straight away when the shared city shows you at the gym).
+const gym={day:'',arrived:false,acts:null,sent:false,next:0};
+async function gymTick(){const s=G()?.state;if(!on()||!signed()||!s?.created)return;const day=new Date(Date.now()+8*3600e3).toISOString().slice(0,10);
+ if(gym.day!==day)Object.assign(gym,{day,arrived:false,acts:null,sent:false,next:0});if(gym.sent)return;
+ if(s.place!=='gym'){gym.acts=null;return}const acts=+(s.stats?.activities||0);
+ if(gym.acts===null){gym.acts=acts;if(!gym.arrived){gym.arrived=true;api('POST',{op:'gym-arrive'}).catch(()=>{gym.arrived=false})}return}
+ if(acts<=gym.acts||Date.now()<gym.next)return;gym.next=Date.now()+15000;
+ try{const d=await api('POST',{op:'workout'});gym.sent=true;last=d;G()?.toast?.('🏋️ Workout counted for Today’s Three');window.ChinaLifeTodayPanel?.pill?.()}catch(e){if(!/longer|first/i.test(e.message||''))gym.sent=true}}
+setInterval(gymTick,3000);
+window.ChinaLifeToday={open,on,peek,get last(){return last},TASKS,GROUPS,gymTick,_gym:gym};
 const css=document.createElement('style');css.textContent=
  '.td{display:grid;gap:10px;padding-bottom:16px}.td-muted{color:#587675;font-size:14px}'+
  '.td-top{display:flex;align-items:center;gap:12px;padding:4px 2px}.td-top b{display:block;font-size:17px;color:#0C3F44}.td-top small{color:#587675;font-weight:700;font-size:12px}'+

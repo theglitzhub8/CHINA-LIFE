@@ -263,14 +263,15 @@ test('admins open cities and every player receives the open list',async()=>{
 
 test('admins set the one-city world layout and every player receives it',async()=>{
  // migration-world-layout.sql seeds the one-city default once and never overwrites it.
- assert.deepEqual((await call(5,'events.php?city=China')).data.world_layout,{mode:'one-city',city:'China',places:['night','gist','voting','football','hq','cityhospital','university'],where_to:true,flights:false});
+ // The seed predates the Gym (15 Nov 2026), so the Gym is added when it is read; an admin save is kept as chosen.
+ assert.deepEqual((await call(5,'events.php?city=China')).data.world_layout,{mode:'one-city',city:'China',places:['night','gist','voting','football','hq','cityhospital','university','gym'],where_to:true,flights:false,places_v:2});
  assert.equal((await call(5,'admin.php','POST',{action:'set_world_layout',layout:{mode:'one-city'}})).httpStatus,403);
  assert.equal((await call(1,'admin.php','POST',{action:'set_world_layout',layout:{mode:'one-city',places:['casino']}})).httpStatus,400);
  assert.equal((await call(1,'admin.php','POST',{action:'set_world_layout',layout:{mode:'everything'}})).httpStatus,400);
  assert.equal((await call(1,'admin.php','POST',{action:'set_world_layout',layout:{mode:'one-city',npc_density:1.5}})).httpStatus,400);
  assert.equal((await call(1,'admin.php','POST',{action:'set_world_layout',layout:{mode:'one-city',npc_density:0.5}})).data.layout.npc_density,0.5);
  const r=await call(1,'admin.php','POST',{action:'set_world_layout',layout:{mode:'one-city',city:'China',places:['night','gist','hq']}});
- assert.deepEqual(r.data.layout,{mode:'one-city',city:'China',places:['night','gist','hq'],where_to:true,flights:false});
+ assert.deepEqual(r.data.layout,{mode:'one-city',city:'China',places:['night','gist','hq'],where_to:true,flights:false,places_v:2});
  assert.deepEqual((await call(5,'events.php?city=China')).data.world_layout.places,['night','gist','hq']);
  assert.equal((await call(1,'admin.php','POST',{action:'world_layout'})).data.layout.mode,'one-city');
  await call(1,'admin.php','POST',{action:'set_world_layout',layout:{mode:'classic'}});
@@ -1771,6 +1772,28 @@ test('today: three tasks from the ledger and the wall, one swap, the bonus once 
  const paid=await call(85,'today.php','POST',{op:'bonus'});assert.equal(paid.httpStatus,200,paid.message);assert.equal(paid.data.awarded,300);assert.equal(paid.data.awardedXp,50);assert.equal(paid.data.bonus.claimed,true);
  assert.equal((await call(85,'today.php','POST',{op:'bonus'})).data.duplicate,true,'once a day');
  const e=await call(1,'admin.php','POST',{action:'energy'});assert.ok(e.data.days[0].three>=1);
+});
+
+// The Gym in Today's Three: the phone marks arriving at the gym; a workout counts after a minute there.
+test('today gym: arrive first, a workout counts after 60 s at the gym or with presence there, never from another place',async()=>{
+ const day=new Date(Date.now()+8*3600e3).toISOString().slice(0,10);
+ sql("USE chinalife_test; INSERT IGNORE INTO users(user_id,user_name) VALUES(87,'user87')");
+ assert.equal((await call(87,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China'}}})).httpStatus,200);
+ let r=await call(87,'today.php','POST',{op:'workout'});assert.equal(r.httpStatus,409);assert.match(r.message,/gym first/);
+ assert.equal((await call(87,'today.php','POST',{op:'gym-arrive'})).data.wait,60);
+ r=await call(87,'today.php','POST',{op:'workout'});assert.equal(r.httpStatus,409);assert.match(r.message,/longer/);
+ sql(`USE chinalife_test; UPDATE chinalife_economy_actions SET created_at=DATE_SUB(NOW(),INTERVAL 2 MINUTE) WHERE user_id=87 AND action='gym-arrive'`);
+ await call(87,'presence.php','POST',presence('China','gist'));
+ r=await call(87,'today.php','POST',{op:'workout'});assert.equal(r.httpStatus,409);assert.match(r.message,/Be at the gym/,'not from another place');
+ await call(87,'presence.php','DELETE');
+ r=await call(87,'today.php','POST',{op:'workout'});assert.equal(r.httpStatus,200,r.message);
+ assert.equal(sql(`USE chinalife_test; SELECT COUNT(*) FROM chinalife_economy_actions WHERE user_id=87 AND action='gym-workout' AND ref='gym-workout:${day}'`).trim(),'1');
+ assert.equal((await call(87,'today.php','POST',{op:'workout'})).httpStatus,200,'twice is harmless');
+ // In the shared city at the gym, a workout counts straight away.
+ sql("USE chinalife_test; INSERT IGNORE INTO users(user_id,user_name) VALUES(88,'user88')");
+ assert.equal((await call(88,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China'}}})).httpStatus,200);
+ await call(88,'presence.php','POST',presence('China','gym'));assert.equal((await call(88,'today.php','POST',{op:'workout'})).httpStatus,200);
+ if(day>='2026-11-15'){const s=(await call(88,'today.php')).data;const life=s.tasks.find(t=>t.group==='life');if(life.key==='gym')assert.equal(life.done,true)}
 });
 
 // Admin → Energy and the evening streak reminder (switch streak_reminder).

@@ -7,7 +7,7 @@ const H=h=>h*60;
 test('layout defaults to one city with the seven destinations and classic turns everything back on',()=>{
  const {ChinaLifeOneCity:o}=load();
  assert.equal(o.active(),true);assert.equal(o.layout.city,'China');
- assert.deepEqual([...o.layout.places],['night','gist','voting','football','hq','cityhospital','university']);
+ assert.deepEqual([...o.layout.places],['night','gist','voting','football','hq','cityhospital','university','gym']);assert.equal(o.allows('gym'),true,'the Gym joined on 15 Nov 2026');
  assert.equal(o.whereTo(),true);assert.equal(o.flights(),false);
  assert.equal(o.allows('night'),true);assert.equal(o.allows('cafe'),false);assert.equal(o.allows('home'),true);assert.equal(o.allows('home-villa'),true);
  // Server JSON is snake_case; unknown venues are dropped.

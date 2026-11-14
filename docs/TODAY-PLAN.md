@@ -51,6 +51,13 @@ Today's Three, streak and rank, Notifications, Messages, Link Up (players and fr
 switches for Music and Clean screen. Map change, for the owner: only the pill is added to the top bar; on narrow phones
 it moves to the city line, and where there is no room at all it hides and the clock shows a small gold dot instead.
 
+**Added 14 Nov 2026 at the owner's request: the Gym.** The Community Gym (already in the China map data, hidden in
+shared-city mode) is now the 8th shared-city place (one-city.js PLACES/ORDER, common.php CL_ONE_CITY_PLACES; a saved
+layout from before gets it once when read, and an admin save after that is kept as chosen). Today's Three gets a Life
+task "Work out at the gym" from 15 Nov: the phone reports arriving at the gym and a finished workout there
+(today.php gym-arrive / workout); it counts after 60 s at the gym, or straight away when the shared city shows you at
+the gym, never from another place. First visits stay the seven places. Link Up shows the Gym card in orange.
+
 **Phase 3: The next-step chip.** One chip under the top bar: "🎯 Drop a gossip tip · +¥100 · Go", always the next
 unfinished task of Today's Three; ✓ and the bonus when all three are done. It replaces the "Find your feet" goal chip
 when the switch is on, and hides with Clean screen. Also in the approved layout: owner sees it first.

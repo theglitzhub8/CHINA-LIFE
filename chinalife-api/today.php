@@ -17,6 +17,11 @@ const TD_POOL=[
     'life'=>['match'=>1,'places'=>3],
     'linkup'=>['tip'=>1,'hotseat'=>1,'react'=>5],
 ];
+// The gym joined the Life group on 15 Nov 2026 (from a new day, so nobody's task changes halfway through a day).
+// A workout happens on the phone, so the server checks the player was at the gym: a fresh shared-city presence there,
+// or an arrival mark ({op:'gym-arrive'}) at least TD_GYM_SECONDS old before {op:'workout'} counts.
+const TD_GYM_FROM='2026-11-15',TD_GYM_SECONDS=60;
+function td_pool(string $day): array {$p=TD_POOL;if ($day>=TD_GYM_FROM) $p['life']['gym']=1;return $p;}
 $day=cl_beijing_day();
 $since=(new DateTimeImmutable($day.' 00:00:00',new DateTimeZone('Asia/Shanghai')))->getTimestamp();
 $endsIn=$since+86400-time();
@@ -35,6 +40,7 @@ function td_count(string $key): int {
         'mission'=>td_ledger('mission','mission:%:'.$day,'mission:bonus:%'),
         'match'=>td_ledger('fb-full','fb:'.$day.':%'),
         'places'=>td_ledger('place-visit','visit:%:'.$day),
+        'gym'=>td_ledger('gym-workout','gym-workout:'.$day),
         'tip'=>$opt('SELECT COUNT(*) n FROM chinalife_gist_night WHERE user_id=? AND official=0 AND UNIX_TIMESTAMP(created_at)>=?','ii',[$uid,$since]),
         'hotseat'=>$opt('SELECT COUNT(*) n FROM chinalife_hot_seat_votes WHERE user_id=? AND day=?','is',[$uid,$day]),
         'react'=>$opt('SELECT COUNT(*) n FROM chinalife_gist_night_reactions WHERE user_id=? AND UNIX_TIMESTAMP(created_at)>=?','ii',[$uid,$since]),
@@ -48,7 +54,7 @@ function td_swapped(): ?string {
 function td_tasks(): array {
     global $day;
     $swapped=td_swapped();$out=[];
-    foreach (TD_POOL as $group=>$items) {
+    foreach (td_pool($day) as $group=>$items) {
         $keys=array_keys($items);$i=crc32($day.'|'.$group)%count($keys);if ($swapped===$group) $i=($i+1)%count($keys);
         $key=$keys[$i];$target=$items[$key];$n=td_count($key);
         $out[]=['group'=>$group,'key'=>$key,'count'=>min($n,$target),'target'=>$target,'done'=>$n>=$target];
@@ -64,14 +70,28 @@ $state=function() use ($uid,$day,$endsIn,$bonusRef): array {
 if ($method==='GET') json_response('success',$state());
 
 $input=cl_body();$op=(string)($input['op']??'');
-if (!in_array($op,['swap','bonus'],true)) cl_fail('Choose swap or bonus');
+if (!in_array($op,['swap','bonus','gym-arrive','workout'],true)) cl_fail('Choose swap or bonus');
+if ($op==='gym-arrive'||$op==='workout') {
+    $insert=fn(string $a,string $r)=>cl_run('INSERT IGNORE INTO chinalife_economy_actions(user_id,action,ref,coins,xp,created_at) VALUES(?,?,?,0,0,NOW())','iss',[$uid,$a,$r]);
+    $here=cl_one('SELECT place FROM chinalife_presence WHERE user_id=? AND seen_at>=DATE_SUB(NOW(),INTERVAL 20 SECOND)','i',[$uid]);
+    $atGym=$here?explode('@',(string)$here['place'])[0]==='gym':null;
+    if ($atGym===false) cl_fail('Be at the gym',409);
+    if ($op==='gym-arrive') {$insert('gym-arrive','gym-arrive:'.$day);json_response('success',['wait'=>TD_GYM_SECONDS]);}
+    if (!$atGym) {
+        $mark=cl_one("SELECT UNIX_TIMESTAMP(NOW())-UNIX_TIMESTAMP(created_at) age FROM chinalife_economy_actions WHERE user_id=? AND action='gym-arrive' AND ref=?",'is',[$uid,'gym-arrive:'.$day]);
+        if (!$mark) cl_fail('Go to the gym first',409);
+        if ((int)$mark['age']<TD_GYM_SECONDS) cl_fail('Stay at the gym a little longer',409);
+    }
+    $insert('gym-workout','gym-workout:'.$day);
+    json_response('success',$state(),'Workout counted.');
+}
 if (!cl_one('SELECT user_id FROM chinalife_saves WHERE user_id=?','i',[$uid])) cl_fail('Save your character first',409);
 $db->begin_transaction();
 try {
     $game=cl_lock_character($uid);
     if ($op==='swap') {
         $group=(string)($input['group']??'');
-        if (!isset(TD_POOL[$group])) {$db->rollback();cl_fail('Choose a task to swap');}
+        if (!isset(td_pool($day)[$group])) {$db->rollback();cl_fail('Choose a task to swap');}
         if (td_swapped()!==null) {$db->rollback();cl_fail('You already used today’s free swap',409);}
         foreach (td_tasks() as $t) if ($t['group']===$group&&$t['done']) {$db->rollback();cl_fail('That task is already done',409);}
         cl_run('INSERT INTO chinalife_economy_actions(user_id,action,ref,coins,xp,created_at) VALUES(?,?,?,0,0,NOW())','iss',[$uid,'today-swap','today-swap:'.$day.':'.$group]);

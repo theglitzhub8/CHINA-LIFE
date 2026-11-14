@@ -33,3 +33,12 @@ test('Today’s Three: signed out asks to log in; the switch off leaves the old 
  const {doc,T,posts}=setup({signed:false});await T.open();await flush();assert.match(doc.getElementById('tdBody').textContent,/Log in with Hafrik/);assert.equal(posts.length,0);
  const off=setup({flag:false});assert.equal(off.T.on(),false);
 });
+test('Today’s Three gym: arriving at the gym is reported once, and a workout there is reported after it is done',async()=>{
+ const {t,c,posts,T}=setup();const s=t.game.state;s.stats=s.stats||{};s.stats.activities=4;s.place='home';
+ await T.gymTick();assert.equal(posts.length,0,'nothing away from the gym');
+ s.place='gym';await T.gymTick();await flush();assert.equal(JSON.stringify(posts),JSON.stringify([{op:'gym-arrive'}]));
+ await T.gymTick();await flush();assert.equal(posts.length,1,'no workout yet');
+ s.stats.activities=5;await T.gymTick();await flush();assert.equal(JSON.stringify(posts.at(-1)),JSON.stringify({op:'workout'}));
+ s.stats.activities=6;await T.gymTick();await flush();assert.equal(posts.length,2,'reported once a day');
+ assert.match(T.TASKS.gym[1],/Work out at the gym/);
+});

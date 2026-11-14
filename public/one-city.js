@@ -13,12 +13,13 @@
     hq: { kind: 'hq', icon: '🏢', label: 'Hafrik HQ', line: 'Services, team and community help', hours: [9, 21] },
     cityhospital: { kind: 'hospital', icon: '🏥', label: 'Hospital', line: 'Check-ups, rest and recovery', hours: [0, 24] },
     university: { kind: 'university', icon: '🎓', label: 'University', line: 'Lectures, study and campus life', hours: [7, 22] },
+    gym: { kind: 'gym', icon: '🏋️', label: 'Gym', line: 'Workouts, basketball and dance classes', hours: [6, 23] },
   };
   // The one-city Club (venue id 'night'). Change the name here, or per server with world_layout.club_name (admin).
   // Classic mode keeps the original '007 Club' naming and its Shenyang dressing; nothing is deleted.
   const CLUB = Object.freeze({ name: 'Club', tagline: 'Afrobeats · Amapiano · all night', track: 'amapiano', bpm: 113, classic: '007 Club' });
   const clubLabel = (v) => String(v ?? '').replace(/[\u0000-\u001f<>"]/g, '').replace(/\s+/g, ' ').trim().slice(0, 24);
-  const ORDER = ['night', 'gist', 'voting', 'football', 'hq', 'cityhospital', 'university'];
+  const ORDER = ['night', 'gist', 'voting', 'football', 'hq', 'cityhospital', 'university', 'gym'];
   // npcDensity: share of each venue's ambient crowd that is spawned (1 = the classic crowd). The founder asked for fewer
   // NPCs per venue on 27 Oct 2026, so one-city mode spawns 40% and keeps at most 2 hosts. NPC definitions are untouched.
   const NPC_DENSITY = 0.4;

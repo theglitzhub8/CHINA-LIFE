@@ -68,7 +68,7 @@ html:root body #socialDialog.lu-v2 #socialTabs .lu-tab-count.online{display:inli
 #socialDialog.lu-v2 .lu-place{--k1:#1F8E93;--k2:#e8f6f5;position:relative;padding:10px 12px 10px 10px;border:0;border-radius:20px;background:linear-gradient(120deg,var(--k2),#fff 70%);box-shadow:0 4px 14px rgb(12 63 68 / .08),inset 4px 0 0 var(--k1)}
 #socialDialog.lu-v2 .lu-place[data-kind="club"]{--k1:#8b3fe4;--k2:#f3ecff}#socialDialog.lu-v2 .lu-place[data-kind="gossip"]{--k1:#f08a24;--k2:#fff3e6}
 #socialDialog.lu-v2 .lu-place[data-kind="voting"]{--k1:#3b6fe0;--k2:#ebf1ff}#socialDialog.lu-v2 .lu-place[data-kind="pitch"]{--k1:#22a35a;--k2:#e9f8ef}
-#socialDialog.lu-v2 .lu-place[data-kind="hq"]{--k1:#1F8E93;--k2:#e6f6f5}#socialDialog.lu-v2 .lu-place[data-kind="hospital"]{--k1:#e0414f;--k2:#ffeef0}#socialDialog.lu-v2 .lu-place[data-kind="university"]{--k1:#4f46e5;--k2:#eeedff}
+#socialDialog.lu-v2 .lu-place[data-kind="hq"]{--k1:#1F8E93;--k2:#e6f6f5}#socialDialog.lu-v2 .lu-place[data-kind="hospital"]{--k1:#e0414f;--k2:#ffeef0}#socialDialog.lu-v2 .lu-place[data-kind="university"]{--k1:#4f46e5;--k2:#eeedff}#socialDialog.lu-v2 .lu-place[data-kind="gym"]{--k1:#ea580c;--k2:#fff1e6}
 #socialDialog.lu-v2 .lu-place-icon{width:50px;height:50px;font-size:26px;border-radius:15px;border:0;background:#fff;box-shadow:0 3px 10px rgb(0 0 0 / .08)}
 #socialDialog.lu-v2 .lu-place-copy b{font-size:16px}
 #socialDialog.lu-v2 .lu-place.here{box-shadow:0 0 0 2px var(--k1),0 6px 18px rgb(12 63 68 / .12)}
