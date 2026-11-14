@@ -62,6 +62,12 @@ the gym, never from another place. First visits stay the seven places. Link Up s
 unfinished task of Today's Three; ✓ and the bonus when all three are done. It replaces the "Find your feet" goal chip
 when the switch is on, and hides with Clean screen. Also in the approved layout: owner sees it first.
 
+✅ Built 14 Nov 2026 (today.js next(), one line in r3.js nextStep, switch `today_next`, default on). As built: the
+existing "Next step" chip (no new chip, so the map screen gains nothing) now shows, after "Daily reward ready" and an
+urgent low need, the next unfinished task of Today's Three with its icon and money ("Drop a tip on the Gossip wall ·
++¥100", "Visit 3 places (1/3) · +¥20"); tapping it does the task's Go. When all three are done it shows "Daily Bonus
+ready · +¥300", and once collected it goes back to its usual hints.
+
 **Phase 4: Event screens.** One shared screen for Match Day (cups), elections and Hot Seat Hour: a coloured card with a
 countdown, **Top 3 in your city** (football goals today, votes, gossip rep), your own line ("Not on the board yet"),
 the reward, one big Go. Server data exists for all three.

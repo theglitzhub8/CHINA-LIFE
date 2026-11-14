@@ -11,6 +11,7 @@ function nextStep(){const st=G()?.state;if(!st?.created)return null;const vis=id
  if(onboardStep())return null; // the coach card speaks during onboarding
  if($('worldRankBadge')&&!$('worldRankBadge').hidden)return {icon:'gift',text:'Daily reward ready',go:()=>$('worldRank').click()};
  const low=NEEDS.find(([k])=>Number(st.needs?.[k]??100)<30);if(low&&st.place!==low[2])return {icon:low[3],text:window.ChinaLifeOneCity?.brand?.(low[1])??low[1],go:()=>G().walkIn(low[2])};
+ const td=window.ChinaLifeToday?.next?.();if(td)return td; // Today's Three (docs/TODAY-PLAN.md Phase 3)
  const today=vis('worldToday');if(today&&!/nothing due/i.test($('worldTodayText')?.textContent||''))return {icon:'clock',text:$('worldTodayText').textContent,go:()=>today.click()};
  const drunk=vis('worldDrunk');if(drunk&&!/sober/i.test($('worldDrunkText')?.textContent||''))return {icon:'drinks',text:'Drinks · '+$('worldDrunkText').textContent,go:()=>drunk.click()};
  const ev=vis('worldEvent');if(ev)return {icon:'party',text:($('worldEventTitle')?.textContent||'City event')+' · '+($('worldEventText')?.textContent||''),go:()=>ev.click()};

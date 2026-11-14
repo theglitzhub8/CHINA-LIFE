@@ -42,3 +42,11 @@ test('Today’s Three gym: arriving at the gym is reported once, and a workout t
  s.stats.activities=6;await T.gymTick();await flush();assert.equal(posts.length,2,'reported once a day');
  assert.match(T.TASKS.gym[1],/Work out at the gym/);
 });
+test('Next step chip: the next unfinished task with its money, then the bonus, then nothing; the switch hides it',async()=>{
+ const {T}=setup();await T.peek();let n=T.next();assert.equal(n.text,'Work one shift at your job');assert.equal(n.icon,'hand');
+ T.last.tasks[0].done=true;n=T.next();assert.equal(n.text,'Visit 3 places (1/3) · +¥20');
+ T.last.tasks.forEach(t=>t.done=true);n=T.next();assert.match(n.text,/Daily Bonus ready · \+¥300/);
+ T.last.bonus.claimed=true;assert.equal(T.next(),null,'all done: the chip shows its usual hints');
+ const tip=setup({state:{day:'d',endsIn:9,swapped:false,bonus:{coins:300,xp:50,claimed:false},tasks:[task('hustle','shift',1,1),task('life','match',1,1),task('linkup','tip',0,1)]}});await tip.T.peek();assert.equal(tip.T.next().text,'Drop a tip on the Gossip wall · +¥100');
+ const off=setup();off.c.ChinaLifeFlags={cast:k=>k==='today_next'?false:undefined};await off.T.peek();assert.equal(off.T.next(),null);
+});

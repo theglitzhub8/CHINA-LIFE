@@ -8,7 +8,7 @@ Size: S = an hour or two, M = half a day, L = a day or more. "Map" = touches the
 - **Bottom docks for the University and the Gym**: every shared-city place now has the club-style row.
 
 ## Next: finish the Today plan (docs/TODAY-PLAN.md)
-1. **Phase 3, the next-step chip** (S, Map). The "Next step" chip under the top bar shows the next unfinished task of
+1. ✅ (14 Nov, live after the next ship) **Phase 3, the next-step chip** (S, Map). The "Next step" chip under the top bar shows the next unfinished task of
    Today's Three with Go ("🎯 Drop a tip · +¥100 · Go"), then the bonus, then the usual hints.
 2. **Phase 4, event screens** (M). One screen for Match Day / cups, elections and Hot Seat Hour: countdown, Top 3 in
    your city (goals today, votes, gossip rep), your own line, the reward, one Go.

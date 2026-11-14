@@ -69,7 +69,16 @@ async function gymTick(){const s=G()?.state;if(!on()||!signed()||!s?.created)ret
  if(acts<=gym.acts||Date.now()<gym.next)return;gym.next=Date.now()+15000;
  try{const d=await api('POST',{op:'workout'});gym.sent=true;last=d;G()?.toast?.('🏋️ Workout counted for Today’s Three');window.ChinaLifeTodayPanel?.pill?.()}catch(e){if(!/longer|first/i.test(e.message||''))gym.sent=true}}
 setInterval(gymTick,3000);
-window.ChinaLifeToday={open,on,peek,get last(){return last},TASKS,GROUPS,gymTick,_gym:gym};
+// Phase 3 (switch today_next, default ON): the "Next step" chip (r3.js) shows the next unfinished task with Go, then the
+// bonus when all three are done. Null when there is nothing to say, so the chip falls back to its usual hints.
+const ICON={shift:'hand',mission:'party',match:'play',places:'map',gym:'jump',tip:'chat',hotseat:'hype',react:'smile'};
+function next(){if(!on()||window.ChinaLifeFlags?.cast?.('today_next')===false||!signed()||!last?.tasks)return null;const b=last.bonus||{};
+ const todo=last.tasks.find(t=>!t.done);
+ if(!todo)return b.claimed?null:{icon:'gift',text:'Daily Bonus ready · +¥'+(b.coins||300),go:open};
+ const [,words,,reward]=TASKS[todo.key]||[];if(!words)return null;const money=/\+¥\d+/.exec(reward||'')?.[0];
+ return {icon:ICON[todo.key]||'nav',text:words+(todo.target>1?' ('+todo.count+'/'+todo.target+')':'')+(money?' · '+money:''),go:()=>GO[todo.key]?.()}}
+window.addEventListener('chinalife:cloudready',()=>{if(!last)peek()});
+window.ChinaLifeToday={open,on,peek,next,get last(){return last},TASKS,GROUPS,gymTick,_gym:gym};
 const css=document.createElement('style');css.textContent=
  '.td{display:grid;gap:10px;padding-bottom:16px}.td-muted{color:#587675;font-size:14px}'+
  '.td-top{display:flex;align-items:center;gap:12px;padding:4px 2px}.td-top b{display:block;font-size:17px;color:#0C3F44}.td-top small{color:#587675;font-weight:700;font-size:12px}'+
