@@ -29,8 +29,8 @@ Size: S = an hour or two, M = half a day, L = a day or more. "Map" = touches the
 - **Watch Admin → Energy** for a week: "Came back next day" and "Today's Three done" tell us what works.
 
 ## Housekeeping
-- **Merge to main.** Live is deployed from `feature/one-city-where-to`; CLAUDE.md says only `main` is deployed.
-  Merge the branch into `main` so the record matches what players have.
+- ✅ **Merged to main** (14 Nov, fast-forward to da1d67b, nothing deployed by it). `main` now matches live. Live still
+  updates from `feature/one-city-where-to`; push each ship to both so they stay equal.
 - **Perf Batch 1** (from an earlier session): prepared on `perf/batch-1`, never deployed. Check if still wanted.
 - **One flaky test** (a timing test fails only under full-suite load). Make it wait for the condition instead of a
   fixed time.
