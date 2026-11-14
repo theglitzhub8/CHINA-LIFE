@@ -1818,6 +1818,43 @@ test('event screens: goals today, the open race and right calls tonight, each wi
  assert.equal((await call(null,'event-screens.php')).httpStatus,401);
 });
 
+// Weekly story (docs/ROADMAP.md item 4): the week of 23 Nov 2026 is Exam Week. Step N opens on day N; each step counts
+// only actions after it opened and after the previous claim; catch-up is allowed; step 7 pays the prize and a badge.
+test('week story: steps open a day apart, count only fresh actions, catch up later in the week, and pay the prize once',async()=>{
+ sql("USE chinalife_test; INSERT IGNORE INTO users(user_id,user_name) VALUES(92,'user92')");
+ assert.equal((await call(92,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China'}}})).httpStatus,200);
+ const at=t=>Math.floor(Date.parse(t.replace(' ','T')+':00+08:00')/1000);
+ const ws=(now,data)=>fetch(base+'/api/v4/chinalife/week-story.php',{method:data?'POST':'GET',headers:{Authorization:'Bearer test-92','X-Test-Today':now,...(data?{'content-type':'application/json'}:{})},body:data?JSON.stringify(data):undefined}).then(async r=>{const j=await r.json();return {...j,...(j.data||{}),httpStatus:r.status}});
+ const row=(action,ref,t)=>sql(`USE chinalife_test; INSERT INTO chinalife_economy_actions(user_id,action,ref,coins,xp,created_at) VALUES(92,'${action}','${ref}',0,0,FROM_UNIXTIME(${at(t)}))`);
+ const does={'visit:university':t=>row('place-visit','visit:university:'+t.slice(0,10),t),class:t=>row('school','school:class:tones:'+t.slice(0,10)+':'+t.slice(11),t),shift:t=>row('job','job:cafe-job:'+t.slice(0,10)+':'+t.slice(11),t),
+  tip:t=>sql(`USE chinalife_test; INSERT INTO chinalife_gist_night(user_id,city,body,official,created_at) VALUES(92,'China','Story tip',0,FROM_UNIXTIME(${at(t)}))`),
+  match:t=>row('fb-full','fb:'+t.slice(0,10)+':'+t.slice(11)+':1:w',t),mission:t=>row('mission','mission:entry:'+t.slice(0,10)+':'+t.slice(11),t)};
+ // Before Monday 16 Nov: when it starts, and nothing to claim.
+ let s=await ws('2026-11-14 23:00');assert.equal(s.soon,true);assert.equal(s.startsIn,3600+86400);assert.equal(s.story.title,'Night Owl Week');
+ assert.equal((await ws('2026-11-14 23:00',{op:'claim'})).httpStatus,409);
+ s=await ws('2026-11-23 10:00');assert.equal(s.httpStatus,200,s.message);
+ assert.equal(s.story.id,'exam');assert.equal(s.week,'2026-11-23');assert.equal(s.current,1);assert.equal(s.steps.length,7);
+ assert.equal(s.steps[0].opensIn,0);assert.equal(s.steps[1].opensIn,14*3600,'step 2 opens at midnight');assert.equal(s.endsIn,6*86400+14*3600);
+ assert.equal((await ws('2026-11-23 10:00',{op:'claim'})).httpStatus,409,'not before the step is done');
+ does['visit:university']('2026-11-23 09:00');s=await ws('2026-11-23 10:00');assert.equal(s.steps[0].ready,true);
+ let c=await ws('2026-11-23 10:00',{op:'claim'});assert.equal(c.httpStatus,200,c.message);assert.equal(c.awarded,50);assert.equal(c.current,2);
+ // Step 2 (a class) opens Tuesday: a class on Monday does not count for it.
+ does.class('2026-11-23 10:30');c=await ws('2026-11-23 23:00',{op:'claim'});assert.equal(c.httpStatus,409);assert.match(c.message,/opens later/);
+ s=await ws('2026-11-24 08:00');assert.equal(s.steps[1].ready,false,'Monday’s class is too early');
+ does.class('2026-11-24 09:00');assert.equal((await ws('2026-11-24 09:30',{op:'claim'})).httpStatus,200);
+ // Catch up on Sunday: every step is open; each action counts once, after the previous claim.
+ s=await ws('2026-11-29 12:00');assert.equal(s.current,3);assert.ok(s.steps.every(x=>x.opensIn===0));
+ const kinds=s.steps.map(x=>x.kind);assert.equal(JSON.stringify(kinds),JSON.stringify(['visit:university','class','shift','tip','class','match','mission']));
+ let minute=0;const t=()=>'2026-11-29 12:'+String(++minute).padStart(2,'0');
+ for(let n=3;n<=7;n++){const when=t();does[kinds[n-1]](when);c=await ws(t(),{op:'claim'});assert.equal(c.httpStatus,200,n+': '+c.message);
+  if(n===4){s=await ws(t());assert.equal(s.steps[4].ready,false,'a class from Tuesday never counts again')}}
+ assert.equal(c.finished,true);assert.equal(c.awarded,1050);assert.equal(c.done,7);assert.equal(c.current,null);
+ assert.equal(sql("USE chinalife_test; SELECT COUNT(*) FROM chinalife_badges WHERE user_id=92 AND name LIKE 'Exam Week%week of 23 Nov'").trim(),'1','one badge');
+ assert.equal((await ws(t(),{op:'claim'})).httpStatus,409,'finished');
+ // The next week is a new story.
+ s=await ws('2026-11-30 10:00');assert.equal(s.week,'2026-11-30');assert.notEqual(s.story.id,'exam');assert.equal(s.current,1);
+});
+
 // Admin → Energy and the evening streak reminder (switch streak_reminder).
 test('energy admin counts the day, and the streak reminder finds streaks ending tonight',async()=>{
  const bj=d=>new Date(Date.now()+8*3600e3-d*86400e3).toISOString().slice(0,10),today=bj(0),yesterday=bj(1);

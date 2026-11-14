@@ -16,8 +16,13 @@ Size: S = an hour or two, M = half a day, L = a day or more. "Map" = touches the
    "How it works · Got it" card on Today's Three, Football, Voting, the Gossip Centre and the Gym.
 
 ## Then: more reasons to come back (ideas from Vatarverse, in ChinaLife's own style)
-4. **Weekly story** (M). A 7-step story each week ("Exam Week", "Fitness Week"): one step a day, each a place and an
+4. ✅ (14 Nov, first story Monday 16 Nov, live after the next ship) **Weekly story** (M). A 7-step story each week ("Exam Week", "Fitness Week"): one step a day, each a place and an
    action, a prize at step 7. Uses the same server checks as Today's Three.
+   As built (chinalife-api/week-story.php, public/week-story.js, switch `week_story`): four stories rotate by ISO week
+   (Exam Week, Fitness Week, Rising Star, Night Owl Week; 16 Nov is Night Owl). Step N opens on day N, missed steps can be
+   caught up; a step counts only actions after it opened and after the previous claim. ¥50 + 10 XP a step; step 7 adds
+   ¥1,000 + 100 XP and a badge. Opens from the Today panel (📖 row) and the What's new card. Add a story: one entry in
+   WS_STORIES (PHP) and seven lines in LINES (JS) with the same id.
 5. **City Album** (L). A card for each place visited and each thing done; finish a set for a prize; trade spares.
 6. **Season track** (M). Today's Three, the weekly story and events give Season XP; tiers with rewards over a month.
 7. **Gym extras** (S, optional). The Gym in first-visit bonuses (eight places), a live pulse on Train when friends are

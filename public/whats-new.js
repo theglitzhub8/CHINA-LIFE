@@ -16,6 +16,7 @@ const shut=()=>{try{$('activityDialog')?.close()}catch{}};
 /* ---------- What's new ---------- */
 // Newest first. id never changes once shipped; add new cards at the top.
 const NEWS=[
+ {id:'week-story',date:'2026-11-14',icon:'📖',title:'Weekly story',text:'A new 7-step story every week from Monday 16 Nov, like Exam Week or Fitness Week. One step a day, ¥50 a step, and a ¥1,000 prize and a badge at the end.',where:'Tap the clock at the top → 📖 the story’s name',go:()=>window.ChinaLifeWeekStory?.open?.()},
  {id:'events',date:'2026-11-14',icon:'🏟',title:'Events',text:'Match Day, the election and Hot Seat Hour on one screen: who’s leading in your city, your place and the prize.',where:'Tap the clock at the top → 🏟 Events',go:()=>window.ChinaLifeEventScreens?.open?.()},
  {id:'today-three',date:'2026-11-14',icon:'🎯',title:'Today’s Three',text:'Three quick tasks every day, one Go each. Finish all three for a ¥300 Daily Bonus. One free swap a day.',where:'Tap the clock → Today’s Three, or the Next step chip under the top bar',go:()=>window.ChinaLifeToday?.open?.()},
  {id:'gym',date:'2026-11-14',icon:'🏋️',title:'The Gym',text:'A new place in the city: train, play basketball, join a dance class and meet people. A workout can be one of your daily tasks.',where:'Map → Where to? → 🏋️ Gym',go:()=>{shut();window.ChinaLifeWhereTo?.go?.('gym')}},
