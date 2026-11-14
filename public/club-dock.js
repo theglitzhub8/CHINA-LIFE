@@ -114,6 +114,19 @@ const SPOTS={
   ['doctor','🩺','Doctor',()=>pressSpot(/See a doctor/),/See a doctor/],
   ['rest','🛏','Rest',()=>pressSpot(/Rest on the ward/),/Rest on the ward/],
   ['health','❤️','Health',()=>window.ChinaLifeHospital?.health?window.ChinaLifeHospital.health():G()?.needs?.(),/Your health/,!0],
+  ['chat','💬','Chat',chat,null,!0]]},
+ // Added 14 Nov 2026 (owner: every place gets the club's bottom row): the University and the Gym.
+ university:{name:'the University',icon:'🎓',buttons:[
+  ['campus','🏛️','Campus',()=>window.ChinaLifeUniversity?.open?window.ChinaLifeUniversity.open():pressSpot(/Continue your student story/),null,!0],
+  ['class','📝','Class',()=>pressSpot(/Chinese class/),/Chinese class/],
+  ['lecture','🎓','Lecture',()=>pressSpot(/Attend a lecture/),/Attend a lecture/],
+  ['club','👥','Club',()=>pressSpot(/Join a student club/),/Join a student club/],
+  ['chat','💬','Chat',chat,null,!0]]},
+ gym:{name:'the Gym',icon:'🏋️',buttons:[
+  ['train','🏋️','Train',()=>pressSpot(/Train for an hour/),/Train for an hour/],
+  ['ball','🏀','Ball',()=>pressSpot(/Play basketball/),/Play basketball/],
+  ['dance','💃','Dance',()=>pressSpot(/Join a dance class/),/Join a dance class/],
+  ['meet','🤝','Meet',()=>pressSpot(/Meet someone/),/Meet someone/],
   ['chat','💬','Chat',chat,null,!0]]}};
 const spotButtons=id=>[...SPOTS[id].buttons,['mic','🎤','Mic',ACT.mic,null,!0],['more','•••','More',()=>spotMore(id),null,!0]];
 function spotMore(id){const g=G(),s=SPOTS[id],covered=s.buttons.map(b=>b[4]).filter(Boolean),list=[...document.querySelectorAll('#worldActivities button')].filter(b=>!covered.some(re=>re.test(b.textContent||'')));

@@ -161,8 +161,9 @@ test('place docks: football, voting, HQ and hospital get a row of buttons that o
   const bar=d.getElementById('worldActivities')||Object.assign(d.createElement('div'),{id:'worldActivities'});if(!bar.isConnected)d.body.append(bar);bar.innerHTML='';
   const item=text=>{const b=d.createElement('button');b.textContent=text;b.onclick=()=>calls.push(text);bar.append(b)};
   ({football:['⚽ Play a match','⚽ Kick-about with locals','🎽 Watch from the stands','🥤 Buy a drink'],voting:['Open the ballot','Read election notices'],
-    hq:['📅 CEO appointment','💼 Work at Hafrik HQ','💼 Co-work at the Hafrik hub','Hafrik community meetup'],cityhospital:['See a doctor','Rest on the ward']})[place]?.forEach(item);
-  c.ChinaLifeFootball={open:()=>calls.push('football')};c.ChinaLifeHospital={health:()=>calls.push('health')};t.game.politics=()=>calls.push('ballot');
+    hq:['📅 CEO appointment','💼 Work at Hafrik HQ','💼 Co-work at the Hafrik hub','Hafrik community meetup'],cityhospital:['See a doctor','Rest on the ward'],
+    university:['📝 Chinese class & quiz','Attend a lecture','Join a student club'],gym:['Train for an hour','Play basketball','Join a dance class','Meet someone']})[place]?.forEach(item);
+  c.ChinaLifeFootball={open:()=>calls.push('football')};c.ChinaLifeUniversity={open:()=>calls.push('campus')};c.ChinaLifeHospital={health:()=>calls.push('health')};t.game.politics=()=>calls.push('ballot');
   vm.runInContext(r('public/club-dock.js'),c);c.ChinaLifeClubDock.sync();return {t,c,d,calls}};
  const keys=d=>[...d.getElementById('placeDock').querySelectorAll('[data-pd]')].filter(b=>!b.hidden).map(b=>b.dataset.pd);
  const press=(x,k)=>x.d.querySelector('#placeDock [data-pd="'+k+'"]').onclick({stopPropagation(){}});
@@ -174,7 +175,10 @@ test('place docks: football, voting, HQ and hospital get a row of buttons that o
  // HQ services come from a switch: no item, no button.
  const hq=make('hq');assert.deepEqual(keys(hq.d),['work','ceo','cowork','meetup','mic','more']);press(hq,'meetup');assert.deepEqual(hq.calls,['Hafrik community meetup']);
  const h=make('cityhospital');assert.deepEqual(keys(h.d),['doctor','rest','health','chat','mic','more']);for(const k of ['doctor','rest','health'])press(h,k);assert.deepEqual(h.calls,['See a doctor','Rest on the ward','health']);
+ // 14 Nov 2026: the University and the Gym get the same row.
+ const u=make('university');assert.deepEqual(keys(u.d),['campus','class','lecture','club','chat','mic','more']);for(const k of ['campus','class','lecture','club'])press(u,k);assert.deepEqual(u.calls,['campus','📝 Chinese class & quiz','Attend a lecture','Join a student club']);
+ const gy=make('gym');assert.deepEqual(keys(gy.d),['train','ball','dance','meet','chat','mic','more']);for(const k of ['train','ball','dance','meet'])press(gy,k);assert.deepEqual(gy.calls,['Train for an hour','Play basketball','Join a dance class','Meet someone']);
  h.t.game.state.place='home';h.c.ChinaLifeClubDock.sync();assert.equal(h.d.getElementById('placeDock').hidden,true,'not outside these places');
  assert.ok(!make('football',false).d.getElementById('placeDock'),'switched off');
- assert.match(r('public/flags.js'),/place_docks:true/);assert.match(r('chinalife-api/hafrik-features.php'),/'place_docks'=>'Football Pitch, Voting Booth, Hafrik HQ and Hospital/);
+ assert.match(r('public/flags.js'),/place_docks:true/);assert.match(r('chinalife-api/hafrik-features.php'),/'place_docks'=>'Football Pitch, Voting Booth, Hafrik HQ, Hospital, University and Gym/);
 });
