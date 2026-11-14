@@ -16,6 +16,7 @@ const shut=()=>{try{$('activityDialog')?.close()}catch{}};
 /* ---------- What's new ---------- */
 // Newest first. id never changes once shipped; add new cards at the top.
 const NEWS=[
+ {id:'album-trading',date:'2026-11-14',icon:'🔁',title:'Trade cards with friends',text:'Got doubles in your City Album? Tap Trade on a spare, pick a friend and one of their spares, and send the offer. Up to 3 offers a day.',where:'City Album → open a set → Trade on a card marked ×2 or more',go:()=>window.ChinaLifeAlbum?.open?.()},
  {id:'city-album',date:'2026-11-14',icon:'🃏',title:'City Album',text:'Everything you do around the city gives you a card from that place’s set. Eight sets of six with a rare card in each. ¥300 for a set, ¥2,000 and a badge for all eight.',where:'Tap the clock at the top → 🃏 City Album',go:()=>window.ChinaLifeAlbum?.open?.()},
  {id:'week-story',date:'2026-11-14',icon:'📖',title:'Weekly story',text:'A new 7-step story every week from Monday 16 Nov, like Exam Week or Fitness Week. One step a day, ¥50 a step, and a ¥1,000 prize and a badge at the end.',where:'Tap the clock at the top → 📖 the story’s name',go:()=>window.ChinaLifeWeekStory?.open?.()},
  {id:'events',date:'2026-11-14',icon:'🏟',title:'Events',text:'Match Day, the election and Hot Seat Hour on one screen: who’s leading in your city, your place and the prize.',where:'Tap the clock at the top → 🏟 Events',go:()=>window.ChinaLifeEventScreens?.open?.()},

@@ -1879,6 +1879,34 @@ test('city album: a card for each real action, from that place’s set; a full s
  assert.equal((await other).data.have,1);
 });
 
+// City Album trading (part 2): friends swap one spare for one spare; 3 offers a day; accepting moves both cards.
+test('album trading: friends only, spares only, accept moves both cards, decline and cancel, 3 offers a day',async()=>{
+ sql("USE chinalife_test; INSERT IGNORE INTO users(user_id,user_name) VALUES(95,'user95'),(96,'user96'),(97,'user97'); INSERT INTO chinalife_friends(first_id,second_id,requested_by,status,created_at) VALUES(95,96,95,'accepted',NOW())");
+ const many=(id,action,ref)=>[...Array(60)].map((_,i)=>`(${id},'${action}','${ref(i)}',0,0,NOW())`);
+ sql('USE chinalife_test; INSERT INTO chinalife_economy_actions(user_id,action,ref,coins,xp,created_at) VALUES '+[...many(95,'gym-workout',i=>'gym-workout:2025-'+String(1+Math.floor(i/28)).padStart(2,'0')+'-'+String(1+i%28).padStart(2,'0')),...many(96,'fb-full',i=>'fb:2025-01-01:'+i+':1:w')].join(','));
+ let a=(await call(95,'album.php')).data;assert.equal(a.trading.on,true);assert.equal(JSON.stringify(a.trading.friends),JSON.stringify([{id:'96',name:'user96'}]));
+ assert.equal((await call(95,'album.php?friend=97')).httpStatus,403,'friends only');
+ const theirs=(await call(95,'album.php?friend=96')).data.spares;assert.ok(theirs.length&&theirs.every(k=>k.startsWith('football:')));
+ const gym=a.sets.find(s=>s.id==='gym').cards,give='gym:'+gym.findIndex(n=>n>=2),want=theirs[0];
+ assert.equal((await call(95,'album.php','POST',{op:'offer',to:97,give,want})).httpStatus,403);
+ assert.equal((await call(95,'album.php','POST',{op:'offer',to:96,give:'night:0',want})).httpStatus,409,'not a spare');
+ let r=await call(95,'album.php','POST',{op:'offer',to:96,give,want});assert.equal(r.httpStatus,200,r.message);assert.equal(r.data.trading.outgoing.length,1);assert.equal(r.data.trading.sentToday,1);
+ let b=(await call(96,'album.php')).data;assert.equal(b.trading.incoming.length,1);assert.equal(b.trading.incoming[0].from.name,'user95');
+ const id=b.trading.incoming[0].id,beforeB=b.sets.find(s=>s.id==='gym').cards[+give.split(':')[1]],[ws,wi]=want.split(':');
+ assert.equal((await call(95,'album.php','POST',{op:'answer',id:+id,accept:true})).httpStatus,404,'only the friend answers');
+ r=await call(96,'album.php','POST',{op:'answer',id:+id,accept:true});assert.equal(r.httpStatus,200,r.message);
+ assert.equal(r.data.sets.find(s=>s.id==='gym').cards[+give.split(':')[1]],beforeB+1,'the friend gets the gym card');
+ a=(await call(95,'album.php')).data;assert.equal(a.sets.find(s=>s.id==='gym').cards[+give.split(':')[1]],gym[+give.split(':')[1]]-1);assert.equal(a.sets.find(s=>s.id===ws).cards[+wi],1,'and you get theirs');
+ assert.equal((await call(96,'album.php','POST',{op:'answer',id:+id,accept:true})).httpStatus,404,'once');
+ // Decline, cancel, and the daily limit (3 offers).
+ r=await call(95,'album.php','POST',{op:'offer',to:96,give,want:theirs[theirs.length-1]});assert.equal(r.httpStatus,200,r.message);
+ const id2=(await call(96,'album.php')).data.trading.incoming[0].id;assert.equal((await call(96,'album.php','POST',{op:'answer',id:+id2,accept:false})).httpStatus,200);
+ r=await call(95,'album.php','POST',{op:'offer',to:96,give,want:theirs[0]});assert.equal(r.httpStatus,200,r.message);
+ assert.equal((await call(95,'album.php','POST',{op:'cancel',id:+r.data.trading.outgoing[0].id})).httpStatus,200);
+ r=await call(95,'album.php','POST',{op:'offer',to:96,give,want:theirs[0]});assert.equal(r.httpStatus,409);assert.match(r.message,/3 trade offers today/);
+ assert.equal((await call(96,'album.php')).data.trading.incoming.length,0);
+});
+
 // Admin → Energy and the evening streak reminder (switch streak_reminder).
 test('energy admin counts the day, and the streak reminder finds streaks ending tonight',async()=>{
  const bj=d=>new Date(Date.now()+8*3600e3-d*86400e3).toISOString().slice(0,10),today=bj(0),yesterday=bj(1);

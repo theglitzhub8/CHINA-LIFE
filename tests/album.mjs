@@ -14,7 +14,7 @@ function setup({flag=true,d=album(),reply,seen}={}){const t=harness({...fixture(
 test('City Album: eight sets with progress; a set opens to six cards, rare and spares marked, how to get them and Go',async()=>{
  const {doc,A,shown,calls}=setup({d:album({gym:[2,1,0,0,0,1],night:[1,0,0,0,0,0]})});await A.open();await flush();
  assert.deepEqual(shown,['🃏 City Album']);const box=doc.getElementById('alBody');
- assert.match(box.textContent,/4of 48/);assert.match(box.textContent,/1 spare · trading comes later/);
+ assert.match(box.textContent,/4of 48/);assert.match(box.textContent,/1 spare · trading opens soon/);
  assert.equal(box.querySelectorAll('.al-set').length,8);assert.match(box.querySelector('.al-set:last-child').textContent,/The Gym3 of 6/);
  box.querySelector('[data-set="gym"]').onclick();const cards=[...doc.querySelectorAll('.al-set.open .al-card')];assert.equal(cards.length,6);
  assert.match(cards[0].textContent,/DumbbellsDumbbells|Dumbbells×2/);assert.match(cards[5].textContent,/Champion Belt.*Rare/);assert.ok(cards[5].classList.contains('rare'));
@@ -44,4 +44,24 @@ test('City Album: a toast names a new card once; new cards show NEW until their 
 test('City Album: every set has six named cards, and the sets match the server',()=>{
  const {A}=setup();const php=fs.readFileSync('chinalife-api/album.php','utf8');
  for(const id of ids){assert.equal(A.SETS[id][5].length,6,id);assert.match(php,new RegExp("'"+id+"'=>"))}
+});
+test('City Album trading: Trade on a spare, pick a friend and one of their spares, send; offers to you can be accepted',async()=>{
+ const d=album({gym:[3,1,0,0,0,0]});d.trading={on:true,perDay:3,hours:48,sentToday:0,incoming:[],outgoing:[],friends:[{id:'7',name:'Ada'}]};
+ const after=JSON.parse(JSON.stringify(d));after.trading.sentToday=1;after.trading.outgoing=[{id:'1',to:{id:'7',name:'Ada'},give:'gym:0',want:'football:2',expiresIn:172800}];
+ const s=setup({d,reply:after});const urls=[];const req=s.c.ChinaLifeAuth.request;s.c.ChinaLifeAuth.request=async(url,method,body)=>{urls.push(url);if(/friend=7/.test(url))return {data:{friend:{id:'7',name:'Ada'},spares:['football:2','gym:0']}};return req(url,method,body)};
+ await s.A.open('gym');await flush();const doc=s.doc;
+ assert.equal(doc.querySelectorAll('[data-give]').length,1,'only spares can be traded');doc.querySelector('[data-give="gym:0"]').onclick({stopPropagation(){}});
+ assert.match(doc.getElementById('alBody').textContent,/YOU GIVE🏋️ Dumbbells.*TRADE WITHAda.*3 of 3 offers left today/);
+ await doc.querySelector('[data-friend="7"]').onclick();await flush();assert.ok(urls.some(u=>/album\.php\?friend=7/.test(u)));
+ const picks=[...doc.querySelectorAll('[data-want]')].map(b=>b.dataset.want);assert.deepEqual(picks,['football:2'],'not the card you are giving');
+ assert.match(doc.getElementById('alBody').textContent,/Team JerseyYou need this/);
+ doc.querySelector('[data-want="football:2"]').onclick();const send=doc.querySelector('[data-send]');assert.match(send.textContent,/Offer Dumbbells for Team Jersey/);
+ await send.onclick();await flush();assert.equal(JSON.stringify(s.posts.at(-1)),JSON.stringify({op:'offer',to:7,give:'gym:0',want:'football:2'}));
+ assert.match(doc.getElementById('alBody').textContent,/Waiting for Ada: your 🏋️ Dumbbells for their 🎽 Team Jersey/);
+ // An offer to you: a toast once, the Today panel line, Accept.
+ const inc=album({football:[2,0,1,0,0,0]});inc.trading={on:true,perDay:3,hours:48,sentToday:0,outgoing:[],friends:[],incoming:[{id:'9',from:{id:'8',name:'Ben'},give:'night:1',want:'football:0',expiresIn:7200}]};
+ const t=setup({d:inc,reply:{...inc,trading:{...inc.trading,incoming:[]}}});await t.A.peek({toast:true});assert.deepEqual(t.calls,['🔁 Ben offered you a card trade. Open your City Album.']);
+ await t.A.peek({toast:true});assert.equal(t.calls.length,1,'once');assert.deepEqual(JSON.parse(JSON.stringify(t.A.summary())),{hot:true,text:'1 trade offer waiting'});
+ await t.A.open();await flush();assert.match(t.doc.getElementById('alBody').textContent,/Ben offers 🌈 Neon Sign for your ⚽ Match Ball.*Ends in 2h/);
+ await t.doc.querySelector('[data-answer="9"][data-ok="1"]').onclick();await flush();assert.equal(JSON.stringify(t.posts),JSON.stringify([{op:'answer',id:9,accept:true}]));
 });

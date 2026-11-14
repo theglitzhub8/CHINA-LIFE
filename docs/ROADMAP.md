@@ -30,8 +30,11 @@ Size: S = an hour or two, M = half a day, L = a day or more. "Map" = touches the
    ledger and gossip tables (no new table; which card is a hash of player + row, so nothing can be rerolled). Set ¥300 +
    30 XP once, all eight ¥2,000 + 200 XP and a badge. New-card toast, NEW labels, Today panel row, What's new card.
    Existing players start with the cards their history earned.
-   **Part 2, trading spares** (M): needs a trades table (offer a spare for a card, the other player accepts), limits
-   (friends only, a few a day) and the album counts adjusted by trades. Not started.
+   ✅ **Part 2, trading spares** (14 Nov, live after the next ship + migrate.php): table chinalife_album_trades
+   (migration-album-trades.sql). Friends only (not blocked), one spare for one of the friend's spares, 3 offers a Beijing
+   day, 5 waiting at most, offers end after 48 h; an offered spare is held; accepting re-checks both spares with both
+   players locked. Accepted trades move the cards in the album counts. Offer toast, Today panel line, What's new card.
+   Until the migration runs, the album says "trading opens soon" and offers are refused (503).
 6. **Season track** (M). Today's Three, the weekly story and events give Season XP; tiers with rewards over a month.
 7. **Gym extras** (S, optional). The Gym in first-visit bonuses (eight places), a live pulse on Train when friends are
    there, and a weekly "most workouts" podium.
