@@ -3,7 +3,7 @@
 One list, in the order I would do them. Each step ships on its own with a switch in Hafrik integrations.
 Size: S = an hour or two, M = half a day, L = a day or more. "Map" = touches the approved city map (owner sees it first).
 
-## Done today, waiting to ship
+## Shipped 14 Nov
 - **The Gym** as the 8th shared-city place, with a "Work out at the gym" task in Today's Three (from 15 Nov). Map.
 - **Bottom docks for the University and the Gym**: every shared-city place now has the club-style row.
 
