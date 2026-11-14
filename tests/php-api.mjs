@@ -1855,6 +1855,30 @@ test('week story: steps open a day apart, count only fresh actions, catch up lat
  s=await ws('2026-11-30 10:00');assert.equal(s.week,'2026-11-30');assert.notEqual(s.story.id,'exam');assert.equal(s.current,1);
 });
 
+// City Album (docs/ROADMAP.md item 5): cards worked out from what the player really did; sets and the album pay once.
+test('city album: a card for each real action, from that place’s set; a full set pays ¥300 once; spares counted',async()=>{
+ sql("USE chinalife_test; INSERT IGNORE INTO users(user_id,user_name) VALUES(93,'user93')");
+ assert.equal((await call(93,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China'}}})).httpStatus,200);
+ let a=(await call(93,'album.php')).data;assert.equal(a.total,48);assert.equal(a.have,0);
+ assert.equal(JSON.stringify(a.sets.map(s=>s.id)),JSON.stringify(['night','gist','voting','football','hq','cityhospital','university','gym']));
+ assert.equal((await call(93,'album.php','POST',{op:'claim',set:'gym'})).httpStatus,409,'not before six cards');
+ const vals=[...Array(120)].map((_,i)=>`(93,'gym-workout','gym-workout:2026-${String(1+Math.floor(i/28)).padStart(2,'0')}-${String(1+i%28).padStart(2,'0')}',0,0,NOW())`);
+ vals.push(`(93,'place-visit','visit:night:2026-11-01',0,0,NOW())`,`(93,'mission','mission:bonus:2026-11-01',0,0,NOW())`,`(93,'place-visit','visit-all:2026-11-01',0,0,NOW())`,`(93,'purchase','buy:x',0,0,NOW())`);
+ sql('USE chinalife_test; INSERT INTO chinalife_economy_actions(user_id,action,ref,coins,xp,created_at) VALUES '+vals.join(','));
+ sql("USE chinalife_test; INSERT INTO chinalife_gist_night(user_id,city,body,official,created_at) VALUES(93,'China','Album tip',0,NOW())");
+ a=(await call(93,'album.php')).data;const set=id=>a.sets.find(s=>s.id===id);
+ assert.equal(set('gym').done,true);assert.equal(set('gym').cards.reduce((x,y)=>x+y,0),120);assert.ok(set('gym').cards[5]<set('gym').cards[0]+set('gym').cards[1],'the sixth card is rare');
+ assert.equal(set('night').cards.reduce((x,y)=>x+y,0),1,'one visit; the mission bonus and visit-all bonus give no cards');assert.equal(set('gist').have,1,'a tip gives a Gossip Centre card');
+ assert.equal(a.have,6+1+1);assert.equal(a.spares,114);
+ assert.equal(JSON.stringify((await call(93,'album.php')).data.sets),JSON.stringify(a.sets),'the same every time');
+ const other=(()=>{sql("USE chinalife_test; INSERT IGNORE INTO users(user_id,user_name) VALUES(94,'user94'); INSERT INTO chinalife_economy_actions(user_id,action,ref,coins,xp,created_at) VALUES(94,'place-visit','visit:night:2026-11-01',0,0,NOW())");return call(94,'album.php')})();
+ const c=await call(93,'album.php','POST',{op:'claim',set:'gym'});assert.equal(c.httpStatus,200,c.message);assert.equal(c.data.awarded,300);assert.equal(c.data.sets.find(s=>s.id==='gym').claimed,true);
+ assert.equal((await call(93,'album.php','POST',{op:'claim',set:'gym'})).httpStatus,409,'once');
+ assert.equal((await call(93,'album.php','POST',{op:'claim',set:'all'})).httpStatus,409,'not before all eight');
+ assert.equal((await call(93,'album.php','POST',{op:'claim',set:'nope'})).httpStatus,400);
+ assert.equal((await other).data.have,1);
+});
+
 // Admin → Energy and the evening streak reminder (switch streak_reminder).
 test('energy admin counts the day, and the streak reminder finds streaks ending tonight',async()=>{
  const bj=d=>new Date(Date.now()+8*3600e3-d*86400e3).toISOString().slice(0,10),today=bj(0),yesterday=bj(1);

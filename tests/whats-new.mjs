@@ -16,7 +16,7 @@ test('What’s new: dated cards, each with a grey “where to find it” box and
 });
 test('What’s new: shown once after an update, only the new cards; a brand-new player gets no old news',async()=>{
  const old=setup({seen:['gym','place-bars']});old.W.autoNews();assert.deepEqual(old.shown,['✨ What’s new']);
- assert.equal(JSON.stringify([...old.doc.querySelectorAll('.wn-card b')].map(b=>b.textContent)),JSON.stringify(['Weekly story','Events','Today’s Three']));
+ assert.equal(JSON.stringify([...old.doc.querySelectorAll('.wn-card b')].map(b=>b.textContent)),JSON.stringify(['City Album','Weekly story','Events','Today’s Three']));
  old.W.autoNews();assert.equal(old.shown.length,1,'only once');
  const fresh=setup({day:1});fresh.W.autoNews();assert.deepEqual(fresh.shown,[]);assert.equal(fresh.W.fresh().length,0,'marked seen quietly');
  const off=setup({flags:{whats_new:false}});off.W.autoNews();off.W.open();assert.deepEqual(off.shown,[]);

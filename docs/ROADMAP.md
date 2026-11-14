@@ -24,6 +24,14 @@ Size: S = an hour or two, M = half a day, L = a day or more. "Map" = touches the
    ¥1,000 + 100 XP and a badge. Opens from the Today panel (📖 row) and the What's new card. Add a story: one entry in
    WS_STORIES (PHP) and seven lines in LINES (JS) with the same id.
 5. **City Album** (L). A card for each place visited and each thing done; finish a set for a prize; trade spares.
+   ✅ Part 1 (14 Nov, live after the next ship; chinalife-api/album.php, public/album.js, switch `city_album`): eight
+   sets of six (one per shared-city place, card 6 rare), a card for every real action there (first visits, missions,
+   drinks, tips, Hot Seat votes, election votes, matches, shifts, check-ups, classes, workouts), worked out from the
+   ledger and gossip tables (no new table; which card is a hash of player + row, so nothing can be rerolled). Set ¥300 +
+   30 XP once, all eight ¥2,000 + 200 XP and a badge. New-card toast, NEW labels, Today panel row, What's new card.
+   Existing players start with the cards their history earned.
+   **Part 2, trading spares** (M): needs a trades table (offer a spare for a card, the other player accepts), limits
+   (friends only, a few a day) and the album counts adjusted by trades. Not started.
 6. **Season track** (M). Today's Three, the weekly story and events give Season XP; tiers with rewards over a month.
 7. **Gym extras** (S, optional). The Gym in first-visit bonuses (eight places), a live pulse on Train when friends are
    there, and a weekly "most workouts" podium.

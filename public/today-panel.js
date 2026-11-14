@@ -28,7 +28,9 @@ function paint(){const card=$('tdpCard');if(!card)return;const g=G(),s=g?.state|
  const streak=window.ChinaLifeEnergy?.streakNext?.(s);const rows=[];
  if(T()?.on?.())rows.push(row('three','🎯','Today’s Three',d?(d.bonus.claimed?'All done · bonus collected ✓':n+' of '+d.tasks.length+' done · +¥'+d.bonus.coins+' bonus'):'Three tasks and a ¥300 bonus',{hot:!!d&&n===d.tasks.length&&!d.bonus.claimed}));
  const E=window.ChinaLifeEventScreens,es=E?.on?.()&&E.summary?.();if(E?.on?.())rows.push(row('events','🏟','Events',es?.text||'Match Day, elections and Hot Seat Hour',{hot:!!es?.hot}));
- const WS=window.ChinaLifeWeekStory,ws=WS?.on?.()&&WS.summary?.();if(WS?.on?.())rows.push(row('story',WS.last?.story?.icon||'📖',WS.last?.story?.title||'Weekly story',ws?.text||'A new 7-step story every week',{hot:!!ws?.hot}));
+ const WS=window.ChinaLifeWeekStory,ws=WS?.on?.()&&WS.summary?.();const AL=window.ChinaLifeAlbum,al=AL?.on?.()&&AL.summary?.();
+ if(WS?.on?.())rows.push(row('story',WS.last?.story?.icon||'📖',WS.last?.story?.title||'Weekly story',ws?.text||'A new 7-step story every week',{hot:!!ws?.hot}));
+ if(AL?.on?.())rows.push(row('album','🃏','City Album',al?.text||'Collect a card for everything you do',{hot:!!al?.hot}));
  rows.push(row('rank',r.icon||'🏆',(r.daily?'Streak reward ready':(s.streak||0)+'-day streak')+' · '+(r.name||'Rank'),r.daily?'Claim day '+(streak||1)+' before midnight':r.next?r.next.toLocaleString()+' XP to the next rank':'Top rank',{hot:!!r.daily}));
  if(window.ChinaLifeMilestones?.inbox)rows.push(row('inbox','🔔','Notifications','News, rewards and milestones'));
  const W=window.ChinaLifeWhatsNew;if(W?.on?.()){const f=W.fresh().length;rows.push(row('news','✨','What’s new',f?f+' new thing'+(f===1?'':'s')+' to see':'The latest in ChinaLife',{hot:f>0}))}
@@ -43,11 +45,11 @@ function paint(){const card=$('tdpCard');if(!card)return;const g=G(),s=g?.state|
 function act(id){const g=G(),S=window.ChinaLifeSocial;
  if(id==='music'){window.ChinaLifeMusic?.toggle?.();return setTimeout(paint,60)}
  if(id==='clean'){$('worldClean')?.click();return setTimeout(paint,60)}
- close();({three:()=>T()?.open(),events:()=>window.ChinaLifeEventScreens?.open?.(),story:()=>window.ChinaLifeWeekStory?.open?.(),news:()=>window.ChinaLifeWhatsNew?.open?.(),rank:()=>g?.rankInfo?.()?.daily&&window.ChinaLifeEnergy?.welcome?window.ChinaLifeEnergy.welcome(true)||g.ranks?.():g?.ranks?.(),inbox:()=>window.ChinaLifeMilestones.inbox(),messages:()=>S.open('messages'),people:()=>S.open('people'),needs:()=>g?.needs?.(),wallet:()=>g?.wallet?.()})[id]?.()}
+ close();({three:()=>T()?.open(),events:()=>window.ChinaLifeEventScreens?.open?.(),story:()=>window.ChinaLifeWeekStory?.open?.(),album:()=>window.ChinaLifeAlbum?.open?.(),news:()=>window.ChinaLifeWhatsNew?.open?.(),rank:()=>g?.rankInfo?.()?.daily&&window.ChinaLifeEnergy?.welcome?window.ChinaLifeEnergy.welcome(true)||g.ranks?.():g?.ranks?.(),inbox:()=>window.ChinaLifeMilestones.inbox(),messages:()=>S.open('messages'),people:()=>S.open('people'),needs:()=>g?.needs?.(),wallet:()=>g?.wallet?.()})[id]?.()}
 function close(){$('tdpWrap')?.remove();document.removeEventListener('keydown',esc_)}
 const esc_=e=>{if(e.key==='Escape')close()};
 function open(){if(!on())return;if($('tdpWrap'))return close();const w=document.createElement('div');w.id='tdpWrap';w.className='tdp-wrap';w.innerHTML='<div class="tdp-card" id="tdpCard" role="dialog" aria-label="Today"></div>';
- w.onclick=e=>{if(e.target===w)close()};document.body.appendChild(w);document.addEventListener('keydown',esc_);paint();refresh();window.ChinaLifeEventScreens?.on?.()&&window.ChinaLifeEventScreens.load?.()?.then?.(()=>paint());window.ChinaLifeWeekStory?.on?.()&&window.ChinaLifeWeekStory.peek?.()?.then?.(()=>paint())}
+ w.onclick=e=>{if(e.target===w)close()};document.body.appendChild(w);document.addEventListener('keydown',esc_);paint();refresh();window.ChinaLifeEventScreens?.on?.()&&window.ChinaLifeEventScreens.load?.()?.then?.(()=>paint());window.ChinaLifeWeekStory?.on?.()&&window.ChinaLifeWeekStory.peek?.()?.then?.(()=>paint());window.ChinaLifeAlbum?.on?.()&&window.ChinaLifeAlbum.peek?.()?.then?.(()=>paint())}
 window.ChinaLifeTodayPanel={open,close,refresh,pill,on};
 const start=()=>{pill();refresh()};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else setTimeout(start,0);
