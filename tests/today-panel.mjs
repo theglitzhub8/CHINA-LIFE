@@ -35,3 +35,11 @@ test('Today panel: an 🏟 Events row names what is on and opens the event scree
  const r=t.document.querySelector('[data-tdp="events"]');assert.ok(r);assert.match(r.textContent,/EventsHot Seat Hour is live/);assert.ok(r.classList.contains('hot'));
  r.onclick();assert.deepEqual(calls,['load','events']);
 });
+test('Today panel: a ✨ What’s new row says how many new things there are and opens the sheet',async()=>{
+ const t=harness({...fixture(),place:'home',city:'China'}),c=t.context,calls=[];t.game.state.created=true;
+ c.ChinaLifeFlags={cast:()=>undefined,off:()=>false};c.ChinaLifeToday={on:()=>false};
+ c.ChinaLifeWhatsNew={on:()=>true,fresh:()=>[1,2],open:()=>calls.push('news')};c.ChinaLifeMilestones={inbox:()=>{}};
+ vm.runInContext(fs.readFileSync('public/today-panel.js','utf8'),c);c.ChinaLifeTodayPanel.open();await flush();
+ const r=t.document.querySelector('[data-tdp="news"]');assert.match(r.textContent,/What’s new2 new things to see/);assert.ok(r.classList.contains('hot'));
+ r.onclick();assert.deepEqual(calls,['news']);
+});

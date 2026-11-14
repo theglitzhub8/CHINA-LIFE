@@ -84,6 +84,14 @@ private (it hints at who wrote which gist), so the Hot Seat board ranks **right 
 "where to find it" box), and a one-time "How it works · Got it" card on Today's Three, Football, Voting and the
 Gossip Centre.
 
+✅ Built 14 Nov 2026 (public/whats-new.js, client only; switches `whats_new` and `how_it_works`, default on).
+What's new: shown once, a few seconds after the game loads and only when nothing else is open (the welcome-back card
+goes first), with just the cards you have not seen; each card has a date, a grey "Where to find it" box and Try it.
+Brand-new players (day 1) are not shown old news. It opens again from the Today panel (✨ What's new, gold while
+something is unseen). Add new cards at the top of NEWS in whats-new.js with each update. How it works: a one-time card
+with three steps and Got it on Today's Three, Events, City Hall and Football (at the top of the screen), and floating
+under the top bar on arriving at the Gossip Centre and the Gym. One at a time, never during the first-day tour.
+
 ## Numbers to watch (Admin → Energy)
 
 Add a "Today's Three" column (players who finished all three) and a "Bonus" column. Success: more players claiming
