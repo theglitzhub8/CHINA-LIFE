@@ -7,7 +7,7 @@ function setup({place='home',flag=true,streak=2,last=yesterday()}={}){const t=ha
  c.ChinaLifeFlags={cast:k=>k==='energy_loop'?flag:undefined,off:()=>false};
  const kept=new Map();c.localStorage={getItem:k=>kept.has(k)?kept.get(k):null,setItem:(k,v)=>kept.set(k,String(v)),removeItem:k=>kept.delete(k)};
  c.ChinaLifeCloud={signedIn:true,claimDaily:async()=>{posts.push('daily');t.game.state.lastVisit=new Date(Date.now()+8*3600e3).toISOString().slice(0,10);t.game.state.streak=streak+1;return {streak:streak+1,money:50*(streak+1),xp:20*(streak+1)}}};
- c.ChinaLifeAuth={request:async(url,method,body)=>{if(/daily-visit/.test(url)){if(method==='POST'){posts.push('visit:'+body.place);return {data:{money:3220,xp:5,awarded:20,awardedXp:5,duplicate:false,all:false}}}return {data:{visited:[]}}}return {data:{}}}};
+ c.ChinaLifeAuth={request:async(url,method,body)=>{if(/daily-visit/.test(url)){if(method==='POST'){if(body.op==='arrive'){posts.push('arrive:'+body.place);return {data:{wait:0}}}posts.push('visit:'+body.place);return {data:{money:3220,xp:5,awarded:20,awardedXp:5,duplicate:false,all:false}}}return {data:{visited:[]}}}return {data:{}}}};
  vm.runInContext(fs.readFileSync('public/energy.js','utf8'),c);return {t,c,d:t.document,posts,E:c.ChinaLifeEnergy,kept}}
 test('Welcome back: once a day, the 7-day ladder at today\'s day, Claim uses the daily reward and celebrates',async()=>{
  const {t,d,posts,E,kept}=setup();assert.equal(t.game.rankInfo().daily,true);
@@ -21,7 +21,7 @@ test('Welcome back: once a day, the 7-day ladder at today\'s day, Claim uses the
 });
 test('first visit of the day pays once per place; pulses mark a dock button; switch off does nothing',async()=>{
  const {t,d,posts,E}=setup({place:'football'});await E.visit('football');await flush();
- assert.deepEqual(posts,['visit:football']);assert.equal(t.game.state.money,3220);assert.match(d.querySelector('.en-burst').textContent,/First visit today/);assert.deepEqual([...E.visited],['football']);
+ assert.deepEqual(posts,['arrive:football','visit:football'],'the arrival first, then the paying visit');assert.equal(t.game.state.money,3220);assert.match(d.querySelector('.en-burst').textContent,/First visit today/);assert.deepEqual([...E.visited],['football']);
  const dock=d.createElement('nav');dock.id='placeDock';dock.dataset.place='cityhospital';dock.innerHTML='<button data-pd="health"></button>';d.body.append(dock);
  t.game.state.needs.hunger=10;E.pulses();assert.ok(dock.querySelector('[data-pd="health"]').classList.contains('live'));
  t.game.state.needs.hunger=80;E.pulses();assert.ok(!dock.querySelector('[data-pd="health"]').classList.contains('live'));

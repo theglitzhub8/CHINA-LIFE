@@ -126,3 +126,11 @@ Map look is untouched in every phase: the docks and the music pill sit in the sa
 - **Evening streak reminder** (chinalife-api/push-streak.php, switch `streak_reminder`, default on): a player who
   claimed yesterday but not today gets one Hafrik notification (inbox and app push) between 19:00 and 23:00 Beijing:
   "🔥 Your N-day ChinaLife streak ends at midnight. Come back and claim ¥X today!". Needs an hourly cron (docs/DEPLOY.md).
+- **The two easy cheats closed** (14 Nov 2026):
+  - Football challenge: signed in, every match reports its kickoff and full time to chinalife-api/football-day.php. A full
+    time counts only 170 s or more after its kickoff, once per kickoff, at most 12 matches a Beijing day, and
+    economy.php `football-daily` pays the ¥300 only when those counts meet today's challenge. The challenge bar shows the
+    server's count. A cheater now needs three real-time matches' worth of calls; the goals and the result are still the
+    phone's word.
+  - First visits outside the shared city: the phone marks the arrival (`op:'arrive'`) and the visit pays only once that
+    mark is 30 s old. In the shared city the presence check stays as it was.

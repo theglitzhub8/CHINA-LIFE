@@ -1664,6 +1664,20 @@ test('world layout hours: valid hours saved and served; bad hours refused',async
 test('football daily challenge: ¥300 and 30 XP once a day, a second claim is a duplicate',async()=>{
  sql("USE chinalife_test; INSERT IGNORE INTO users(user_id,user_name) VALUES(77,'user77')");
  assert.equal((await call(77,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China'}}})).httpStatus,200);
+ // Closed 14 Nov 2026: the server counts the matches the phone reported (football-day.php) before it pays.
+ assert.equal((await call(77,'economy.php','POST',{action:'football-daily'})).httpStatus,409,'no matches yet');
+ const ch=(await call(77,'football-day.php')).data;assert.equal(ch.claimed,false);assert.deepEqual(ch.counts,{played:0,won:0,goals:0});
+ const [key,target]=ch.challenge;
+ for(let i=0;i<3;i++){
+  const k=(await call(77,'football-day.php','POST',{op:'kickoff'})).data.kickoff;assert.match(k,/^fb:\d{4}-\d\d-\d\d:\d+$/);
+  const soon=await call(77,'football-day.php','POST',{op:'full',kickoff:k,goals:1,result:'w'});assert.equal(soon.httpStatus,409,'too soon after kickoff');
+  sql(`USE chinalife_test; UPDATE chinalife_economy_actions SET created_at=DATE_SUB(created_at,INTERVAL 200 SECOND) WHERE user_id=77 AND action='fb-kickoff' AND ref='${k}'`);
+  const full=await call(77,'football-day.php','POST',{op:'full',kickoff:k,goals:1,result:'w'});assert.equal(full.httpStatus,200,full.message);assert.equal(full.data.counts.played,i+1);
+  assert.equal((await call(77,'football-day.php','POST',{op:'full',kickoff:k,goals:1,result:'w'})).httpStatus,409,'one full time per kickoff');
+ }
+ assert.equal((await call(77,'football-day.php','POST',{op:'full',kickoff:'fb:2000-01-01:1',goals:1,result:'w'})).httpStatus,404,'no such kickoff');
+ assert.equal((await call(77,'football-day.php','POST',{op:'full',kickoff:'x',goals:1,result:'w'})).httpStatus,400);
+ assert.equal((await call(77,'football-day.php')).data.counts[key]>=target,true,'3 played, 3 won, 3 goals meets every challenge');
  const first=await call(77,'economy.php','POST',{action:'football-daily'});
  assert.equal(first.httpStatus,200,first.message);assert.equal(first.data.awarded,300);assert.equal(first.data.awardedXp,30);assert.equal(first.data.money,3500);assert.equal(first.data.duplicate,false);
  const again=await call(77,'economy.php','POST',{action:'football-daily'});assert.equal(again.data.duplicate,true);assert.equal(again.data.money,3500,'paid once');
@@ -1713,6 +1727,12 @@ test('daily visits: ¥20 + 5 XP per place once a day, ¥100 + 20 XP for all seve
  assert.equal((await call(82,'daily-visit.php','POST',{place:'football'})).httpStatus,409,'no save yet');
  assert.equal((await call(82,'save.php','POST',{revision:0,save:{character:{},game:{...game(),city:'China'}}})).httpStatus,200);
  assert.equal((await call(82,'daily-visit.php','POST',{place:'cafe'})).httpStatus,400,'only the seven places');
+ // Outside the shared city: arrive first, and the visit pays once the arrival is 30 s old.
+ const back=(p)=>sql(`USE chinalife_test; UPDATE chinalife_economy_actions SET created_at=DATE_SUB(created_at,INTERVAL 40 SECOND) WHERE user_id=82 AND action='place-arrive' AND ref LIKE 'arrive:${p}:%'`);
+ const arrive=async p=>{const r=await call(82,'daily-visit.php','POST',{place:p,op:'arrive'});assert.equal(r.httpStatus,200,r.message);back(p);return r.data.wait};
+ assert.equal((await call(82,'daily-visit.php','POST',{place:'football'})).httpStatus,409,'no arrival yet');
+ assert.equal((await call(82,'daily-visit.php','POST',{place:'football',op:'arrive'})).data.wait>25,true,'wait about 30 s');
+ assert.equal((await call(82,'daily-visit.php','POST',{place:'football'})).httpStatus,409,'too soon');back('football');
  const first=await call(82,'daily-visit.php','POST',{place:'football'});assert.equal(first.httpStatus,200,first.message);assert.equal(first.data.awarded,20);assert.equal(first.data.awardedXp,5);assert.equal(first.data.money,3220);
  assert.equal((await call(82,'daily-visit.php','POST',{place:'football'})).data.duplicate,true,'once a day');
  // In the shared city, the visit must be where you are.
@@ -1720,8 +1740,8 @@ test('daily visits: ¥20 + 5 XP per place once a day, ¥100 + 20 XP for all seve
  assert.equal((await call(82,'daily-visit.php','POST',{place:'voting'})).httpStatus,409);
  assert.equal((await call(82,'daily-visit.php','POST',{place:'gist'})).data.awarded,20);
  await call(82,'presence.php','DELETE');
- for(const p of ['night','voting','hq','cityhospital']){const r=await call(82,'daily-visit.php','POST',{place:p});assert.equal(r.data.all,false,p)}
- const last=await call(82,'daily-visit.php','POST',{place:'university'});assert.equal(last.data.all,true);assert.equal(last.data.awarded,120,'¥20 and the ¥100 bonus');assert.equal(last.data.awardedXp,25);assert.equal(last.data.money,3220+20*6+100);
+ for(const p of ['night','voting','hq','cityhospital']){await arrive(p);const r=await call(82,'daily-visit.php','POST',{place:p});assert.equal(r.data.all,false,p)}
+ await arrive('university');const last=await call(82,'daily-visit.php','POST',{place:'university'});assert.equal(last.data.all,true);assert.equal(last.data.awarded,120,'¥20 and the ¥100 bonus');assert.equal(last.data.awardedXp,25);assert.equal(last.data.money,3220+20*6+100);
  const s=(await call(82,'daily-visit.php')).data;assert.equal(s.visited.length,7);assert.equal(s.bonus,true);
 });
 

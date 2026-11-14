@@ -42,7 +42,14 @@ function welcome(force=false){const g=G(),s=g?.state;if(!on()||!s?.created||(!fo
 const PLACES=['night','gist','voting','football','hq','cityhospital','university'];
 let visited=new Set(),visitDay='',lastPlace=null,visiting=false,retry=0;
 async function loadVisits(){if(!signed())return;try{const r=await window.ChinaLifeAuth.request('/chinalife/daily-visit.php'),d=r?.data||r;if(Array.isArray(d?.visited)){visited=new Set(d.visited);visitDay=bj()}}catch{}}
+// Outside the shared city the server first notes the arrival and pays after 30 s at the place (daily-visit.php).
+const here=place=>G()?.state?.place===place&&!visited.has(place);
 async function visit(place){if(visiting||!signed())return;visiting=true;
+ try{const r=await window.ChinaLifeAuth.request('/chinalife/daily-visit.php','POST',{place,op:'arrive'}),w=Math.max(0,Number((r?.data||r)?.wait)||0);
+  if(w){setTimeout(()=>{if(here(place))pay(place)},w*1000+800);return}}
+ catch{if(retry++<2)setTimeout(()=>{lastPlace=null},12000);return}finally{visiting=false}
+ pay(place)}
+async function pay(place){if(visiting||!signed())return;visiting=true;
  try{const r=await window.ChinaLifeAuth.request('/chinalife/daily-visit.php','POST',{place}),d=r?.data||r;visited.add(place);
   if(d&&!d.duplicate&&d.awarded){G().applyServerTotals?.(d);G().save?.();G().refresh?.();
    if(d.all)celebrate('🗺️ All 7 places today!','+¥'+d.awarded+' · +'+d.awardedXp+' XP · come back tomorrow');
@@ -65,7 +72,7 @@ function pulses(){const s=G()?.state;if(!s)return;const live=on();
 function tick(){if(!G())return;watchPlace();refreshLive().then(pulses);pulses();welcome()}
 setInterval(tick,3000);window.addEventListener?.('chinalife:update',()=>pulses());
 window.ChinaLifeCelebrate=celebrate;
-window.ChinaLifeEnergy={welcome,visit,watchPlace,pulses,refreshLive,celebrate,get visited(){return [...visited]},streakNext};
+window.ChinaLifeEnergy={welcome,visit,pay,watchPlace,pulses,refreshLive,celebrate,get visited(){return [...visited]},streakNext};
 const css=document.createElement('style');css.textContent=
  '.en-welcome{position:fixed;inset:0;z-index:2147482000;display:grid;place-items:center;padding:16px;background:rgb(8 20 22 / .66);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);animation:enFade .25s ease-out}'+
  '.en-card{width:min(360px,100%);display:grid;gap:10px;justify-items:center;text-align:center;padding:22px 18px 16px;border-radius:26px;background:linear-gradient(165deg,#0c3f44,#082528);color:#f7fff7;box-shadow:0 24px 60px rgb(0 0 0 / .5);animation:enPop .45s cubic-bezier(.34,1.56,.64,1)}'+

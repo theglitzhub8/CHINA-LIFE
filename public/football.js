@@ -58,8 +58,11 @@
   }
   function toastOut(m) { (game()?.toast || root.toast || ((x) => console.info(x)))(m); }
   let pickSize = 3;
+  let daySynced = 0;
   async function home() {
     stopLoops(); match = null;
+    // Bring today's challenge count from the server (at most every 20 s), then draw again if it changed.
+    if (dayNet() && Date.now() - daySynced > 20000) { daySynced = Date.now(); dayCall('GET').then((d) => { if (daySync(d) && !match && view === 'home' && el && !screen().hidden) home(); }).catch(() => {}); }
     const sizes = [1, 2, 3, 4, 5].map((n) => `<button class="fb-chip${n === pickSize ? ' on' : ''}" data-fb="size" data-n="${n}">${n}v${n}</button>`).join('');
     let lobbies = '', tours = '';
     if (online()) {
@@ -97,6 +100,15 @@
     r.today ||= { played: 0, won: 0, goals: 0 }; return r;
   }
   // Every finished match (on this phone or online) counts: result, your own goals, the win streak, today's challenge.
+  // Signed in, the server keeps today's count (football-day.php): each match reports its kickoff and full time, and a
+  // full time counts only about 3 minutes after its kickoff. The challenge bar then shows the server's numbers.
+  const dayNet = () => homeOn() && root.ChinaLifeCloud?.signedIn && root.ChinaLifeAuth?.request ? root.ChinaLifeAuth.request : null;
+  const dayCall = (method, body) => { const f = dayNet(); return f ? Promise.resolve(f('/chinalife/football-day.php', method, body)).then((r) => r?.data || r) : Promise.resolve(null); };
+  function daySync(d) {
+    if (!d?.counts) return false; const r = myRecord(), t = r.today, before = JSON.stringify([t, r.claimed]);
+    t.played = +d.counts.played || 0; t.won = +d.counts.won || 0; t.goals = +d.counts.goals || 0; if (d.claimed) r.claimed = true;
+    try { game()?.save?.(); } catch {} return JSON.stringify([t, r.claimed]) !== before;
+  }
   function noteMatch(won, draw, goals) {
     const r = myRecord(); r.played++; if (won) r.won++; else if (draw) r.drawn++; else r.lost++; r.goals += goals;
     r.streak = won ? r.streak + 1 : 0; r.best = Math.max(r.best, r.streak);
@@ -176,6 +188,7 @@
   function startMatch() {
     clearInterval(poll); poll = null; finished = false; resetFx(); actN = actBase(); charge = null; pendingAct = null; input.mx = input.my = 0; input.sprint = false; input.act = null; legacyPrev = {}; legacyN = {}; remoteInputs = {};
     const m = match; m.status = 'live';
+    m.kick = dayNet() ? dayCall('POST', { op: 'kickoff' }).then((r) => r?.kickoff || null).catch(() => null) : null;
     m.state = E.create({ roster: m.roster.map((p) => ({ id: String(p.id), name: p.name, team: p.team })), size: m.size, seed: m.seed || (Date.now() % 2e9), duration: m.duration || F.DURATION_MS, knockout: !!m.knockout, difficulty });
     m.myTeam = (m.roster.find((p) => String(p.id) === String(m.me)) || { team: 0 }).team;
     m.isHost = String(m.host) === String(m.me);
@@ -351,7 +364,9 @@
     if (finished || !match) return; finished = true; const m = match; clearInterval(netT); netT = null;
     const s = m.state, mine = m.myTeam, won = s.winner === mine, isDraw = s.winner === null; if (won) try { window.dispatchEvent(new CustomEvent('chinalife:winner', { detail: { kind: 'football' } })); } catch {} // Club Hypeman
     let note = '';
-    noteMatch(won, isDraw, s.goals.filter((g) => !g.own && String(g.by) === String(m.me)).length);
+    const myGoals = s.goals.filter((g) => !g.own && String(g.by) === String(m.me)).length;
+    noteMatch(won, isDraw, myGoals);
+    if (m.kick) m.kick.then((k) => k && dayCall('POST', { op: 'full', kickoff: k, goals: Math.min(10, myGoals), result: won ? 'w' : isDraw ? 'd' : 'l' })).then(daySync).catch(() => {});
     if (!m.local) {
       try {
         if (m.isHost) { const r = await call('POST', { action: 'result', id: m.id, report: E.report(s) }); note = r.status === 'done' ? 'Result confirmed ✓' : r.status === 'disputed' ? 'Result disputed: the ChinaLife team will check it' : 'Waiting for the other players to confirm…'; }

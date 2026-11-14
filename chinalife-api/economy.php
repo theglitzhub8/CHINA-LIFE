@@ -253,11 +253,14 @@ try {
         json_response('success',$moved+['duplicate'=>false,'bonus'=>false],'Shift recorded.');
     }
     // Energy Phase 3 (docs/ENERGY-PLAN.md, switch football_home): today's football challenge (score 3 goals, win 2 or play
-    // 3 matches, counted by the game) pays ¥300 + 30 XP once a Beijing day. The game shows the Collect button at the
+    // 3 matches) pays ¥300 + 30 XP once a Beijing day. Since 14 Nov 2026 the server checks it from the matches the
+    // phone reported to football-day.php (fb_day_done in football-lib.php). The game shows the Collect button at the
     // pitch; the server does not ask for presence, so players who have not joined the shared city can collect too.
     if ($action==='football-daily') {
         $ref='football-daily:'.$day;
         if (economy_seen('football-daily',$ref)) {$totals=economy_totals($game);$db->commit();json_response('success',$totals);}
+        require_once __DIR__.'/football-lib.php';
+        if (!fb_day_done($uid,$day)) {$db->rollback();cl_fail('Finish today’s challenge first',409);}
         $moved=cl_move_totals($uid,$game,300,30);
         economy_note('football-daily',$ref,$moved['awarded'],30);
         cl_store_totals($uid,$game);

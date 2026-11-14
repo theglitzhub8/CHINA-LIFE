@@ -104,6 +104,19 @@ function fb_settle(array $reported,int $hostTeam,array $confirms,bool $otherSide
 function fb_clean_name(mixed $v,int $max): string {return is_string($v)?trim(preg_replace('/\s+/u',' ',mb_substr(strip_tags($v),0,$max))):'';}
 
 // ---------- DB helpers (need common.php) ----------
+// Today's football challenge (Energy Phase 3, closed on the server 14 Nov 2026). The phone tells football-day.php when a
+// match kicks off and when it ends; a full time counts only FB_DAY_MIN_SECONDS or more after its kickoff, at most
+// FB_DAY_MAX matches a day. Ledger rows (chinalife_economy_actions, 0 coins): fb-kickoff "fb:DAY:N" and
+// fb-full "fb:DAY:N:GOALS:w|d|l". The challenge rotates daily, the same as public/football.js CHALLENGES.
+const FB_DAY_MIN_SECONDS=170,FB_DAY_MAX=12,FB_DAY_CHALLENGES=[['goals',3],['won',2],['played',3]];
+function fb_day_challenge(string $day): array {return FB_DAY_CHALLENGES[intdiv((int)gmdate('U',strtotime($day.' 00:00:00 UTC')),86400)%count(FB_DAY_CHALLENGES)];}
+function fb_day_counts(int $userId,string $day): array {
+    $c=['played'=>0,'won'=>0,'goals'=>0];
+    foreach (cl_rows("SELECT ref FROM chinalife_economy_actions WHERE user_id=? AND action='fb-full' AND ref LIKE ?",'is',[$userId,'fb:'.$day.':%']) as $r)
+        if (preg_match('/^fb:\d{4}-\d\d-\d\d:\d+:(\d+):([wdl])$/',(string)$r['ref'],$m)) {$c['played']++;$c['goals']+=(int)$m[1];if ($m[2]==='w') $c['won']++;}
+    return $c;
+}
+function fb_day_done(int $userId,string $day): bool {[$k,$n]=fb_day_challenge($day);return fb_day_counts($userId,$day)[$k]>=$n;}
 function cl_football_enabled(): bool {
     try {$row=cl_one("SELECT value FROM chinalife_settings WHERE name='football_matches'");}
     catch (mysqli_sql_exception $e) {return false;}

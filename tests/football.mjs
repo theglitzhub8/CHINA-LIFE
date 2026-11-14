@@ -265,3 +265,22 @@ test('stadium first screen: PLAY NOW, your record from the save, today\'s challe
  assert.match(readFileSync('public/game.js','utf8'),/r\.football=f&&typeof f==='object'\?\{played:n\(f\.played\)/);
  assert.match(readFileSync('chinalife-api/economy.php','utf8'),/\$action==='football-daily'/);assert.match(readFileSync('public/flags.js','utf8'),/football_home:true/);
 });
+
+// Closed 14 Nov 2026: signed in, today's challenge count comes from the server (football-day.php), not the phone.
+test('signed in, the challenge shows the server count and every match reports its kickoff and full time',async()=>{
+ const {harness,fixture}=await import('./game-harness.mjs');const vm=await import('node:vm');
+ const t=harness({...fixture(),place:'football'}),c=t.context,calls=[];c.requestAnimationFrame=()=>0;c.cancelAnimationFrame=()=>{};
+ c.ChinaLifeSandbox={localOnly:true};c.ChinaLifeFlags={cast:k=>k==='football_home'?true:undefined,off:()=>false};
+ c.ChinaLifeCloud={signedIn:true};c.ChinaLifeAuth={request:async(url,method,body)=>{calls.push([url.replace('/chinalife/',''),method,body]);
+  if(/football-day/.test(url))return {data:body?.op==='kickoff'?{kickoff:'fb:2026-11-14:1'}:{counts:{played:1,won:0,goals:1},challenge:['goals',3],claimed:false}};return {data:{}}}};
+ vm.runInContext(readFileSync('public/football-engine.js','utf8'),c);vm.runInContext(readFileSync('public/football.js','utf8'),c);
+ const day=new Date(Date.now()+8*3600e3).toISOString().slice(0,10),tick=async()=>{for(let i=0;i<6;i++)await new Promise(r=>setTimeout(r,0))};
+ // The phone thinks the challenge is done; the server says 1 match, 1 goal, so there is nothing to collect.
+ t.game.state.football={played:9,won:5,drawn:0,lost:4,goals:9,streak:0,best:3,date:day,today:{played:3,won:2,goals:3},claimed:false};
+ await c.ChinaLifeFootball.open();await tick();
+ assert.deepEqual(calls[0].slice(0,2),['football-day.php','GET']);assert.deepEqual({...t.game.state.football.today},{played:1,won:0,goals:1});
+ assert.ok(!t.document.querySelector('[data-fb="claim"]'),'no Collect until the server agrees');
+ const src=readFileSync('public/football.js','utf8');
+ assert.match(src,/m\.kick = dayNet\(\) \? dayCall\('POST', \{ op: 'kickoff' \}\)/,'a kickoff when the match starts');
+ assert.match(src,/dayCall\('POST', \{ op: 'full', kickoff: k, goals: Math\.min\(10, myGoals\), result: won \? 'w' : isDraw \? 'd' : 'l' \}\)\)\.then\(daySync\)/,'the full time, then the server count');
+});
